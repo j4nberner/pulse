@@ -45,3 +45,19 @@ This repository contains the implementation for predicting sepsis, acute kidney 
 
 1. adjust config_benchmark.yaml
 2. run benchmark_models.py
+
+## Add a new model
+
+- in config_train.yaml under models, add a new model with it's config
+
+```json
+- name: "ExampleModel"
+    params:
+      trainer_name: "ExampleTrainer"
+      input_size: 784
+      hidden_size: 128
+      output_size: 10
+```
+
+- in src/models add a new file which will host the model and the trainer
+- add the new model name to the src/models/**init**.py

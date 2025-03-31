@@ -26,10 +26,14 @@ class HarmonizedIcu(Dataset):
         # Placeholder for actual data loading logic
         if test:
             # Load test data
-            self.data = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]  # Example data
+            self.data = [
+                {"features": [i / 10, i / 5, i / 2], "label": i % 2} for i in range(100)
+            ]
         else:
             # Load training data
-            self.data = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]  # Example data
+            self.data = [
+                {"features": [i / 10, i / 5, i / 2], "label": i % 2} for i in range(500)
+            ]
 
     def __len__(self) -> int:
         return len(self.data)

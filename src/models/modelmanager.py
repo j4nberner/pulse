@@ -51,7 +51,9 @@ class ModelManager:
             try:
                 # Create model instance from configuration. Associate trainer with model.
                 model_cls = get_model_class(model_name)
-                model = model_cls(**config.get("params", {}))
+                model = model_cls(
+                    config.get("params", {})
+                )  # **config.get("params", {})
 
                 prepared_models.append(model)
                 logger.info("Model '%s' prepared successfully", model_name)

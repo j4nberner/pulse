@@ -1,12 +1,13 @@
 import argparse
-import os
-import numpy as np
-import pandas as pd
 import logging
-import yaml
+import os
 from datetime import datetime
-import wandb
+
+import pandas as pd
+import yaml
 from torch.utils.data import DataLoader
+
+import wandb
 from src.data.dataloader import DatasetManager
 from src.models.modelmanager import ModelManager
 
@@ -113,10 +114,8 @@ class ModelTrainer:
                     )
 
                     # Torch dataloaders -> might need custom Loaders for some models
-                    train_loader = DataLoader(
-                        train_dataset, batch_size=32, shuffle=True
-                    )
-                    test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
+                    train_loader = DataLoader(train_dataset, batch_size=1, shuffle=True)
+                    test_loader = DataLoader(test_dataset, batch_size=1, shuffle=False)
 
                     model.set_trainer(
                         trainer_name, train_loader, test_loader
@@ -153,7 +152,8 @@ def main():
     # Initialize configuration
     config = TrainConfig(args.config)
     config.load_from_file()
-    init_wandb(config)  # Initialize Weights & Biases
+    if config.wandb["enabled"]:
+        init_wandb(config)  # Initialize Weights & Biases
 
     # Run training
     trainer = ModelTrainer(config)
