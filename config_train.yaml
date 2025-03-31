@@ -1,0 +1,43 @@
+# Configuration file for pulse application
+
+# General settings
+general:
+  app_name: "Pulse"
+  version: "1.0.0"
+  debug_mode: true
+
+# Logging configuration
+logging:
+  level: "DEBUG" # Options: DEBUG, INFO, WARNING, ERROR, CRITICAL
+  file: "output/logs/app.log"
+  log_to_console: true
+
+# Weight and Biases (wandb) logging configuration
+wandb:
+  enabled: true
+  entity: "berner"
+  experiment_name: "experiment_1"
+
+# Application specific settings
+benchmark_settings:
+  batch_size: 100
+  num_epochs: 10
+  learning_rate: 0.001
+  optimizer: "adam" # Options: adam, sgd, rmsprop
+
+models:
+  - name: "ExampleModel"
+    params:
+      trainer_name: "ExampleTrainer"
+      input_size: 784
+      hidden_size: 128
+      output_size: 10
+
+datasets:
+  - "harmonized_icu"
+metrics:
+  - "accuracy"
+  - "f1_score"
+  - "roc_auc"
+  - "precision"
+  - "recall"

@@ -1,0 +1,30 @@
+# Configuration file for pulse application
+
+# General settings
+general:
+  app_name: "Pulse"
+  version: "1.0.0"
+  debug_mode: true
+
+# Logging configuration
+logging:
+  level: "DEBUG" # Options: DEBUG, INFO, WARNING, ERROR, CRITICAL
+  file: "output/logs/app.log"
+  log_to_console: true
+
+# Weight and Biases (wandb) logging configuration
+wandb:
+  enabled: true
+  project: "pulse"
+  entity: null # Your wandb username or team name
+  mode: "online" # Options: online, offline, disabled
+  save_code: true
+  log_model: true
+  api_key_file: "secrets/wandb_api_key.txt" # Path to file containing API key
+
+# Application specific settings
+benchmark_settings:
+  batch_size: 100
+  num_epochs: 10
+  learning_rate: 0.001
+  optimizer: "adam" # Options: adam, sgd, rmsprop
