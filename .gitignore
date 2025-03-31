@@ -3,6 +3,7 @@ results/
 secrets/
 output/
 wandb/
+.vscode/
 utils/__pycache__/
 .venv/
 __pycache__/
