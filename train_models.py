@@ -45,7 +45,12 @@ class ModelTrainer:
     """Core training functionality for ML/DL models and LLMs."""
 
     def __init__(self, config: TrainConfig):
-        """Initialize the model trainer."""
+        """
+        Initialize the model trainer.
+
+        Args:
+            config (TrainConfig): Configuration object containing training settings.
+        """
         self.config = config
         self.dm = DatasetManager(config.datasets)
         self.mm = ModelManager(config.models)

@@ -5,6 +5,12 @@ import torch.nn as nn
 import torch.nn.functional as F
 import wandb
 from .pulsetemplate_model import PulseTemplateModel
+from ..eval.metrics import (
+    calculate_accuracy as accuracy,
+    calculate_auroc as auroc,
+    calculate_auprc as auprc,
+    calculate_f1_score as f1_score,
+)
 
 
 logger = logging.getLogger("PULSE_logger")
@@ -163,11 +169,24 @@ class SimpleDLTrainer:
                     total += target.size(0)
                     correct += (predicted == target).sum().item()
 
+                    # Calculate metrics
+
+                    # metrics = {
+                    #     "accuracy": accuracy(predicted, target),
+                    #     "auroc": auroc(predicted, target),
+                    #     "auprc": auprc(predicted, target),
+                    #     "f1_score": f1_score(predicted, target),
+                    # }
+
             logger.info(f"Epoch {epoch+1} Accuracy: {100 * correct / total:.2f}%")
+            logger.info(f"Epoch {epoch+1} Metrics: {metrics}")
             # Log to wandb
             wandb.log(
                 {
                     "epoch": epoch + 1,
                     "accuracy": 100 * correct / total,
+                    # "auroc": metrics["auroc"],
+                    # "auprc": metrics["auprc"],
+                    # "f1_score": metrics["f1_score"],
                 }
             )

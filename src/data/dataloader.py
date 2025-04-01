@@ -1,11 +1,8 @@
 import logging
 import sys
-from typing import List, Dict, Any
+from typing import List, Any
 from torch.utils.data import Dataset
-import os
 import torch
-import numpy as np
-
 import yaml
 
 
@@ -26,6 +23,7 @@ class HarmonizedIcu(Dataset):
         """
         self.model_name = model_name
         # Placeholder for actual data loading logic
+        # Do Baseline preprocessing here
         if test:
             # Load test data
             self.data = [
@@ -51,8 +49,9 @@ class HarmonizedIcu(Dataset):
         features_tensor = torch.tensor(features, dtype=torch.float32)
         label_tensor = torch.tensor(label, dtype=torch.long)
 
+        # Do model-specific preprocessing here
         if self.model_name == "XGBoostModel":
-            # XGBoost works with numpy arrays
+            # Implement specific preprocessing for XGBoost here. Use src/preprocess/xgboost_preprocess.py import
             return features_tensor, label_tensor
         elif self.model_name == "SimpleDLModel":
             # For neural networks, return properly formatted tensors

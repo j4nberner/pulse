@@ -61,4 +61,4 @@ This repository contains the implementation for predicting sepsis, acute kidney 
 
 - in src/models add a new file which will host the model and the trainer class
 - add the new model name and import to the src/models/**init**.py
--
+- adjust **getitem** method in src/data/dataloader.py for model specific preprocessing
