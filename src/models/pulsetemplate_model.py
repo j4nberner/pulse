@@ -1,4 +1,5 @@
 from typing import Any, Optional
+from torch.utils.data import DataLoader
 
 
 class PulseTemplateModel:
@@ -20,9 +21,14 @@ class PulseTemplateModel:
         self.trainer = None
 
     def set_trainer(
-        self, trainer_name: str, train_dataloader: Any, test_dataloader: Any
+        self,
+        trainer_name: str,
+        train_dataloader: DataLoader,
+        test_dataloader: DataLoader,
     ) -> None:
-        """Set the trainer for this model.
+        """
+        Set the trainer for this model. This method should be overridden by subclasses.
+        A trainer is responsible for training and evaluating the model.
 
         Args:
             trainer_name: Name of the trainer to use
@@ -30,18 +36,5 @@ class PulseTemplateModel:
             test_dataloader: DataLoader for test data
         """
         self.trainer_name = trainer_name
+        self.trainer = None
         # TODO: Implement dynamic loading of trainer class based on trainer_name
-
-        # # Import the trainer dynamically
-        # try:
-        #     trainer_module = __import__(f"trainers.{trainer_name}", fromlist=[""])
-        #     trainer_class = getattr(trainer_module, trainer_name)
-        #     self.trainer = trainer_class(self, train_dataloader, test_dataloader)
-        # except (ImportError, AttributeError) as e:
-        #     raise ValueError(f"Failed to load trainer '{trainer_name}': {e}")
-
-        # # Verify that trainer has required methods
-        # if not hasattr(self.trainer, "train") or not hasattr(self.trainer, "test"):
-        #     raise ValueError(
-        #         f"Trainer '{trainer_name}' missing required methods (train or test)"
-        #     )

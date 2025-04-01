@@ -1,9 +1,9 @@
-from .example_model import ExampleModel  # Placeholder for actual model class
+from .simpledl_model import SimpleDLModel  # Placeholder for actual model class
 from .xgboost import XGBoostModel
 
 
 model_cls_name_dict = {
-    "ExampleModel": ExampleModel,  # Placeholder for actual model class
+    "SimpleDLModel": SimpleDLModel,
     "XGBoost": XGBoostModel,
 }
 

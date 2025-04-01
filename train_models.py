@@ -1,51 +1,18 @@
 import argparse
-import logging
 import os
-from datetime import datetime
 
 import pandas as pd
 import yaml
 from torch.utils.data import DataLoader
 
-import wandb
+from src.logger_setup import setup_logger, init_wandb
 from src.data.dataloader import DatasetManager
 from src.models.modelmanager import ModelManager
 
 
 # -------------------------Configure logging-------------------------
-# Initialize wandb
-def init_wandb(config):
-    """Initialize Weights & Biases for experiment tracking"""
-    try:
-        wandb.init(
-            entity=config.wandb["entity"],
-            name=config.experiment_name,
-            config={k: v for k, v in vars(config).items() if not k.startswith("_")},
-        )
-        logger.info("Weights & Biases initialized successfully")
-        return True
-    except Exception as e:
-        logger.warning(f"Failed to initialize Weights & Biases: {e}")
-        return False
 
-
-# Create logs directory if it doesn't exist
-log_dir = os.path.join("output", "logs")
-os.makedirs(log_dir, exist_ok=True)
-
-# Set up log file with timestamp
-log_file = os.path.join(
-    log_dir, f"training_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
-)
-
-# Configure logging to both console and file
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-    handlers=[logging.FileHandler(log_file), logging.StreamHandler()],
-)
-logger = logging.getLogger(__name__)
-logger.info(f"Logging to file: {log_file}")
+logger = setup_logger()
 
 
 class TrainConfig:
@@ -80,7 +47,6 @@ class ModelTrainer:
     def __init__(self, config: TrainConfig):
         """Initialize the model trainer."""
         self.config = config
-        config.load_from_file()  # Ensure config is loaded
         self.dm = DatasetManager(config.datasets)
         self.mm = ModelManager(config.models)
 

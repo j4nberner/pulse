@@ -3,12 +3,14 @@ import sys
 from typing import List, Dict, Any
 from torch.utils.data import Dataset
 import os
+import torch
+import numpy as np
 
 import yaml
 
 
 # Set up logger
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("PULSE_logger")
 
 
 class HarmonizedIcu(Dataset):
@@ -36,18 +38,27 @@ class HarmonizedIcu(Dataset):
             ]
 
     def __len__(self) -> int:
+        """Return the length of the dataset."""
         return len(self.data)
 
     def __getitem__(self, idx: int) -> Any:
         # Placeholder for actual data retrieval logic. Change preprocessing for each model.
-        if self.model_name == "XGBoost":
-            # Apply XGBoost specific preprocessing
-            pass
-        elif self.model_name == "RandomForest":
-            # Apply RandomForest specific preprocessing
-            pass
-        # Add more model-specific preprocessing as needed
-        return self.data[idx]
+        item = self.data[idx]
+        features = item["features"]
+        label = item["label"]
+
+        # Convert to tensors
+        features_tensor = torch.tensor(features, dtype=torch.float32)
+        label_tensor = torch.tensor(label, dtype=torch.long)
+
+        if self.model_name == "XGBoostModel":
+            # XGBoost works with numpy arrays
+            return features_tensor, label_tensor
+        elif self.model_name == "SimpleDLModel":
+            # For neural networks, return properly formatted tensors
+            return features_tensor, label_tensor
+        # Default case: return tensors for PyTorch models
+        return features_tensor, label_tensor
 
 
 class DatasetManager:

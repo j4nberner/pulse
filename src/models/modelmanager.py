@@ -7,7 +7,7 @@ from torch import nn
 from . import get_model_class
 
 # Set up logger
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("PULSE_logger")
 
 
 class ModelManager:
@@ -15,7 +15,8 @@ class ModelManager:
 
     def __init__(self, models: List[dict]):
         """
-        Initialize the ModelManager with model names. Verifies model attributes. Converts model names to model objects.
+        Initialize the ModelManager with model names. Verifies model attributes.
+        Converts model names to model objects with specified parameters.
 
         Args:
             models: List of model configurations.
@@ -53,7 +54,7 @@ class ModelManager:
                 model_cls = get_model_class(model_name)
                 model = model_cls(
                     config.get("params", {})
-                )  # **config.get("params", {})
+                )  # Pass parameters to model constructor
 
                 prepared_models.append(model)
                 logger.info("Model '%s' prepared successfully", model_name)

@@ -59,5 +59,6 @@ This repository contains the implementation for predicting sepsis, acute kidney 
       output_size: 10
 ```
 
-- in src/models add a new file which will host the model and the trainer
-- add the new model name to the src/models/**init**.py
+- in src/models add a new file which will host the model and the trainer class
+- add the new model name and import to the src/models/**init**.py
+-

@@ -6,17 +6,11 @@ general:
   version: "1.0.0"
   debug_mode: true
 
-# Logging configuration
-logging:
-  level: "DEBUG" # Options: DEBUG, INFO, WARNING, ERROR, CRITICAL
-  file: "output/logs/app.log"
-  log_to_console: true
-
 # Weight and Biases (wandb) logging configuration
 wandb:
-  enabled: false
+  enabled: true
   entity: "berner"
-  experiment_name: "experiment_1"
+  # experiment_name: "experiment_1"
 
 # Application specific settings
 benchmark_settings:
@@ -26,21 +20,21 @@ benchmark_settings:
   optimizer: "adam" # Options: adam, sgd, rmsprop
 
 models:
-  - name: "XGBoost"
-    params:
-      trainer_name: "XGBoostTrainer"
-      n_estimators: 100
-      learning_rate: 0.1
-      max_depth: 3
-      subsample: 0.8
-      colsample_bytree: 0.8
-      objective: "binary:logistic"
-  # - name: "ExampleModel"
+  # - name: "XGBoost"
   #   params:
-  #     trainer_name: "ExampleTrainer"
-  #     input_size: 784
-  #     hidden_size: 128
-  #     output_size: 10
+  #     trainer_name: "XGBoostTrainer"
+  #     n_estimators: 100
+  #     learning_rate: 0.1
+  #     max_depth: 3
+  #     subsample: 0.8
+  #     colsample_bytree: 0.8
+  #     objective: "binary:logistic"
+  - name: "SimpleDLModel"
+    params:
+      trainer_name: "SimpleDLTrainer"
+      input_size: 3
+      hidden_size: 128
+      output_size: 10
 
 datasets:
   - "harmonized_icu"
