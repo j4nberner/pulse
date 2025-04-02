@@ -1,10 +1,12 @@
 from .simpledl_model import SimpleDLModel  # Placeholder for actual model class
 from .xgboost import XGBoostModel
+from .randomforest_model import RandomForestModel
 
 
 model_cls_name_dict = {
     "SimpleDLModel": SimpleDLModel,
     "XGBoost": XGBoostModel,
+    "RandomForest": RandomForestModel,
 }
 
 

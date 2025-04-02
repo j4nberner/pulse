@@ -24,6 +24,37 @@ This repository contains the implementation for predicting sepsis, acute kidney 
    pip install -r requirements.txt
    ```
 
+## Project Structure
+
+```
+├── README.md
+├── requirements.txt
+├── config_train.yaml
+├── config_benchmark.yaml
+├── train_models.py
+├── benchmark_models.py
+├── src/
+│   ├── data/
+│   │   ├── __init__.py
+│   │   ├── dataloader.py
+│   ├── eval/
+│   │   ├── __init__.py
+│   │   └── metrics.py
+│   ├── models/
+│   │   ├── __init__.py
+│   │   ├── modelmanager.py
+│   │   └── example_model.py
+│   ├── preprocessing/
+│   │   ├── __init__.py
+│   │   ├── preprocessing_advanced/
+│   │   ├── preprocessing_baseline/
+│   │   └── promt_engineering/
+|   └── framework.png
+├── notebooks/
+├── datasets/
+└── secrets/
+```
+
 ## Data
 
 ...
@@ -60,5 +91,27 @@ This repository contains the implementation for predicting sepsis, acute kidney 
 ```
 
 - in src/models add a new file which will host the model and the trainer class
+
+```python
+class ExampleModel(PulseTemplateModel):
+   def __init__(self, params: Dict[str, Any]) -> None:
+      super().__init__(model_name, trainer_name)
+   def set_trainer(self, trainer_name, train_dataloader, test_dataloader):
+      self.trainer = ExampleTrainer(self,train_dataloader, test_dataloader)
+```
+
+```python
+class ExampleTrainer():
+   def __init__(self, model, train_dataloader, test_dataloader):
+      self.model = model
+      self.train_dataloader = train_dataloader
+      self.test_dataloader = test_dataloader
+
+   def train(self):
+      # training loop
+      pass
+
+```
+
 - add the new model name and import to the src/models/**init**.py
 - adjust **getitem** method in src/data/dataloader.py for model specific preprocessing

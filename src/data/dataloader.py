@@ -13,7 +13,7 @@ logger = logging.getLogger("PULSE_logger")
 class HarmonizedIcu(Dataset):
     """A harmonized icu dataset class for loading and processing datasets."""
 
-    def __init__(self, model_name: str, test: bool = False):
+    def __init__(self, model_name: str, test: bool = False, **kwargs) -> None:
         """
         Initialize the dataset.
 
@@ -49,11 +49,15 @@ class HarmonizedIcu(Dataset):
         features_tensor = torch.tensor(features, dtype=torch.float32)
         label_tensor = torch.tensor(label, dtype=torch.long)
 
+        # General Preprocessing
+        # preprocessor.preprocess(preprocessing_dict, data)
+
         # Do model-specific preprocessing here
         if self.model_name == "XGBoostModel":
             # Implement specific preprocessing for XGBoost here. Use src/preprocess/xgboost_preprocess.py import
             return features_tensor, label_tensor
         elif self.model_name == "SimpleDLModel":
+
             # For neural networks, return properly formatted tensors
             return features_tensor, label_tensor
         # Default case: return tensors for PyTorch models

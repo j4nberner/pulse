@@ -13,6 +13,13 @@ from sklearn.metrics import (
 )
 
 
+def rmse(y_true: np.ndarray, y_pred: np.ndarray) -> float:
+    """
+    Dummy function
+    """
+    return np.sqrt(np.mean((y_true - y_pred) ** 2))
+
+
 def calculate_auroc(
     y_true: Union[np.ndarray, torch.Tensor], y_pred: Union[np.ndarray, torch.Tensor]
 ) -> float:

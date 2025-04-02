@@ -148,13 +148,13 @@ class SimpleDLTrainer:
                         f"Epoch {epoch+1}, Batch {batch_idx+1}, Loss: {running_loss/100:.4f}"
                     )
                     # Log to wandb
-                    wandb.log(
-                        {
-                            "epoch": epoch + 1,
-                            "batch": batch_idx + 1,
-                            "training_loss": running_loss / 100,
-                        }
-                    )
+                    # wandb.log(
+                    #     {
+                    #         "epoch": epoch + 1,
+                    #         "batch": batch_idx + 1,
+                    #         "training_loss": running_loss / 100,
+                    #     }
+                    # )
                     running_loss = 0.0
 
             # Validate after each epoch
@@ -180,13 +180,14 @@ class SimpleDLTrainer:
 
             logger.info(f"Epoch {epoch+1} Accuracy: {100 * correct / total:.2f}%")
             logger.info(f"Epoch {epoch+1} Metrics: {metrics}")
-            # Log to wandb
-            wandb.log(
-                {
-                    "epoch": epoch + 1,
-                    "accuracy": 100 * correct / total,
-                    # "auroc": metrics["auroc"],
-                    # "auprc": metrics["auprc"],
-                    # "f1_score": metrics["f1_score"],
-                }
-            )
+            # Log to wandb if enabled
+
+            # wandb.log(
+            #     {
+            #         "epoch": epoch + 1,
+            #         "accuracy": 100 * correct / total,
+            #         # "auroc": metrics["auroc"],
+            #         # "auprc": metrics["auprc"],
+            #         # "f1_score": metrics["f1_score"],
+            #     }
+            # )

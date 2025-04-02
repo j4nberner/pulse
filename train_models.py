@@ -23,7 +23,7 @@ class TrainConfig:
         self.config_path = config_path
         self.models = []
         self.datasets = []
-        self.metrics = ["accuracy", "auroc", "auprc", "f1_score"]
+        self.metrics = []
         self.output_dir = r"output/results"
         self.experiment_name = (
             f"experiment_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}"

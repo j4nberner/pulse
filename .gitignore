@@ -4,6 +4,9 @@ secrets/
 output/
 wandb/
 .vscode/
+todo
 utils/__pycache__/
 .venv/
 __pycache__/
+
+

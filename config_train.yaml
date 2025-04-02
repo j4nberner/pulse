@@ -8,7 +8,7 @@ general:
 
 # Weight and Biases (wandb) logging configuration
 wandb:
-  enabled: true
+  enabled: false
   entity: "berner"
   # experiment_name: "experiment_1"
 
@@ -19,7 +19,14 @@ benchmark_settings:
   learning_rate: 0.001
   optimizer: "adam" # Options: adam, sgd, rmsprop
 
+preprocessing:
+  windowing_time: 60 # in minutes
+  onset_matching: true
+
 models:
+  - name: "RandomForest"
+    params:
+      trainer_name: "RandomForestTrainer"
   # - name: "XGBoost"
   #   params:
   #     trainer_name: "XGBoostTrainer"
@@ -29,18 +36,17 @@ models:
   #     subsample: 0.8
   #     colsample_bytree: 0.8
   #     objective: "binary:logistic"
-  - name: "SimpleDLModel"
-    params:
-      trainer_name: "SimpleDLTrainer"
-      input_size: 3
-      hidden_size: 128
-      output_size: 10
+  # - name: "SimpleDLModel"
+  #   params:
+  #     trainer_name: "SimpleDLTrainer"
+  #     input_size: 3
+  #     hidden_size: 128
+  #     output_size: 10
 
 datasets:
   - "harmonized_icu"
-metrics:
-  - "accuracy"
-  - "f1_score"
-  - "roc_auc"
-  - "precision"
-  - "recall"
+
+tasks:
+  - mortality
+  - aki
+  - sepsis
