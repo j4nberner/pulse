@@ -8,6 +8,7 @@ from torch.utils.data import DataLoader
 from src.logger_setup import setup_logger, init_wandb
 from src.data.dataloader import DatasetManager, TorchDatasetWrapper
 from src.models.modelmanager import ModelManager
+from src.util.slurm_util import copy_data_to_scratch, is_on_slurm, get_local_scratch_dir
 
 
 # -------------------------Configure logging-------------------------
@@ -22,8 +23,10 @@ class TrainConfig:
         """Initialize training configuration."""
         self.config_path = config_path
         self.models = []
+        self.tasks = []
         self.datasets = []
         self.metrics = []
+        self.base_path = ""
         self.output_dir = r"output/results"
         self.experiment_name = (
             f"experiment_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}"
@@ -59,6 +62,18 @@ class ModelTrainer:
             config (TrainConfig): Configuration object containing training settings.
         """
         self.config = config
+
+        # -------------------- Copy data to local scratch (Slurm) --------------------
+        if is_on_slurm() and self.config.general.get('use_scratch', False):
+            logger.info("Running on Slurm, preparing to copy data to scratch space...")
+            scratch_dir = get_local_scratch_dir()
+            if scratch_dir:
+                logger.info(f"Scratch directory available at: {scratch_dir}")
+                # Update the config with scratch space paths
+                self.config = copy_data_to_scratch(self.config)
+            else:
+                logger.warning("No scratch directory found, using original data paths")
+
         self.dm = DatasetManager(config)
         self.mm = ModelManager(config.models)
 
@@ -100,9 +115,19 @@ class ModelTrainer:
                     train_dataset = TorchDatasetWrapper(X_train, y_train)
                     test_dataset = TorchDatasetWrapper(X_test, y_test)
 
+                    # Get batch size with fallback using getattr
+                    if isinstance(self.config.benchmark_settings, dict):
+                        # If benchmark_settings is a dictionary
+                        batch_size = self.config.benchmark_settings.get('batch_size', 100)
+                    else:
+                        # If benchmark_settings is an object with attributes
+                        batch_size = getattr(self.config.benchmark_settings, 'batch_size', 100)
+                    
+                    logger.info(f"Using batch size: {batch_size} for {model_name} on {dataset_name}")
+
                     # Now create the DataLoaders with the wrapped datasets
-                    train_loader = DataLoader(train_dataset, batch_size=1, shuffle=True)
-                    test_loader = DataLoader(test_dataset, batch_size=1, shuffle=False)
+                    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+                    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
                     # If in debug mode, limit to a single batch for both training and testing
                     if self.config.debug_mode:
@@ -154,6 +179,11 @@ def main():
     # Initialize configuration
     config = TrainConfig(args.config)
     config.load_from_file()
+
+    # Log if running on Slurm
+    if is_on_slurm():
+        logger.info(f"Running on Slurm cluster (Job ID: {os.getenv('SLURM_JOB_ID')})")
+
     if config.wandb["enabled"]:
         init_wandb(config)  # Initialize Weights & Biases
 

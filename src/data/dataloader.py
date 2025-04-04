@@ -265,18 +265,12 @@ class DatasetManager:
 
 class TorchDatasetWrapper(Dataset):
     """
-    Wrapper class to convert pandas DataFrames to PyTorch Datasets.
-    
-    This class makes pandas DataFrames compatible with PyTorch DataLoader.
-    
-    Attributes:
-        X (pd.DataFrame): Feature dataframe
-        y (pd.DataFrame): Label dataframe
+    Memory-efficient wrapper class to convert pandas DataFrames to PyTorch Dataset.
     """
     
     def __init__(self, X: pd.DataFrame, y: pd.DataFrame):
         """
-        Initialize the TorchDatasetWrapper.
+        Initialize the TorchDatasetWrapper with options for memory efficiency.
         
         Args:
             X (pd.DataFrame): Feature dataframe
@@ -284,6 +278,18 @@ class TorchDatasetWrapper(Dataset):
         """
         self.X = X
         self.y = y
+        
+        # Pre-compute indices for faster access
+        self.indices = list(range(len(X)))
+        
+        # Optional: Convert DataFrames to NumPy arrays upfront if they fit in memory
+        # This avoids repeated conversions during __getitem__ calls
+        # Comment this out if data is too large
+        self.X_array = X.values.astype(np.float32)
+        self.y_array = y.values.astype(np.float32)
+        
+        # Store column dtypes for efficient conversion
+        self.dtypes = X.dtypes
     
     def __len__(self):
         """Return the number of samples in the dataset."""
@@ -291,16 +297,42 @@ class TorchDatasetWrapper(Dataset):
     
     def __getitem__(self, idx):
         """
-        Get a sample from the dataset.
+        Get a sample from the dataset with optimized memory usage.
         
         Args:
-            idx (int): Index of the sample
+            idx (int or slice or list): Index/indices of the sample(s)
             
         Returns:
-            tuple: (features, label) for the specified index
+            tuple: (features, label) for the specified index/indices
         """
-        # Convert to numpy arrays
-        X_sample = self.X.iloc[idx].values.astype(np.float32)
-        y_sample = self.y.iloc[idx].values.astype(np.float32)
+        # If we pre-computed arrays, use them
+        if hasattr(self, 'X_array') and hasattr(self, 'y_array'):
+            return self.X_array[idx], self.y_array[idx]
+            
+        # For single integer index
+        if isinstance(idx, int):
+            # More efficient single row access
+            X_sample = self.X.iloc[idx].values.astype(np.float32)
+            y_sample = self.y.iloc[idx].values.astype(np.float32)
+            return X_sample, y_sample
+            
+        # For slices or lists of indices (batch access)
+        # Use .loc which is more efficient for multiple row access with explicit indices
+        X_samples = self.X.iloc[idx].values.astype(np.float32)
+        y_samples = self.y.iloc[idx].values.astype(np.float32)
+        return X_samples, y_samples
+    
+    def get_batch(self, indices):
+        """
+        Custom method to get a batch with explicit indices.
+        More efficient than using DataLoader for large datasets.
         
-        return X_sample, y_sample
+        Args:
+            indices (list): List of indices to include in batch
+            
+        Returns:
+            tuple: (features, labels) for the specified indices
+        """
+        X_batch = self.X.iloc[indices].values.astype(np.float32)
+        y_batch = self.y.iloc[indices].values.astype(np.float32)
+        return X_batch, y_batch

@@ -4,7 +4,8 @@
 general:
   app_name: "Pulse"
   version: "1.0.0"
-  debug_mode: true
+  debug_mode: false
+  use_scratch: true
 
 # Weight and Biases (wandb) logging configuration
 wandb:
@@ -13,12 +14,12 @@ wandb:
   # experiment_name: "experiment_1"
 
 ###### Application specific settings ######
-base_path: "/Users/sophiaehlers/Documents/pulse" #"/cluster/project/bmds_lab/sepsis_sophia/pulse"  #"/path/to/pulse"
+base_path: "/cluster/project/bmds_lab/sepsis_sophia/pulse"  #"/path/to/pulse" "/Users/sophiaehlers/Documents/pulse" 
 
 # Tasks to process
 tasks:
-  - "mortality"
-  # - "aki"
+  # "mortality"
+  - "aki"
   # - "sepsis"
   # - "harmonized_icu"
 
@@ -54,12 +55,13 @@ preprocessing:
     test: 0.2
 
 # TODO: add config -> use presaved scripts, print set statistics, ...
+# TODO: change folder name of splits to automatic naming based on preprocessing configuration
 
 
 # _______ Model Training _______
 
 benchmark_settings:
-  batch_size: 100
+  batch_size: 1024
   num_epochs: 10
   learning_rate: 0.001
   optimizer: "adam" # Options: adam, sgd, rmsprop
@@ -68,6 +70,17 @@ models:
   - name: "RandomForest"
     params:
       trainer_name: "RandomForestTrainer"
+      n_estimators: 100        # Number of trees in the forest
+      n_jobs: 1                # Number of CPU cores to use (-1 for all available, None for 1 CPU)
+      max_depth: 30            # Maximum depth of the tree (null for unlimited)
+      min_samples_split: 2     # Minimum samples required to split internal node
+      min_samples_leaf: 1      # Minimum samples required at a leaf node
+      max_features: "sqrt"     # Number of features to consider (options: "sqrt", "log2", int, float)
+      bootstrap: true          # Whether to use bootstrap samples
+      oob_score: false         # Whether to use out-of-bag samples
+      random_state: 42       # Random seed for reproducibility (scikit default = None)
+      verbose: 0               # Controls verbosity of output
+
   # - name: "XGBoost"
   #   params:
   #     trainer_name: "XGBoostTrainer"
