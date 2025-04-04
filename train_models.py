@@ -6,7 +6,7 @@ import yaml
 from torch.utils.data import DataLoader
 
 from src.logger_setup import setup_logger, init_wandb
-from src.data.dataloader import DatasetManager
+from src.data.dataloader import DatasetManager, TorchDatasetWrapper
 from src.models.modelmanager import ModelManager
 
 
@@ -52,7 +52,7 @@ class ModelTrainer:
             config (TrainConfig): Configuration object containing training settings.
         """
         self.config = config
-        self.dm = DatasetManager(config.datasets)
+        self.dm = DatasetManager(config)
         self.mm = ModelManager(config.models)
 
         # Create output directory
@@ -76,15 +76,19 @@ class ModelTrainer:
                 logger.info("Training model: %s on %s", model_name, dataset_name)
 
                 try:
-                    # Preprocess data for corresponding model. Returns torch dataset.
-                    train_dataset = self.dm.get_preprocessed_data(
+                    # Preprocess data for corresponding model. Returns X and y as pandas DataFrames
+                    X_train, y_train = self.dm.get_preprocessed_data(
                         dataset_name, model_name, test=False
                     )
-                    test_dataset = self.dm.get_preprocessed_data(
+                    X_test, y_test = self.dm.get_preprocessed_data(
                         dataset_name, model_name, test=True
                     )
 
-                    # Torch dataloaders -> might need custom Loaders for some models
+                    # Wrap with TorchDatasetWrapper
+                    train_dataset = TorchDatasetWrapper(X_train, y_train)
+                    test_dataset = TorchDatasetWrapper(X_test, y_test)
+
+                    # Now create the DataLoaders with the wrapped datasets
                     train_loader = DataLoader(train_dataset, batch_size=1, shuffle=True)
                     test_loader = DataLoader(test_dataset, batch_size=1, shuffle=False)
 

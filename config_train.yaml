@@ -12,16 +12,55 @@ wandb:
   entity: "berner"
   # experiment_name: "experiment_1"
 
-# Application specific settings
+###### Application specific settings ######
+base_path: "/Users/sophiaehlers/Documents/pulse" #"/path/to/pulse"
+
+# Tasks to process
+tasks:
+  # - "mortality"
+  - "aki"
+  # - "sepsis"
+  # - "harmonized_icu"
+
+# Datasets to process
+datasets:
+  - "hirid"
+  # - "miiv"
+  # - "eicu"
+
+# _______ Preprocessing _______
+
+# Random seed for reproducibility
+random_seed: 42
+
+# Options for preprocessing
+preprocessing:
+  # Whether to replace outliers with NaNs
+  replace_outliers: true
+  
+  # Whether to flag NA values with binary indicators
+  flag_na: true
+  
+  # Whether to standardize features
+  standardize: true
+  
+  # Whether to save preprocessed data
+  save_data: false
+  
+  # Train/Val/Test split ratios
+  split_ratios:
+    train: 0.7
+    val: 0.1
+    test: 0.2
+
+
+# _______ Model Training _______
+
 benchmark_settings:
   batch_size: 100
   num_epochs: 10
   learning_rate: 0.001
   optimizer: "adam" # Options: adam, sgd, rmsprop
-
-preprocessing:
-  windowing_time: 60 # in minutes
-  onset_matching: true
 
 models:
   - name: "RandomForest"
@@ -42,11 +81,3 @@ models:
   #     input_size: 3
   #     hidden_size: 128
   #     output_size: 10
-
-datasets:
-  - "harmonized_icu"
-
-tasks:
-  - mortality
-  - aki
-  - sepsis
