@@ -13,12 +13,12 @@ wandb:
   # experiment_name: "experiment_1"
 
 ###### Application specific settings ######
-base_path: "/cluster/project/bmds_lab/sepsis_sophia/pulse" #"/Users/sophiaehlers/Documents/pulse" #"/path/to/pulse"
+base_path: "/Users/sophiaehlers/Documents/pulse" #"/cluster/project/bmds_lab/sepsis_sophia/pulse"  #"/path/to/pulse"
 
 # Tasks to process
 tasks:
-  # - "mortality"
-  - "aki"
+  - "mortality"
+  # - "aki"
   # - "sepsis"
   # - "harmonized_icu"
 

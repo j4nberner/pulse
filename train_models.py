@@ -28,6 +28,8 @@ class TrainConfig:
         self.experiment_name = (
             f"experiment_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}"
         )
+        self.debug_mode = False
+        self.general = {}  # Add container for general settings
 
     def load_from_file(self):
         """Load configuration from a YAML file."""
@@ -37,6 +39,11 @@ class TrainConfig:
         for key, value in config_data.items():
             # if hasattr(self, key):
             setattr(self, key, value)
+
+        # Set debug_mode from general section if it exists
+        if hasattr(self, 'general') and isinstance(self.general, dict) and 'debug_mode' in self.general:
+            self.debug_mode = self.general['debug_mode']
+            logger.info(f"DEBUG MODE set to: {self.debug_mode}")
 
         logger.info("Loaded configuration from %s", self.config_path)
 
@@ -63,6 +70,11 @@ class ModelTrainer:
     def run(self):
         """Run the training process for all configured models and datasets."""
         logger.info("Starting training process...")
+
+        # Check if debug mode is enabled
+        if self.config.debug_mode:
+            logger.info("DEBUG MODE ACTIVE: Training will use only one batch")
+
         results = {}
 
         # Train and evaluate each model on each dataset
@@ -91,6 +103,21 @@ class ModelTrainer:
                     # Now create the DataLoaders with the wrapped datasets
                     train_loader = DataLoader(train_dataset, batch_size=1, shuffle=True)
                     test_loader = DataLoader(test_dataset, batch_size=1, shuffle=False)
+
+                    # If in debug mode, limit to a single batch for both training and testing
+                    if self.config.debug_mode:
+                        try:
+                            # Get just the first batch
+                            first_train_batch = next(iter(train_loader))
+                            first_test_batch = next(iter(test_loader))
+                            
+                            # Convert to single-batch iterables
+                            train_loader = [first_train_batch]
+                            test_loader = [first_test_batch]
+                            
+                            logger.info(f"DEBUG MODE: Limited to single batch for {model_name}")
+                        except StopIteration:
+                            logger.warning(f"Dataset {dataset_name} is empty, cannot extract batch")
 
                     model.set_trainer(
                         trainer_name, train_loader, test_loader
