@@ -1,11 +1,10 @@
 #!/bin/bash
 #SBATCH --job-name=train_models
 #SBATCH --output=output/slurm_output/delete/training_%j_%N_%x.output
-
-#SBATCH --time=5:00:00
+#SBATCH --time=4:00:00
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=1
-#SBATCH --mem-per-cpu=480000
+#SBATCH --cpus-per-task=24
+#SBATCH --mem-per-cpu=20000
 #SBATCH --partition=compute
 
 # Uncomment these lines if you need GPU resources
@@ -36,23 +35,49 @@ source .venv/bin/activate
 # Print job and node information
 echo "======================================================================="
 echo "Job Information:"
-echo "  Job ID: $SLURM_JOB_ID"
-echo "  Node: $(hostname)"
-echo "  Started at: $(date)"
+echo " Job ID: $SLURM_JOB_ID"
+echo " Job Name: $SLURM_JOB_NAME"
+echo " Node: $(hostname)"
+echo " Started at: $(date)"
 echo "======================================================================="
+
+# Extract and print all Slurm settings
+echo "Slurm Settings:"
+echo " Number of Tasks: $SLURM_NTASKS"
+echo " CPUs per Task: $SLURM_CPUS_PER_TASK"
+echo " Total CPUs: $SLURM_CPUS_ON_NODE"
+echo " Memory per CPU: $(grep -oP '(?<=#SBATCH --mem-per-cpu=)[0-9]+' $0) MB"
+echo " Time Limit: $(grep -oP '(?<=#SBATCH --time=)[0-9:]+' $0)"
+echo " Partition: $SLURM_JOB_PARTITION"
+
+# Check if GPU is enabled and print GPU information
+if grep -q "^#SBATCH --gres=gpu:" $0; then
+    echo " GPU Configuration: Not enabled (commented out)"
+elif grep -q "^SBATCH --gres=gpu:" $0; then
+    GPU_CONFIG=$(grep -oP '(?<=^SBATCH --gres=gpu:)[0-9]+' $0)
+    echo " GPU Configuration: $GPU_CONFIG GPU(s) requested"
+    if command -v nvidia-smi &> /dev/null; then
+        echo " GPU Information:"
+        nvidia-smi
+    else
+        echo " GPU Information: nvidia-smi command not available"
+    fi
+fi
+echo "======================================================================="
+
 echo "Environment:"
-echo "  TMPDIR: $TMPDIR"  # Slurm scratch directory
-echo "  SLURM_SUBMIT_DIR: $SLURM_SUBMIT_DIR"
+echo " TMPDIR: $TMPDIR" # Slurm scratch directory
+echo " SLURM_SUBMIT_DIR: $SLURM_SUBMIT_DIR"
 echo "======================================================================="
 
 # Ensure scratch directory exists and has space
 if [ -n "$TMPDIR" ]; then
-    mkdir -p $TMPDIR/job_${SLURM_JOB_ID}_data
-    echo "Scratch directory created at: $TMPDIR/job_${SLURM_JOB_ID}_data"
-    echo "Available space in scratch directory:"
-    df -h $TMPDIR
+ mkdir -p $TMPDIR/job_${SLURM_JOB_ID}_data
+ echo "Scratch directory created at: $TMPDIR/job_${SLURM_JOB_ID}_data"
+ echo "Available space in scratch directory:"
+ df -h $TMPDIR
 else
-    echo "WARNING: TMPDIR not set. Scratch space might not be available."
+ echo "WARNING: TMPDIR not set. Scratch space might not be available."
 fi
 
 # Run the training script with the existing config
@@ -61,8 +86,9 @@ python train_models.py --config config_train.yaml
 
 # Clean up scratch space (optional - uncomment if you want to clean up after job)
 if [ -n "$TMPDIR" ] && [ -d "$TMPDIR/job_${SLURM_JOB_ID}_data" ]; then
-    echo "Cleaning up scratch directory: $TMPDIR/job_${SLURM_JOB_ID}_data"
-    rm -rf $TMPDIR/job_${SLURM_JOB_ID}_data
+ echo "Cleaning up scratch directory: $TMPDIR/job_${SLURM_JOB_ID}_data"
+ rm -rf $TMPDIR/job_${SLURM_JOB_ID}_data
 fi
 
 echo "Job completed at $(date)"
+echo "Total runtime: $(($(date +%s) - $(date -d "$(grep 'Started at:' output/slurm_output/training_${TIMESTAMP}_${JOB_ID}.output | cut -d':' -f2- | xargs)" +%s))) seconds"

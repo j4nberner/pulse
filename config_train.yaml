@@ -70,11 +70,11 @@ models:
   - name: "RandomForest"
     params:
       trainer_name: "RandomForestTrainer"
-      n_estimators: 100        # Number of trees in the forest
-      n_jobs: 1                # Number of CPU cores to use (-1 for all available, None for 1 CPU)
-      max_depth: 30            # Maximum depth of the tree (null for unlimited)
+      n_estimators: 200        # Number of trees in the forest
+      n_jobs: 24               # Number of CPU cores to use (-1 for all available, None for 1 CPU)
+      max_depth: 20            # Maximum depth of the tree (null for unlimited)
       min_samples_split: 2     # Minimum samples required to split internal node
-      min_samples_leaf: 1      # Minimum samples required at a leaf node
+      min_samples_leaf: 2      # Minimum samples required at a leaf node
       max_features: "sqrt"     # Number of features to consider (options: "sqrt", "log2", int, float)
       bootstrap: true          # Whether to use bootstrap samples
       oob_score: false         # Whether to use out-of-bag samples
