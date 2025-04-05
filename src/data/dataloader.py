@@ -9,6 +9,7 @@ import pandas as pd
 import numpy as np
 
 from src.preprocessing.preprocessing_baseline.preprocessing_baseline import PreprocessorBaseline
+from src.preprocessing.preprocessing_advanced.windowing import Windower
 
 # Set up logger
 logger = logging.getLogger("PULSE_logger")
@@ -93,14 +94,26 @@ class DatasetManager:
         self.config = config
         self.datasets = {}
         self.preprocessor = None
+        self.windower = None
+
+        # Initialize preprocessing tools
+        self._init_preprocessing_tools()
         
         # Initialize datasets based on config
         self._init_datasets()
-    
-    def _init_datasets(self) -> None:
-        """Initialize datasets based on configuration."""
+
+    def _init_preprocessing_tools(self):
+        """Initialize preprocessing tools based on configuration."""
         base_path = self.config.base_path
         random_seed = self.config.random_seed
+        
+        # Get debug_mode from config
+        debug_mode = False
+        if hasattr(self.config, 'general'):
+            if isinstance(self.config.general, dict):
+                debug_mode = self.config.general.get('debug_mode', False)
+            else:
+                debug_mode = getattr(self.config.general, 'debug_mode', False)
         
         # Initialize preprocessor
         self.preprocessor = PreprocessorBaseline(
@@ -108,6 +121,40 @@ class DatasetManager:
             random_seed=random_seed
         )
         
+        # Initialize windower
+        windowing_enabled = False
+        save_windowed_data = False
+        
+        # Check if preprocessing_advanced exists in config
+        if hasattr(self.config, 'preprocessing_advanced'):
+            # Try different approaches to access the config
+            if isinstance(self.config.preprocessing_advanced, dict):
+                windowing_config = self.config.preprocessing_advanced.get('windowing', {})
+            else:
+                # If it's an object with attributes
+                windowing_config = getattr(self.config.preprocessing_advanced, 'windowing', {})
+                
+            if windowing_config:
+                if isinstance(windowing_config, dict):
+                    windowing_enabled = windowing_config.get('enabled', False)
+                    save_windowed_data = windowing_config.get('save_data', False)
+                else:
+                    windowing_enabled = getattr(windowing_config, 'enabled', False)
+                    save_windowed_data = getattr(windowing_config, 'save_data', False)
+        
+        logger.info(f"Windowing enabled: {windowing_enabled}, Debug mode: {debug_mode}")
+        
+        if windowing_enabled:
+            self.windower = Windower(
+                base_path=base_path, 
+                save_data=save_windowed_data,
+                debug_mode=debug_mode
+            )
+            logger.info("Windower initialized for advanced preprocessing with debug mode: {debug_mode}")
+    
+    def _init_datasets(self) -> None:
+        """Initialize datasets based on configuration."""
+
         # Process each task and dataset combination
         for task in self.config.tasks:
             for dataset_name in self.config.datasets:
@@ -142,10 +189,49 @@ class DatasetManager:
             return True
         
         try:
-            # Try to load preprocessed data first
+            # Extract task and dataset name
             task = dataset['task']
             name = dataset['name']
             
+            # Check if windowing is enabled and should be applied
+            windowing_enabled = False
+            windowing_config = None
+            
+            if hasattr(self.config, 'preprocessing_advanced') and isinstance(self.config.preprocessing_advanced, dict):
+                if 'windowing' in self.config.preprocessing_advanced:
+                    windowing_config = self.config.preprocessing_advanced['windowing']
+                    windowing_enabled = windowing_config.get('enabled', False)
+            
+            # Check if windowing is applicable for this task
+            if task == "mortality":
+                logger.warning(f"Windowing is not applicable for the mortality task. Skipping windowing for task = 'mortality'.")
+            
+            # If windowing is enabled and not a mortality task, try to load presaved windowed data first
+            if windowing_enabled and task != "mortality" and self.windower is not None:
+                logger.info(f"Attempting to load presaved windowed data for {dataset_id}")
+                windowed_data = self.windower.window_data(
+                    task=task,
+                    dataset=name,
+                    config=windowing_config
+                )
+                
+                if windowed_data is not None:
+                    # Successfully loaded presaved windowed data
+                    dataset['data'] = {
+                        'X_train': windowed_data['train']['X'],
+                        'X_val': windowed_data['val']['X'],
+                        'X_test': windowed_data['test']['X'],
+                        'y_train': windowed_data['train']['y'],
+                        'y_val': windowed_data['val']['y'],
+                        'y_test': windowed_data['test']['y']
+                    }
+                    dataset['loaded'] = True
+                    logger.info(f"Successfully loaded presaved windowed data for {dataset_id}")
+                    return True
+                
+                logger.info(f"No presaved windowed data found for {dataset_id}, falling back to regular loading")
+            
+            # If not using presaved windowed data, proceed with regular loading/preprocessing
             try:
                 # Try to load from preprocessed files
                 X_train, X_val, X_test, y_train, y_val, y_test = self.preprocessor.load_preprocessed_data(
@@ -168,13 +254,35 @@ class DatasetManager:
                 logger.info(f"Preprocessing completed for {dataset_id}")
             
             # Store the loaded data
+            data_dict = {
+                'train': {'X': X_train, 'y': y_train},
+                'val': {'X': X_val, 'y': y_val},
+                'test': {'X': X_test, 'y': y_test}
+            }
+            
+            # Apply windowing if enabled and not already loaded from presaved files
+            if windowing_enabled and task != "mortality" and self.windower is not None:
+                logger.info(f"Applying windowing to {dataset_id}")
+                
+                windowed_data = self.windower.window_data(
+                    task=task,
+                    dataset=name,
+                    config=windowing_config,
+                    data_dict=data_dict
+                )
+                
+                if windowed_data is not None:
+                    data_dict = windowed_data
+                    logger.info(f"Windowing applied to {dataset_id}")
+            
+            # Store the processed data
             dataset['data'] = {
-                'X_train': X_train,
-                'X_val': X_val,
-                'X_test': X_test,
-                'y_train': y_train,
-                'y_val': y_val,
-                'y_test': y_test
+                'X_train': data_dict['train']['X'],
+                'X_val': data_dict['val']['X'],
+                'X_test': data_dict['test']['X'],
+                'y_train': data_dict['train']['y'],
+                'y_val': data_dict['val']['y'],
+                'y_test': data_dict['test']['y']
             }
             
             dataset['loaded'] = True

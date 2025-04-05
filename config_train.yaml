@@ -4,7 +4,7 @@
 general:
   app_name: "Pulse"
   version: "1.0.0"
-  debug_mode: false
+  debug_mode: true
   use_scratch: true
 
 # Weight and Biases (wandb) logging configuration
@@ -14,11 +14,11 @@ wandb:
   # experiment_name: "experiment_1"
 
 ###### Application specific settings ######
-base_path: "/cluster/project/bmds_lab/sepsis_sophia/pulse"  #"/path/to/pulse" "/Users/sophiaehlers/Documents/pulse" 
+base_path: "/Users/sophiaehlers/Documents/pulse" #"/path/to/pulse" "/cluster/project/bmds_lab/sepsis_sophia/pulse" 
 
 # Tasks to process
 tasks:
-  # "mortality"
+  # - "mortality"
   - "aki"
   # - "sepsis"
   # - "harmonized_icu"
@@ -29,39 +29,40 @@ datasets:
   # - "miiv"
   # - "eicu"
 
-# _______ Preprocessing _______
+# _______ Preprocessing Baseline _______
 
 # Random seed for reproducibility
 random_seed: 42
 
 # Options for preprocessing
 preprocessing:
-  # Whether to replace outliers with NaNs
-  replace_outliers: true
-  
-  # Whether to flag NA values with binary indicators
-  flag_na: true
-  
-  # Whether to standardize features
-  standardize: true
-  
-  # Whether to save preprocessed data
-  save_data: false
-  
-  # Train/Val/Test split ratios
-  split_ratios:
+  replace_outliers: true          # Whether to replace outliers with NaNs
+  flag_na: true                   # Whether to flag NA values with binary indicators
+  standardize: true               # Whether to standardize features
+  save_data: false                # Whether to save preprocessed data
+  split_ratios:                   # Train/Val/Test split ratios
     train: 0.7
     val: 0.1
     test: 0.2
 
 # TODO: add config -> use presaved scripts, print set statistics, ...
 # TODO: change folder name of splits to automatic naming based on preprocessing configuration
+# TODO: add logging for the preprocessing_baseline setup
+# TODO: Change the config preprocessing to preprocessing_baseline (to be consistent with preprocessing_advanced)
 
+# _______ Preprocessing Advanced _______
+preprocessing_advanced:
+  windowing:
+    enabled: true                    # Enable/disable windowing
+    data_window: 6                   # Size of the data window
+    prediction_window: 0             # Size of the prediction window (0 = predict at the end of window)
+    step_size: 1                     # Step size for sliding windows
+    save_data: false                 # Whether to save windowed data
 
 # _______ Model Training _______
 
 benchmark_settings:
-  batch_size: 1024
+  batch_size: 100
   num_epochs: 10
   learning_rate: 0.001
   optimizer: "adam" # Options: adam, sgd, rmsprop
