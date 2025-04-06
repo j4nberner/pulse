@@ -115,10 +115,19 @@ class DatasetManager:
             else:
                 debug_mode = getattr(self.config.general, 'debug_mode', False)
         
+        # Get preprocessing_baseline configuration
+        preprocessing_config = None
+        if hasattr(self.config, 'preprocessing_baseline'):
+            if isinstance(self.config.preprocessing_baseline, dict):
+                preprocessing_config = self.config.preprocessing_baseline
+            else:
+                preprocessing_config = self.config.preprocessing_baseline.__dict__
+
         # Initialize preprocessor
         self.preprocessor = PreprocessorBaseline(
             base_path=base_path,
-            random_seed=random_seed
+            random_seed=random_seed,
+            config=preprocessing_config
         )
         
         # Initialize windower
@@ -248,7 +257,7 @@ class DatasetManager:
                 X_train, X_val, X_test, y_train, y_val, y_test = self.preprocessor.preprocess(
                     task=task,
                     dataset_name=name,
-                    save_data=True
+                    save_data=self.config.preprocessing_baseline.get('save_data', True)
                 )
                 
                 logger.info(f"Preprocessing completed for {dataset_id}")

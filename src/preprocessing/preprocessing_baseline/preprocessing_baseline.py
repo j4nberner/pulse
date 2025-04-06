@@ -15,6 +15,7 @@ warnings.filterwarnings("ignore", category=pd.errors.SettingWithCopyWarning)
 # Set up logger
 logger = logging.getLogger("PULSE_logger")
 
+# TODO: Clean up logging
 
 class PreprocessorBaseline:
     """
@@ -38,7 +39,8 @@ class PreprocessorBaseline:
     def __init__(
         self, 
         base_path: str, 
-        random_seed: int = 42
+        random_seed: int = 42,
+        config: Dict[str, Any] = None
     ):
         """
         Initialize the PreprocessorBaseline with configuration parameters.
@@ -46,11 +48,34 @@ class PreprocessorBaseline:
         Args:
             base_path (str): Base path for data loading and saving
             random_seed (int, optional): Random seed for reproducibility. Defaults to 42.
+            config (Dict[str, Any], optional): Configuration options. Defaults to None.
         """
         self.base_path = base_path
         self.random_seed = random_seed
         self.task = None
         self.dataset_name = None
+        
+        # Set default configuration
+        self.config = {
+            'replace_outliers': True,
+            'flag_na': False,
+            'standardize': True,
+            'static_imputation': True,     # Add static imputation option
+            'dynamic_imputation': True,    # Add dynamic imputation option
+            'save_data': True,
+            'split_ratios': {
+                'train': 0.7,
+                'val': 0.1,
+                'test': 0.2
+            }
+        }
+        
+        # Update with user config if provided
+        if config:
+            self.config.update(config)
+        
+        # Log the active configuration
+        logger.info(f"PreprocessorBaseline initialized with configuration: {self.config}")
         
         # Dictionary of feature limits for outlier detection
         self.features_dict = {
@@ -194,8 +219,7 @@ class PreprocessorBaseline:
         y: pd.DataFrame
     ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
         """
-        Split data into training (70%), validation (10%), and testing (20%) sets
-        using GroupShuffleSplit to keep stay_ids together.
+        Split data into training, validation, and testing sets using ratios from config.
         
         Args:
             X (pd.DataFrame): Features DataFrame
@@ -210,17 +234,32 @@ class PreprocessorBaseline:
                 y_val (pd.DataFrame): Validation labels
                 y_test (pd.DataFrame): Testing labels
         """
-        # First split: 80% train+val, 20% test
-        gss_test = GroupShuffleSplit(n_splits=1, test_size=0.2, random_state=self.random_seed)
+        # Get split ratios from config
+        train_ratio = self.config['split_ratios']['train']
+        val_ratio = self.config['split_ratios']['val']
+        test_ratio = self.config['split_ratios']['test']
+
+        # Validate ratios sum to 1
+        total_ratio = train_ratio + val_ratio + test_ratio
+        if abs(total_ratio - 1.0) > 0.001:  # Allow small floating point errors
+            logger.warning(f"Split ratios don't sum to 1.0: {total_ratio}. Normalizing...")
+            train_ratio /= total_ratio
+            val_ratio /= total_ratio
+            test_ratio /= total_ratio
+
+        # First split: (train+val) vs test
+        test_size = test_ratio / (train_ratio + val_ratio + test_ratio)
+        gss_test = GroupShuffleSplit(n_splits=1, test_size=test_size, random_state=self.random_seed)
         train_val_idx, test_idx = next(gss_test.split(X, y, groups=X['stay_id']))
-        
+
         X_train_val, X_test = X.iloc[train_val_idx], X.iloc[test_idx]
         y_train_val, y_test = y.iloc[train_val_idx], y.iloc[test_idx]
-        
-        # Second split: From the 80%, take 7/8 (70% overall) for train and 1/8 (10% overall) for validation
-        gss_val = GroupShuffleSplit(n_splits=1, test_size=0.125, random_state=self.random_seed)  # 0.125 = 10/80
+
+        # Second split: train vs val
+        val_size = val_ratio / (train_ratio + val_ratio)
+        gss_val = GroupShuffleSplit(n_splits=1, test_size=val_size, random_state=self.random_seed)
         train_idx, val_idx = next(gss_val.split(X_train_val, y_train_val, groups=X_train_val['stay_id']))
-        
+
         X_train, X_val = X_train_val.iloc[train_idx], X_train_val.iloc[val_idx]
         y_train, y_val = y_train_val.iloc[train_idx], y_train_val.iloc[val_idx]
         
@@ -562,10 +601,13 @@ class PreprocessorBaseline:
             y_val (pd.DataFrame): Validation labels
             y_test (pd.DataFrame): Testing labels
         """
-        # Construct directory path with task subfolder
+        # Generate directory name based on preprocessing configuration
+        config_dirname = self._generate_preprocessing_dirname()
+        
+        # Construct directory path with task subfolder and config-based directory name
         directory = os.path.join(
             self.base_path, 
-            f"datasets/preprocessed_splits/{self.task}/{self.dataset_name}/train_val_test_standardized"
+            f"datasets/preprocessed_splits/{self.task}/{self.dataset_name}/{config_dirname}"
         )
         
         os.makedirs(directory, exist_ok=True)
@@ -584,7 +626,7 @@ class PreprocessorBaseline:
         self, 
         task: str, 
         dataset_name: str, 
-        save_data: bool = True
+        save_data: bool = None
     ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
         """
         Run the full preprocessing pipeline for a given task and dataset.
@@ -592,7 +634,7 @@ class PreprocessorBaseline:
         Args:
             task (str): Task name ('mortality', 'aki', 'sepsis')
             dataset_name (str): Dataset name ('hirid', 'miiv', 'eicu')
-            save_data (bool, optional): Whether to save the preprocessed data. Defaults to True.
+            save_data (bool, optional): Whether to save the preprocessed data. Overrides config if provided.
             
         Returns:
             Tuple containing:
@@ -603,6 +645,16 @@ class PreprocessorBaseline:
                 y_val (pd.DataFrame): Validation labels
                 y_test (pd.DataFrame): Testing labels
                 
+        Notes:
+            The following preprocessing steps are applied conditionally based on config:
+            - Outlier removal ('replace_outliers')
+            - NaN flagging ('flag_na')
+            - Standardization ('standardize')
+            - Static imputation ('static_imputation')
+            - Dynamic imputation ('dynamic_imputation')
+            
+            For mortality task, reshape_mortality_data is always applied.
+                
         Raises:
             Exception: If there's an error during preprocessing
         """
@@ -611,9 +663,14 @@ class PreprocessorBaseline:
             self.task = task
             self.dataset_name = dataset_name
             
-            logger.info(f"\n{'#'*80}")
+            # Determine whether to save data - parameter overrides config
+            if save_data is None:
+                save_data = self.config['save_data']
+            
+            logger.info(f"{'#'*40}")
             logger.info(f"Processing Task: {task}, Dataset: {dataset_name}")
-            logger.info(f"{'#'*80}")
+            logger.info(f"Active preprocessing options: {self.config}")
+            logger.info(f"{'#'*40}")
             
             # Load parquet files
             logger.info("Loading parquet files (original harmonized datasets)...")
@@ -639,15 +696,23 @@ class PreprocessorBaseline:
             del dyn_df, sta_df, outc_df, dyn_sta, merged_data
             gc.collect()
             
-            # Remove outliers
-            logger.info("Removing outliers...")
-            X_cleaned, outlier_counts = self.replace_outliers_with_nans(X)
+            # Remove outliers - conditional
+            if self.config['replace_outliers']:
+                logger.info("Removing outliers...")
+                X_cleaned, outlier_counts = self.replace_outliers_with_nans(X)
+            else:
+                logger.info("Skipping outlier removal (disabled in config)")
+                X_cleaned = X
             del X
             gc.collect()
             
-            # Flag NaNs
-            logger.info("Flagging NaN values...")
-            X_flagged = self.flag_na_all(X_cleaned)
+            # Flag NaNs - conditional
+            if self.config['flag_na']:
+                logger.info("Flagging NaN values...")
+                X_flagged = self.flag_na_all(X_cleaned)
+            else:
+                logger.info("Skipping NaN flagging (disabled in config)")
+                X_flagged = X_cleaned
             del X_cleaned
             gc.collect()
             
@@ -657,26 +722,38 @@ class PreprocessorBaseline:
             del X_flagged
             gc.collect()
             
-            # Standardization
-            logger.info("Standardizing data...")
-            X_train_standardized, X_val_standardized, X_test_standardized = self.standardize_all_sets(X_train, X_val, X_test)
+            # Standardization - conditional
+            if self.config['standardize']:
+                logger.info("Standardizing data...")
+                X_train_standardized, X_val_standardized, X_test_standardized = self.standardize_all_sets(X_train, X_val, X_test)
+            else:
+                logger.info("Skipping standardization (disabled in config)")
+                X_train_standardized, X_val_standardized, X_test_standardized = X_train, X_val, X_test
             del X_train, X_val, X_test
             gc.collect()
             
-            # Static imputation
-            logger.info("Performing static imputation...")
-            X_train_sta_imputed, X_val_sta_imputed, X_test_sta_imputed, global_means_sta_dict = self.impute_static_all_sets(
-                X_train_standardized, X_val_standardized, X_test_standardized)
+            # Static imputation - conditional
+            if self.config['static_imputation']:
+                logger.info("Performing static imputation...")
+                X_train_sta_imputed, X_val_sta_imputed, X_test_sta_imputed, global_means_sta_dict = self.impute_static_all_sets(
+                    X_train_standardized, X_val_standardized, X_test_standardized)
+            else:
+                logger.info("Skipping static imputation (disabled in config)")
+                X_train_sta_imputed, X_val_sta_imputed, X_test_sta_imputed = X_train_standardized, X_val_standardized, X_test_standardized
             del X_train_standardized, X_val_standardized, X_test_standardized
             gc.collect()
             
-            # Dynamic imputation
-            logger.info("Performing dynamic imputation...")
-            X_train_mean = self.mean_before_imputation(X_train_sta_imputed)
+            # Dynamic imputation - conditional
+            if self.config['dynamic_imputation']:
+                logger.info("Performing dynamic imputation...")
+                X_train_mean = self.mean_before_imputation(X_train_sta_imputed)
 
-            X_train_imputed = self.dynamic_imputation(X_train_sta_imputed, X_train_mean)
-            X_val_imputed = self.dynamic_imputation(X_val_sta_imputed, X_train_mean)
-            X_test_imputed = self.dynamic_imputation(X_test_sta_imputed, X_train_mean)
+                X_train_imputed = self.dynamic_imputation(X_train_sta_imputed, X_train_mean)
+                X_val_imputed = self.dynamic_imputation(X_val_sta_imputed, X_train_mean)
+                X_test_imputed = self.dynamic_imputation(X_test_sta_imputed, X_train_mean)
+            else:
+                logger.info("Skipping dynamic imputation (disabled in config)")
+                X_train_imputed, X_val_imputed, X_test_imputed = X_train_sta_imputed, X_val_sta_imputed, X_test_sta_imputed
             del X_train_sta_imputed, X_val_sta_imputed, X_test_sta_imputed
             gc.collect()
             
@@ -691,6 +768,21 @@ class PreprocessorBaseline:
             train_stats = self.calculate_dataset_statistics(X_train_imputed, y_train, "train")
             val_stats = self.calculate_dataset_statistics(X_val_imputed, y_val, "validation")
             test_stats = self.calculate_dataset_statistics(X_test_imputed, y_test, "test")
+            
+            # Display statistics
+            self.print_statistics([train_stats, val_stats, test_stats])
+            
+            # Add a warning about potential missing values if imputation was skipped
+            if not self.config['static_imputation'] or not self.config['dynamic_imputation']:
+                na_counts = {
+                    'X_train': X_train_imputed.isna().sum().sum(),
+                    'X_val': X_val_imputed.isna().sum().sum(),
+                    'X_test': X_test_imputed.isna().sum().sum()
+                }
+                
+                if any(na_counts.values()):
+                    logger.warning(f"Datasets contain missing values after preprocessing: {na_counts}")
+                    logger.warning("This may cause issues with models that don't handle NaN values.")
             
             # Save data if requested
             if save_data:
@@ -731,12 +823,20 @@ class PreprocessorBaseline:
         Raises:
             FileNotFoundError: If preprocessed data files don't exist
         """
-        # Construct directory path with task subfolder
+        # Store task and dataset name as instance variables
+        self.task = task
+        self.dataset_name = dataset_name
+        
+        # Generate directory name based on current configuration
+        config_dirname = self._generate_preprocessing_dirname()
+        
+        # Construct directory path with task subfolder and config-based directory name
         directory = os.path.join(
             self.base_path, 
-            f"datasets/preprocessed_splits/{task}/{dataset_name}/train_val_test_standardized"
+            f"datasets/preprocessed_splits/{task}/{dataset_name}/{config_dirname}"
         )
         
+        # Check if directory exists with current configuration
         if not os.path.exists(directory):
             raise FileNotFoundError(f"Preprocessed data directory does not exist: {directory}")
         
@@ -765,16 +865,13 @@ class PreprocessorBaseline:
             statistics_list (List[Dict[str, Any]]): List of statistics dictionaries
         """
 
-        # TODO: add option to display set statistics as config 
-
         if not statistics_list:
             logger.info("No statistics available to display")
             return
         
-        logger.info(f"\n{'='*80}")
+        logger.info(f"{'='*40}")
         logger.info(f"DATASET STATISTICS - EXCEL FORMAT (Use Text to Columns with '/' as delimiter)")
-        logger.info(f"For best results, paste into Notepad first, then copy to Excel")
-        logger.info(f"{'='*80}")
+        logger.info(f"{'='*40}")
         
         # Print header row with slash delimiters
         logger.info(f"Task/Dataset/Set/Total Stays/Cases/Controls/Total Rows/Rows of Cases/Rows of Controls/Positive Labels/Negative Labels")
@@ -817,4 +914,51 @@ class PreprocessorBaseline:
                     f"{neg_labels} ({stat['Negative Labels %']})"
                 )
         
-        logger.info(f"{'='*80}")
+        logger.info(f"{'='*40}")
+
+    def _generate_preprocessing_dirname(self) -> str:
+        """
+        Generate a directory name based on the current preprocessing configuration.
+        The name encodes which preprocessing steps were applied and with what parameters.
+        Format: <preprocessing_steps>_split<train><val><test>
+        Returns:
+        str: Directory name encoding the preprocessing configuration
+        """
+        parts = []
+        # Add part for outlier replacement
+        if self.config['replace_outliers']:
+            parts.append("outliers")
+        
+        # Add part for NA flagging
+        if self.config['flag_na']:
+            parts.append("flagna")
+        
+        # Get split ratios and format them
+        train_pct = int(self.config['split_ratios']['train'] * 100)
+        val_pct = int(self.config['split_ratios']['val'] * 100)
+        test_pct = int(self.config['split_ratios']['test'] * 100)
+        split_part = f"split{train_pct}{val_pct}{test_pct}"
+        
+        # Always add split information
+        parts.append(split_part)
+        
+        # Add part for standardization (after split)
+        if self.config['standardize']:
+            parts.append("standardized")
+        
+        # Add part for static imputation
+        if self.config['static_imputation']:
+            parts.append("staimputed")
+        
+        # Add part for dynamic imputation
+        if self.config['dynamic_imputation']:
+            parts.append("dynimputed")
+        
+        # Create the directory name
+        if parts:
+            dirname = "_".join(parts)
+        else:
+            # If no preprocessing steps are enabled, use a default name with just split info
+            dirname = f"raw_{split_part}"
+        
+        return dirname

@@ -35,29 +35,28 @@ datasets:
 random_seed: 42
 
 # Options for preprocessing
-preprocessing:
+preprocessing_baseline:
   replace_outliers: true          # Whether to replace outliers with NaNs
-  flag_na: true                   # Whether to flag NA values with binary indicators
+  flag_na: false                   # Whether to flag NA values with binary indicators
   standardize: true               # Whether to standardize features
-  save_data: false                # Whether to save preprocessed data
+  static_imputation: true         # Whether to perform static feature imputation
+  dynamic_imputation: true        # Whether to perform dynamic feature imputation
+  save_data: true                 # Whether to save preprocessed data
   split_ratios:                   # Train/Val/Test split ratios
     train: 0.7
     val: 0.1
     test: 0.2
 
-# TODO: add config -> use presaved scripts, print set statistics, ...
-# TODO: change folder name of splits to automatic naming based on preprocessing configuration
-# TODO: add logging for the preprocessing_baseline setup
-# TODO: Change the config preprocessing to preprocessing_baseline (to be consistent with preprocessing_advanced)
-
 # _______ Preprocessing Advanced _______
 preprocessing_advanced:
   windowing:
     enabled: true                    # Enable/disable windowing
-    data_window: 6                   # Size of the data window
+    data_window: 9                   # Size of the data window
     prediction_window: 0             # Size of the prediction window (0 = predict at the end of window)
     step_size: 1                     # Step size for sliding windows
-    save_data: false                 # Whether to save windowed data
+    save_data: true                 # Whether to save windowed data
+
+# TODO: Create a PreprocessorAdvanced class (maybe better idea than separate classes to handle data saving/loading?)
 
 # _______ Model Training _______
 

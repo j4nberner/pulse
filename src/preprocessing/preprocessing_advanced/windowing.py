@@ -4,6 +4,7 @@ import numpy as np
 from tqdm import tqdm
 import gc
 import logging
+from src.preprocessing.preprocessing_baseline.preprocessing_baseline import PreprocessorBaseline
 
 # Set up logger
 logger = logging.getLogger("PULSE_logger")
@@ -160,9 +161,13 @@ class Windower:
             prediction_window (int): Size of the prediction window
             step_size (int): Step size for window shifting
         """
+        # Generate dynamic directory name based on preprocessing configuration
+        preprocessor = PreprocessorBaseline(base_path=self.base_path)  # Temporary instance to access method
+        config_dirname = preprocessor._generate_preprocessing_dirname()
+
         # Directory naming adjusted based on debug mode
         debug_suffix = "_debug" if self.debug_mode else ""
-        save_directory = f'datasets/preprocessed_splits/{task}/{dataset}/train_val_test_standardized/{data_window}_dw_{prediction_window}_pw_{step_size}_sz{debug_suffix}'
+        save_directory = f'datasets/preprocessed_splits/{task}/{dataset}/{config_dirname}/{data_window}_dw_{prediction_window}_pw_{step_size}_sz{debug_suffix}'
         os.makedirs(os.path.join(self.base_path, save_directory), exist_ok=True)
         
         for set_type in ['train', 'val', 'test']:
@@ -171,7 +176,7 @@ class Windower:
             results[set_type]['y'].to_parquet(os.path.join(self.base_path, save_directory, f"y_{set_type}.parquet"))
         
         logger.info(f"All windowed data saved to {os.path.join(self.base_path, save_directory)}")
-    
+
     def load_windowed_data(self, task, dataset, data_window, prediction_window, step_size):
         """
         Load previously windowed data from parquet files.
@@ -186,9 +191,13 @@ class Windower:
         Returns:
             dict: Dictionary containing windowed data or None if loading fails
         """
+        # Generate dynamic directory name based on preprocessing configuration
+        preprocessor = PreprocessorBaseline(base_path=self.base_path)  # Temporary instance to access method
+        config_dirname = preprocessor._generate_preprocessing_dirname()
+
         # Check for debug mode directory first
         debug_suffix = "_debug" if self.debug_mode else ""
-        load_directory = f'datasets/preprocessed_splits/{task}/{dataset}/train_val_test_standardized/{data_window}_dw_{prediction_window}_pw_{step_size}_sz{debug_suffix}'
+        load_directory = f'datasets/preprocessed_splits/{task}/{dataset}/{config_dirname}/{data_window}_dw_{prediction_window}_pw_{step_size}_sz{debug_suffix}'
         full_path = os.path.join(self.base_path, load_directory)
         
         # If in debug mode but debug files don't exist, we don't want to fall back to regular files
