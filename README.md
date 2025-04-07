@@ -48,7 +48,7 @@ This repository contains the implementation for predicting sepsis, acute kidney 
 │   │   ├── __init__.py
 │   │   ├── preprocessing_advanced/
 │   │   ├── preprocessing_baseline/
-│   │   └── promt_engineering/
+│   │   └── prompt_engineering/
 |   └── framework.png
 ├── notebooks/
 ├── datasets/

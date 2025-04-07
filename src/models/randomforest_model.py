@@ -21,19 +21,39 @@ class RandomForestModel(PulseTemplateModel):
     def __init__(self, params: Dict[str, Any]) -> None:
         """
         Initialize the RandomForest model.
-
+        
         Args:
-            model_type: Type of model ('classifier' or 'regressor').
             params: Dictionary of parameters for the RandomForest model.
         """
         model_name = params.get("model_name")
         trainer_name = params.get("trainer_name")
         super().__init__(model_name, trainer_name)
 
-        # Check input parameters
+        # Extract all RandomForest parameters from the config
         rf_params = {
+            # Core parameters
             "n_estimators": params.get("n_estimators", 100),
+            "n_jobs": params.get("n_jobs", None), 
+            
+            # Tree structure parameters
+            "max_depth": params.get("max_depth", None),
+            "min_samples_split": params.get("min_samples_split", 2),
+            "min_samples_leaf": params.get("min_samples_leaf", 1),
+            "max_features": params.get("max_features", "sqrt"),
+            
+            # Bootstrap parameters
+            "bootstrap": params.get("bootstrap", True),
+            "oob_score": params.get("oob_score", False),
+            
+            # General parameters
+            "random_state": params.get("random_state", None),
+            "verbose": params.get("verbose", 0),
         }
+        
+        # Log the parameters being used
+        logger.info(f"Initializing RandomForest with parameters: {rf_params}")
+        
+        # Initialize the model with parameters
         self.model = RandomForestClassifier(**rf_params)
 
     def set_trainer(self, trainer_name, train_dataloader, test_dataloader):
@@ -62,10 +82,11 @@ class RandomForestTrainer:
     def __init__(self, model, train_dataloader, test_dataloader) -> None:
         """
         Initialize the RandomForest trainer.
-
+        
         Args:
-            model_type: Type of model ('classifier' or 'regressor').
-            params: Parameters for the RandomForest model.
+            model: The RandomForest model to train.
+            train_dataloader: DataLoader for training data.
+            test_dataloader: DataLoader for testing data.
         """
         self.model = model
         self.train_dataloader = train_dataloader
@@ -77,6 +98,7 @@ class RandomForestTrainer:
         """
         # training loop
         logger.info("Training RandomForest model...")
+
         # Extract data from dataloader
         X_train, y_train = [], []
         X_test, y_test = [], []
@@ -90,6 +112,9 @@ class RandomForestTrainer:
             features, labels = batch
             X_test.extend(features.numpy())
             y_test.extend(labels.numpy())
+
+        # Log dataset sizes
+        logger.info(f"Training on {len(X_train)} samples, testing on {len(X_test)} samples")
 
         # dummy training loop
         self.model.model.fit(X_train, y_train)
