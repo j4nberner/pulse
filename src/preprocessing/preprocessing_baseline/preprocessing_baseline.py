@@ -58,10 +58,10 @@ class PreprocessorBaseline:
         # Set default configuration
         self.config = {
             'replace_outliers': True,
-            'flag_na': False,
+            'flag_na': True,
             'standardize': True,
-            'static_imputation': True,     # Add static imputation option
-            'dynamic_imputation': True,    # Add dynamic imputation option
+            'static_imputation': True,     
+            'dynamic_imputation': True,    
             'save_data': True,
             'split_ratios': {
                 'train': 0.7,

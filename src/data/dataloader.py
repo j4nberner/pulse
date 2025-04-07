@@ -420,24 +420,23 @@ class TorchDatasetWrapper(Dataset):
             idx (int or slice or list): Index/indices of the sample(s)
             
         Returns:
-            tuple: (features, label) for the specified index/indices
+            tuple: (features, label) as torch.Tensor
         """
         # If we pre-computed arrays, use them
         if hasattr(self, 'X_array') and hasattr(self, 'y_array'):
-            return self.X_array[idx], self.y_array[idx]
-            
+            X_sample = self.X_array[idx]
+            y_sample = self.y_array[idx]
         # For single integer index
-        if isinstance(idx, int):
-            # More efficient single row access
+        elif isinstance(idx, int):
             X_sample = self.X.iloc[idx].values.astype(np.float32)
             y_sample = self.y.iloc[idx].values.astype(np.float32)
-            return X_sample, y_sample
-            
         # For slices or lists of indices (batch access)
-        # Use .loc which is more efficient for multiple row access with explicit indices
-        X_samples = self.X.iloc[idx].values.astype(np.float32)
-        y_samples = self.y.iloc[idx].values.astype(np.float32)
-        return X_samples, y_samples
+        else:
+            X_sample = self.X.iloc[idx].values.astype(np.float32)
+            y_sample = self.y.iloc[idx].values.astype(np.float32)
+        
+        # Convert to PyTorch tensors
+        return torch.tensor(X_sample), torch.tensor(y_sample)
     
     def get_batch(self, indices):
         """

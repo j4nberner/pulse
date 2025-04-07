@@ -1,5 +1,6 @@
 from typing import Dict, Any, Optional
 import logging
+import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 
 from src.models.pulsetemplate_model import PulseTemplateModel
@@ -23,37 +24,39 @@ class RandomForestModel(PulseTemplateModel):
         Initialize the RandomForest model.
         
         Args:
-            params: Dictionary of parameters for the RandomForest model.
+            params: Dictionary of parameters from the config file.
+            
+        Raises:
+            KeyError: If any required parameters are missing from the config.
         """
-        model_name = params.get("model_name")
-        trainer_name = params.get("trainer_name")
+        # For trainer_name we still require it to be explicitly in the params
+        if "trainer_name" not in params:
+            raise KeyError("Required parameter 'trainer_name' not found in config")
+            
+        # Use the class name as model_name if not provided in params
+        model_name = params.get("model_name", self.__class__.__name__.replace("Model", ""))
+        trainer_name = params["trainer_name"]
         super().__init__(model_name, trainer_name)
-
-        # Extract all RandomForest parameters from the config
-        rf_params = {
-            # Core parameters
-            "n_estimators": params.get("n_estimators", 100),
-            "n_jobs": params.get("n_jobs", None), 
-            
-            # Tree structure parameters
-            "max_depth": params.get("max_depth", None),
-            "min_samples_split": params.get("min_samples_split", 2),
-            "min_samples_leaf": params.get("min_samples_leaf", 1),
-            "max_features": params.get("max_features", "sqrt"),
-            
-            # Bootstrap parameters
-            "bootstrap": params.get("bootstrap", True),
-            "oob_score": params.get("oob_score", False),
-            
-            # General parameters
-            "random_state": params.get("random_state", None),
-            "verbose": params.get("verbose", 0),
-        }
+        
+        # Define all required scikit-learn RandomForest parameters
+        required_rf_params = [
+            "n_estimators", "n_jobs", "max_depth", 
+            "min_samples_split", "min_samples_leaf", "max_features",
+            "bootstrap", "oob_score", "random_state", "verbose"
+        ]
+        
+        # Check if all required RandomForest parameters exist in config
+        missing_params = [param for param in required_rf_params if param not in params]
+        if missing_params:
+            raise KeyError(f"Required RandomForest parameters missing from config: {missing_params}")
+        
+        # Extract RandomForest parameters from config
+        rf_params = {param: params[param] for param in required_rf_params}
         
         # Log the parameters being used
         logger.info(f"Initializing RandomForest with parameters: {rf_params}")
         
-        # Initialize the model with parameters
+        # Initialize the RandomForest model with parameters from config
         self.model = RandomForestClassifier(**rf_params)
 
     def set_trainer(self, trainer_name, train_dataloader, test_dataloader):
@@ -93,10 +96,7 @@ class RandomForestTrainer:
         self.test_dataloader = test_dataloader
 
     def train(self):
-        """
-        Train the RandomForest model using the provided data loaders.
-        """
-        # training loop
+        """Train the RandomForest model using the provided data loaders."""
         logger.info("Training RandomForest model...")
 
         # Extract data from dataloader
@@ -105,17 +105,24 @@ class RandomForestTrainer:
 
         for batch in self.train_dataloader:
             features, labels = batch
+            # Convert PyTorch tensors to NumPy arrays
             X_train.extend(features.numpy())
-            y_train.extend(labels.numpy())
+            y_train.extend(labels.numpy().squeeze())
 
         for batch in self.test_dataloader:
             features, labels = batch
             X_test.extend(features.numpy())
-            y_test.extend(labels.numpy())
+            y_test.extend(labels.numpy().squeeze())
+
+        # Convert lists to numpy arrays (necessary after extend)
+        X_train = np.array(X_train)
+        y_train = np.array(y_train)
+        X_test = np.array(X_test)
+        y_test = np.array(y_test)
 
         # Log dataset sizes
         logger.info(f"Training on {len(X_train)} samples, testing on {len(X_test)} samples")
-
+        
         # dummy training loop
         self.model.model.fit(X_train, y_train)
         logger.info("RandomForest model trained successfully.")
