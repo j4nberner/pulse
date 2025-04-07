@@ -226,6 +226,9 @@ class DatasetManager:
                 
                 if windowed_data is not None:
                     # Successfully loaded presaved windowed data
+                    # Drop 'stay_id' column if present in y sets
+                    windowed_data = self._drop_stay_id_if_present(windowed_data)
+                    
                     dataset['data'] = {
                         'X_train': windowed_data['train']['X'],
                         'X_val': windowed_data['val']['X'],
@@ -283,6 +286,9 @@ class DatasetManager:
                 if windowed_data is not None:
                     data_dict = windowed_data
                     logger.info(f"Windowing applied to {dataset_id}")
+
+            # Drop 'stay_id' column if present in y sets (after windowing)
+            data_dict = self._drop_stay_id_if_present(data_dict)
             
             # Store the processed data
             dataset['data'] = {
@@ -379,6 +385,25 @@ class DatasetManager:
         # For now, we just return the data as is
         
         return X_val, y_val
+
+    def _drop_stay_id_if_present(self, data_dict: dict) -> dict:
+            """
+            Check if y sets have 'stay_id' column and drop it if present.
+            
+            Args:
+                data_dict (dict): Dictionary containing X and y data splits
+                
+            Returns:
+                dict: The modified data dictionary
+            """
+            for split in ['train', 'val', 'test']:
+                if split in data_dict and 'y' in data_dict[split]:
+                    y_data = data_dict[split]['y']
+                    if isinstance(y_data, pd.DataFrame) and 'stay_id' in y_data.columns:
+                        logger.info(f"Dropping 'stay_id' column from train/val/test labels")
+                        data_dict[split]['y'] = y_data.drop(columns=['stay_id'])
+            
+            return data_dict
 
 class TorchDatasetWrapper(Dataset):
     """

@@ -19,8 +19,8 @@ base_path: "/Users/sophiaehlers/Documents/pulse" #"/path/to/pulse" "/cluster/pro
 # Tasks to process
 tasks:
   # - "mortality"
-  - "aki"
-  # - "sepsis"
+  # - "aki"
+  - "sepsis"
   # - "harmonized_icu"
 
 # Datasets to process

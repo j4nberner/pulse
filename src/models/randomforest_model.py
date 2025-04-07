@@ -120,6 +120,12 @@ class RandomForestTrainer:
         X_test = np.array(X_test)
         y_test = np.array(y_test)
 
+        # Log shapes after conversion
+        logger.info(f"After conversion - X_train shape: {X_train.shape}")
+        logger.info(f"After conversion - y_train shape: {y_train.shape}")
+        logger.info(f"After conversion - X_test shape: {X_test.shape}")
+        logger.info(f"After conversion - y_test shape: {y_test.shape}")
+
         # Log dataset sizes
         logger.info(f"Training on {len(X_train)} samples, testing on {len(X_test)} samples")
         
