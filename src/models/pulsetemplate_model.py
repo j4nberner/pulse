@@ -9,7 +9,9 @@ class PulseTemplateModel:
     in the Pulse framework should implement.
     """
 
-    def __init__(self, model_name: str, trainer_name: Optional[str] = None):
+    def __init__(
+        self, model_name: str, trainer_name: Optional[str] = None, **kwargs
+    ) -> None:
         """Initialize a new Pulse model.
 
         Args:

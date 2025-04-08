@@ -10,9 +10,6 @@ from src.data.dataloader import DatasetManager, TorchDatasetWrapper
 from src.models.modelmanager import ModelManager
 from src.util.slurm_util import copy_data_to_scratch, is_on_slurm, get_local_scratch_dir
 
-
-# -------------------------Configure logging-------------------------
-
 logger = setup_logger()
 
 
@@ -44,8 +41,12 @@ class TrainConfig:
             setattr(self, key, value)
 
         # Set debug_mode from general section if it exists
-        if hasattr(self, 'general') and isinstance(self.general, dict) and 'debug_mode' in self.general:
-            self.debug_mode = self.general['debug_mode']
+        if (
+            hasattr(self, "general")
+            and isinstance(self.general, dict)
+            and "debug_mode" in self.general
+        ):
+            self.debug_mode = self.general["debug_mode"]
             logger.info(f"DEBUG MODE set to: {self.debug_mode}")
 
         logger.info("Loaded configuration from %s", self.config_path)
@@ -68,7 +69,7 @@ class ModelTrainer:
             logger.info("DEBUG MODE ACTIVE: Training will use limited dataset size")
 
         # -------------------- Copy data to local scratch (Slurm) --------------------
-        if is_on_slurm() and self.config.general.get('use_scratch', False):
+        if is_on_slurm() and self.config.general.get("use_scratch", False):
             logger.info("Running on Slurm, preparing to copy data to scratch space...")
             scratch_dir = get_local_scratch_dir()
             if scratch_dir:
@@ -78,8 +79,10 @@ class ModelTrainer:
             else:
                 logger.warning("No scratch directory found, using original data paths")
 
+        logger.info("---------------Initializing Dataset Manager---------------")
         self.dm = DatasetManager(config)
-        self.mm = ModelManager(config.models)
+        logger.info("---------------Initializing Model Manager---------------")
+        self.mm = ModelManager(config.models, wandb=config.wandb)
 
         # Create output directory
         self.output_dir = os.path.join(config.output_dir, config.experiment_name)
@@ -104,6 +107,7 @@ class ModelTrainer:
             for model in self.mm.models:
                 model_name = model.__class__.__name__
                 trainer_name = model.trainer_name
+                logger.info("--" * 30)
                 logger.info("Training model: %s on %s", model_name, dataset_name)
 
                 try:
@@ -122,16 +126,32 @@ class ModelTrainer:
                     # Get batch size with fallback using getattr
                     if isinstance(self.config.benchmark_settings, dict):
                         # If benchmark_settings is a dictionary
-                        batch_size = self.config.benchmark_settings.get('batch_size', 100)
+                        batch_size = self.config.benchmark_settings.get(
+                            "batch_size", 100
+                        )
                     else:
                         # If benchmark_settings is an object with attributes
-                        batch_size = getattr(self.config.benchmark_settings, 'batch_size', 100)
-                    
-                    logger.info(f"Using batch size: {batch_size} for {model_name} on {dataset_name}")
+                        batch_size = getattr(
+                            self.config.benchmark_settings, "batch_size", 100
+                        )
+
+                    logger.info(
+                        f"Using batch size: {batch_size} for {model_name} on {dataset_name}"
+                    )
 
                     # Now create the DataLoaders with the wrapped datasets
-                    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, drop_last=True)
-                    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, drop_last=True)
+                    train_loader = DataLoader(
+                        train_dataset,
+                        batch_size=batch_size,
+                        shuffle=True,
+                        drop_last=True,
+                    )
+                    test_loader = DataLoader(
+                        test_dataset,
+                        batch_size=batch_size,
+                        shuffle=False,
+                        drop_last=True,
+                    )
 
                     # If in debug mode, limit to a single batch for both training and testing
                     if self.config.debug_mode:
@@ -139,25 +159,31 @@ class ModelTrainer:
                             # Get just the first batch
                             first_train_batch = next(iter(train_loader))
                             first_test_batch = next(iter(test_loader))
-                            
+
                             # Convert to single-batch iterables
                             train_loader = [first_train_batch]
                             test_loader = [first_test_batch]
-                            
-                            logger.info(f"DEBUG MODE: Limited to single batch for {model_name}")
+
+                            logger.info(
+                                f"DEBUG MODE: Limited to single batch for {model_name}"
+                            )
                         except StopIteration:
-                            logger.warning(f"Dataset {dataset_name} is empty, cannot extract batch")
+                            logger.warning(
+                                f"Dataset {dataset_name} is empty, cannot extract batch"
+                            )
 
-                    model.set_trainer(
-                        trainer_name, train_loader, test_loader
-                    )  # Set trainer for the model
-
+                    # Set trainer for the model
+                    model.set_trainer(trainer_name, train_loader, test_loader)
                     # Train and evaluate the model -> model specific
                     model.trainer.train()
 
                 except Exception as e:
                     logger.error(
-                        "Error training %s on %s: %s", model_name, dataset_name, str(e)
+                        "Error training %s on %s: %s",
+                        model_name,
+                        dataset_name,
+                        str(e),
+                        exc_info=True,
                     )
 
         logger.info("Training process completed.")
