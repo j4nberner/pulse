@@ -21,7 +21,7 @@ class Windower:
     - Loading previously windowed data
     """
     
-    def __init__(self, base_path, save_data=False, debug_mode=False, original_base_path=None):
+    def __init__(self, base_path, save_data=False, debug_mode=False, original_base_path=None, preprocessor_config=None):
         """
         Initialize the Windower.
         
@@ -35,6 +35,7 @@ class Windower:
         self.save_data = save_data
         self.debug_mode = debug_mode
         self.original_base_path = original_base_path
+        self.preprocessor_config = preprocessor_config
 
     def create_windows(self, data_dict, data_window, prediction_window, step_size=1):
         """
@@ -164,8 +165,12 @@ class Windower:
             prediction_window (int): Size of the prediction window
             step_size (int): Step size for window shifting
         """
+
         # Generate dynamic directory name based on preprocessing configuration
-        preprocessor = PreprocessorBaseline(base_path=self.base_path)  # Temporary instance to access method
+        preprocessor = PreprocessorBaseline(
+            base_path=self.base_path,
+            config=self.preprocessor_config
+        )  # Pass config to temporary instance
         config_dirname = preprocessor._generate_preprocessing_dirname()
 
         # Directory naming adjusted based on debug mode
@@ -196,7 +201,7 @@ class Windower:
     def load_windowed_data(self, task, dataset, data_window, prediction_window, step_size):
         """
         Load previously windowed data from parquet files.
-        
+
         Args:
             task (str): Task name
             dataset (str): Dataset name
@@ -208,7 +213,10 @@ class Windower:
             dict: Dictionary containing windowed data or None if loading fails
         """
         # Generate dynamic directory name based on preprocessing configuration
-        preprocessor = PreprocessorBaseline(base_path=self.base_path)  # Temporary instance to access method
+        preprocessor = PreprocessorBaseline(
+            base_path=self.base_path, 
+            config=self.preprocessor_config
+        )  # Pass config to temporary instance
         config_dirname = preprocessor._generate_preprocessing_dirname()
 
         # Check for debug mode directory first
@@ -244,6 +252,8 @@ class Windower:
                 
                 logger.info(f"Loaded windowed {set_type} set - X shape: {X.shape}, y shape: {y.shape}")
             
+            logger.info(f"Loaded windowed data from {full_path}")
+
             return results
         
         except Exception as e:

@@ -1,5 +1,5 @@
 from .simpledl_model import SimpleDLModel  # Placeholder for actual model class
-from .xgboost import XGBoostModel
+from .xgboost_model import XGBoostModel
 from .randomforest_model import RandomForestModel
 
 

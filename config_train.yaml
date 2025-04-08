@@ -18,8 +18,8 @@ base_path: "/Users/sophiaehlers/Documents/pulse" #"/cluster/project/bmds_lab/sep
 
 # Tasks to process
 tasks:
-  # - "mortality"
-  - "aki"
+  - "mortality"
+  # - "aki"
   # - "sepsis"
   # - "harmonized_icu"
 

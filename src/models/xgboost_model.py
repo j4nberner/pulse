@@ -51,17 +51,17 @@ class XGBoostModel(PulseTemplateModel):
         if missing_params:
             raise KeyError(f"Required XGBoost parameters missing from config: {missing_params}")
         
-        # Extract XGBoost parameters from config
-        xgb_params = {param: params[param] for param in required_xgb_params if param != "early_stopping_rounds"}
+        # For XGBoost 2.0.3: include early_stopping_rounds in model initialization
+        model_params = {param: params[param] for param in required_xgb_params}
         
         # Store early_stopping_rounds for training
         self.early_stopping_rounds = params["early_stopping_rounds"]
         
         # Log the parameters being used
-        logger.info(f"Initializing XGBoost with parameters: {xgb_params}")
+        logger.info(f"Initializing XGBoost with parameters: {model_params}")
         
         # Initialize the XGBoost model with parameters from config
-        self.model = XGBClassifier(**xgb_params)
+        self.model = XGBClassifier(**model_params)
 
     def set_trainer(self, trainer_name, train_dataloader, test_dataloader):
         """
@@ -99,10 +99,9 @@ class XGBoostTrainer:
         self.train_dataloader = train_dataloader
         self.test_dataloader = test_dataloader
 
-    def train(self, model):
+    def train(self):
         """Train the XGBoost model using the provided data loaders."""
-        self.model = model
-        logger.info(f"Starting training process for {model} model...")
+        logger.info(f"Starting training process for XGBoost model...")
 
         # Extract data from dataloader
         X_train, y_train = [], []
@@ -125,26 +124,18 @@ class XGBoostTrainer:
         X_test = np.array(X_test)
         y_test = np.array(y_test)
 
-        # Log shapes after conversion
-        logger.info(f"After conversion - X_train shape: {X_train.shape}")
-        logger.info(f"After conversion - y_train shape: {y_train.shape}")
-        logger.info(f"After conversion - X_test shape: {X_test.shape}")
-        logger.info(f"After conversion - y_test shape: {y_test.shape}")
-
         # Log shapes before model training (after conversion)
-        logger.info(f"Before {model} training - X_train shape: {X_train.shape}")
-        logger.info(f"Before {model} training - y_train shape: {y_train.shape}")
-        logger.info(f"Before {model} training - X_test shape: {X_test.shape}")
-        logger.info(f"Before {model} training - y_test shape: {y_test.shape}")
+        logger.info(f"Before XGBoost training - X_train shape: {X_train.shape}, y_train shape: {y_train.shape}")
+        logger.info(f"Before XGBoost training - X_test shape: {X_test.shape}, y_test shape: {y_test.shape}")
 
         # Log dataset sizes
         logger.info(f"Training on {len(X_train)} samples, testing on {len(X_test)} samples")
         
-        # Train XGBoost model with early stopping
+        # Train model
         self.model.model.fit(
             X_train, y_train,
             eval_set=[(X_test, y_test)],
-            early_stopping_rounds=self.model.early_stopping_rounds
+            verbose=False
         )
         logger.info("XGBoost model trained successfully.")
 

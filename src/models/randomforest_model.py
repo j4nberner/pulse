@@ -97,9 +97,8 @@ class RandomForestTrainer:
         self.train_dataloader = train_dataloader
         self.test_dataloader = test_dataloader
 
-    def train(self, model):
+    def train(self):
         """Train the RandomForest model using the provided data loaders."""
-        self.model = model
         logger.info("Starting training process for RandomForest model...")
 
         # Extract data from dataloader
@@ -124,10 +123,8 @@ class RandomForestTrainer:
         y_test = np.array(y_test)
 
         # Log shapes before model training (after conversion)
-        logger.info(f"Before {model} training - X_train shape: {X_train.shape}")
-        logger.info(f"Before {model} training - y_train shape: {y_train.shape}")
-        logger.info(f"Before {model} training - X_test shape: {X_test.shape}")
-        logger.info(f"Before {model} training - y_test shape: {y_test.shape}")
+        logger.info(f"Before RandomForest training - X_train shape: {X_train.shape}, y_train shape: {y_train.shape}")
+        logger.info(f"Before RandomForest training - X_test shape: {X_test.shape}, y_test shape: {y_test.shape}")
 
         # Log dataset sizes
         logger.info(f"Training on {len(X_train)} samples, testing on {len(X_test)} samples")
