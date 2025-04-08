@@ -14,7 +14,6 @@ from src.preprocessing.preprocessing_advanced.windowing import Windower
 # Set up logger
 logger = logging.getLogger("PULSE_logger")
 
-
 class HarmonizedIcu(Dataset):
     """A harmonized icu dataset class for loading and processing datasets."""
 
@@ -123,12 +122,20 @@ class DatasetManager:
             else:
                 preprocessing_config = self.config.preprocessing_baseline.__dict__
 
-        # Initialize preprocessor
-        self.preprocessor = PreprocessorBaseline(
-            base_path=base_path,
-            random_seed=random_seed,
-            config=preprocessing_config
-        )
+        # Initialize preprocessor (add original_base_path attribute if run in HPC environment)
+        if hasattr(self.config, 'original_base_path'):
+            self.preprocessor = PreprocessorBaseline(
+                base_path=base_path,
+                random_seed=random_seed,
+                config=preprocessing_config,
+                original_base_path=self.config.original_base_path
+            )
+        else:
+            self.preprocessor = PreprocessorBaseline(
+                base_path=base_path,
+                random_seed=random_seed,
+                config=preprocessing_config
+            )
         
         # Initialize windower
         windowing_enabled = False
@@ -153,13 +160,17 @@ class DatasetManager:
         
         logger.info(f"Windowing enabled: {windowing_enabled}, Debug mode: {debug_mode}")
         
+        # In the _init_preprocessing_tools method:
         if windowing_enabled:
+            # Initialize windower with original_base_path if available
+            original_base_path = getattr(self.config, 'original_base_path', None)
             self.windower = Windower(
                 base_path=base_path, 
                 save_data=save_windowed_data,
-                debug_mode=debug_mode
+                debug_mode=debug_mode,
+                original_base_path=original_base_path
             )
-            logger.info("Windower initialized for advanced preprocessing with debug mode: {debug_mode}")
+            logger.info(f"Windower initialized for advanced preprocessing with debug mode: {debug_mode}")
     
     def _init_datasets(self) -> None:
         """Initialize datasets based on configuration."""

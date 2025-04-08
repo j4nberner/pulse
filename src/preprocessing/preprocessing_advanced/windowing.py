@@ -9,8 +9,6 @@ from src.preprocessing.preprocessing_baseline.preprocessing_baseline import Prep
 # Set up logger
 logger = logging.getLogger("PULSE_logger")
 
-# TODO: Add logging of windowed data (processed or loaded) shape
-
 class Windower:
     """
     Class for creating windowed data with specified data window, prediction window, and step size.
@@ -23,17 +21,20 @@ class Windower:
     - Loading previously windowed data
     """
     
-    def __init__(self, base_path, save_data=False, debug_mode=False):
+    def __init__(self, base_path, save_data=False, debug_mode=False, original_base_path=None):
         """
         Initialize the Windower.
         
         Args:
             base_path (str): Base path for data directories
             save_data (bool): Whether to save windowed data
+            debug_mode (bool): Whether to run in debug mode (limited data)
+            original_base_path (str): Original base path for permanent storage (for Slurm jobs)
         """
         self.base_path = base_path
         self.save_data = save_data
         self.debug_mode = debug_mode
+        self.original_base_path = original_base_path
 
     def create_windows(self, data_dict, data_window, prediction_window, step_size=1):
         """
@@ -153,7 +154,7 @@ class Windower:
   
     def save_windowed_data(self, results, task, dataset, data_window, prediction_window, step_size):
         """
-        Save windowed data to parquet files.
+        Save windowed data to parquet files, both in scratch and permanent storage if applicable.
         
         Args:
             results (dict): Dictionary containing windowed data
@@ -172,12 +173,25 @@ class Windower:
         save_directory = f'datasets/preprocessed_splits/{task}/{dataset}/{config_dirname}/{data_window}_dw_{prediction_window}_pw_{step_size}_sz{debug_suffix}'
         os.makedirs(os.path.join(self.base_path, save_directory), exist_ok=True)
         
+        # Save to current base_path (might be scratch)
         for set_type in ['train', 'val', 'test']:
             # Save files
             results[set_type]['X'].to_parquet(os.path.join(self.base_path, save_directory, f"X_{set_type}.parquet"))
             results[set_type]['y'].to_parquet(os.path.join(self.base_path, save_directory, f"y_{set_type}.parquet"))
         
-        logger.info(f"All windowed data saved to {os.path.join(self.base_path, save_directory)}")
+        logger.info(f"Windowed data saved to {os.path.join(self.base_path, save_directory)}")
+        
+        # If original_base_path is set, also save to permanent storage
+        if self.original_base_path:
+            permanent_directory = os.path.join(self.original_base_path, save_directory)
+            os.makedirs(permanent_directory, exist_ok=True)
+            
+            for set_type in ['train', 'val', 'test']:
+                # Save files to permanent storage
+                results[set_type]['X'].to_parquet(os.path.join(permanent_directory, f"X_{set_type}.parquet"))
+                results[set_type]['y'].to_parquet(os.path.join(permanent_directory, f"y_{set_type}.parquet"))
+            
+            logger.info(f"Windowed data also saved to permanent storage: {permanent_directory}")
 
     def load_windowed_data(self, task, dataset, data_window, prediction_window, step_size):
         """
