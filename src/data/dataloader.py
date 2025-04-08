@@ -226,6 +226,9 @@ class DatasetManager:
                 
                 if windowed_data is not None:
                     # Successfully loaded presaved windowed data
+                    # Drop 'stay_id' column if present in y sets
+                    windowed_data = self._drop_stay_id_if_present(windowed_data)
+                    
                     dataset['data'] = {
                         'X_train': windowed_data['train']['X'],
                         'X_val': windowed_data['val']['X'],
@@ -283,6 +286,9 @@ class DatasetManager:
                 if windowed_data is not None:
                     data_dict = windowed_data
                     logger.info(f"Windowing applied to {dataset_id}")
+
+            # Drop 'stay_id' column if present in y sets (after windowing)
+            data_dict = self._drop_stay_id_if_present(data_dict)
             
             # Store the processed data
             dataset['data'] = {
@@ -380,6 +386,25 @@ class DatasetManager:
         
         return X_val, y_val
 
+    def _drop_stay_id_if_present(self, data_dict: dict) -> dict:
+            """
+            Check if y sets have 'stay_id' column and drop it if present.
+            
+            Args:
+                data_dict (dict): Dictionary containing X and y data splits
+                
+            Returns:
+                dict: The modified data dictionary
+            """
+            for split in ['train', 'val', 'test']:
+                if split in data_dict and 'y' in data_dict[split]:
+                    y_data = data_dict[split]['y']
+                    if isinstance(y_data, pd.DataFrame) and 'stay_id' in y_data.columns:
+                        logger.info(f"Dropping 'stay_id' column from train/val/test labels")
+                        data_dict[split]['y'] = y_data.drop(columns=['stay_id'])
+            
+            return data_dict
+
 class TorchDatasetWrapper(Dataset):
     """
     Memory-efficient wrapper class to convert pandas DataFrames to PyTorch Dataset.
@@ -420,24 +445,23 @@ class TorchDatasetWrapper(Dataset):
             idx (int or slice or list): Index/indices of the sample(s)
             
         Returns:
-            tuple: (features, label) for the specified index/indices
+            tuple: (features, label) as torch.Tensor
         """
         # If we pre-computed arrays, use them
         if hasattr(self, 'X_array') and hasattr(self, 'y_array'):
-            return self.X_array[idx], self.y_array[idx]
-            
+            X_sample = self.X_array[idx]
+            y_sample = self.y_array[idx]
         # For single integer index
-        if isinstance(idx, int):
-            # More efficient single row access
+        elif isinstance(idx, int):
             X_sample = self.X.iloc[idx].values.astype(np.float32)
             y_sample = self.y.iloc[idx].values.astype(np.float32)
-            return X_sample, y_sample
-            
         # For slices or lists of indices (batch access)
-        # Use .loc which is more efficient for multiple row access with explicit indices
-        X_samples = self.X.iloc[idx].values.astype(np.float32)
-        y_samples = self.y.iloc[idx].values.astype(np.float32)
-        return X_samples, y_samples
+        else:
+            X_sample = self.X.iloc[idx].values.astype(np.float32)
+            y_sample = self.y.iloc[idx].values.astype(np.float32)
+        
+        # Convert to PyTorch tensors
+        return torch.tensor(X_sample), torch.tensor(y_sample)
     
     def get_batch(self, indices):
         """

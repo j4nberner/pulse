@@ -4,7 +4,7 @@
 general:
   app_name: "Pulse"
   version: "1.0.0"
-  debug_mode: true
+  debug_mode: false
   use_scratch: true
 
 # Weight and Biases (wandb) logging configuration
@@ -19,8 +19,8 @@ base_path: "/Users/sophiaehlers/Documents/pulse" #"/path/to/pulse" "/cluster/pro
 # Tasks to process
 tasks:
   # - "mortality"
-  - "aki"
-  # - "sepsis"
+  # - "aki"
+  - "sepsis"
   # - "harmonized_icu"
 
 # Datasets to process
@@ -37,7 +37,7 @@ random_seed: 42
 # Options for preprocessing
 preprocessing_baseline:
   replace_outliers: true          # Whether to replace outliers with NaNs
-  flag_na: false                   # Whether to flag NA values with binary indicators
+  flag_na: true                   # Whether to flag NA values with binary indicators
   standardize: true               # Whether to standardize features
   static_imputation: true         # Whether to perform static feature imputation
   dynamic_imputation: true        # Whether to perform dynamic feature imputation
@@ -50,8 +50,8 @@ preprocessing_baseline:
 # _______ Preprocessing Advanced _______
 preprocessing_advanced:
   windowing:
-    enabled: true                    # Enable/disable windowing
-    data_window: 9                   # Size of the data window
+    enabled: false                    # Enable/disable windowing
+    data_window: 3                   # Size of the data window
     prediction_window: 0             # Size of the prediction window (0 = predict at the end of window)
     step_size: 1                     # Step size for sliding windows
     save_data: true                 # Whether to save windowed data
