@@ -59,9 +59,10 @@ This repository contains the implementation for predicting sepsis, acute kidney 
 
 ...
 
-## Methodology
+## Implemented Models
 
-...
+- RandomForest
+- CNN
 
 ## Results
 
@@ -94,7 +95,7 @@ This repository contains the implementation for predicting sepsis, acute kidney 
 
 ```python
 class ExampleModel(PulseTemplateModel):
-   def __init__(self, params: Dict[str, Any]) -> None:
+   def __init__(self, params: Dict[str, Any], **kwargs) -> None:
       super().__init__(model_name, trainer_name)
    def set_trainer(self, trainer_name, train_dataloader, test_dataloader):
       self.trainer = ExampleTrainer(self,train_dataloader, test_dataloader)

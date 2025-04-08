@@ -13,7 +13,7 @@ logger = logging.getLogger("PULSE_logger")
 class ModelManager:
     """Manages all models for ICU predictions. Loading, Api-Access, and Saving."""
 
-    def __init__(self, models: List[dict]):
+    def __init__(self, models: List[dict], **kwargs) -> None:
         """
         Initialize the ModelManager with model names. Verifies model attributes.
         Converts model names to model objects with specified parameters.
@@ -27,6 +27,7 @@ class ModelManager:
             logger.error("No models specified.")
             sys.exit()
 
+        self.wandb = kwargs.get("wandb", False)
         self.models = self._prepare_models(models)
 
     def _prepare_models(self, model_configs) -> List[Any]:
@@ -50,10 +51,14 @@ class ModelManager:
                 continue
 
             try:
+                logger.info(
+                    "---------------Preparing model '%s'---------------", model_name
+                )
                 # Create model instance from configuration. Associate trainer with model.
                 model_cls = get_model_class(model_name)
                 model = model_cls(
-                    config.get("params", {})
+                    config.get("params", {}),
+                    wandb=self.wandb.get("enabled", False),
                 )  # Pass parameters to model constructor
 
                 prepared_models.append(model)
