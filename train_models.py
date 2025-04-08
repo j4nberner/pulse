@@ -74,7 +74,7 @@ class ModelTrainer:
             if scratch_dir:
                 logger.info(f"Scratch directory available at: {scratch_dir}")
                 # Update the config with scratch space paths
-                self.config = copy_data_to_scratch(self.config)
+                self.config, data_copied = copy_data_to_scratch(self.config)
             else:
                 logger.warning("No scratch directory found, using original data paths")
 
@@ -130,8 +130,8 @@ class ModelTrainer:
                     logger.info(f"Using batch size: {batch_size} for {model_name} on {dataset_name}")
 
                     # Now create the DataLoaders with the wrapped datasets
-                    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-                    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+                    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, drop_last=True)
+                    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, drop_last=True)
 
                     # If in debug mode, limit to a single batch for both training and testing
                     if self.config.debug_mode:
