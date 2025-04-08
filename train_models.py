@@ -74,7 +74,7 @@ class ModelTrainer:
             if scratch_dir:
                 logger.info(f"Scratch directory available at: {scratch_dir}")
                 # Update the config with scratch space paths
-                self.config = copy_data_to_scratch(self.config)
+                self.config, data_copied = copy_data_to_scratch(self.config)
             else:
                 logger.warning("No scratch directory found, using original data paths")
 

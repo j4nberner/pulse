@@ -40,7 +40,8 @@ class PreprocessorBaseline:
         self, 
         base_path: str, 
         random_seed: int = 42,
-        config: Dict[str, Any] = None
+        config: Dict[str, Any] = None,
+        original_base_path: str = None
     ):
         """
         Initialize the PreprocessorBaseline with configuration parameters.
@@ -54,6 +55,10 @@ class PreprocessorBaseline:
         self.random_seed = random_seed
         self.task = None
         self.dataset_name = None
+
+        # Store original base path if provided (for permanent storage)
+        if original_base_path:
+            self.original_base_path = original_base_path
         
         # Set default configuration
         self.config = {
@@ -591,7 +596,7 @@ class PreprocessorBaseline:
         y_test: pd.DataFrame
     ) -> None:
         """
-        Save processed data to parquet files.
+        Save processed data to parquet files, both in scratch and permanent storage if applicable.
         
         Args:
             X_train (pd.DataFrame): Training features
@@ -621,6 +626,32 @@ class PreprocessorBaseline:
         y_test.to_parquet(os.path.join(directory, "y_test.parquet"))
         
         logger.info(f"Data saved to {directory}")
+
+        # Check if we're running on scratch (if original_base_path attribute exists)
+        # Save to permanent storage as well
+        if hasattr(self, 'original_base_path') or (hasattr(globals(), 'config') and hasattr(config, 'original_base_path')):
+            # Get the original base path
+            if hasattr(self, 'original_base_path'):
+                original_base_path = self.original_base_path
+            else:
+                original_base_path = config.original_base_path
+                
+            # Construct permanent directory path
+            permanent_directory = os.path.join(
+                original_base_path, 
+                f"datasets/preprocessed_splits/{self.task}/{self.dataset_name}/{config_dirname}"
+            )
+            
+            # Create permanent directory and save
+            os.makedirs(permanent_directory, exist_ok=True)
+            X_train.to_parquet(os.path.join(permanent_directory, "X_train.parquet"))
+            y_train.to_parquet(os.path.join(permanent_directory, "y_train.parquet"))
+            X_val.to_parquet(os.path.join(permanent_directory, "X_val.parquet"))
+            y_val.to_parquet(os.path.join(permanent_directory, "y_val.parquet"))
+            X_test.to_parquet(os.path.join(permanent_directory, "X_test.parquet"))
+            y_test.to_parquet(os.path.join(permanent_directory, "y_test.parquet"))
+            
+            logger.info(f"Data also saved to permanent storage: {permanent_directory}")
 
     def preprocess(
         self, 
