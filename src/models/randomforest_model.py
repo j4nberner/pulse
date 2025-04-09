@@ -5,6 +5,9 @@ from sklearn.ensemble import RandomForestClassifier
 
 from src.models.pulsetemplate_model import PulseTemplateModel
 from src.eval.metrics import rmse
+import psutil
+import os
+import sys
 
 logger = logging.getLogger("PULSE_logger")
 
@@ -19,25 +22,27 @@ class RandomForestModel(PulseTemplateModel):
         params: Parameters used for the model.
     """
 
-    def __init__(self, params: Dict[str, Any]) -> None:
+    def __init__(self, params: Dict[str, Any], **kwargs) -> None:
         """
         Initialize the RandomForest model.
-        
+
         Args:
             params: Dictionary of parameters from the config file.
-            
+
         Raises:
             KeyError: If any required parameters are missing from the config.
         """
         # For trainer_name we still require it to be explicitly in the params
         if "trainer_name" not in params:
             raise KeyError("Required parameter 'trainer_name' not found in config")
-            
+
         # Use the class name as model_name if not provided in params
-        model_name = params.get("model_name", self.__class__.__name__.replace("Model", ""))
+        model_name = params.get(
+            "model_name", self.__class__.__name__.replace("Model", "")
+        )
         trainer_name = params["trainer_name"]
         super().__init__(model_name, trainer_name)
-        
+
         # Define all required scikit-learn RandomForest parameters
         required_rf_params = [
             "n_estimators", "n_jobs", "max_depth", 
@@ -46,18 +51,20 @@ class RandomForestModel(PulseTemplateModel):
             "criterion", "max_leaf_nodes", "min_impurity_decrease",
             "max_samples", "class_weight", "ccp_alpha"
         ]
-        
+
         # Check if all required RandomForest parameters exist in config
         missing_params = [param for param in required_rf_params if param not in params]
         if missing_params:
-            raise KeyError(f"Required RandomForest parameters missing from config: {missing_params}")
-        
+            raise KeyError(
+                f"Required RandomForest parameters missing from config: {missing_params}"
+            )
+
         # Extract RandomForest parameters from config
         rf_params = {param: params[param] for param in required_rf_params}
-        
+
         # Log the parameters being used
         logger.info(f"Initializing RandomForest with parameters: {rf_params}")
-        
+
         # Initialize the RandomForest model with parameters from config
         self.model = RandomForestClassifier(**rf_params)
 
@@ -87,7 +94,7 @@ class RandomForestTrainer:
     def __init__(self, model, train_dataloader, test_dataloader) -> None:
         """
         Initialize the RandomForest trainer.
-        
+
         Args:
             model: The RandomForest model to train.
             train_dataloader: DataLoader for training data.
@@ -127,8 +134,10 @@ class RandomForestTrainer:
         logger.info(f"Before RandomForest training - X_test shape: {X_test.shape}, y_test shape: {y_test.shape}")
 
         # Log dataset sizes
-        logger.info(f"Training on {len(X_train)} samples, testing on {len(X_test)} samples")
-        
+        logger.info(
+            f"Training on {len(X_train)} samples, testing on {len(X_test)} samples"
+        )
+
         # dummy training loop
         self.model.model.fit(X_train, y_train)
         logger.info("RandomForest model trained successfully.")
