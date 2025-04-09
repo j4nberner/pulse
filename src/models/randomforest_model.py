@@ -45,11 +45,22 @@ class RandomForestModel(PulseTemplateModel):
 
         # Define all required scikit-learn RandomForest parameters
         required_rf_params = [
-            "n_estimators", "n_jobs", "max_depth", 
-            "min_samples_split", "min_samples_leaf", "max_features",
-            "bootstrap", "oob_score", "random_state", "verbose",
-            "criterion", "max_leaf_nodes", "min_impurity_decrease",
-            "max_samples", "class_weight", "ccp_alpha"
+            "n_estimators", 
+            "n_jobs", 
+            "max_depth", 
+            "min_samples_split", 
+            "min_samples_leaf", 
+            "max_features",
+            "bootstrap", 
+            "oob_score", 
+            "random_state", 
+            "verbose",
+            "criterion", 
+            "max_leaf_nodes", 
+            "min_impurity_decrease",
+            "max_samples", 
+            "class_weight", 
+            "ccp_alpha"
         ]
 
         # Check if all required RandomForest parameters exist in config

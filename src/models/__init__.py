@@ -7,6 +7,7 @@ from .cnn_model import CNNModel
 model_cls_name_dict = {
     "RandomForest": RandomForestModel,
     "CNNModel": CNNModel,
+    "XGBoost": XGBoostModel
 }
 
 

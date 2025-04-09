@@ -122,12 +122,10 @@ class DatasetManager:
                 save_data=save_windowed_data,
                 debug_mode=debug_mode,
                 original_base_path=original_base_path,
+                preprocessor_config=preprocessing_config 
             )
-            logger.info(
-                f"Windower initialized for advanced preprocessing with debug mode: {debug_mode}"
-                original_base_path=original_base_path,
-                preprocessor_config=preprocessing_config  # Pass the same config used for preprocessor
-            )
+        
+            logger.info(f"Windower initialized for advanced preprocessing with debug mode: {debug_mode}")
 
     def _init_datasets(self) -> None:
         """Initialize datasets based on configuration."""

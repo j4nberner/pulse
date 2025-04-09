@@ -8,6 +8,7 @@ from src.eval.metrics import rmse
 
 logger = logging.getLogger("PULSE_logger")
 
+# TODO: add saving and loading functionality
 
 class XGBoostModel(PulseTemplateModel):
     """
@@ -19,7 +20,7 @@ class XGBoostModel(PulseTemplateModel):
         params: Parameters used for the model.
     """
 
-    def __init__(self, params: Dict[str, Any]) -> None:
+    def __init__(self, params: Dict[str, Any], **kwargs) -> None:
         """
         Initialize the XGBoost model.
         
@@ -40,10 +41,22 @@ class XGBoostModel(PulseTemplateModel):
         
         # Define all required XGBoost parameters
         required_xgb_params = [
-            "objective", "n_estimators", "learning_rate", "random_state", "verbosity",
-            "max_depth", "gamma", "min_child_weight", "subsample", "colsample_bytree",
-            "reg_alpha", "reg_lambda", "scale_pos_weight", "n_jobs", "tree_method",
-            "eval_metric", "early_stopping_rounds"
+            "objective", 
+            "n_estimators", 
+            "learning_rate", 
+            "random_state", 
+            "verbosity",
+            "max_depth", 
+            "gamma", 
+            "min_child_weight", 
+            "subsample", 
+            "colsample_bytree",
+            "reg_alpha", 
+            "reg_lambda", 
+            "scale_pos_weight", 
+            "n_jobs", "tree_method",
+            "eval_metric", 
+            "early_stopping_rounds"
         ]
         
         # Check if all required XGBoost parameters exist in config

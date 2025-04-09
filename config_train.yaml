@@ -4,7 +4,7 @@
 general:
   app_name: "Pulse"
   version: "1.0.0"
-  debug_mode: true
+  debug_mode: false
   use_scratch: true
 
 # Weight and Biases (wandb) logging configuration
@@ -14,12 +14,12 @@ wandb:
   # experiment_name: "experiment_1"
 
 ###### Application specific settings ######
-base_path: "" #"/cluster/project/bmds_lab/sepsis_sophia/pulse" #"/Users/sophiaehlers/Documents/pulse" #"/path/to/pulse"
+base_path: "/Users/sophiaehlers/Documents/pulse" #"/cluster/project/bmds_lab/sepsis_sophia/pulse" # #"/path/to/pulse"
 
 # Tasks to process
 tasks:
-  - "mortality"
-  # - "aki"
+  # - "mortality"
+  - "aki"
   # - "sepsis"
   # - "harmonized_icu"
 
@@ -38,7 +38,7 @@ random_seed: 42
 # Options for preprocessing
 preprocessing_baseline:
   replace_outliers: true # Whether to replace outliers with NaNs
-  flag_na: false # Whether to flag NA values with binary indicators
+  flag_na: true # Whether to flag NA values with binary indicators
   standardize: true # Whether to standardize features
   static_imputation: true # Whether to perform static feature imputation
   dynamic_imputation: true # Whether to perform dynamic feature imputation
@@ -68,34 +68,7 @@ benchmark_settings:
   optimizer: "adam" # Options: adam, sgd, rmsprop
 
 models:
-  - name: "RandomForest"
-    params:
-      trainer_name: "RandomForestTrainer"
-      n_estimators: 200 # Number of trees in the forest
-      n_jobs: 24 # Number of CPU cores to use (-1 for all available, None for 1 CPU)
-      max_depth: 20 # Maximum depth of the tree (null for unlimited)
-      min_samples_split: 2 # Minimum samples required to split internal node
-      min_samples_leaf: 2 # Minimum samples required at a leaf node
-      max_features: "sqrt" # Number of features to consider (options: "sqrt", "log2", int, float)
-      bootstrap: true # Whether to use bootstrap samples
-      oob_score: false # Whether to use out-of-bag samples
-      random_state: 42 # Random seed for reproducibility (scikit default = None)
-      verbose: 0 # Controls verbosity of output
-  - name: "CNNModel"
-    params:
-      trainer_name: "CNNTrainer"
-      save_checkpoint: 0 # Save checkpoint every n epochs. Set to 0 to disable.
-      num_features: 53
-      output_shape: 1
-      num_channels: 1
-      kernel_size: 3
-      pool_size: 2
-      learning_rate: 0.001
-      num_epochs: 10
-      verbose: 2 # Controls verbosity of output (0 = silent, 1 = log every 10 batches, 2 = log every batch)
-
-
-  # - name: "XGBoost"
+  # - name: "RandomForest"
   #   params:
   #     # Basic configuration
   #     trainer_name: "RandomForestTrainer"   # Class that implements the training process
@@ -146,6 +119,19 @@ models:
       tree_method: "hist"                     # Algorithm to build trees (hist = faster histogram-based approach)
       eval_metric: "auc"                      # Metric used for validation data evaluation
       early_stopping_rounds: 10               # Stop training if performance doesn't improve for this many rounds
+
+  # - name: "CNNModel"
+  #   params:
+  #     trainer_name: "CNNTrainer"
+  #     save_checkpoint: 0 # Save checkpoint every n epochs. Set to 0 to disable.
+  #     num_features: 53
+  #     output_shape: 1
+  #     num_channels: 1
+  #     kernel_size: 3
+  #     pool_size: 2
+  #     learning_rate: 0.001
+  #     num_epochs: 10
+  #     verbose: 2 # Controls verbosity of output (0 = silent, 1 = log every 10 batches, 2 = log every batch)
 
   # - name: "SimpleDLModel"
   #   params:
