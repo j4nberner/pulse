@@ -2,28 +2,26 @@ from typing import Dict, Any, Optional
 import logging
 import numpy as np
 import pandas as pd
-from xgboost import XGBClassifier
+from lightgbm import LGBMClassifier, early_stopping
 
 from src.models.pulsetemplate_model import PulseTemplateModel
 from src.eval.metrics import rmse
 
 logger = logging.getLogger("PULSE_logger")
 
-# TODO: add saving and loading functionality
-
-class XGBoostModel(PulseTemplateModel):
+class LightGBMModel(PulseTemplateModel):
     """
-    Implementation of XGBoost model for classification and regression tasks.
+    Implementation of LightGBM model for classification and regression tasks.
 
     Attributes:
-        model: The trained XGBoost model.
+        model: The trained LightGBM model.
         model_type: Type of the model ('classifier' or 'regressor').
         params: Parameters used for the model.
     """
 
     def __init__(self, params: Dict[str, Any], **kwargs) -> None:
         """
-        Initialize the XGBoost model.
+        Initialize the LightGBM model.
         
         Args:
             params: Dictionary of parameters from the config file.
@@ -40,42 +38,42 @@ class XGBoostModel(PulseTemplateModel):
         trainer_name = params["trainer_name"]
         super().__init__(model_name, trainer_name)
         
-        # Define all required XGBoost parameters
-        required_xgb_params = [
+        # Define all required LightGBM parameters
+        required_lgb_params = [
             "objective", 
             "n_estimators", 
             "learning_rate", 
             "random_state", 
-            "verbosity",
+            "verbose",
             "max_depth", 
-            "gamma", 
-            "min_child_weight", 
+            "num_leaves", 
+            "min_child_samples", 
             "subsample", 
             "colsample_bytree",
             "reg_alpha", 
             "reg_lambda", 
-            "scale_pos_weight", 
-            "n_jobs", "tree_method",
-            "eval_metric", 
+            "n_jobs", 
+            "boosting_type",
+            "metric", 
             "early_stopping_rounds"
         ]
         
-        # Check if all required XGBoost parameters exist in config
-        missing_params = [param for param in required_xgb_params if param not in params]
+        # Check if all required LightGBM parameters exist in config
+        missing_params = [param for param in required_lgb_params if param not in params]
         if missing_params:
-            raise KeyError(f"Required XGBoost parameters missing from config: {missing_params}")
-        
-        # For XGBoost 2.0.3: include early_stopping_rounds in model initialization
-        model_params = {param: params[param] for param in required_xgb_params}
+            raise KeyError(f"Required LightGBM parameters missing from config: {missing_params}")
         
         # Store early_stopping_rounds for training
         self.early_stopping_rounds = params["early_stopping_rounds"]
         
-        # Log the parameters being used
-        logger.info(f"Initializing XGBoost with parameters: {model_params}")
+        # Extract LightGBM parameters from config
+        model_params = {param: params[param] for param in required_lgb_params if param != "early_stopping_rounds"}
         
-        # Initialize the XGBoost model with parameters from config
-        self.model = XGBClassifier(**model_params)
+        # Log the parameters being used
+        logger.info(f"Initializing LightGBM with parameters: {model_params}")
+        
+        # Initialize the LightGBM model with parameters from config
+        self.model = LGBMClassifier(**model_params)
 
     def set_trainer(self, trainer_name, train_dataloader, test_dataloader):
         """
@@ -86,26 +84,26 @@ class XGBoostModel(PulseTemplateModel):
             train_dataloader: DataLoader for training data.
             test_dataloader: DataLoader for testing data.
         """
-        if trainer_name == "XGBoostTrainer":
-            self.trainer = XGBoostTrainer(self, train_dataloader, test_dataloader)
+        if trainer_name == "LightGBMTrainer":
+            self.trainer = LightGBMTrainer(self, train_dataloader, test_dataloader)
         else:
-            raise ValueError(f"Trainer {trainer_name} not supported for XGBoost.")
+            raise ValueError(f"Trainer {trainer_name} not supported for LightGBM.")
 
 
-class XGBoostTrainer:
+class LightGBMTrainer:
     """
-    Trainer class for XGBoost models.
+    Trainer class for LightGBM models.
 
-    This class handles the training workflow for XGBoost models
+    This class handles the training workflow for LightGBM models
     including data preparation, model training, evaluation and saving.
     """
 
     def __init__(self, model, train_dataloader, test_dataloader) -> None:
         """
-        Initialize the XGBoost trainer.
+        Initialize the LightGBM trainer.
         
         Args:
-            model: The XGBoost model to train.
+            model: The LightGBM model to train.
             train_dataloader: DataLoader for training data.
             test_dataloader: DataLoader for testing data.
         """
@@ -114,13 +112,14 @@ class XGBoostTrainer:
         self.test_dataloader = test_dataloader
 
     def train(self):
-        """Train the XGBoost model using the provided data loaders."""
-        logger.info(f"Starting training process for XGBoost model...")
+        """Train the LightGBM model using the provided data loaders."""
+        logger.info(f"Starting training process for LightGBM model...")
 
-        # Extract data from dataloader
+        # Extract data from dataloader and preserve feature names
         X_train, y_train = [], []
         X_test, y_test = [], []
-
+        
+        # Rest of your data extraction code
         for batch in self.train_dataloader:
             features, labels = batch
             X_train.extend(features.numpy())
@@ -131,23 +130,15 @@ class XGBoostTrainer:
             X_test.extend(features.numpy())
             y_test.extend(labels.numpy().squeeze())
 
-        # Convert lists to numpy arrays (necessary after extend)
+        # Convert lists to numpy arrays
         X_train = np.array(X_train)
         y_train = np.array(y_train)
         X_test = np.array(X_test)
         y_test = np.array(y_test)
 
-        # Log shapes before model training (after conversion)
-        logger.info(f"Before XGBoost training - X_train shape: {X_train.shape}, y_train shape: {y_train.shape}")
-        logger.info(f"Before XGBoost training - X_test shape: {X_test.shape}, y_test shape: {y_test.shape}")
-        
-        # Train model
-        self.model.model.fit(
-            X_train, y_train,
-            eval_set=[(X_test, y_test)],
-            verbose=False
-        )
-        logger.info("XGBoost model trained successfully.")
+        # Log shapes before model training
+        logger.info(f"Before LightGBM training - X_train shape: {X_train.shape}, y_train shape: {y_train.shape}")
+        logger.info(f"Before LightGBM training - X_test shape: {X_test.shape}, y_test shape: {y_test.shape}")
 
         # Access the original x-dataframe from the TorchDatasetWrapper to get column names (e.g. for feature importance analysis)
         feature_names = None
@@ -159,7 +150,23 @@ class XGBoostTrainer:
         if feature_names is None or len(feature_names) != X_train.shape[1]:
             feature_names = [f'feature_{i}' for i in range(X_train.shape[1])]
             logger.info(f"Using generated feature names (couldn't access original names)")
-
+        
+        # Create early stopping callback with verbose setting based on model configuration
+        early_stopping_callback = early_stopping(
+            stopping_rounds=self.model.early_stopping_rounds,
+            first_metric_only=True,
+            verbose=(self.model.model.verbose > 0)  # Use model's verbose setting
+        )
+        
+        # Train model with explicit feature names
+        self.model.model.fit(
+            X_train, y_train,
+            eval_set=[(X_test, y_test)],
+            callbacks=[early_stopping_callback],
+            feature_name=feature_names  # Pass the extracted column names
+        )
+        logger.info("LightGBM model trained successfully.")
+        
         # Create DataFrame with feature names for prediction to avoid warnings
         X_test_df = pd.DataFrame(X_test, columns=feature_names)
 

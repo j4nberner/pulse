@@ -9,6 +9,8 @@ from src.preprocessing.preprocessing_baseline.preprocessing_baseline import Prep
 # Set up logger
 logger = logging.getLogger("PULSE_logger")
 
+# TODO: create windower that returns 3d arrays
+
 class Windower:
     """
     Class for creating windowed data with specified data window, prediction window, and step size.

@@ -16,6 +16,8 @@ from sklearn.metrics import (
 
 logger = logging.getLogger("PULSE_logger")
 
+# TODO: maybe implement sub-group AUROC and AUPRC (considering the fairness and biases of models) for different genders, age ranges, etc.
+
 
 def rmse(y_true: np.ndarray, y_pred: np.ndarray) -> float:
     """

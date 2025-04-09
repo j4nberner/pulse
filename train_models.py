@@ -120,7 +120,6 @@ class ModelTrainer:
                     )
 
                     # Wrap with TorchDatasetWrapper
-                    # TODO: This should not be applied to all models but rather only to traditional ML models that do not need tensors as input?
                     train_dataset = TorchDatasetWrapper(X_train, y_train)
                     test_dataset = TorchDatasetWrapper(X_test, y_test)
 

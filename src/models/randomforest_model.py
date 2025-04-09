@@ -1,13 +1,19 @@
 from typing import Dict, Any, Optional
 import logging
 import numpy as np
+import pandas as pd
+import psutil
+import os
+import sys
+import warnings
 from sklearn.ensemble import RandomForestClassifier
 
 from src.models.pulsetemplate_model import PulseTemplateModel
 from src.eval.metrics import rmse
-import psutil
-import os
-import sys
+
+# Filter the specific warning about feature names 
+# (This is because training is done with np arrays and prediction with pd dataframe to preserve information about feature importance etc.)
+warnings.filterwarnings("ignore", message="X has feature names, but RandomForestClassifier was fitted without feature names")
 
 logger = logging.getLogger("PULSE_logger")
 
@@ -123,6 +129,7 @@ class RandomForestTrainer:
         X_train, y_train = [], []
         X_test, y_test = [], []
 
+        # Extract data from dataloader
         for batch in self.train_dataloader:
             features, labels = batch
             # Convert PyTorch tensors to NumPy arrays
@@ -144,16 +151,25 @@ class RandomForestTrainer:
         logger.info(f"Before RandomForest training - X_train shape: {X_train.shape}, y_train shape: {y_train.shape}")
         logger.info(f"Before RandomForest training - X_test shape: {X_test.shape}, y_test shape: {y_test.shape}")
 
-        # Log dataset sizes
-        logger.info(
-            f"Training on {len(X_train)} samples, testing on {len(X_test)} samples"
-        )
-
         # dummy training loop
         self.model.model.fit(X_train, y_train)
         logger.info("RandomForest model trained successfully.")
 
+        # Access the original x-dataframe from the TorchDatasetWrapper to get column names (e.g. for feature importance analysis)
+        feature_names = None
+        if hasattr(self.train_dataloader.dataset, 'X') and isinstance(self.train_dataloader.dataset.X, pd.DataFrame):
+            feature_names = list(self.train_dataloader.dataset.X.columns)
+            logger.info(f"Extracted {len(feature_names)} feature names from original DataFrame")
+
+        # Create fallback feature names if needed
+        if feature_names is None or len(feature_names) != X_train.shape[1]:
+            feature_names = [f'feature_{i}' for i in range(X_train.shape[1])]
+            logger.info(f"Using generated feature names (couldn't access original names)")
+
+        # Create DataFrame with feature names for prediction to avoid warnings
+        X_test_df = pd.DataFrame(X_test, columns=feature_names)
+
         # Evaluate the model
-        y_pred = self.model.model.predict(X_test)
+        y_pred = self.model.model.predict(X_test_df)
         rmse_score = rmse(y_test, y_pred)
         logger.info("RMSE: %f", rmse_score)
