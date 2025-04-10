@@ -1,3 +1,5 @@
+import json
+import os
 import numpy as np
 import torch
 from typing import Dict, Union, List, Any
@@ -282,3 +284,38 @@ def calculate_all_metrics(
         "precision": calculate_precision(y_true, y_pred, threshold),
         "recall": calculate_recall(y_true, y_pred, threshold),
     }
+
+
+def calc_metric_stats(metrics_tracker: dict, model_id: str, save_dir=str) -> None:
+    """
+    Calculate and save statistics for the tracked metrics.
+
+    Args:
+        metrics_tracker: Dictionary containing the tracked metrics
+        model_id: Identifier for the model
+        save_dir: Directory where the statistics will be saved
+    """
+    # Calculate mean and standard deviation for each metric
+    stats = {}
+    for metric_name, values in metrics_tracker.items():
+        # Convert numpy types to native Python types for JSON serialization
+        values_array = np.array(values)
+        stats[metric_name] = {
+            "mean": float(np.mean(values_array)),
+            "std": float(np.std(values_array)),
+            "min": float(np.min(values_array)),
+            "max": float(np.max(values_array)),
+            "median": float(np.median(values_array)),
+            "count": int(len(values_array)),
+        }
+
+    stats["model_id"] = model_id
+
+    # Save the statistics to a file
+    stats_file_path = os.path.join(save_dir, "metrics_stats.json")
+
+    with open(stats_file_path, "w", encoding="utf-8") as f:
+
+        json.dump(stats, f, indent=4)
+
+    logger.info(f"Metrics statistics saved to {stats_file_path}")

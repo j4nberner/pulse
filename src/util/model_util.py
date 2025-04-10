@@ -14,7 +14,7 @@ def save_torch_model(model_name: str, model: Any, save_dir: str) -> None:
     Args:
         model_name: Name of the model to be saved
         model: The PyTorch model object to save
-        save_dir: Directory where the model should be saved
+        save_dir: Parent directory where the model should be saved
     """
 
     try:
@@ -31,6 +31,7 @@ def save_torch_model(model_name: str, model: Any, save_dir: str) -> None:
         logger.error(f"Failed to save model '{model_name}': {str(e)}")
 
 
+# TODO: not tested
 def save_sklearn_model(model_name: str, model: Any, save_dir: str) -> None:
     """Save the trained sklearn model to disk.
 
@@ -51,6 +52,7 @@ def save_sklearn_model(model_name: str, model: Any, save_dir: str) -> None:
         logger.error(f"Failed to save model '{model_name}': {str(e)}")
 
 
+# TODO: not tested
 def load_torch_model(model_name: str, save_dir: str) -> Any:
     """Load a PyTorch model from disk.
 
@@ -73,6 +75,7 @@ def load_torch_model(model_name: str, save_dir: str) -> Any:
         return None
 
 
+# TODO: not tested
 def load_sklearn_model(model_name: str, save_dir: str) -> Any:
     """Load a sklearn model from disk.
 

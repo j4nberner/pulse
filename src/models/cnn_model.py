@@ -9,7 +9,7 @@ import torch
 import wandb
 from src.models.pulsetemplate_model import PulseTemplateModel
 from src.util.model_util import save_torch_model, load_torch_model
-from src.eval.metrics import calculate_all_metrics
+from src.eval.metrics import calculate_all_metrics, calc_metric_stats
 
 
 logger = logging.getLogger("PULSE_logger")
@@ -56,15 +56,12 @@ class CNNModel(PulseTemplateModel, nn.Module):
         self.model_name = params.get(
             "model_name", self.__class__.__name__.replace("Model", "")
         )
-        trainer_name = params["trainer_name"]
-        super().__init__(self.model_name, trainer_name)
+        self.trainer_name = params["trainer_name"]
+        super().__init__(self.model_name, self.trainer_name)
         nn.Module.__init__(self)
 
         # Set the model save directory
-        save_dir = kwargs.get(f"output_dir", f"{os.getcwd()}/output")
-        self.model_save_dir = os.path.join(
-            save_dir, f"{self.model_name}_{self.trainer_name}"
-        )
+        self.save_dir = kwargs.get(f"output_dir", f"{os.getcwd()}/output")
 
         # Define all required parameters
         required_params = [
@@ -183,6 +180,7 @@ class CNNTrainer:
         self.optimizer = optim.Adam(self.model.parameters())
         self.criterion = nn.BCEWithLogitsLoss()
         self.wandb = self.model.wandb
+        self.model_save_dir = os.path.join(cnn_model.save_dir, "Models")
 
     def train(self):
         """Training loop."""
@@ -200,15 +198,15 @@ class CNNTrainer:
             self.train_epoch(epoch, verbose)
             logger.info(f"Epoch {epoch + 1} finished")
             # Save checkpoint every epoch
-            checkpoint_name = f"{self.model.model_name}_epoch_{epoch + 1}.pth"
-            checkpoint_path = os.path.join(self.model.model_save_dir, checkpoint_name)
+            checkpoint_name = f"{self.model.model_name}_epoch_{epoch + 1}"
+            checkpoint_path = os.path.join(self.model_save_dir, "Checkpoints")
             if save_checkpoint != 0 and epoch % save_checkpoint == 0:
                 save_torch_model(checkpoint_name, self.model, checkpoint_path)
 
         logger.info("Training finished.")
         self.evaluate(self.test_dataloader)
         save_torch_model(
-            self.model.model_name, self.model, self.model.model_save_dir
+            self.model.model_name, self.model, self.model_save_dir
         )  # Save the final model
 
     def train_epoch(self, epoch: int, verbose: int = 1) -> None:
@@ -253,6 +251,7 @@ class CNNTrainer:
         Args:
             test_dataloader: The DataLoader object for the testing dataset.
         """
+        verbose = self.params.get("verbose", 1)
         self.model.eval()
         metrics_tracker = {
             "auroc": [],
@@ -266,20 +265,33 @@ class CNNTrainer:
         }
 
         with torch.no_grad():
-            for inputs, labels in test_dataloader:
+            for batch, (inputs, labels) in enumerate(test_dataloader):
                 # Reshape inputs to (batch_size, 1, input_size) for CNN
                 inputs = inputs.unsqueeze(1)
 
                 outputs = self.model(inputs)
                 _, predicted = torch.max(outputs.data, 1)
-                metrics = calculate_all_metrics(labels, predicted)
-                for metric, value in metrics.items():
-                    metrics_tracker[metric].append(value)
 
-        # Average metrics over the dataset
-        for metric in metrics_tracker:
-            metrics_tracker[metric] = np.mean(metrics_tracker[metric])
+                # Calculate metrics for batch
+                test_error = calculate_all_metrics(labels, predicted)
+
+                # Store metrics in the tracker
+                for metric in metrics_tracker:
+                    metrics_tracker[metric].append(test_error[metric])
+
+                # Log metrics
+                if verbose == 2 or (verbose == 1 and batch % 10 == 9):
+                    logger.info(test_error)
+
+                    if self.wandb:
+                        wandb.log(test_error)
 
         logger.info(f"Evaluation metrics: {metrics_tracker}")
         if self.wandb:
             wandb.log(metrics_tracker)
+        # Calculate statistics over all metrics and store to file
+        calc_metric_stats(
+            metrics_tracker,
+            model_id=self.model.model_name,
+            save_dir=self.model.save_dir,
+        )
