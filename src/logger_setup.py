@@ -8,12 +8,11 @@ logger = logging.getLogger("PULSE_logger")
 
 def setup_logger():
     """Creates a logger that logs to both a file and the console."""
-    log_dir = "output/logs"
+    time_stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    log_dir = os.path.join("output", time_stamp)
     os.makedirs(log_dir, exist_ok=True)
 
-    log_file = os.path.join(
-        log_dir, f"training_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
-    )
+    log_file = os.path.join(log_dir, f"log_{time_stamp}.log")
 
     logger = logging.getLogger("PULSE_logger")
     logger.setLevel(logging.INFO)
@@ -38,7 +37,7 @@ def setup_logger():
 
         logger.info(f"Logging to file: {log_file}")
 
-    return logger
+    return logger, log_dir
 
 
 # Initialize wandb
