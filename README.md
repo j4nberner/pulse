@@ -63,6 +63,8 @@ This repository contains the implementation for predicting sepsis, acute kidney 
 
 - RandomForest
 - CNN
+- XGBoost
+- LSTM
 
 ## Results
 

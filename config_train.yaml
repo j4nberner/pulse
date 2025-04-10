@@ -4,23 +4,22 @@
 general:
   app_name: "Pulse"
   version: "1.0.0"
-  debug_mode: false
+  debug_mode: true
   use_scratch: true
 
 # Weight and Biases (wandb) logging configuration
 wandb:
   enabled: false
   entity: "berner"
-  # experiment_name: "experiment_1"
 
 ###### Application specific settings ######
-base_path: "/Users/sophiaehlers/Documents/pulse" #"/cluster/project/bmds_lab/sepsis_sophia/pulse" # #"/path/to/pulse"
+base_path: "" #"/cluster/project/bmds_lab/sepsis_sophia/pulse" # #"/path/to/pulse"
 
 # Tasks to process
 tasks:
   # - "mortality"
-  - "aki"
-  # - "sepsis"
+  # - "aki"
+  - "sepsis"
   # - "harmonized_icu"
 
 # Datasets to process
@@ -68,95 +67,109 @@ preprocessing_advanced:
 # TODO: Maybe create separate config files for each model and only use true/false here
 
 benchmark_settings:
-  batch_size: 100
-  num_epochs: 10
+  batch_size: 1
+  num_epochs: 50
   learning_rate: 0.001
-  optimizer: "adam" # Options: adam, sgd, rmsprop
+  optimizer: "adam"
 
 models:
-  - name: "RandomForest"
-    params:
-      # Basic configuration
-      trainer_name: "RandomForestTrainer"   # Class that implements the training process
-      n_estimators: 200                     # Number of trees in the forest
-      random_state: 42                      # Seed for reproducible results
-      verbose: 0                            # Controls verbosity of output (0: silent, 1: progress bar, >1: more details)
-      # Tree structure parameters
-      max_depth: 20                         # Maximum depth of trees (null for unlimited)
-      min_samples_split: 2                  # Minimum samples required to split internal node
-      min_samples_leaf: 2                   # Minimum samples required at a leaf node
-      max_features: "sqrt"                  # Number of features to consider (options: "sqrt", "log2", int, float)
-      criterion: "gini"                     # Function to measure split quality ("gini" or "entropy")
-      max_leaf_nodes: null                  # Max leaf nodes (null for unlimited)
-      min_impurity_decrease: 0.0            # Minimum impurity decrease required for splitting
-      # Sampling parameters
-      bootstrap: true                       # Whether to use bootstrap samples for building trees
-      oob_score: false                      # Whether to use out-of-bag samples to estimate generalization accuracy
-      max_samples: null                     # Number of samples to draw if bootstrap=True (null for same as input)
-      # Class handling parameters
-      class_weight: null                    # Weights for classes (null, "balanced", "balanced_subsample", or dict)
-      # Regularization parameters
-      ccp_alpha: 0.0                        # Complexity parameter for Minimal Cost-Complexity Pruning
-      # Performance parameters
-      n_jobs: 24                            # Number of CPU cores to use (-1 for all available, None for 1 CPU)
+  # - name: "RandomForest"
+  #   params:
+  #     # Basic configuration
+  #     trainer_name: "RandomForestTrainer" # Class that implements the training process
+  #     n_estimators: 200 # Number of trees in the forest
+  #     random_state: 42 # Seed for reproducible results
+  #     verbose: 0 # Controls verbosity of output (0: silent, 1: progress bar, >1: more details)
+  #     # Tree structure parameters
+  #     max_depth: 20 # Maximum depth of trees (null for unlimited)
+  #     min_samples_split: 2 # Minimum samples required to split internal node
+  #     min_samples_leaf: 2 # Minimum samples required at a leaf node
+  #     max_features: "sqrt" # Number of features to consider (options: "sqrt", "log2", int, float)
+  #     criterion: "gini" # Function to measure split quality ("gini" or "entropy")
+  #     max_leaf_nodes: null # Max leaf nodes (null for unlimited)
+  #     min_impurity_decrease: 0.0 # Minimum impurity decrease required for splitting
+  #     # Sampling parameters
+  #     bootstrap: true # Whether to use bootstrap samples for building trees
+  #     oob_score: false # Whether to use out-of-bag samples to estimate generalization accuracy
+  #     max_samples: null # Number of samples to draw if bootstrap=True (null for same as input)
+  #     # Class handling parameters
+  #     class_weight: null # Weights for classes (null, "balanced", "balanced_subsample", or dict)
+  #     # Regularization parameters
+  #     ccp_alpha: 0.0 # Complexity parameter for Minimal Cost-Complexity Pruning
+  #     # Performance parameters
+  #     n_jobs: 24 # Number of CPU cores to use (-1 for all available, None for 1 CPU)
 
   # - name: "XGBoost"
   #   params:
   #     # Basic configuration
-  #     trainer_name: "XGBoostTrainer"          # Class that implements the training process
-  #     objective: "binary:logistic"            # For binary classification tasks like AKI prediction
-  #     n_estimators: 100                       # Number of boosting rounds/trees to build
-  #     learning_rate: 0.1                      # Controls how much each tree contributes to the final model (eta)
-  #     random_state: 42                        # Seed for reproducible results
-  #     verbosity: 1                            # Controls the level of logging output (0: silent, 1: warnings, 2: info)
+  #     trainer_name: "XGBoostTrainer" # Class that implements the training process
+  #     objective: "binary:logistic" # For binary classification tasks like AKI prediction
+  #     n_estimators: 100 # Number of boosting rounds/trees to build
+  #     learning_rate: 0.1 # Controls how much each tree contributes to the final model (eta)
+  #     random_state: 42 # Seed for reproducible results
+  #     verbosity: 1 # Controls the level of logging output (0: silent, 1: warnings, 2: info)
   #     # Tree structure parameters
-  #     max_depth: 3                            # Maximum depth of each tree (prevents overfitting)
-  #     gamma: 0                                # Minimum loss reduction required for a split
-  #     min_child_weight: 1                     # Minimum sum of instance weight needed in a child node
+  #     max_depth: 3 # Maximum depth of each tree (prevents overfitting)
+  #     gamma: 0 # Minimum loss reduction required for a split
+  #     min_child_weight: 1 # Minimum sum of instance weight needed in a child node
   #     # Sampling parameters
-  #     subsample: 0.8                          # Fraction of samples used for tree building (prevents overfitting)
-  #     colsample_bytree: 0.8                   # Fraction of features used for tree building
+  #     subsample: 0.8 # Fraction of samples used for tree building (prevents overfitting)
+  #     colsample_bytree: 0.8 # Fraction of features used for tree building
   #     # Regularization parameters
-  #     reg_alpha: 0                            # L1 regularization on weights (0 = no regularization)
-  #     reg_lambda: 1                           # L2 regularization on weights (higher = more regularization)
-  #     scale_pos_weight: 1                     # Balance positive and negative weights (for imbalanced datasets)
+  #     reg_alpha: 0 # L1 regularization on weights (0 = no regularization)
+  #     reg_lambda: 1 # L2 regularization on weights (higher = more regularization)
+  #     scale_pos_weight: 1 # Balance positive and negative weights (for imbalanced datasets)
   #     # Performance and evaluation parameters
-  #     n_jobs: 1                               # Number of parallel threads (-1 to use all CPUs)
-  #     tree_method: "hist"                     # Algorithm to build trees (hist = faster histogram-based approach)
-  #     eval_metric: "auc"                      # Metric used for validation data evaluation
-  #     early_stopping_rounds: 10               # Stop training if performance doesn't improve for this many rounds
+  #     n_jobs: 1 # Number of parallel threads (-1 to use all CPUs)
+  #     tree_method: "hist" # Algorithm to build trees (hist = faster histogram-based approach)
+  #     eval_metric: "auc" # Metric used for validation data evaluation
+  #     early_stopping_rounds: 10 # Stop training if performance doesn't improve for this many rounds
 
-  - name: "LightGBM"
-    params:
-      # Basic configuration
-      trainer_name: "LightGBMTrainer"         # Class that implements the training process
-      objective: "binary"                      # For binary classification tasks like AKI prediction
-      n_estimators: 100                        # Number of boosting rounds/trees to build
-      learning_rate: 0.1                       # Controls how much each tree contributes to the final model
-      random_state: 42                         # Seed for reproducible results
-      verbose: -1                              # Controls the level of logging output (-1: silent, >=0: logging)
-      # Tree structure parameters
-      max_depth: -1                            # Maximum depth of each tree (-1 means no limit)
-      num_leaves: 31                           # Maximum number of leaves in each tree
-      min_child_samples: 20                    # Minimum number of samples required in a leaf node
-      # Sampling parameters
-      subsample: 0.8                           # Fraction of samples used for tree building
-      colsample_bytree: 0.8                    # Fraction of features used for tree building
-      # Regularization parameters
-      reg_alpha: 0                             # L1 regularization on weights
-      reg_lambda: 1                            # L2 regularization on weights
-      # Algorithm specific parameters
-      boosting_type: "gbdt"                    # Boosting type (gbdt, dart, goss, rf)
-      # Performance and evaluation parameters
-      n_jobs: 4                                # Number of parallel threads (-1 to use all CPUs)
-      metric: "auc"                            # Metric used for validation data evaluation
-      early_stopping_rounds: 10                # Stop if performance doesn't improve for this many rounds
-
-  # - name: "CNNModel"
+  # - name: "LightGBM"
   #   params:
-  #     trainer_name: "CNNTrainer"
-  #     save_checkpoint: 0 # Save checkpoint every n epochs. Set to 0 to disable.
-  #     num_features: 53
+  #     # Basic configuration
+  #     trainer_name: "LightGBMTrainer" # Class that implements the training process
+  #     objective: "binary" # For binary classification tasks like AKI prediction
+  #     n_estimators: 100 # Number of boosting rounds/trees to build
+  #     learning_rate: 0.1 # Controls how much each tree contributes to the final model
+  #     random_state: 42 # Seed for reproducible results
+  #     verbose: -1 # Controls the level of logging output (-1: silent, >=0: logging)
+  #     # Tree structure parameters
+  #     max_depth: -1 # Maximum depth of each tree (-1 means no limit)
+  #     num_leaves: 31 # Maximum number of leaves in each tree
+  #     min_child_samples: 20 # Minimum number of samples required in a leaf node
+  #     # Sampling parameters
+  #     subsample: 0.8 # Fraction of samples used for tree building
+  #     colsample_bytree: 0.8 # Fraction of features used for tree building
+  #     # Regularization parameters
+  #     reg_alpha: 0 # L1 regularization on weights
+  #     reg_lambda: 1 # L2 regularization on weights
+  #     # Algorithm specific parameters
+  #     boosting_type: "gbdt" # Boosting type (gbdt, dart, goss, rf)
+  #     # Performance and evaluation parameters
+  #     n_jobs: 4 # Number of parallel threads (-1 to use all CPUs)
+  #     metric: "auc" # Metric used for validation data evaluation
+  #     early_stopping_rounds: 10 # Stop if performance doesn't improve for this many rounds
+
+  - name: "CNNModel"
+    params:
+      trainer_name: "CNNTrainer"
+      save_checkpoint: 1 # Save checkpoint every n epochs. Set to 0 to disable.
+      num_features: 53
+      output_shape: 1
+      num_channels: 1
+      kernel_size: 3
+      pool_size: 2
+      learning_rate: 0.001
+      num_epochs: 10
+      verbose: 2 # Controls verbosity of output (0 = silent, 1 = log every 10 batches, 2 = log every batch)
+
+
+  # - name: "LSTMModel"
+  #   params:
+  #     trainer_name: "LSTMTrainer"
+  #     save_checkpoint: 1 # Save checkpoint every n epochs. Set to 0 to disable.
+  #     num_features: 101
   #     output_shape: 1
   #     num_channels: 1
   #     kernel_size: 3

@@ -4,13 +4,15 @@ import os
 import pandas as pd
 import yaml
 from torch.utils.data import DataLoader
+import shutil
 
 from src.logger_setup import setup_logger, init_wandb
 from src.data.dataloader import DatasetManager, TorchDatasetWrapper
 from src.models.modelmanager import ModelManager
 from src.util.slurm_util import copy_data_to_scratch, is_on_slurm, get_local_scratch_dir
 
-logger = setup_logger()
+
+logger, output_dir = setup_logger()
 
 
 class TrainConfig:
@@ -24,7 +26,7 @@ class TrainConfig:
         self.datasets = []
         self.metrics = []
         self.base_path = ""
-        self.output_dir = r"output/results"
+        self.output_dir = output_dir
         self.experiment_name = (
             f"experiment_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}"
         )
@@ -50,6 +52,13 @@ class TrainConfig:
             logger.info(f"DEBUG MODE set to: {self.debug_mode}")
 
         logger.info("Loaded configuration from %s", self.config_path)
+
+    def save_config_file(self):
+        """Copy the current configuration to the output directory."""
+        config_copy_path = os.path.join(self.output_dir, "config_copy.yaml")
+        # Copy the configuration file to the output directory
+        shutil.copy2(self.config_path, config_copy_path)
+        logger.info("Configuration file copied to %s", config_copy_path)
 
 
 class ModelTrainer:
@@ -80,14 +89,11 @@ class ModelTrainer:
                 logger.warning("No scratch directory found, using original data paths")
 
         logger.info("---------------Initializing Dataset Manager---------------")
-        self.dm = DatasetManager(config)
+        self.dm = DatasetManager(self.config)
         logger.info("---------------Initializing Model Manager---------------")
-        self.mm = ModelManager(config.models, wandb=config.wandb)
-
-        # Create output directory
-        self.output_dir = os.path.join(config.output_dir, config.experiment_name)
-        os.makedirs(self.output_dir, exist_ok=True)
-        logger.info(f"Results will be saved to {self.output_dir}")
+        self.mm = ModelManager(
+            self.config.models, wandb=config.wandb, output_dir=config.output_dir
+        )
 
     def run(self):
         """Run the training process for all configured models and datasets."""
@@ -208,6 +214,7 @@ def main():
 
     # Initialize configuration
     config = TrainConfig(args.config)
+    config.save_config_file()
     config.load_from_file()
 
     # Log if running on Slurm

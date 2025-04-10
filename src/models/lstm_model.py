@@ -8,41 +8,17 @@ import torch.optim as optim
 import torch
 import wandb
 from src.models.pulsetemplate_model import PulseTemplateModel
-from src.util.model_util import save_torch_model, load_torch_model
-from src.eval.metrics import calculate_all_metrics, calc_metric_stats
+from src.eval.metrics import calc_metric_stats, calculate_all_metrics
+from src.util.model_util import save_torch_model
 
 
 logger = logging.getLogger("PULSE_logger")
 
 
-class CNN(nn.Module):
-    def __init__(self, num_features, window_size):
-        # call the parent constructor
-        super(CNN, self).__init__()
-        self.conv1 = nn.Conv1d(
-            in_channels=num_features, out_channels=256, kernel_size=1, padding=1
-        )
-        self.bn1 = nn.BatchNorm1d(256)
-        self.conv2 = nn.Conv1d(
-            in_channels=256, out_channels=64, kernel_size=3, padding=1
-        )
-        self.bn2 = nn.BatchNorm1d(64)
-        self.conv3 = nn.Conv1d(
-            in_channels=64, out_channels=16, kernel_size=5, padding=1
-        )
-        self.bn3 = nn.BatchNorm1d(16)
-        self.pool = nn.MaxPool1d(kernel_size=2)
-        self.dropout = nn.Dropout(0.5)
-
-        conv_output_size = 16 * ((window_size) // 2)
-        self.fc1 = nn.Linear(conv_output_size, 16)
-        self.fc2 = nn.Linear(16, 1)
-
-
-class CNNModel(PulseTemplateModel, nn.Module):
+class LSTMModel(PulseTemplateModel, nn.Module):
     def __init__(self, params: Dict[str, Any], **kwargs) -> None:
         """
-        Initialize the CNN model.
+        Initialize the LSTM model.
 
         Args:
             params (Dict[str, Any]): Configuration parameters for the model.
@@ -56,8 +32,8 @@ class CNNModel(PulseTemplateModel, nn.Module):
         self.model_name = params.get(
             "model_name", self.__class__.__name__.replace("Model", "")
         )
-        self.trainer_name = params["trainer_name"]
-        super().__init__(self.model_name, self.trainer_name)
+        trainer_name = params["trainer_name"]
+        super().__init__(self.model_name, trainer_name)
         nn.Module.__init__(self)
 
         # Set the model save directory
@@ -65,15 +41,12 @@ class CNNModel(PulseTemplateModel, nn.Module):
 
         # Define all required parameters
         required_params = [
-            "num_features",
-            "output_shape",
-            "num_channels",
-            "kernel_size",
-            "pool_size",
             "learning_rate",
             "num_epochs",
             "save_checkpoint",
             "verbose",
+            "num_features",  # Number of features in input
+            "output_shape",  # Size of output
         ]
 
         # Check if wandb is enabled and set up
@@ -85,78 +58,61 @@ class CNNModel(PulseTemplateModel, nn.Module):
             raise KeyError(f"Required parameters missing from config: {missing_params}")
 
         # Extract parameters from config
-        self.params = {param: params[param] for param in required_params}
+        self.params = params.copy()
 
         # Log the parameters being used
-        logger.info(f"Initializing CNN with parameters: {self.params}")
+        logger.info(f"Initializing LSTM with parameters: {self.params}")
 
         # -------------------------Define layers-------------------------
-        self.conv1 = nn.Conv1d(
-            in_channels=self.params["num_channels"],
-            out_channels=self.params["num_channels"] * 4,
-            kernel_size=self.params["kernel_size"],
-            stride=1,
-            padding=self.params["kernel_size"] // 2,
-        )
-        self.bn1 = nn.BatchNorm1d(self.params["num_channels"] * 4)
-        self.leaky_relu = nn.ReLU()
-        self.pool1 = nn.MaxPool1d(kernel_size=self.params["pool_size"])
+        self.input_size = self.params["num_features"]
+        self.hidden_size = 128
+        self.num_layers = 2
+        self.output_size = self.params["output_shape"]
+        self.dropout = 0.2
 
-        self.conv2 = nn.Conv1d(
-            in_channels=self.params["num_channels"] * 4,
-            out_channels=self.params["num_channels"] * 2,
-            kernel_size=3,
-            padding=1,
+        # LSTM layer
+        self.lstm = nn.LSTM(
+            input_size=self.input_size,
+            hidden_size=self.hidden_size,
+            num_layers=self.num_layers,
+            batch_first=True,
+            dropout=self.dropout if self.num_layers > 1 else 0,
         )
-        self.bn2 = nn.BatchNorm1d(self.params["num_channels"] * 2)
-        self.conv3 = nn.Conv1d(
-            in_channels=self.params["num_channels"] * 2,
-            out_channels=self.params["num_channels"] * 1,
-            kernel_size=5,
-            padding=1,
-        )
-        self.bn3 = nn.BatchNorm1d(self.params["num_channels"] * 1)
-        self.pool = nn.MaxPool1d(kernel_size=self.params["pool_size"])
-        self.dropout = nn.Dropout(0.5)
 
-        # Fully connected layer
-        pooled_size = (self.params["num_features"] // self.params["pool_size"]) // 2
-        # TODO: use pooled_size when input is fixed. hardcoded for now...
-        self.fc1 = nn.Linear(
-            self.params["num_channels"] * 49,
-            self.params["num_channels"] * 49 // 2,
-        )
-        self.fc2 = nn.Linear(
-            self.params["num_channels"] * 1 * 49 // 2,
-            self.params["output_shape"],
-        )
+        # Fully connected layer for output
+        self.fc = nn.Linear(self.hidden_size, self.output_size)
         # -------------------------Define layers-------------------------
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
-        Forward pass through the CNN model.
+        Forward pass through the LSTM model.
 
         Args:
-            x (torch.Tensor): Input tensor of shape [batch_size, num_features, seq_length]
+            x (torch.Tensor): Input tensor of shape [batch_size, seq_length, input_size]
 
         Returns:
-            torch.Tensor: Output tensor of shape [batch_size, output_shape]
-
-
+            torch.Tensor: Output tensor of shape [batch_size, output_size]
         """
-        x = self.leaky_relu(self.bn1(self.conv1(x)))
-        x = self.leaky_relu(self.bn2(self.conv2(x)))
-        x = self.leaky_relu(self.bn3(self.conv3(x)))
-        x = self.pool(x)
-        x = x.view(x.size(0), -1)  # Flatten
-        x = self.dropout(x)
-        x = self.leaky_relu(self.fc1(x))
-        x = self.fc2(x)
-        return x
+        # x shape: [batch_size, seq_length, input_size]
+
+        # Initialize hidden state and cell state
+        h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(x.device)
+        c0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(x.device)
+
+        # LSTM forward pass
+        out, _ = self.lstm(x, (h0, c0))
+
+        # Get the output from the last time step
+        out = out[:, -1, :]
+
+        # Pass through fully connected layer
+        out = self.fc(out)
+
+        return out
 
     def set_trainer(self, trainer_name: str, train_dataloader, test_dataloader) -> None:
         """
-        Sets the trainer for the CNN model.
+        Sets the trainer for the LSTM model.
 
         Args:
             trainer_name (str): The name of the trainer to be used.
@@ -166,22 +122,25 @@ class CNNModel(PulseTemplateModel, nn.Module):
         Returns:
             None
         """
-        self.trainer = CNNTrainer(self, train_dataloader, test_dataloader)
+        self.trainer = LSTMTrainer(self, train_dataloader, test_dataloader)
 
 
-class CNNTrainer:
-    """Trainer for the CNN model."""
+class LSTMTrainer:
+    """Trainer for the LSTM model."""
 
-    def __init__(self, cnn_model, train_dataloader, test_dataloader):
-        self.model = cnn_model
-        self.params = cnn_model.params
+    def __init__(self, lstm_model, train_dataloader, test_dataloader):
+        self.model = lstm_model
+        self.params = lstm_model.params
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
         self.train_dataloader = train_dataloader
         self.test_dataloader = test_dataloader
-        self.optimizer = optim.Adam(self.model.parameters())
-        self.criterion = nn.BCEWithLogitsLoss()
+        self.optimizer = optim.Adam(
+            self.model.parameters(), lr=self.params["learning_rate"]
+        )
+        self.criterion = nn.MSELoss()
         self.wandb = self.model.wandb
-        self.model_save_dir = os.path.join(cnn_model.save_dir, "Models")
+        self.model_save_dir = os.path.join(lstm_model.save_dir, "Models")
 
         # Log optimizer and criterion
         logger.info(f"Using optimizer: {self.optimizer.__class__.__name__}")
@@ -204,7 +163,8 @@ class CNNTrainer:
         for epoch in range(num_epochs):
             self.train_epoch(epoch, verbose)
             logger.info(f"Epoch {epoch + 1} finished")
-            # Save checkpoint every epoch
+
+            # Save checkpoint every save_checkpoint epochs
             checkpoint_name = f"{self.model.model_name}_epoch_{epoch + 1}"
             checkpoint_path = os.path.join(self.model_save_dir, "Checkpoints")
             if save_checkpoint != 0 and epoch % save_checkpoint == 0:
@@ -226,12 +186,17 @@ class CNNTrainer:
         """
         self.model.train()
         running_loss = 0.0
+        total_batches = len(self.train_dataloader)
+
         for i, (inputs, labels) in enumerate(self.train_dataloader):
             # Move tensors to the same device as the model
             inputs, labels = inputs.to(self.device), labels.to(self.device)
 
-            # Reshape inputs to (batch_size, 1, input_size) for CNN
-            inputs = inputs.unsqueeze(1)
+            # Handle sequence dimension based on the input data shape
+            if len(inputs.shape) == 2:  # [batch_size, features]
+                inputs = inputs.unsqueeze(
+                    1
+                )  # Add sequence dimension [batch_size, seq_len=1, features]
 
             self.optimizer.zero_grad()
             outputs = self.model(inputs)
@@ -240,6 +205,8 @@ class CNNTrainer:
             self.optimizer.step()
 
             running_loss += loss.item()
+
+            # Reporting based on verbosity
             if verbose == 2 or (verbose == 1 and i % 10 == 9):
                 logger.info(
                     f"Epoch {epoch + 1}, Batch {i + 1}: Loss = {running_loss / (10 if self.params.get('verbose', 1) == 1 else 1):.4f}"
