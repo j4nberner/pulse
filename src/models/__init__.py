@@ -3,6 +3,7 @@ from .randomforest_model import RandomForestModel
 from .xgboost_model import XGBoostModel
 from .lightgbm_model import LightGBMModel
 from .cnn_model import CNNModel
+from .lstm_model import LSTMModel
 from .inceptiontime_model import InceptionTimeModel
 
 
@@ -11,6 +12,7 @@ model_cls_name_dict = {
     "CNNModel": CNNModel,
     "XGBoost": XGBoostModel,
     "LightGBM": LightGBMModel,
+    "LSTMModel": LSTMModel,
     "InceptionTimeModel": InceptionTimeModel
 }
 

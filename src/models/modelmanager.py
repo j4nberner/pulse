@@ -3,6 +3,7 @@ from typing import List, Dict, Any
 import logging
 import torch
 from torch import nn
+import os
 
 from . import get_model_class
 
@@ -28,6 +29,7 @@ class ModelManager:
             sys.exit()
 
         self.wandb = kwargs.get("wandb", False)
+        self.output_dir = kwargs.get("output_dir", "")
         self.models = self._prepare_models(models)
 
     def _prepare_models(self, model_configs) -> List[Any]:
@@ -59,6 +61,7 @@ class ModelManager:
                 model = model_cls(
                     config.get("params", {}),
                     wandb=self.wandb.get("enabled", False),
+                    output_dir=self.output_dir,
                 )  # Pass parameters to model constructor
 
                 prepared_models.append(model)
@@ -71,14 +74,3 @@ class ModelManager:
             sys.exit(1)
 
         return prepared_models
-
-    def save_model(self, model_name: str, model: Any) -> None:
-        """Save the trained model to disk."""
-        # Placeholder - implement actual model saving logic
-        logger.info("Saving model: %s", model_name)
-
-    def load_model(self, model_name: str) -> Any:
-        """Load a specific model."""
-        logger.info("Loading model: %s", model_name)
-        # Placeholder - implement actual model loading logic
-        return {"name": model_name}
