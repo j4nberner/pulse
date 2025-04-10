@@ -2,88 +2,80 @@ from typing import Dict, Any, Optional
 import logging
 import numpy as np
 import pandas as pd
-import psutil
-import os
-import sys
-import warnings
-from sklearn.ensemble import RandomForestClassifier
+from xgboost import XGBClassifier
 
 from src.models.pulsetemplate_model import PulseTemplateModel
 from src.eval.metrics import rmse
 
-# Filter the specific warning about feature names 
-# (This is because training is done with np arrays and prediction with pd dataframe to preserve information about feature importance etc.)
-warnings.filterwarnings("ignore", message="X has feature names, but RandomForestClassifier was fitted without feature names")
-
 logger = logging.getLogger("PULSE_logger")
 
+# TODO: add saving and loading functionality
 
-class RandomForestModel(PulseTemplateModel):
+class XGBoostModel(PulseTemplateModel):
     """
-    Implementation of RandomForest model for classification and regression tasks.
+    Implementation of XGBoost model for classification and regression tasks.
 
     Attributes:
-        model: The trained RandomForest model.
+        model: The trained XGBoost model.
         model_type: Type of the model ('classifier' or 'regressor').
         params: Parameters used for the model.
     """
 
     def __init__(self, params: Dict[str, Any], **kwargs) -> None:
         """
-        Initialize the RandomForest model.
-
+        Initialize the XGBoost model.
+        
         Args:
             params: Dictionary of parameters from the config file.
-
+            
         Raises:
             KeyError: If any required parameters are missing from the config.
         """
         # For trainer_name we still require it to be explicitly in the params
         if "trainer_name" not in params:
             raise KeyError("Required parameter 'trainer_name' not found in config")
-
+            
         # Use the class name as model_name if not provided in params
-        model_name = params.get(
-            "model_name", self.__class__.__name__.replace("Model", "")
-        )
+        model_name = params.get("model_name", self.__class__.__name__.replace("Model", ""))
         trainer_name = params["trainer_name"]
         super().__init__(model_name, trainer_name)
-
-        # Define all required scikit-learn RandomForest parameters
-        required_rf_params = [
+        
+        # Define all required XGBoost parameters
+        required_xgb_params = [
+            "objective", 
             "n_estimators", 
-            "n_jobs", 
-            "max_depth", 
-            "min_samples_split", 
-            "min_samples_leaf", 
-            "max_features",
-            "bootstrap", 
-            "oob_score", 
+            "learning_rate", 
             "random_state", 
-            "verbose",
-            "criterion", 
-            "max_leaf_nodes", 
-            "min_impurity_decrease",
-            "max_samples", 
-            "class_weight", 
-            "ccp_alpha"
+            "verbosity",
+            "max_depth", 
+            "gamma", 
+            "min_child_weight", 
+            "subsample", 
+            "colsample_bytree",
+            "reg_alpha", 
+            "reg_lambda", 
+            "scale_pos_weight", 
+            "n_jobs", "tree_method",
+            "eval_metric", 
+            "early_stopping_rounds"
         ]
-
-        # Check if all required RandomForest parameters exist in config
-        missing_params = [param for param in required_rf_params if param not in params]
+        
+        # Check if all required XGBoost parameters exist in config
+        missing_params = [param for param in required_xgb_params if param not in params]
         if missing_params:
-            raise KeyError(
-                f"Required RandomForest parameters missing from config: {missing_params}"
-            )
-
-        # Extract RandomForest parameters from config
-        rf_params = {param: params[param] for param in required_rf_params}
-
+            raise KeyError(f"Required XGBoost parameters missing from config: {missing_params}")
+        
+        # For XGBoost 2.0.3: include early_stopping_rounds in model initialization
+        model_params = {param: params[param] for param in required_xgb_params}
+        
+        # Store early_stopping_rounds for training
+        self.early_stopping_rounds = params["early_stopping_rounds"]
+        
         # Log the parameters being used
-        logger.info(f"Initializing RandomForest with parameters: {rf_params}")
-
-        # Initialize the RandomForest model with parameters from config
-        self.model = RandomForestClassifier(**rf_params)
+        logger.info(f"Initializing XGBoost with parameters: {model_params}")
+        
+        # Initialize the XGBoost model with parameters from config
+        self.model = XGBClassifier(**model_params)
 
     def set_trainer(self, trainer_name, train_dataloader, test_dataloader):
         """
@@ -94,26 +86,26 @@ class RandomForestModel(PulseTemplateModel):
             train_dataloader: DataLoader for training data.
             test_dataloader: DataLoader for testing data.
         """
-        if trainer_name == "RandomForestTrainer":
-            self.trainer = RandomForestTrainer(self, train_dataloader, test_dataloader)
+        if trainer_name == "XGBoostTrainer":
+            self.trainer = XGBoostTrainer(self, train_dataloader, test_dataloader)
         else:
-            raise ValueError(f"Trainer {trainer_name} not supported for RandomForest.")
+            raise ValueError(f"Trainer {trainer_name} not supported for XGBoost.")
 
 
-class RandomForestTrainer:
+class XGBoostTrainer:
     """
-    Trainer class for RandomForest models.
+    Trainer class for XGBoost models.
 
-    This class handles the training workflow for RandomForest models
+    This class handles the training workflow for XGBoost models
     including data preparation, model training, evaluation and saving.
     """
 
     def __init__(self, model, train_dataloader, test_dataloader) -> None:
         """
-        Initialize the RandomForest trainer.
-
+        Initialize the XGBoost trainer.
+        
         Args:
-            model: The RandomForest model to train.
+            model: The XGBoost model to train.
             train_dataloader: DataLoader for training data.
             test_dataloader: DataLoader for testing data.
         """
@@ -122,17 +114,15 @@ class RandomForestTrainer:
         self.test_dataloader = test_dataloader
 
     def train(self):
-        """Train the RandomForest model using the provided data loaders."""
-        logger.info("Starting training process for RandomForest model...")
+        """Train the XGBoost model using the provided data loaders."""
+        logger.info(f"Starting training process for XGBoost model...")
 
         # Extract data from dataloader
         X_train, y_train = [], []
         X_test, y_test = [], []
 
-        # Extract data from dataloader
         for batch in self.train_dataloader:
             features, labels = batch
-            # Convert PyTorch tensors to NumPy arrays
             X_train.extend(features.numpy())
             y_train.extend(labels.numpy().squeeze())
 
@@ -148,12 +138,16 @@ class RandomForestTrainer:
         y_test = np.array(y_test)
 
         # Log shapes before model training (after conversion)
-        logger.info(f"Before RandomForest training - X_train shape: {X_train.shape}, y_train shape: {y_train.shape}")
-        logger.info(f"Before RandomForest training - X_test shape: {X_test.shape}, y_test shape: {y_test.shape}")
-
-        # dummy training loop
-        self.model.model.fit(X_train, y_train)
-        logger.info("RandomForest model trained successfully.")
+        logger.info(f"Before XGBoost training - X_train shape: {X_train.shape}, y_train shape: {y_train.shape}")
+        logger.info(f"Before XGBoost training - X_test shape: {X_test.shape}, y_test shape: {y_test.shape}")
+        
+        # Train model
+        self.model.model.fit(
+            X_train, y_train,
+            eval_set=[(X_test, y_test)],
+            verbose=False
+        )
+        logger.info("XGBoost model trained successfully.")
 
         # Access the original x-dataframe from the TorchDatasetWrapper to get column names (e.g. for feature importance analysis)
         feature_names = None
