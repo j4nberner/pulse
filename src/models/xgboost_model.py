@@ -9,7 +9,8 @@ from src.eval.metrics import rmse
 
 logger = logging.getLogger("PULSE_logger")
 
-# TODO: add saving and loading functionality
+# TODO: add WanB to ModelTrainer of all ML models
+# TODO: add model saving to RF, XGBoost, LightGBM, InceptionTime (from Jan)
 
 class XGBoostModel(PulseTemplateModel):
     """

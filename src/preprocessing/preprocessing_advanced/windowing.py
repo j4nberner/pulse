@@ -1,6 +1,7 @@
 import os
 import pandas as pd
 import numpy as np
+import re
 from tqdm import tqdm
 import gc
 import logging
@@ -356,3 +357,210 @@ class Windower:
             self.save_windowed_data(windowed_data, task, dataset, data_window, prediction_window, step_size)
         
         return windowed_data
+    
+class WindowedDataTo3D:
+    """
+    Class for converting windowed ICU data from flattened 2D pandas DataFrames to 3D numpy arrays
+    suitable for deep learning models.
+    
+    This class treats static features (like demographics) as time series by repeating their values
+    across the time dimension, resulting in a single 3D array output.
+    """
+    
+    def __init__(self, logger=None):
+        """
+        Initialize the WindowedDataTo3D converter.
+        """
+    
+    def convert_to_3d(self, windowed_data, static_columns=None, id_column='stay_id'):
+        """
+        Convert windowed data from 2D DataFrames to 3D numpy arrays, treating static features
+        as time series by repeating them.
+        
+        Args:
+            windowed_data (dict): Dictionary containing train, val, test data with X and y keys,
+                                 as produced by Windower.window_data()
+            static_columns (list, optional): List of static columns to include as repeated time series
+                                           Default: ['sex', 'age', 'height', 'weight']
+            id_column (str): Column name to exclude from the resulting array
+                                           
+        Returns:
+            dict: Dictionary containing the data as 3D arrays
+        """
+        if static_columns is None:
+            static_columns = ['sex', 'age', 'height', 'weight']
+        
+        results = {}
+        
+        for set_type in ['train', 'val', 'test']:
+            if set_type not in windowed_data:
+                self.logger.warning(f"Set type {set_type} not found in windowed data")
+                continue
+                
+            X = windowed_data[set_type]['X']
+            y = windowed_data[set_type]['y']
+            
+            # Drop the ID column
+            X_without_id = X.drop(columns=[id_column], errors='ignore')
+            
+            # Find all time-dependent columns and organize them
+            time_dependent_cols = {}
+            time_indices_set = set()
+            
+            for col in X_without_id.columns:
+                if col in static_columns:
+                    # Skip static columns for now, will add them later
+                    continue
+                    
+                # Extract feature name and time index using regex
+                match = re.match(r'(.+)_(\d+)$', col)
+                if match:
+                    feature_name, time_idx = match.groups()
+                    time_idx = int(time_idx)
+                    time_indices_set.add(time_idx)
+                    
+                    if feature_name not in time_dependent_cols:
+                        time_dependent_cols[feature_name] = []
+                    
+                    time_dependent_cols[feature_name].append((time_idx, col))
+            
+            # Get a sorted list of all unique time indices
+            time_indices = sorted(time_indices_set)
+            data_window = len(time_indices)
+            
+            # Get feature names sorted alphabetically
+            feature_names = sorted(time_dependent_cols.keys())
+            
+            # Add static columns to the feature list
+            available_static_cols = [col for col in static_columns if col in X_without_id.columns]
+            all_feature_names = available_static_cols + feature_names
+            
+            # Create 3D array (samples, features, time_steps)
+            samples = X_without_id.shape[0]
+            n_features = len(all_feature_names)
+            X_3d = np.zeros((samples, n_features, data_window), dtype=np.float32)
+            
+            self.logger.info(f"Creating 3D array for {set_type} set: {samples} samples, {n_features} features, {data_window} data window")
+            
+            # Fill static features (repeating values across time dimension)
+            for feature_idx, feature_name in enumerate(available_static_cols):
+                static_values = X_without_id[feature_name].values
+                # Broadcast static values across the time dimension
+                for t in range(data_window):
+                    X_3d[:, feature_idx, t] = static_values
+            
+            # Fill time-dependent features
+            static_offset = len(available_static_cols)
+            for feature_idx, feature_name in enumerate(feature_names):
+                for time_idx, col_name in sorted(time_dependent_cols[feature_name], key=lambda x: x[0]):
+                    # Map the time_idx to its position in the time_indices list
+                    t_pos = time_indices.index(time_idx)
+                    X_3d[:, feature_idx + static_offset, t_pos] = X_without_id[col_name].values
+            
+            # Convert y to numpy array
+            y_np = y['label'].values.astype(np.int32)
+            
+            # Store results
+            results[set_type] = {
+                'X': X_3d,                          # 3D array: (samples, features, time_steps)
+                'y': y_np,                          # 1D array with labels
+                'feature_names': all_feature_names  # List of feature names
+            }
+            
+            self.logger.info(f"Converted {set_type} set to 3D array with shape: {X_3d.shape}")
+        
+        return results
+    
+    def save_3d_arrays(self, results_3d, base_path, task, dataset, data_window, prediction_window):
+        """
+        Save the 3D arrays and related data to disk.
+        
+        Args:
+            results_3d (dict): Dictionary containing 3D arrays and related data
+            base_path (str): Base path for data directories
+            task (str): Task name
+            dataset (str): Dataset name
+            data_window (int): Size of the data window
+            prediction_window (int): Size of the prediction window
+        """
+        # Create save directory
+        save_dir = f'{base_path}/datasets/deep_learning/{task}/{dataset}/{data_window}_dw_{prediction_window}_pw'
+        os.makedirs(save_dir, exist_ok=True)
+        
+        self.logger.info(f"Saving 3D arrays to {save_dir}")
+        
+        # Save data for each set
+        for set_type in ['train', 'val', 'test']:
+            if set_type not in results_3d:
+                continue
+                
+            # Save 3D array
+            np.save(f"{save_dir}/X_{set_type}.npy", results_3d[set_type]['X'])
+            
+            # Save labels
+            np.save(f"{save_dir}/y_{set_type}.npy", results_3d[set_type]['y'])
+            
+            # Save feature names
+            with open(f"{save_dir}/feature_names_{set_type}.txt", 'w') as f:
+                for feature in results_3d[set_type]['feature_names']:
+                    f.write(f"{feature}\n")
+                    
+        self.logger.info(f"Successfully saved 3D arrays to {save_dir}")
+    
+    def load_3d_arrays(self, base_path, task, dataset, data_window, prediction_window):
+        """
+        Load previously saved 3D arrays and related data from disk.
+        
+        Args:
+            base_path (str): Base path for data directories
+            task (str): Task name
+            dataset (str): Dataset name
+            data_window (int): Size of the data window
+            prediction_window (int): Size of the prediction window
+            
+        Returns:
+            dict: Dictionary containing the loaded 3D arrays and related data or None if loading fails
+        """
+        # Load directory
+        load_dir = f'{base_path}/datasets/deep_learning/{task}/{dataset}/{data_window}_dw_{prediction_window}_pw'
+        
+        if not os.path.exists(load_dir):
+            self.logger.error(f"3D array directory {load_dir} does not exist")
+            return None
+        
+        results = {}
+        
+        try:
+            for set_type in ['train', 'val', 'test']:
+                # Check if files exist
+                x_path = f"{load_dir}/X_{set_type}.npy"
+                y_path = f"{load_dir}/y_{set_type}.npy"
+                
+                if not os.path.exists(x_path) or not os.path.exists(y_path):
+                    self.logger.warning(f"Missing 3D array files for {set_type} set")
+                    continue
+                
+                # Load 3D array and labels
+                X = np.load(x_path)
+                y = np.load(y_path)
+                
+                # Load feature names if available
+                feature_names = []
+                names_path = f"{load_dir}/feature_names_{set_type}.txt"
+                if os.path.exists(names_path):
+                    with open(names_path, 'r') as f:
+                        feature_names = [line.strip() for line in f.readlines()]
+                
+                results[set_type] = {
+                    'X': X,
+                    'y': y,
+                    'feature_names': feature_names
+                }
+                
+                self.logger.info(f"Loaded {set_type} set 3D array with shape: {X.shape}")
+            
+            return results
+            
+        except Exception as e:
+            self.logger.error(f"Error loading 3D arrays from {load_dir}: {e}")
+            return None

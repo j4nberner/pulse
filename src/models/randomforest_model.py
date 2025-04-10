@@ -12,7 +12,7 @@ from src.models.pulsetemplate_model import PulseTemplateModel
 from src.eval.metrics import rmse
 
 # Filter the specific warning about feature names 
-# (This is because training is done with np arrays and prediction with pd dataframe to preserve information about feature importance etc.)
+# (This is because training is done with np arrays and prediction with pd dataframe to preserve feature names for feature importance etc.)
 warnings.filterwarnings("ignore", message="X has feature names, but RandomForestClassifier was fitted without feature names")
 
 logger = logging.getLogger("PULSE_logger")

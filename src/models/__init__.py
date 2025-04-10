@@ -3,13 +3,15 @@ from .randomforest_model import RandomForestModel
 from .xgboost_model import XGBoostModel
 from .lightgbm_model import LightGBMModel
 from .cnn_model import CNNModel
+from .inceptiontime_model import InceptionTimeModel
 
 
 model_cls_name_dict = {
     "RandomForest": RandomForestModel,
     "CNNModel": CNNModel,
     "XGBoost": XGBoostModel,
-    "LightGBM": LightGBMModel
+    "LightGBM": LightGBMModel,
+    "InceptionTimeModel": InceptionTimeModel
 }
 
 
