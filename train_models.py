@@ -1,70 +1,25 @@
 import argparse
 import os
-
 import pandas as pd
 import yaml
 from torch.utils.data import DataLoader
+from omegaconf import OmegaConf
 import shutil
 
 from src.logger_setup import setup_logger, init_wandb
 from src.data.dataloader import DatasetManager, TorchDatasetWrapper
 from src.models.modelmanager import ModelManager
 from src.util.slurm_util import copy_data_to_scratch, is_on_slurm, get_local_scratch_dir
+from src.util.config_util import load_config_with_models, save_config_file
 
 
 logger, output_dir = setup_logger()
 
 
-class TrainConfig:
-    """Configuration settings for the training process."""
-
-    def __init__(self, config_path: str):
-        """Initialize training configuration."""
-        self.config_path = config_path
-        self.models = []
-        self.tasks = []
-        self.datasets = []
-        self.metrics = []
-        self.base_path = ""
-        self.output_dir = output_dir
-        self.experiment_name = (
-            f"experiment_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}"
-        )
-        self.debug_mode = False
-        self.general = {}  # Add container for general settings
-
-    def load_from_file(self):
-        """Load configuration from a YAML file."""
-        with open(self.config_path, "r") as f:
-            config_data = yaml.safe_load(f)
-
-        for key, value in config_data.items():
-            # if hasattr(self, key):
-            setattr(self, key, value)
-
-        # Set debug_mode from general section if it exists
-        if (
-            hasattr(self, "general")
-            and isinstance(self.general, dict)
-            and "debug_mode" in self.general
-        ):
-            self.debug_mode = self.general["debug_mode"]
-            logger.info(f"DEBUG MODE set to: {self.debug_mode}")
-
-        logger.info("Loaded configuration from %s", self.config_path)
-
-    def save_config_file(self):
-        """Copy the current configuration to the output directory."""
-        config_copy_path = os.path.join(self.output_dir, "config_copy.yaml")
-        # Copy the configuration file to the output directory
-        shutil.copy2(self.config_path, config_copy_path)
-        logger.info("Configuration file copied to %s", config_copy_path)
-
-
 class ModelTrainer:
     """Core training functionality for ML/DL models and LLMs."""
 
-    def __init__(self, config: TrainConfig):
+    def __init__(self, config: OmegaConf):
         """
         Initialize the model trainer.
 
@@ -74,7 +29,7 @@ class ModelTrainer:
         self.config = config
 
         # Log debug mode status
-        if self.config.debug_mode:
+        if self.config.general.debug_mode:
             logger.info("DEBUG MODE ACTIVE: Training will use limited dataset size")
 
         # -------------------- Copy data to local scratch (Slurm) --------------------
@@ -100,7 +55,7 @@ class ModelTrainer:
         logger.info("Starting training process...")
 
         # Check if debug mode is enabled
-        if self.config.debug_mode:
+        if self.config.general.debug_mode:
             logger.info("DEBUG MODE ACTIVE: Training will use only one batch")
 
         results = {}
@@ -160,7 +115,7 @@ class ModelTrainer:
                     )
 
                     # If in debug mode, limit to a single batch for both training and testing
-                    if self.config.debug_mode:
+                    if self.config.general.debug_mode:
                         try:
                             # Get just the first batch
                             first_train_batch = next(iter(train_loader))
@@ -211,11 +166,12 @@ def parse_args() -> argparse.Namespace:
 def main():
     """Main entry point."""
     args = parse_args()
-
-    # Initialize configuration
-    config = TrainConfig(args.config)
-    config.save_config_file()
-    config.load_from_file()
+    config = load_config_with_models(args.config)
+    config.output_dir = output_dir
+    config.experiment_name = (
+        f"experiment_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}"
+    )
+    save_config_file(config, output_dir)  # Save the configuration file
 
     # Log if running on Slurm
     if is_on_slurm():

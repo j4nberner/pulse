@@ -14,7 +14,7 @@ logger = logging.getLogger("PULSE_logger")
 class ModelManager:
     """Manages all models for ICU predictions. Loading, Api-Access, and Saving."""
 
-    def __init__(self, models: List[dict], **kwargs) -> None:
+    def __init__(self, models: Dict, **kwargs) -> None:
         """
         Initialize the ModelManager with model names. Verifies model attributes.
         Converts model names to model objects with specified parameters.
@@ -23,7 +23,7 @@ class ModelManager:
             models: List of model configurations.
         """
         self.pipelines = {}
-        self.models = []
+        self.models = {}
         if not models:
             logger.error("No models specified.")
             sys.exit()
@@ -32,7 +32,7 @@ class ModelManager:
         self.output_dir = kwargs.get("output_dir", "")
         self.models = self._prepare_models(models)
 
-    def _prepare_models(self, model_configs) -> List[Any]:
+    def _prepare_models(self, model_configs: Dict) -> List[Any]:
         """
         Checks model configurations and converts them to actual model objects.
 
@@ -46,7 +46,7 @@ class ModelManager:
         logger.info("Preparing %d models...", len(model_configs))
         prepared_models = []
 
-        for config in model_configs:
+        for _, config in model_configs.items():
             model_name = config.get("name")
             if not model_name:
                 logger.error("Model name is required.")
