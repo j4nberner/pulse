@@ -46,7 +46,10 @@ class LSTMModel(PulseTemplateModel, nn.Module):
             "save_checkpoint",
             "verbose",
             "num_features",  # Number of features in input
+            "num_layers",  # Number of LSTM layers
             "output_shape",  # Size of output
+            "hidden_size",  # Number of features in hidden state
+            "dropout",  # Dropout rate
         ]
 
         # Check if wandb is enabled and set up
@@ -65,10 +68,14 @@ class LSTMModel(PulseTemplateModel, nn.Module):
 
         # -------------------------Define layers-------------------------
         self.input_size = self.params["num_features"]
-        self.hidden_size = 128
-        self.num_layers = 2
+        self.hidden_size = self.params[
+            "hidden_size"
+        ]  # Number of features in hidden state. 32-256 is standard
+        self.num_layers = self.params[
+            "num_layers"
+        ]  # Number of LSTM layers 1-4 is standard
         self.output_size = self.params["output_shape"]
-        self.dropout = 0.2
+        self.dropout = self.params["dropout"]
 
         # LSTM layer
         self.lstm = nn.LSTM(
