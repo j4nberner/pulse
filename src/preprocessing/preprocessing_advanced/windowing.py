@@ -382,10 +382,10 @@ class WindowedDataTo3D:
         self.model_type_mapping = {
             # CNN type models
             "CNN": "CNN",
+            "InceptionTime": "CNN",
             
             # RNN type models
             "LSTM": "RNN",
-            "InceptionTime": "RNN",
             "GRU": "RNN"
         }
         

@@ -231,6 +231,8 @@ class InceptionTimeTrainer:
         self.patience = config.get("patience", 5)
         self.save_path = config.get("save_path", "output/models/inceptiontime_best.pt")
         
+        # TODO: adjust parameter access (save_path is not accessed properly for example)
+
         # Set up model save directory
         self.save_dir = config.get("save_dir", os.path.join(os.getcwd(), "output"))
         self.model_save_dir = os.path.join(self.save_dir, "Models")
@@ -319,10 +321,6 @@ class InceptionTimeTrainer:
                 if windowing_enabled:
                     self.convert_method = "windowed_to_3d"
                     logger.info("Will use WindowedDataTo3D converter for batches")
-                    
-                    # Test conversion on a sample batch
-                    converted_batch = self.converter.convert_batch_to_3d(features)
-                    logger.info(f"Converted shape as input to model: {converted_batch.shape}")
                 else:
                     # Simple reshaping needed (handled during training)
                     self.reshape_needed = True
@@ -452,6 +450,10 @@ class InceptionTimeTrainer:
                     else:  # RNN format
                         features = features.unsqueeze(1)   # (batch, 1, features)
                 
+                # Log the shape on first batch of first epoch
+                if batch_idx == 0 and epoch == 0:
+                    logger.info(f"Input shape to model: {features.shape}")
+
                 features, labels = features.to(self.device), labels.to(self.device).float()
                 
                 # Forward pass
