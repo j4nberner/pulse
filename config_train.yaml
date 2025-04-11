@@ -4,12 +4,12 @@
 general:
   app_name: "Pulse"
   version: "1.0.0"
-  debug_mode: true
+  debug_mode: false
   use_scratch: true
 
 # Weight and Biases (wandb) logging configuration
 wandb:
-  enabled: false
+  enabled: true
   entity: "berner"
 
 ###### Application specific settings ######
@@ -65,14 +65,14 @@ preprocessing_advanced:
 
 benchmark_settings:
   batch_size: 100
-  num_epochs: 50
-  learning_rate: 0.001
-  optimizer: "adam"
+#   num_epochs: 100
+# learning_rate: 0.001 # Removed. Use model-specific learning rate instead.
+# optimizer: "adam" # Removed. Use model-specific optimizer instead.
 
 load_models:
   # - model_configs/CNNModel.yaml
   # - model_configs/LightGBMModel.yaml
-  # - model_configs/LSTMModel.yaml
+  - model_configs/LSTMModel.yaml
   # - model_configs/RandomForestModel.yaml
   # - model_configs/XGBoost.yaml
   - model_configs/InceptionTimeModel.yaml

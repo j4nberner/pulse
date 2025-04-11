@@ -294,7 +294,7 @@ class DatasetManager:
             return False
 
     def get_preprocessed_data(
-        self, dataset_id: str, model_name: str, test: bool = False
+        self, dataset_id: str, model_name: str, mode: str = "train"
     ) -> Tuple[pd.DataFrame, pd.DataFrame]:
         """
         Get preprocessed data for a specific model.
@@ -302,7 +302,7 @@ class DatasetManager:
         Args:
             dataset_id (str): ID of the dataset
             model_name (str): Name of the model
-            test (bool): Whether to return test data
+            mode (str): train, val, or test (default: train)
 
         Returns:
             Tuple[pd.DataFrame, pd.DataFrame]: Features and labels
@@ -321,9 +321,12 @@ class DatasetManager:
         data = dataset["data"]
 
         # Get the appropriate split
-        if test:
+        if mode == "test":
             X = data["X_test"]
             y = data["y_test"]
+        elif mode == "val":
+            X = data["X_val"]
+            y = data["y_val"]
         else:
             X = data["X_train"]
             y = data["y_train"]
@@ -332,40 +335,6 @@ class DatasetManager:
         # For now, we just return the data as is
 
         return X, y
-
-    def get_validation_data(
-        self, dataset_id: str, model_name: str
-    ) -> Tuple[pd.DataFrame, pd.DataFrame]:
-        """
-        Get validation data for a specific model.
-
-        Args:
-            dataset_id (str): ID of the dataset
-            model_name (str): Name of the model
-
-        Returns:
-            Tuple[pd.DataFrame, pd.DataFrame]: Features and labels
-        """
-        if dataset_id not in self.datasets:
-            logger.error(f"Dataset {dataset_id} not found")
-            return None, None
-
-        dataset = self.datasets[dataset_id]
-
-        if not dataset["loaded"]:
-            success = self.load_dataset(dataset_id)
-            if not success:
-                return None, None
-
-        data = dataset["data"]
-
-        X_val = data["X_val"]
-        y_val = data["y_val"]
-
-        # Apply any model-specific preprocessing if needed
-        # For now, we just return the data as is
-
-        return X_val, y_val
 
     def _drop_stay_id_if_present(self, data_dict: dict) -> dict:
         """

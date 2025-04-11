@@ -1,12 +1,12 @@
 name: "LSTMModel"
 params:
   trainer_name: "LSTMTrainer"
-  save_checkpoint: 1 # Save checkpoint every n epochs. Set to 0 to disable.
+  save_checkpoint: 0 # Save checkpoint every n epochs. Set to 0 to disable.
   num_features: 101
+  num_layers: 2 # Number of LSTM layers
   output_shape: 1
-  num_channels: 1
-  kernel_size: 3
-  pool_size: 2
+  hidden_size: 128 # Number of hidden units in LSTM layers
   learning_rate: 0.001
-  num_epochs: 10
+  num_epochs: 1
+  dropout: 0.2 # Dropout rate for LSTM layers
   verbose: 2 # Controls verbosity of output (0 = silent, 1 = log every 10 batches, 2 = log every batch)
