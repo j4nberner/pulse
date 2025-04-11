@@ -74,15 +74,13 @@ class ModelTrainer:
                 try:
                     # Preprocess data for corresponding model. Returns X and y as pandas DataFrames
                     X_train, y_train = self.dm.get_preprocessed_data(
-                        dataset_name, model_name, test=False
+                        dataset_name, model_name, mode="train"
                     )
-                    X_test, y_test = self.dm.get_preprocessed_data(
-                        dataset_name, model_name, test=True
-                    )
+                    X_val, y_val = self.dm.get_preprocessed_data(dataset_name, model_name, mode="val")
 
                     # Wrap with TorchDatasetWrapper
                     train_dataset = TorchDatasetWrapper(X_train, y_train)
-                    test_dataset = TorchDatasetWrapper(X_test, y_test)
+                    val_dataset = TorchDatasetWrapper(X_val, y_val)
 
                     # Get batch size with fallback using getattr
                     if isinstance(self.config.benchmark_settings, dict):
@@ -107,8 +105,8 @@ class ModelTrainer:
                         shuffle=True,
                         drop_last=True,
                     )
-                    test_loader = DataLoader(
-                        test_dataset,
+                    val_loader = DataLoader(
+                        val_dataset,
                         batch_size=batch_size,
                         shuffle=False,
                         drop_last=True,
@@ -119,11 +117,11 @@ class ModelTrainer:
                         try:
                             # Get just the first batch
                             first_train_batch = next(iter(train_loader))
-                            first_test_batch = next(iter(test_loader))
+                            first_test_batch = next(iter(val_loader))
 
                             # Convert to single-batch iterables
                             train_loader = [first_train_batch]
-                            test_loader = [first_test_batch]
+                            val_loader = [first_test_batch]
 
                             logger.info(
                                 f"DEBUG MODE: Limited to single batch for {model_name}"
@@ -134,7 +132,7 @@ class ModelTrainer:
                             )
 
                     # Set trainer for the model
-                    model.set_trainer(trainer_name, train_loader, test_loader)
+                    model.set_trainer(trainer_name, train_loader, val_loader)
                     # Train and evaluate the model -> model specific
                     model.trainer.train()
 

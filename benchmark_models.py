@@ -1,128 +1,153 @@
-"""
-LLM ICU Prediction Benchmark Framework
-
-This framework evaluates and benchmarks large language models on intensive care unit
-prediction tasks, providing standardized metrics and comparison tools.
-"""
-
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
-import os
 import argparse
-import logging
-import json
-import time
-from datetime import datetime
-from typing import Dict, Any, Optional
+import os
+import pandas as pd
 import yaml
+from torch.utils.data import DataLoader
+from omegaconf import OmegaConf
+import shutil
 
+from src.logger_setup import setup_logger, init_wandb
+from src.data.dataloader import DatasetManager, TorchDatasetWrapper
 from src.models.modelmanager import ModelManager
-from src.data.dataloader import DatasetManager
-
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    handlers=[logging.StreamHandler()],
-)
-logger = logging.getLogger(__name__)
+from src.util.slurm_util import copy_data_to_scratch, is_on_slurm, get_local_scratch_dir
+from src.util.config_util import load_config_with_models, save_config_file
 
 
-class BenchmarkConfig:
-    """Configuration settings for the ICU prediction benchmark."""
+logger, output_dir = setup_logger()
 
-    def __init__(self, config_path: Optional[str] = None):
-        """Initialize benchmark configuration.
+
+class ModelTrainer:
+    """Core training functionality for ML/DL models and LLMs."""
+
+    def __init__(self, config: OmegaConf):
+        """
+        Initialize the model trainer.
 
         Args:
-            config_path: Path to JSON configuration file
+            config (TrainConfig): Configuration object containing training settings.
         """
-        # Default configuration
-        self.models = []
-        self.datasets = []
-        self.metrics = ["accuracy", "auroc", "auprc", "f1_score"]
-        self.output_dir = "results"
-        self.experiment_name = f"experiment_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-
-        # Load from file if provided
-        if config_path and os.path.exists(config_path):
-            self._load_from_file(config_path)
-
-    def _load_from_file(self, config_path: str) -> None:
-        """Load configuration from a YAML file."""
-
-        with open(config_path, "r") as f:
-            config_data = yaml.safe_load(f)
-
-        for key, value in config_data.items():
-            if hasattr(self, key):
-                setattr(self, key, value)
-
-        logger.info("Loaded configuration from %s", config_path)
-
-
-class Benchmark:
-    """Core benchmark functionality."""
-
-    def __init__(self, config: BenchmarkConfig):
         self.config = config
-        self.model_manager = ModelManager(config.models)
-        self.dataset_manager = DatasetManager(config.datasets)
-        self.results = {}
 
-        # Ensure output directory exists
-        os.makedirs(
-            os.path.join(config.output_dir, config.experiment_name), exist_ok=True
+        # Log debug mode status
+        if self.config.general.debug_mode:
+            logger.info("DEBUG MODE ACTIVE: Training will use limited dataset size")
+
+        # -------------------- Copy data to local scratch (Slurm) --------------------
+        if is_on_slurm() and self.config.general.get("use_scratch", False):
+            logger.info("Running on Slurm, preparing to copy data to scratch space...")
+            scratch_dir = get_local_scratch_dir()
+            if scratch_dir:
+                logger.info(f"Scratch directory available at: {scratch_dir}")
+                # Update the config with scratch space paths
+                self.config, data_copied = copy_data_to_scratch(self.config)
+            else:
+                logger.warning("No scratch directory found, using original data paths")
+
+        logger.info("---------------Initializing Dataset Manager---------------")
+        self.dm = DatasetManager(self.config)
+        logger.info("---------------Initializing Model Manager---------------")
+        self.mm = ModelManager(
+            self.config.models, wandb=config.wandb, output_dir=config.output_dir
         )
 
-    def run(self) -> Dict[str, Any]:
-        """Execute the benchmark."""
-        start_time = time.time()
-        logger.info("Starting benchmark: %s", self.config.experiment_name)
+    def run(self):
+        """Run the training process for all configured models and datasets."""
+        logger.info("Starting training process...")
 
-        # TODO:Implement from here...
-        models = self.model_manager.load_models()
-        datasets = self.dataset_manager.load_datasets()
+        # Check if debug mode is enabled
+        if self.config.general.debug_mode:
+            logger.info("DEBUG MODE ACTIVE: Training will use only one batch")
 
-        # Run evaluations
-        for model_name, model in models.items():
-            self.results[model_name] = {}
+        results = {}
 
-            for dataset_name, dataset in datasets.items():
-                logger.info("Evaluating %s on %s", model_name, dataset_name)
-                self.results[model_name][dataset_name] = self._evaluate(model, dataset)
+        # Train and evaluate each model on each dataset
+        for dataset_name, _ in self.dm.datasets.items():
+            logger.info("Processing dataset: %s", dataset_name)
+            results[dataset_name] = {}
 
-        # Save results
-        self._save_results()
+            for model in self.mm.models:
+                model_name = model.__class__.__name__
+                trainer_name = model.trainer_name
+                logger.info("--" * 30)
+                logger.info("Training model: %s on %s", model_name, dataset_name)
 
-        elapsed = time.time() - start_time
-        logger.info(f"Benchmark completed in {elapsed:.2f} seconds")
-        return self.results
+                try:
+                    # Preprocess data for corresponding model. Returns X and y as pandas DataFrames
+                    X_train, y_train = self.dm.get_preprocessed_data(
+                        dataset_name, model_name, test=False
+                    )
+                    X_test, y_test = self.dm.get_preprocessed_data(
+                        dataset_name, model_name, test=True
+                    )
 
-    def _evaluate(self, model: Any, dataset: Any) -> Dict[str, float]:
-        """Evaluate a model on a dataset."""
-        # Placeholder - implement actual evaluation logic
-        return {metric: 0.0 for metric in self.config.metrics}
+                    # Wrap with TorchDatasetWrapper
+                    train_dataset = TorchDatasetWrapper(X_train, y_train)
+                    test_dataset = TorchDatasetWrapper(X_test, y_test)
 
-    def _save_results(self) -> None:
-        """Save benchmark results to file."""
-        result_path = os.path.join(
-            self.config.output_dir, self.config.experiment_name, "results.json"
-        )
+                    # Get batch size with fallback using getattr
+                    if isinstance(self.config.benchmark_settings, dict):
+                        # If benchmark_settings is a dictionary
+                        batch_size = self.config.benchmark_settings.get(
+                            "batch_size", 100
+                        )
+                    else:
+                        # If benchmark_settings is an object with attributes
+                        batch_size = getattr(
+                            self.config.benchmark_settings, "batch_size", 100
+                        )
 
-        with open(result_path, "w") as f:
-            json.dump(
-                {
-                    "config": self.config.__dict__,
-                    "results": self.results,
-                    "timestamp": datetime.now().isoformat(),
-                },
-                f,
-                indent=2,
-            )
+                    logger.info(
+                        f"Using batch size: {batch_size} for {model_name} on {dataset_name}"
+                    )
 
-        logger.info("Results saved to %s", result_path)
+                    # Now create the DataLoaders with the wrapped datasets
+                    train_loader = DataLoader(
+                        train_dataset,
+                        batch_size=batch_size,
+                        shuffle=True,
+                        drop_last=True,
+                    )
+                    test_loader = DataLoader(
+                        test_dataset,
+                        batch_size=batch_size,
+                        shuffle=False,
+                        drop_last=True,
+                    )
+
+                    # If in debug mode, limit to a single batch for both training and testing
+                    if self.config.general.debug_mode:
+                        try:
+                            # Get just the first batch
+                            first_train_batch = next(iter(train_loader))
+                            first_test_batch = next(iter(test_loader))
+
+                            # Convert to single-batch iterables
+                            train_loader = [first_train_batch]
+                            test_loader = [first_test_batch]
+
+                            logger.info(
+                                f"DEBUG MODE: Limited to single batch for {model_name}"
+                            )
+                        except StopIteration:
+                            logger.warning(
+                                f"Dataset {dataset_name} is empty, cannot extract batch"
+                            )
+
+                    # Set trainer for the model
+                    model.set_trainer(trainer_name, train_loader, test_loader)
+                    # Train and evaluate the model -> model specific
+                    model.trainer.train()
+
+                except Exception as e:
+                    logger.error(
+                        "Error training %s on %s: %s",
+                        model_name,
+                        dataset_name,
+                        str(e),
+                        exc_info=True,
+                    )
+
+        logger.info("Training process completed.")
 
 
 def parse_args() -> argparse.Namespace:
@@ -130,7 +155,10 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="LLM ICU Prediction Benchmark")
 
     parser.add_argument(
-        "--config", type=str, default="config.yaml", help="Path to configuration file"
+        "--config",
+        type=str,
+        default="config_train.yaml",
+        help="Path to configuration file",
     )
     return parser.parse_args()
 
@@ -138,13 +166,23 @@ def parse_args() -> argparse.Namespace:
 def main():
     """Main entry point."""
     args = parse_args()
+    config = load_config_with_models(args.config)
+    config.output_dir = output_dir
+    config.experiment_name = (
+        f"experiment_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}"
+    )
+    save_config_file(config, output_dir)  # Save the configuration file
 
-    # Initialize configuration
-    config = BenchmarkConfig(args.config)
+    # Log if running on Slurm
+    if is_on_slurm():
+        logger.info(f"Running on Slurm cluster (Job ID: {os.getenv('SLURM_JOB_ID')})")
 
-    # Run benchmark
-    benchmark = Benchmark(config)
-    benchmark.run()
+    if config.wandb["enabled"]:
+        init_wandb(config)  # Initialize Weights & Biases
+
+    # Run Benchmarking
+    trainer = ModelTrainer(config)
+    trainer.run()
 
 
 if __name__ == "__main__":
