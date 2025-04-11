@@ -110,9 +110,15 @@ class ExampleTrainer():
       self.train_dataloader = train_dataloader
       self.test_dataloader = test_dataloader
 
+
    def train(self):
       # training loop
       pass
+
+   def validate(self, val_dataloader):
+      # validation loop
+      metrics_tracker = MetricsTracker(self.model.model_name, self.model.save_dir)
+
 
 ```
 

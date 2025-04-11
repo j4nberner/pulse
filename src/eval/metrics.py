@@ -21,6 +21,106 @@ logger = logging.getLogger("PULSE_logger")
 # TODO: maybe implement sub-group AUROC and AUPRC (considering the fairness and biases of models) for different genders, age ranges, etc.
 
 
+class MetricsTracker:
+    """
+    A class to track and report metrics during model validation.
+    """
+
+    def __init__(self, model_id, save_dir="output", metrics_to_track=None) -> None:
+        """
+        Initialize the metrics tracker.
+
+        Args:
+            metrics_to_track (List[str], optional): List of metric names to track.
+                If None, all metrics will be tracked.
+        """
+        self.model_id = model_id
+        self.save_dir = save_dir
+        self.summary = {}
+        self.metrics_to_track = metrics_to_track or [
+            "auroc",
+            "auprc",
+            "sensitivity",
+            "specificity",
+            "f1_score",
+            "accuracy",
+            "precision",
+            "recall",
+        ]
+        self.metrics = {metric: [] for metric in self.metrics_to_track}
+        self.results = {
+            "predictions": [],
+            "labels": [],
+        }
+
+    def add_results(self, predictions: List, labels: List) -> None:
+        """
+        Add results to the metrics tracker.
+
+        Args:
+            predictions: List of predicted values
+            labels: List of true labels
+        """
+        # Make sure that predictions and labels have the same dimensions
+        labels = np.array(labels).flatten()
+        predictions = np.array(predictions).flatten()
+
+        self.results["predictions"].extend(predictions)
+        self.results["labels"].extend(labels)
+
+    def compute_overall_metrics(self) -> Dict[str, Dict[str, float]]:
+        """
+        Compute summary statistics for all results in tracked metrics..
+
+        Returns:
+            Dictionary containing statistics for each metric
+        """
+        summary = {}
+
+        # Check if we have stored results to calculate overall metrics
+        if self.results["predictions"] and self.results["labels"]:
+            predictions = np.array(self.results["predictions"])
+            labels = np.array(self.results["labels"])
+
+            # Calculate overall metrics based on all predictions and labels
+            overall_metrics = calculate_all_metrics(labels, predictions)
+
+            # Store only the metrics we're tracking
+            overall_summary = {
+                metric: overall_metrics[metric]
+                for metric in self.metrics_to_track
+                if metric in overall_metrics
+            }
+            summary["overall"] = overall_summary
+
+        return summary
+
+    def save_report(self) -> str:
+        """
+        Generate and save a report of the tracked metrics.
+
+        Returns:
+            Path to the saved report file
+        """
+        os.makedirs(self.save_dir, exist_ok=True)
+
+        # Create the report
+        report = {
+            "model_id": self.model_id,
+            "metrics_summary": self.summary,
+        }
+
+        # Save as JSON
+        report_path = os.path.join(
+            self.save_dir, f"{self.model_id}_metrics_report.json"
+        )
+        with open(report_path, "w", encoding="utf-8") as f:
+            json.dump(report, f, indent=4)
+
+        logger.info(f"Metrics report saved to {report_path}")
+        return report_path
+
+
 def rmse(y_true: np.ndarray, y_pred: np.ndarray) -> float:
     """
     Dummy function

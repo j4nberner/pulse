@@ -65,7 +65,7 @@ preprocessing_advanced:
 # _______ Model Training _______
 
 benchmark_settings:
-  batch_size: 1
+  batch_size: 100
   num_epochs: 50
   learning_rate: 0.001
   optimizer: "adam"

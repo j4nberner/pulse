@@ -9,6 +9,7 @@ import torch
 import wandb
 from src.models.pulsetemplate_model import PulseTemplateModel
 from src.util.model_util import save_torch_model, load_torch_model
+from src.eval.metrics import MetricsTracker
 from src.eval.metrics import calculate_all_metrics, calc_metric_stats
 
 
@@ -254,28 +255,19 @@ class CNNTrainer:
                 if verbose == 1:
                     running_loss = 0.0
 
-    def evaluate(self, test_dataloader):
+    def evaluate(self, val_dataloader):
         """
-        Evaluates the model on the test set.
+        Evaluates the model on the validation set.
 
         Args:
-            test_dataloader: The DataLoader object for the testing dataset.
+            val_dataloader: The DataLoader object for the validation dataset.
         """
+        metrics_tracker = MetricsTracker(self.model.model_name, self.model.save_dir)
         verbose = self.params.get("verbose", 1)
         self.model.eval()
-        metrics_tracker = {
-            "auroc": [],
-            "auprc": [],
-            "accuracy": [],
-            "precision": [],
-            "recall": [],
-            "f1_score": [],
-            "sensitivity": [],
-            "specificity": [],
-        }
 
         with torch.no_grad():
-            for batch, (inputs, labels) in enumerate(test_dataloader):
+            for batch, (inputs, labels) in enumerate(val_dataloader):
                 inputs, labels = inputs.to(self.device), labels.to(self.device)
 
                 # Reshape inputs to (batch_size, 1, input_size) for CNN
@@ -284,26 +276,20 @@ class CNNTrainer:
                 outputs = self.model(inputs)
                 _, predicted = torch.max(outputs.data, 1)
 
-                # Calculate metrics for batch
-                test_error = calculate_all_metrics(labels, predicted)
+                accuracy = (predicted == labels).sum().item() / labels.size(0)
 
-                # Store metrics in the tracker
-                for metric in metrics_tracker:
-                    metrics_tracker[metric].append(test_error[metric])
-
-                # Log metrics
+                # Append results to metrics tracker
+                metrics_tracker.add_results(
+                    predicted.cpu().numpy(), labels.cpu().numpy()
+                )
                 if verbose == 2 or (verbose == 1 and batch % 10 == 9):
-                    logger.info(test_error)
+                    logger.info(
+                        f"Evaluating batch {batch + 1}: " f"Accuracy = {accuracy}"
+                    )
 
                     if self.wandb:
-                        wandb.log(test_error)
+                        wandb.log({"accuracy": accuracy})
 
-        logger.info(f"Evaluation metrics: {metrics_tracker}")
-        if self.wandb:
-            wandb.log(metrics_tracker)
-        # Calculate statistics over all metrics and store to file
-        calc_metric_stats(
-            metrics_tracker,
-            model_id=self.model.model_name,
-            save_dir=self.model.save_dir,
-        )
+        # Calculate and log metrics
+        metrics_tracker.summary = metrics_tracker.compute_overall_metrics()
+        metrics_tracker.save_report()
