@@ -381,12 +381,12 @@ class WindowedDataTo3D:
         # Dictionary mapping model names to their types (CNN or RNN)
         self.model_type_mapping = {
             # CNN type models
-            "CNNModel": "CNN",
+            "CNN": "CNN",
             
             # RNN type models
-            "LSTMModel": "RNN",
-            "InceptionTimeModel": "RNN",
-            "GRUModel": "RNN"
+            "LSTM": "RNN",
+            "InceptionTime": "RNN",
+            "GRU": "RNN"
         }
         
         # Set model type based on provided model name
@@ -399,150 +399,16 @@ class WindowedDataTo3D:
                 
         # Extract window size from config if available
         self.window_size = 6  # Default
-        if config and "preprocessing_advanced" in config:
-            if isinstance(config["preprocessing_advanced"], dict) and "windowing" in config["preprocessing_advanced"]:
-                self.window_size = config["preprocessing_advanced"]["windowing"].get("data_window", 3)
-                self.logger.info(f"Using window size {self.window_size} from config")
-    
-    def convert_to_3d(self, windowed_data, static_columns=None, id_column='stay_id', model_name=None):
-        """
-        Convert windowed data from 2D DataFrames to 3D numpy arrays, treating static features
-        as time series by repeating them. The output shape is determined by the model type.
-        
-        Args:
-            windowed_data (dict): Dictionary containing train, val, test data with X and y keys,
-                                as produced by Windower.window_data()
-            static_columns (list, optional): List of static columns to include as repeated time series
-                                        Default: ['sex', 'age', 'height', 'weight']
-            id_column (str): Column name to exclude from the resulting array
-            model_name (str, optional): Name of the model to determine array format, 
-                                        overrides the model_name provided during initialization
-                                        
-        Returns:
-            dict: Dictionary containing the data as 3D arrays
-        """
-        if static_columns is None:
-            static_columns = ['sex', 'age', 'height', 'weight']
-        
-        results = {}
-        
-        # Determine model type from model_name parameter or from initialization
-        model_type = None
-        if model_name:
-            model_type = self.model_type_mapping.get(model_name)
-            if not model_type:
-                self.logger.warning(f"Unknown model name: {model_name}. Using RNN format as default.")
-                model_type = "RNN"
-        else:
-            model_type = self.model_type
-            
-        # Default to RNN if model_type is still None
-        if not model_type:
-            model_type = "RNN"
-            
-        is_cnn = model_type == "CNN"
-        
-        for set_type in ['train', 'val', 'test']:
-            if set_type not in windowed_data:
-                self.logger.warning(f"Set type {set_type} not found in windowed data")
-                continue
+        if config:
+            if hasattr(config, "preprocessing_advanced"):
+                preprocessing_advanced = config.preprocessing_advanced
                 
-            X = windowed_data[set_type]['X']
-            y = windowed_data[set_type]['y']
-            
-            # Drop the ID column
-            X_without_id = X.drop(columns=[id_column], errors='ignore')
-            
-            # Find all time-dependent columns and organize them
-            time_dependent_cols = {}
-            time_indices_set = set()
-            
-            for col in X_without_id.columns:
-                if col in static_columns:
-                    # Skip static columns for now, will add them later
-                    continue
+                if hasattr(preprocessing_advanced, "windowing"):
+                    windowing_config = preprocessing_advanced.windowing
                     
-                # Extract feature name and time index using regex
-                match = re.match(r'(.+)_(\d+)$', col)
-                if match:
-                    feature_name, time_idx = match.groups()
-                    time_idx = int(time_idx)
-                    time_indices_set.add(time_idx)
-                    
-                    if feature_name not in time_dependent_cols:
-                        time_dependent_cols[feature_name] = []
-                    
-                    time_dependent_cols[feature_name].append((time_idx, col))
-            
-            # Get a sorted list of all unique time indices
-            time_indices = sorted(time_indices_set)
-            data_window = len(time_indices)
-            
-            # Get feature names sorted alphabetically
-            feature_names = sorted(time_dependent_cols.keys())
-            
-            # Add static columns to the feature list
-            available_static_cols = [col for col in static_columns if col in X_without_id.columns]
-            all_feature_names = available_static_cols + feature_names
-            
-            # Create 3D array with appropriate dimensions based on model type
-            samples = X_without_id.shape[0]
-            n_features = len(all_feature_names)
-            
-            if is_cnn:
-                # CNN format: (samples, features, time_steps)
-                X_3d = np.zeros((samples, n_features, data_window), dtype=np.float32)
-                self.logger.info(f"Creating 3D array for {set_type} set (CNN format): {samples} samples, {n_features} features, {data_window} time steps")
-            else:
-                # RNN format: (samples, time_steps, features)
-                X_3d = np.zeros((samples, data_window, n_features), dtype=np.float32)
-                self.logger.info(f"Creating 3D array for {set_type} set (RNN format): {samples} samples, {data_window} time steps, {n_features} features")
-            
-            # Fill the array based on model type
-            if is_cnn:
-                # Fill static features for CNN format
-                for feature_idx, feature_name in enumerate(available_static_cols):
-                    static_values = X_without_id[feature_name].values
-                    # Broadcast static values across the time dimension
-                    for t in range(data_window):
-                        X_3d[:, feature_idx, t] = static_values
-                
-                # Fill time-dependent features for CNN format
-                static_offset = len(available_static_cols)
-                for feature_idx, feature_name in enumerate(feature_names):
-                    for time_idx, col_name in sorted(time_dependent_cols[feature_name], key=lambda x: x[0]):
-                        # Map the time_idx to its position in the time_indices list
-                        t_pos = time_indices.index(time_idx)
-                        X_3d[:, feature_idx + static_offset, t_pos] = X_without_id[col_name].values
-            else:
-                # Fill static features for RNN format
-                for feature_idx, feature_name in enumerate(available_static_cols):
-                    static_values = X_without_id[feature_name].values
-                    # Broadcast static values across the time dimension
-                    for t in range(data_window):
-                        X_3d[:, t, feature_idx] = static_values
-                
-                # Fill time-dependent features for RNN format
-                static_offset = len(available_static_cols)
-                for feature_idx, feature_name in enumerate(feature_names):
-                    for time_idx, col_name in sorted(time_dependent_cols[feature_name], key=lambda x: x[0]):
-                        # Map the time_idx to its position in the time_indices list
-                        t_pos = time_indices.index(time_idx)
-                        X_3d[:, t_pos, feature_idx + static_offset] = X_without_id[col_name].values
-            
-            # Convert y to numpy array
-            y_np = y['label'].values.astype(np.int32)
-            
-            # Store results
-            results[set_type] = {
-                'X': X_3d,                          # 3D array with appropriate shape for model
-                'y': y_np,                          # 1D array with labels
-                'feature_names': all_feature_names  # List of feature names
-            }
-            
-            self.logger.info(f"Converted {set_type} set to 3D array with shape: {X_3d.shape}")
-        
-        return results
+                    if hasattr(windowing_config, "data_window"):
+                        self.window_size = windowing_config.data_window
+                        self.logger.info(f"Set window size to {self.window_size} from config")
 
     def convert_batch_to_3d(self, batch_features, window_size=None, static_feature_count=4, id_column_index=0):
         """
@@ -551,7 +417,7 @@ class WindowedDataTo3D:
         
         Args:
             batch_features (torch.Tensor): Batch of features in 2D format (batch_size, n_features)
-            window_size (int, optional): Size of the time window. If None, will try to infer it
+            window_size (int, optional): Size of the time window. Defaults to self.window_size
             static_feature_count (int): Number of static features (excluding id_column)
             id_column_index (int): Index of the ID column to exclude (typically 0 for stay_id)
             
@@ -565,6 +431,10 @@ class WindowedDataTo3D:
             return batch_features
         
         batch_size, n_features = batch_features.shape
+        
+        # Use provided window_size or fall back to self.window_size
+        if window_size is None:
+            window_size = self.window_size
         
         # Determine model type (CNN or RNN)
         is_cnn = self.model_type == "CNN"
@@ -587,25 +457,6 @@ class WindowedDataTo3D:
         # Extract dynamic features (everything after static features)
         dynamic_features = features_no_id[:, static_feature_count:]
         n_dynamic_features = dynamic_features.shape[1]
-        
-        # Try to use configured window size or infer if not provided
-        if window_size is None:
-            # Use stored window size from config if available
-            if hasattr(self, 'window_size'):
-                window_size = self.window_size
-                self.logger.debug(f"Using window size {window_size} from config")
-            else:
-                # Otherwise try to infer from data
-                possible_window_sizes = [3, 6, 9, 12, 18, 24]
-                for ws in possible_window_sizes:
-                    if n_dynamic_features % ws == 0:
-                        window_size = ws
-                        break
-                
-                # Default to 6 if we can't determine
-                if window_size is None:
-                    window_size = 3
-                    self.logger.warning(f"Could not infer window size. Using default: {window_size}")
         
         # Calculate number of actual features
         n_actual_dynamic_features = n_dynamic_features // window_size
@@ -639,4 +490,3 @@ class WindowedDataTo3D:
                 return features_no_id.unsqueeze(-1)  # (batch, features, 1)
             else:
                 return features_no_id.unsqueeze(1)   # (batch, 1, features)
-

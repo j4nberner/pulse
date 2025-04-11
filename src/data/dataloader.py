@@ -55,21 +55,15 @@ class DatasetManager:
         base_path = self.config.base_path
         random_seed = self.config.random_seed
 
-        # Get debug_mode from config
+        # Get debug_mode from config - using attribute style
         debug_mode = False
         if hasattr(self.config, "general"):
-            if isinstance(self.config.general, dict):
-                debug_mode = self.config.general.get("debug_mode", False)
-            else:
-                debug_mode = getattr(self.config.general, "debug_mode", False)
+            debug_mode = getattr(self.config.general, "debug_mode", False)
 
-        # Get preprocessing_baseline configuration
+        # Get preprocessing_baseline configuration - using attribute style
         preprocessing_config = None
         if hasattr(self.config, "preprocessing_baseline"):
-            if isinstance(self.config.preprocessing_baseline, dict):
-                preprocessing_config = self.config.preprocessing_baseline
-            else:
-                preprocessing_config = self.config.preprocessing_baseline.__dict__
+            preprocessing_config = self.config.preprocessing_baseline
 
         # Initialize preprocessor (add original_base_path attribute if run in HPC environment)
         if hasattr(self.config, "original_base_path"):
@@ -90,32 +84,18 @@ class DatasetManager:
         windowing_enabled = False
         save_windowed_data = False
 
-        # Check if preprocessing_advanced exists in config
+        # Check if preprocessing_advanced exists in config - using attribute style
         if hasattr(self.config, "preprocessing_advanced"):
-            # Try different approaches to access the config
-            if isinstance(self.config.preprocessing_advanced, dict):
-                windowing_config = self.config.preprocessing_advanced.get(
-                    "windowing", {}
-                )
-            else:
-                # If it's an object with attributes
-                windowing_config = getattr(
-                    self.config.preprocessing_advanced, "windowing", {}
-                )
-
-            if windowing_config:
-                if isinstance(windowing_config, dict):
-                    windowing_enabled = windowing_config.get("enabled", False)
-                    save_windowed_data = windowing_config.get("save_data", False)
-                else:
-                    windowing_enabled = getattr(windowing_config, "enabled", False)
-                    save_windowed_data = getattr(windowing_config, "save_data", False)
+            if hasattr(self.config.preprocessing_advanced, "windowing"):
+                windowing_config = self.config.preprocessing_advanced.windowing
+                
+                windowing_enabled = getattr(windowing_config, "enabled", False)
+                save_windowed_data = getattr(windowing_config, "save_data", False)
 
         logger.info(f"Windowing enabled: {windowing_enabled}, Debug mode: {debug_mode}")
 
-        # In the _init_preprocessing_tools method:
+        # Initialize windower with attribute style access
         if windowing_enabled:
-            # Initialize windower with original_base_path if available
             original_base_path = getattr(self.config, "original_base_path", None)
             self.windower = Windower(
                 base_path=base_path,
@@ -177,12 +157,10 @@ class DatasetManager:
             windowing_enabled = False
             windowing_config = None
 
-            if hasattr(self.config, "preprocessing_advanced") and isinstance(
-                self.config.preprocessing_advanced, dict
-            ):
-                if "windowing" in self.config.preprocessing_advanced:
-                    windowing_config = self.config.preprocessing_advanced["windowing"]
-                    windowing_enabled = windowing_config.get("enabled", False)
+            if hasattr(self.config, "preprocessing_advanced"):
+                if hasattr(self.config.preprocessing_advanced, "windowing"):
+                    windowing_config = self.config.preprocessing_advanced.windowing
+                    windowing_enabled = getattr(windowing_config, "enabled", False)
 
             # Check if windowing is applicable for this task
             if task == "mortality":
@@ -243,9 +221,7 @@ class DatasetManager:
                     self.preprocessor.preprocess(
                         task=task,
                         dataset_name=name,
-                        save_data=self.config.preprocessing_baseline.get(
-                            "save_data", True
-                        ),
+                        save_data=getattr(self.config.preprocessing_baseline, "save_data", True),
                     )
                 )
 
@@ -431,5 +407,3 @@ class TorchDatasetWrapper(Dataset):
         X_batch = self.X.iloc[indices].values.astype(np.float32)
         y_batch = self.y.iloc[indices].values.astype(np.float32)
         return X_batch, y_batch
-
-# TODO: 

@@ -322,7 +322,7 @@ class InceptionTimeTrainer:
                     
                     # Test conversion on a sample batch
                     converted_batch = self.converter.convert_batch_to_3d(features)
-                    logger.info(f"Converted shape: {converted_batch.shape}")
+                    logger.info(f"Converted shape as input to model: {converted_batch.shape}")
                 else:
                     # Simple reshaping needed (handled during training)
                     self.reshape_needed = True
@@ -451,10 +451,6 @@ class InceptionTimeTrainer:
                         features = features.unsqueeze(-1)  # (batch, features, 1)
                     else:  # RNN format
                         features = features.unsqueeze(1)   # (batch, 1, features)
-                
-                # Log the shape on first batch of first epoch
-                if batch_idx == 0 and epoch == 0:
-                    logger.info(f"Input shape to model: {features.shape}")
                 
                 features, labels = features.to(self.device), labels.to(self.device).float()
                 
