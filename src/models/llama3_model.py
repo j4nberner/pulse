@@ -29,6 +29,8 @@ class Llama3Model:
         self.model_name = params.get(
             "model_name", self.__class__.__name__.replace("Model", "")
         )
+        self.type = "llm"
+        self.trainer_name = params["trainer_name"]
 
         # Set the model save directory
         self.save_dir = kwargs.get("output_dir", f"{os.getcwd()}/output")
@@ -67,39 +69,44 @@ class Llama3Model:
         # Log the parameters being used
         logger.info(f"Initializing Llama3 with parameters: {self.params}")
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def eval(self, test_dataloader) -> Dict[str, Any]:
         """
-        Forward pass through the Llama3 model.
+        Evaluate the Llama3 model on the provided test dataloader.
+
+        Args:
+            test_dataloader: The DataLoader object for the testing dataset.
 
         Returns:
-            str: Model response
+            Dict[str, Any]: Evaluation results.
         """
+        # Initialize metrics tracker
+        #metrics = MetricsTracker()
 
-        system_promt = "You are a medical professional. Answer the user's question as accurately as possible."
-        # Format the prompt in the style Llama3 expects
-        full_prompt = f"<|system|>\n{system_prompt}\n<|user|>\n{x}\n<|assistant|>"
-
-        inputs = self.tokenizer(full_prompt, return_tensors="pt").to(
-            self.llama_model.device
-        )
-
-        # Generate a response
-        with torch.no_grad():
-            outputs = self.llama_model.generate(
-                inputs["input_ids"],
-                max_new_tokens=self.max_length,
-                do_sample=True,
-                temperature=0.7,
-                top_p=0.9,
+        # Iterate over the test dataloader
+        for X, y in test_dataloader:
+            # Tokenize the input data
+            inputs = self.tokenizer(
+                X,
+                return_tensors="pt",
+                truncation=True,
+                max_length=self.max_length,
             )
+            # Generate predictions
+            with torch.no_grad():
+                outputs = self.llama_model.generate(
+                    inputs["input_ids"],
+                    max_length=self.max_length,
+                    num_return_sequences=1,
+                )
+            # Decode the generated outputs
+            generated_text = self.tokenizer.batch_decode(
+                outputs, skip_special_tokens=True
+            )
+            # Print the generated text
+            logger.info(f"Generated text: {generated_text}")
 
-        # Decode the response and extract only the assistant's reply
-        full_response = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
-
-        # Extract only the assistant's response
-        assistant_response = full_response.split("<|assistant|>")[-1].strip()
-
-        return assistant_response
+        # Log the evaluation results
+        #logger.info(f"Evaluation results: {metrics.get_results()}")
 
     def set_trainer(self, trainer_name: str, train_dataloader, test_dataloader) -> None:
         """

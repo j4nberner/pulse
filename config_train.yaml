@@ -4,7 +4,7 @@
 general:
   app_name: "Pulse"
   version: "1.0.0"
-  debug_mode: false
+  debug_mode: true
   use_scratch: true
 
 # Weight and Biases (wandb) logging configuration

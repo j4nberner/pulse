@@ -77,8 +77,8 @@ class ModelTrainer:
                         dataset_name,
                         model_name,
                         mode="train",
-                        dataset=self.config.data,
-                        task=self.config.task,
+                        dataset=self.config.datasets[0],
+                        task=self.config.tasks[0],
                     )
                     X_val, y_val = self.dm.get_preprocessed_data(
                         dataset_name, model_name, mode="val"

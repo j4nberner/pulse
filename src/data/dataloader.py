@@ -324,6 +324,19 @@ class DatasetManager:
 
         data = dataset["data"]
 
+        # Take only 100 rows if in debug
+        debug = kwargs.get("debug", False)
+        if debug:
+            logger.info(f"Debug mode: limiting data to 2 rows for {dataset_id}")
+            data = {
+                "X_train": data["X_train"].head(100),
+                "y_train": data["y_train"].head(100),
+                "X_val": data["X_val"].head(100),
+                "y_val": data["y_val"].head(100),
+                "X_test": data["X_test"].head(100),
+                "y_test": data["y_test"].head(100),
+            }
+
         # Get the appropriate split
         if mode == "test":
             X = data["X_test"]

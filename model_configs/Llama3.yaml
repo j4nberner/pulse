@@ -1,3 +1,4 @@
 name: "Llama3Model"
 params:
+  trainer_name: "Llama3Trainer" # placeholder and not implemented 
   verbose: 2
