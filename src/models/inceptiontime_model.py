@@ -12,8 +12,9 @@ import os
 from src.models.pulsetemplate_model import PulseTemplateModel
 from src.preprocessing.preprocessing_advanced.windowing import WindowedDataTo3D
 from src.util.model_util import save_torch_model, load_torch_model
-from src.eval.metrics import MetricsTracker
-from src.eval.metrics import calculate_all_metrics, calc_metric_stats
+from src.eval.metrics import calculate_all_metrics, calc_metric_stats, MetricsTracker
+
+# TODO: Why are calculate_all_metrics and cal_metric_stats imported but not used?
 
 # Set up logger
 logger = logging.getLogger("PULSE_logger")
@@ -172,10 +173,13 @@ class InceptionTimeModel(PulseTemplateModel):
         
         # Store configuration
         self.config = params
-        self.model = None
         
-        # Log parameters
-        logger.info(f"Initializing {model_name} model with parameters: {self.config}")
+        # Log configuration details including preprocessing settings
+        logger.info(f"Initializing {model_name} model with parameters")
+        if "preprocessing_advanced" in self.config:
+            logger.info(f"Model initialized with preprocessing_advanced config: {self.config['preprocessing_advanced']}")
+        
+        self.model = None
         
     def set_trainer(self, trainer_name, train_dataloader, test_dataloader):
         """
@@ -216,7 +220,7 @@ class InceptionTimeTrainer:
         self.train_loader = train_dataloader
         self.test_loader = test_dataloader
         self.config = config
-        
+  
         # Set device
         self.device = torch.device("cuda" if torch.cuda.is_available() and 
                                   config.get("use_cuda", True) else "cpu")
@@ -234,10 +238,20 @@ class InceptionTimeTrainer:
         os.makedirs(os.path.join(self.model_save_dir, "Checkpoints"), exist_ok=True)
         
         # Initialize metrics tracker
-        self.metrics_tracker = MetricsTracker(self.model_wrapper.model_name, self.save_dir)
+        self.metrics_tracker = MetricsTracker(
+            self.model_wrapper.model_name,
+            self.save_dir
+        )
         
         # Check if wandb is enabled
         self.use_wandb = config.get("use_wandb", False)
+        if self.use_wandb and not 'wandb' in locals():
+            try:
+                import wandb
+                logger.info("WandB imported successfully")
+            except ImportError:
+                logger.warning("WandB not found, disabling WandB logging")
+                self.use_wandb = False
         
         # Data preparation
         self._prepare_data()
@@ -259,9 +273,24 @@ class InceptionTimeTrainer:
         """
         # Check if windowing is enabled in config
         windowing_enabled = False
+        
+        # Check for preprocessing_advanced config
         if "preprocessing_advanced" in self.config:
-            if isinstance(self.config["preprocessing_advanced"], dict) and "windowing" in self.config["preprocessing_advanced"]:
-                windowing_enabled = self.config["preprocessing_advanced"]["windowing"].get("enabled", False)
+            preprocessing_advanced = self.config["preprocessing_advanced"]
+            if "windowing" in preprocessing_advanced:
+                windowing_config = preprocessing_advanced["windowing"]
+                
+                # Get the enabled value with proper type handling
+                if "enabled" in windowing_config:
+                    enabled_value = windowing_config["enabled"]
+                    
+                    # Handle different boolean representations
+                    if isinstance(enabled_value, bool):
+                        windowing_enabled = enabled_value
+                    else:
+                        # Convert string/other types to boolean
+                        enabled_str = str(enabled_value).lower()
+                        windowing_enabled = (enabled_str == "true" or enabled_str == "1")
         
         logger.info(f"Data preparation for InceptionTime - Windowing enabled: {windowing_enabled}")
         
@@ -273,46 +302,32 @@ class InceptionTimeTrainer:
             # Get a batch to inspect shape
             features, labels = next(iter(self.train_loader))
             
+            # Check data dimensionality and decide on conversion method
             if len(features.shape) == 3:
-                # Data is already in 3D format
-                logger.info(f"Data already in 3D format with shape: {features.shape}")
-                return
-            
-            # Data is in 2D format and needs conversion
-            logger.info(f"Data is in 2D format with shape: {features.shape} - needs conversion to 3D")
-            
-            # Get model name from config
-            model_name = self.config.get("name", "InceptionTimeModel")
-            
-            if windowing_enabled:
-                # Use the advanced conversion from WindowedDataTo3D for rich 3D data
-                logger.info(f"Using WindowedDataTo3D with model name '{model_name}' to transform windowed data to 3D")
-                self.converter = WindowedDataTo3D(model_name=model_name, config=self.config)
-                self.convert_method = "windowed_to_3d"
-                
-                # Test the conversion with sample data
-                sample_3d = self.converter.convert_batch_to_3d(features)
-                logger.info(f"Converted sample to 3D using WindowedDataTo3D: {sample_3d.shape}")
-                if len(sample_3d.shape) != 3:
-                    logger.warning("Conversion did not result in 3D data. Check window size configuration.")
+                logger.info(f"Input data is already 3D with shape {features.shape}")
             else:
-                # Get model name from config
-                model_name = self.config.get("name", "InceptionTimeModel")
+                logger.info(f"Input data is 2D with shape {features.shape}, will convert to 3D")
                 
-                # Initialize converter just to determine model type
-                self.converter = WindowedDataTo3D(model_name=model_name, config=None)
+                # Initialize the data converter
+                self.converter = WindowedDataTo3D(
+                    logger=logger,
+                    model_name=self.model_wrapper.model_name,
+                    config=self.config
+                )
                 
-                # For 2D data without windowing, add a time dimension of 1
-                logger.info("Using simple reshaping to add time dimension (pseudo-3D)")
-                self.reshape_needed = True
-                self.convert_method = "simple_reshape"
-                
-                # Reshape based on model type
-                if self.converter.model_type == "CNN":
-                    sample_3d = features.unsqueeze(-1)  # (batch, features, 1)
-                else:  # RNN format
-                    sample_3d = features.unsqueeze(1)   # (batch, 1, features)
-                
+                # If windowing was already applied, use 3D conversion
+                if windowing_enabled:
+                    self.convert_method = "windowed_to_3d"
+                    logger.info("Will use WindowedDataTo3D converter for batches")
+                    
+                    # Test conversion on a sample batch
+                    converted_batch = self.converter.convert_batch_to_3d(features)
+                    logger.info(f"Converted shape: {converted_batch.shape}")
+                else:
+                    # Simple reshaping needed (handled during training)
+                    self.reshape_needed = True
+                    logger.info("Will use simple reshaping for batches")
+            
         except Exception as e:
             logger.error(f"Error preparing data: {e}")
     
@@ -415,6 +430,11 @@ class InceptionTimeTrainer:
         """Train the InceptionTime model using the provided data loaders."""
         logger.info("Starting InceptionTime training")
         
+        # Setup checkpoint saving
+        save_checkpoint_freq = self.config.get("save_checkpoint", 5)
+        checkpoint_path = os.path.join(self.model_save_dir, "Checkpoints")
+        os.makedirs(checkpoint_path, exist_ok=True)
+        
         for epoch in range(self.num_epochs):
             # Training phase
             self.model.train()
@@ -470,16 +490,36 @@ class InceptionTimeTrainer:
                         f"Val Loss: {val_loss:.4f}, "
                         f"LR: {self.optimizer.param_groups[0]['lr']:.6f}")
             
+            # Save checkpoint periodically
+            if save_checkpoint_freq > 0 and (epoch + 1) % save_checkpoint_freq == 0:
+                checkpoint_name = f"{self.model_wrapper.model_name}_epoch_{epoch + 1}"
+                save_torch_model(checkpoint_name, self.model, checkpoint_path)
+                logger.info(f"Saved checkpoint: {checkpoint_name}")
+            
+            # Log to WandB if enabled
+            if self.use_wandb:
+                wandb.log({
+                    "epoch": epoch + 1,
+                    "train_loss": avg_train_loss,
+                    "val_loss": val_loss,
+                    "learning_rate": self.optimizer.param_groups[0]['lr']
+                })
+            
             # Check early stopping
             self.early_stopping(val_loss, self.model, self.save_path)
             if self.early_stopping.early_stop:
                 logger.info("Early stopping triggered")
                 break
         
-        # Load best model
+        # Load best model from early stopping
         if self.early_stopping.model_path:
             self.model.load_state_dict(torch.load(self.early_stopping.model_path))
             logger.info(f"Loaded best model from {self.early_stopping.model_path}")
+        
+        # Save final model using the utility function
+        final_model_path = os.path.join(self.model_save_dir, f"{self.model_wrapper.model_name}_final.pt")
+        save_torch_model(f"{self.model_wrapper.model_name}_final", self.model, self.model_save_dir)
+        logger.info(f"Saved final model to {final_model_path}")
         
         # Evaluate final model
         eval_results = self._evaluate()
@@ -511,10 +551,11 @@ class InceptionTimeTrainer:
         return val_loss / len(self.test_loader)
     
     def _evaluate(self):
-        """Evaluate the model on the test set with simplified metrics."""
+        """Evaluate the model on the test set with comprehensive metrics."""
         self.model.eval()
         all_labels = []
         all_preds = []
+        all_probs = []
         
         with torch.no_grad():
             for features, labels in self.test_loader:
@@ -532,24 +573,39 @@ class InceptionTimeTrainer:
                 probs = torch.sigmoid(outputs).squeeze()
                 preds = (probs >= 0.5).int()
                 
+                # Store results for metrics calculation
                 all_labels.extend(labels.numpy().flatten())
                 all_preds.extend(preds.cpu().numpy().flatten())
+                all_probs.extend(probs.cpu().numpy().flatten())
+                
+                # Add results to metrics tracker
+                self.metrics_tracker.add_results(preds.cpu().numpy(), labels.numpy())
         
-        # Convert lists to numpy arrays
-        all_labels = np.array(all_labels)
-        all_preds = np.array(all_preds)
+        # Calculate comprehensive metrics
+        metrics_summary = self.metrics_tracker.compute_overall_metrics()
+        self.metrics_tracker.save_report()
         
-        # Calculate simple accuracy
-        accuracy = np.mean(all_labels == all_preds)
-        logger.info(f"Test accuracy: {accuracy:.4f}")
+        logger.info(f"Test metrics: {metrics_summary}")
         
-        # For consistency with other models, calculate RMSE
-        rmse_score = np.sqrt(np.mean((all_labels - all_preds) ** 2))
-        logger.info(f"RMSE: {rmse_score:.4f}")
+        # For backwards compatibility with existing code
+        accuracy = np.mean(np.array(all_labels) == np.array(all_preds))
+        rmse_score = np.sqrt(np.mean((np.array(all_labels) - np.array(all_preds)) ** 2))
+        
+        # Log results
+        logger.info(f"Test accuracy: {accuracy:.4f}, RMSE: {rmse_score:.4f}")
+        
+        # Update WandB if enabled
+        if self.use_wandb:
+            wandb.log({
+                "test_accuracy": accuracy,
+                "test_rmse": rmse_score,
+                **{f"test_{k}": v for k, v in metrics_summary.items()}
+            })
         
         return {
             "accuracy": accuracy,
-            "rmse": rmse_score
+            "rmse": rmse_score,
+            **metrics_summary
         }
     
     def predict(self, features):
