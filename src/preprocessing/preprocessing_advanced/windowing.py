@@ -64,7 +64,7 @@ class Windower:
             stay_id_np = X['stay_id'].values
 
             # Define static columns that will be preserved in order
-            static_columns = ['stay_id', 'sex', 'age', 'height', 'weight']
+            static_columns = ['stay_id', 'age', 'sex', 'height', 'weight']
             columns_index = [X.columns.get_loc(col) for col in static_columns if col in X.columns]
             non_static_columns = [i for i in range(X_np.shape[1]) if i not in columns_index]
 
@@ -367,23 +367,57 @@ class WindowedDataTo3D:
     across the time dimension, resulting in a single 3D array output.
     """
     
-    def __init__(self, logger=None):
+    def __init__(self, logger=None, model_name=None, config=None):
         """
         Initialize the WindowedDataTo3D converter.
+        
+        Args:
+            logger: Logger instance for logging messages
+            model_name (str, optional): Name of the model to determine array format
+            config (dict, optional): Configuration with windowing parameters
         """
+        self.logger = logger or logging.getLogger("PULSE_logger")
+        
+        # Dictionary mapping model names to their types (CNN or RNN)
+        self.model_type_mapping = {
+            # CNN type models
+            "CNNModel": "CNN",
+            
+            # RNN type models
+            "LSTMModel": "RNN",
+            "InceptionTimeModel": "RNN",
+            "GRUModel": "RNN"
+        }
+        
+        # Set model type based on provided model name
+        self.model_type = None
+        if model_name:
+            self.model_type = self.model_type_mapping.get(model_name)
+            if not self.model_type:
+                self.logger.warning(f"Unknown model name: {model_name}. Using RNN format as default.")
+                self.model_type = "RNN"
+                
+        # Extract window size from config if available
+        self.window_size = 6  # Default
+        if config and "preprocessing_advanced" in config:
+            if isinstance(config["preprocessing_advanced"], dict) and "windowing" in config["preprocessing_advanced"]:
+                self.window_size = config["preprocessing_advanced"]["windowing"].get("data_window", 3)
+                self.logger.info(f"Using window size {self.window_size} from config")
     
-    def convert_to_3d(self, windowed_data, static_columns=None, id_column='stay_id'):
+    def convert_to_3d(self, windowed_data, static_columns=None, id_column='stay_id', model_name=None):
         """
         Convert windowed data from 2D DataFrames to 3D numpy arrays, treating static features
-        as time series by repeating them.
+        as time series by repeating them. The output shape is determined by the model type.
         
         Args:
             windowed_data (dict): Dictionary containing train, val, test data with X and y keys,
-                                 as produced by Windower.window_data()
+                                as produced by Windower.window_data()
             static_columns (list, optional): List of static columns to include as repeated time series
-                                           Default: ['sex', 'age', 'height', 'weight']
+                                        Default: ['sex', 'age', 'height', 'weight']
             id_column (str): Column name to exclude from the resulting array
-                                           
+            model_name (str, optional): Name of the model to determine array format, 
+                                        overrides the model_name provided during initialization
+                                        
         Returns:
             dict: Dictionary containing the data as 3D arrays
         """
@@ -391,6 +425,22 @@ class WindowedDataTo3D:
             static_columns = ['sex', 'age', 'height', 'weight']
         
         results = {}
+        
+        # Determine model type from model_name parameter or from initialization
+        model_type = None
+        if model_name:
+            model_type = self.model_type_mapping.get(model_name)
+            if not model_type:
+                self.logger.warning(f"Unknown model name: {model_name}. Using RNN format as default.")
+                model_type = "RNN"
+        else:
+            model_type = self.model_type
+            
+        # Default to RNN if model_type is still None
+        if not model_type:
+            model_type = "RNN"
+            
+        is_cnn = model_type == "CNN"
         
         for set_type in ['train', 'val', 'test']:
             if set_type not in windowed_data:
@@ -435,34 +485,57 @@ class WindowedDataTo3D:
             available_static_cols = [col for col in static_columns if col in X_without_id.columns]
             all_feature_names = available_static_cols + feature_names
             
-            # Create 3D array (samples, features, time_steps)
+            # Create 3D array with appropriate dimensions based on model type
             samples = X_without_id.shape[0]
             n_features = len(all_feature_names)
-            X_3d = np.zeros((samples, n_features, data_window), dtype=np.float32)
             
-            self.logger.info(f"Creating 3D array for {set_type} set: {samples} samples, {n_features} features, {data_window} data window")
+            if is_cnn:
+                # CNN format: (samples, features, time_steps)
+                X_3d = np.zeros((samples, n_features, data_window), dtype=np.float32)
+                self.logger.info(f"Creating 3D array for {set_type} set (CNN format): {samples} samples, {n_features} features, {data_window} time steps")
+            else:
+                # RNN format: (samples, time_steps, features)
+                X_3d = np.zeros((samples, data_window, n_features), dtype=np.float32)
+                self.logger.info(f"Creating 3D array for {set_type} set (RNN format): {samples} samples, {data_window} time steps, {n_features} features")
             
-            # Fill static features (repeating values across time dimension)
-            for feature_idx, feature_name in enumerate(available_static_cols):
-                static_values = X_without_id[feature_name].values
-                # Broadcast static values across the time dimension
-                for t in range(data_window):
-                    X_3d[:, feature_idx, t] = static_values
-            
-            # Fill time-dependent features
-            static_offset = len(available_static_cols)
-            for feature_idx, feature_name in enumerate(feature_names):
-                for time_idx, col_name in sorted(time_dependent_cols[feature_name], key=lambda x: x[0]):
-                    # Map the time_idx to its position in the time_indices list
-                    t_pos = time_indices.index(time_idx)
-                    X_3d[:, feature_idx + static_offset, t_pos] = X_without_id[col_name].values
+            # Fill the array based on model type
+            if is_cnn:
+                # Fill static features for CNN format
+                for feature_idx, feature_name in enumerate(available_static_cols):
+                    static_values = X_without_id[feature_name].values
+                    # Broadcast static values across the time dimension
+                    for t in range(data_window):
+                        X_3d[:, feature_idx, t] = static_values
+                
+                # Fill time-dependent features for CNN format
+                static_offset = len(available_static_cols)
+                for feature_idx, feature_name in enumerate(feature_names):
+                    for time_idx, col_name in sorted(time_dependent_cols[feature_name], key=lambda x: x[0]):
+                        # Map the time_idx to its position in the time_indices list
+                        t_pos = time_indices.index(time_idx)
+                        X_3d[:, feature_idx + static_offset, t_pos] = X_without_id[col_name].values
+            else:
+                # Fill static features for RNN format
+                for feature_idx, feature_name in enumerate(available_static_cols):
+                    static_values = X_without_id[feature_name].values
+                    # Broadcast static values across the time dimension
+                    for t in range(data_window):
+                        X_3d[:, t, feature_idx] = static_values
+                
+                # Fill time-dependent features for RNN format
+                static_offset = len(available_static_cols)
+                for feature_idx, feature_name in enumerate(feature_names):
+                    for time_idx, col_name in sorted(time_dependent_cols[feature_name], key=lambda x: x[0]):
+                        # Map the time_idx to its position in the time_indices list
+                        t_pos = time_indices.index(time_idx)
+                        X_3d[:, t_pos, feature_idx + static_offset] = X_without_id[col_name].values
             
             # Convert y to numpy array
             y_np = y['label'].values.astype(np.int32)
             
             # Store results
             results[set_type] = {
-                'X': X_3d,                          # 3D array: (samples, features, time_steps)
+                'X': X_3d,                          # 3D array with appropriate shape for model
                 'y': y_np,                          # 1D array with labels
                 'feature_names': all_feature_names  # List of feature names
             }
@@ -470,97 +543,100 @@ class WindowedDataTo3D:
             self.logger.info(f"Converted {set_type} set to 3D array with shape: {X_3d.shape}")
         
         return results
-    
-    def save_3d_arrays(self, results_3d, base_path, task, dataset, data_window, prediction_window):
+
+    def convert_batch_to_3d(self, batch_features, window_size=None, static_feature_count=4, id_column_index=0):
         """
-        Save the 3D arrays and related data to disk.
+        Convert a batch of features from 2D to 3D format suitable for temporal models.
+        Works with tensors extracted directly from the dataloader.
         
         Args:
-            results_3d (dict): Dictionary containing 3D arrays and related data
-            base_path (str): Base path for data directories
-            task (str): Task name
-            dataset (str): Dataset name
-            data_window (int): Size of the data window
-            prediction_window (int): Size of the prediction window
-        """
-        # Create save directory
-        save_dir = f'{base_path}/datasets/deep_learning/{task}/{dataset}/{data_window}_dw_{prediction_window}_pw'
-        os.makedirs(save_dir, exist_ok=True)
-        
-        self.logger.info(f"Saving 3D arrays to {save_dir}")
-        
-        # Save data for each set
-        for set_type in ['train', 'val', 'test']:
-            if set_type not in results_3d:
-                continue
-                
-            # Save 3D array
-            np.save(f"{save_dir}/X_{set_type}.npy", results_3d[set_type]['X'])
-            
-            # Save labels
-            np.save(f"{save_dir}/y_{set_type}.npy", results_3d[set_type]['y'])
-            
-            # Save feature names
-            with open(f"{save_dir}/feature_names_{set_type}.txt", 'w') as f:
-                for feature in results_3d[set_type]['feature_names']:
-                    f.write(f"{feature}\n")
-                    
-        self.logger.info(f"Successfully saved 3D arrays to {save_dir}")
-    
-    def load_3d_arrays(self, base_path, task, dataset, data_window, prediction_window):
-        """
-        Load previously saved 3D arrays and related data from disk.
-        
-        Args:
-            base_path (str): Base path for data directories
-            task (str): Task name
-            dataset (str): Dataset name
-            data_window (int): Size of the data window
-            prediction_window (int): Size of the prediction window
+            batch_features (torch.Tensor): Batch of features in 2D format (batch_size, n_features)
+            window_size (int, optional): Size of the time window. If None, will try to infer it
+            static_feature_count (int): Number of static features (excluding id_column)
+            id_column_index (int): Index of the ID column to exclude (typically 0 for stay_id)
             
         Returns:
-            dict: Dictionary containing the loaded 3D arrays and related data or None if loading fails
+            torch.Tensor: Batch of features in 3D format
         """
-        # Load directory
-        load_dir = f'{base_path}/datasets/deep_learning/{task}/{dataset}/{data_window}_dw_{prediction_window}_pw'
+        import torch
         
-        if not os.path.exists(load_dir):
-            self.logger.error(f"3D array directory {load_dir} does not exist")
-            return None
+        # If already 3D, return as is
+        if len(batch_features.shape) == 3:
+            return batch_features
         
-        results = {}
+        batch_size, n_features = batch_features.shape
+        
+        # Determine model type (CNN or RNN)
+        is_cnn = self.model_type == "CNN"
+        
+        # Skip the ID column
+        if id_column_index is not None:
+            # Create a mask to exclude the ID column
+            keep_mask = torch.ones(n_features, dtype=torch.bool)
+            keep_mask[id_column_index] = False
+            
+            # Apply the mask to get features without ID
+            features_no_id = batch_features[:, keep_mask]
+            n_features = features_no_id.shape[1]
+        else:
+            features_no_id = batch_features
+        
+        # Extract static features (typically columns 0-3 after removing ID)
+        static_features = features_no_id[:, :static_feature_count]
+        
+        # Extract dynamic features (everything after static features)
+        dynamic_features = features_no_id[:, static_feature_count:]
+        n_dynamic_features = dynamic_features.shape[1]
+        
+        # Try to use configured window size or infer if not provided
+        if window_size is None:
+            # Use stored window size from config if available
+            if hasattr(self, 'window_size'):
+                window_size = self.window_size
+                self.logger.debug(f"Using window size {window_size} from config")
+            else:
+                # Otherwise try to infer from data
+                possible_window_sizes = [3, 6, 9, 12, 18, 24]
+                for ws in possible_window_sizes:
+                    if n_dynamic_features % ws == 0:
+                        window_size = ws
+                        break
+                
+                # Default to 6 if we can't determine
+                if window_size is None:
+                    window_size = 3
+                    self.logger.warning(f"Could not infer window size. Using default: {window_size}")
+        
+        # Calculate number of actual features
+        n_actual_dynamic_features = n_dynamic_features // window_size
         
         try:
-            for set_type in ['train', 'val', 'test']:
-                # Check if files exist
-                x_path = f"{load_dir}/X_{set_type}.npy"
-                y_path = f"{load_dir}/y_{set_type}.npy"
+            # Reshape dynamic features based on window size
+            if is_cnn:
+                # For CNN: (batch, features, time)
+                dynamic_3d = dynamic_features.reshape(batch_size, n_actual_dynamic_features, window_size)
                 
-                if not os.path.exists(x_path) or not os.path.exists(y_path):
-                    self.logger.warning(f"Missing 3D array files for {set_type} set")
-                    continue
+                # Repeat static features for each time step
+                static_3d = static_features.unsqueeze(-1).repeat(1, 1, window_size)
                 
-                # Load 3D array and labels
-                X = np.load(x_path)
-                y = np.load(y_path)
+                # Combine on feature dimension (static first, then dynamic)
+                return torch.cat([static_3d, dynamic_3d], dim=1)
+            else:
+                # For RNN: (batch, time, features)
+                dynamic_3d = dynamic_features.reshape(batch_size, window_size, n_actual_dynamic_features)
                 
-                # Load feature names if available
-                feature_names = []
-                names_path = f"{load_dir}/feature_names_{set_type}.txt"
-                if os.path.exists(names_path):
-                    with open(names_path, 'r') as f:
-                        feature_names = [line.strip() for line in f.readlines()]
+                # Repeat static features for each time step
+                static_3d = static_features.unsqueeze(1).repeat(1, window_size, 1)
                 
-                results[set_type] = {
-                    'X': X,
-                    'y': y,
-                    'feature_names': feature_names
-                }
-                
-                self.logger.info(f"Loaded {set_type} set 3D array with shape: {X.shape}")
-            
-            return results
-            
+                # Combine on feature dimension
+                return torch.cat([static_3d, dynamic_3d], dim=2)
+        
         except Exception as e:
-            self.logger.error(f"Error loading 3D arrays from {load_dir}: {e}")
-            return None
+            self.logger.warning(f"Error reshaping batch to 3D: {e}. Using simple approach.")
+            
+            # Fall back to simple reshape if the proper reshaping fails
+            if is_cnn:
+                return features_no_id.unsqueeze(-1)  # (batch, features, 1)
+            else:
+                return features_no_id.unsqueeze(1)   # (batch, 1, features)
+

@@ -6,9 +6,14 @@ import numpy as np
 import logging
 from collections import OrderedDict
 from typing import Dict, Any, List, Optional
+import wandb
+import os
 
-from src.preprocessing.preprocessing_advanced.windowing import WindowedDataTo3D
 from src.models.pulsetemplate_model import PulseTemplateModel
+from src.preprocessing.preprocessing_advanced.windowing import WindowedDataTo3D
+from src.util.model_util import save_torch_model, load_torch_model
+from src.eval.metrics import MetricsTracker
+from src.eval.metrics import calculate_all_metrics, calc_metric_stats
 
 # Set up logger
 logger = logging.getLogger("PULSE_logger")
@@ -222,6 +227,18 @@ class InceptionTimeTrainer:
         self.patience = config.get("patience", 5)
         self.save_path = config.get("save_path", "output/models/inceptiontime_best.pt")
         
+        # Set up model save directory
+        self.save_dir = config.get("save_dir", os.path.join(os.getcwd(), "output"))
+        self.model_save_dir = os.path.join(self.save_dir, "Models")
+        os.makedirs(self.model_save_dir, exist_ok=True)
+        os.makedirs(os.path.join(self.model_save_dir, "Checkpoints"), exist_ok=True)
+        
+        # Initialize metrics tracker
+        self.metrics_tracker = MetricsTracker(self.model_wrapper.model_name, self.save_dir)
+        
+        # Check if wandb is enabled
+        self.use_wandb = config.get("use_wandb", False)
+        
         # Data preparation
         self._prepare_data()
         
@@ -239,10 +256,6 @@ class InceptionTimeTrainer:
     def _prepare_data(self):
         """
         Prepare data for InceptionTime by ensuring it's in 3D format.
-        
-        InceptionTime requires 3D input data in format (batch_size, features, time_steps).
-        - When windowing is enabled: Use WindowedDataTo3D.convert_to_3d() to create proper 3D tensors
-        - When windowing is disabled: Create pseudo-3D tensors by adding a single time dimension
         """
         # Check if windowing is enabled in config
         windowing_enabled = False
@@ -268,20 +281,37 @@ class InceptionTimeTrainer:
             # Data is in 2D format and needs conversion
             logger.info(f"Data is in 2D format with shape: {features.shape} - needs conversion to 3D")
             
+            # Get model name from config
+            model_name = self.config.get("name", "InceptionTimeModel")
+            
             if windowing_enabled:
                 # Use the advanced conversion from WindowedDataTo3D for rich 3D data
-                logger.info("Using WindowedDataTo3D.convert_to_3d() to transform windowed data to 3D")
-                self.converter = WindowedDataTo3D()
+                logger.info(f"Using WindowedDataTo3D with model name '{model_name}' to transform windowed data to 3D")
+                self.converter = WindowedDataTo3D(model_name=model_name, config=self.config)
                 self.convert_method = "windowed_to_3d"
+                
+                # Test the conversion with sample data
+                sample_3d = self.converter.convert_batch_to_3d(features)
+                logger.info(f"Converted sample to 3D using WindowedDataTo3D: {sample_3d.shape}")
+                if len(sample_3d.shape) != 3:
+                    logger.warning("Conversion did not result in 3D data. Check window size configuration.")
             else:
+                # Get model name from config
+                model_name = self.config.get("name", "InceptionTimeModel")
+                
+                # Initialize converter just to determine model type
+                self.converter = WindowedDataTo3D(model_name=model_name, config=None)
+                
                 # For 2D data without windowing, add a time dimension of 1
                 logger.info("Using simple reshaping to add time dimension (pseudo-3D)")
                 self.reshape_needed = True
                 self.convert_method = "simple_reshape"
                 
-                # Test the reshaping
-                sample_3d = features.unsqueeze(-1)  # Add time dimension: (batch, features, 1)
-                logger.info(f"Reshaped sample to 3D: {sample_3d.shape}")
+                # Reshape based on model type
+                if self.converter.model_type == "CNN":
+                    sample_3d = features.unsqueeze(-1)  # (batch, features, 1)
+                else:  # RNN format
+                    sample_3d = features.unsqueeze(1)   # (batch, 1, features)
                 
         except Exception as e:
             logger.error(f"Error preparing data: {e}")
@@ -298,13 +328,9 @@ class InceptionTimeTrainer:
             depth = arch_config.get("depth", 12)
             dropout_rate = arch_config.get("dropout_rate", 0.3)
             
-            # Define default channel configurations if not provided
-            default_in_channels = [num_features, 1024, 1024, 512, 512, 512, 512, 512, 512, 256, 256, 256]
-            default_out_channels = [256, 256, 128, 128, 128, 128, 128, 128, 64, 64, 64, 32]
-            
-            # Use custom configs if provided in model_architecture
-            in_channels = arch_config.get("in_channels", default_in_channels)
-            out_channels = arch_config.get("out_channels", default_out_channels)
+            # Define channel configurations
+            in_channels = [num_features, 1024, 1024, 512, 512, 512, 512, 512, 512, 256, 256, 256]
+            out_channels = [256, 256, 128, 128, 128, 128, 128, 128, 64, 64, 64, 32]
             
             # Initialize the network
             self.model = InceptionTimeModel.Network(
@@ -397,9 +423,18 @@ class InceptionTimeTrainer:
             all_outputs = []
             
             for batch_idx, (features, labels) in enumerate(self.train_loader):
-                # Convert 2D data to 3D if needed
-                if hasattr(self, 'reshape_needed') and self.reshape_needed:
-                    features = features.unsqueeze(-1)  # Add time dimension: (batch, features, 1)
+                # Convert 2D data to 3D based on model type
+                if hasattr(self, 'convert_method') and self.convert_method == "windowed_to_3d":
+                    features = self.converter.convert_batch_to_3d(features)
+                elif hasattr(self, 'reshape_needed') and self.reshape_needed:
+                    if self.converter.model_type == "CNN":
+                        features = features.unsqueeze(-1)  # (batch, features, 1)
+                    else:  # RNN format
+                        features = features.unsqueeze(1)   # (batch, 1, features)
+                
+                # Log the shape on first batch of first epoch
+                if batch_idx == 0 and epoch == 0:
+                    logger.info(f"Input shape to model: {features.shape}")
                 
                 features, labels = features.to(self.device), labels.to(self.device).float()
                 
@@ -459,9 +494,14 @@ class InceptionTimeTrainer:
         
         with torch.no_grad():
             for features, labels in self.test_loader:
-                # Convert 2D data to 3D if needed
-                if hasattr(self, 'reshape_needed') and self.reshape_needed:
-                    features = features.unsqueeze(-1)  # Add time dimension: (batch, features, 1)
+                # Convert 2D data to 3D based on model type
+                if hasattr(self, 'convert_method') and self.convert_method == "windowed_to_3d":
+                    features = self.converter.convert_batch_to_3d(features)
+                elif hasattr(self, 'reshape_needed') and self.reshape_needed:
+                    if self.converter.model_type == "CNN":
+                        features = features.unsqueeze(-1)  # (batch, features, 1)
+                    else:  # RNN format
+                        features = features.unsqueeze(1)   # (batch, 1, features)
                 
                 features, labels = features.to(self.device), labels.to(self.device).float()
                 outputs = self.model(features)
@@ -478,9 +518,14 @@ class InceptionTimeTrainer:
         
         with torch.no_grad():
             for features, labels in self.test_loader:
-                # Convert 2D data to 3D if needed
-                if hasattr(self, 'reshape_needed') and self.reshape_needed:
-                    features = features.unsqueeze(-1)  # Add time dimension: (batch, features, 1)
+                # Convert 2D data to 3D based on model type
+                if hasattr(self, 'convert_method') and self.convert_method == "windowed_to_3d":
+                    features = self.converter.convert_batch_to_3d(features)
+                elif hasattr(self, 'reshape_needed') and self.reshape_needed:
+                    if self.converter.model_type == "CNN":
+                        features = features.unsqueeze(-1)  # (batch, features, 1)
+                    else:  # RNN format
+                        features = features.unsqueeze(1)   # (batch, 1, features)
                 
                 features = features.to(self.device)
                 outputs = self.model(features)
@@ -515,9 +560,15 @@ class InceptionTimeTrainer:
             if not isinstance(features, torch.Tensor):
                 features = torch.tensor(features, dtype=torch.float32)
             
-            # Convert 2D data to 3D if needed
-            if hasattr(self, 'reshape_needed') and self.reshape_needed and len(features.shape) == 2:
-                features = features.unsqueeze(-1)  # Add time dimension: (batch, features, 1)
+            # Convert 2D data to 3D based on model type
+            if len(features.shape) == 2:
+                if hasattr(self, 'convert_method') and self.convert_method == "windowed_to_3d":
+                    features = self.converter.convert_batch_to_3d(features)
+                elif hasattr(self, 'reshape_needed') and self.reshape_needed:
+                    if self.converter.model_type == "CNN":
+                        features = features.unsqueeze(-1)  # (batch, features, 1)
+                    else:  # RNN format
+                        features = features.unsqueeze(1)   # (batch, 1, features)
             
             features = features.to(self.device)
             outputs = self.model(features)

@@ -1,0 +1,23 @@
+name: "InceptionTimeModel"
+params:
+  # Basic configuration
+  trainer_name: "InceptionTimeTrainer"
+  # Training parameters
+  num_epochs: 60
+  patience: 5
+  use_cuda: true
+  save_path: "output/models/inceptiontime_best.pt"
+  # Model architecture
+  model_architecture:
+    depth: 12
+    dropout_rate: 0.3
+  # Optimizer settings
+  optimizer:
+    name: "adamw"  # Options: adam, adamw, sgd
+    learning_rate: 0.01
+    weight_decay: 0.01
+  # Scheduler settings
+  scheduler:
+    factor: 0.9
+    patience: 5
+    min_lr: 0.001

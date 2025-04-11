@@ -5,7 +5,6 @@ general:
   app_name: "Pulse"
   version: "1.0.0"
   debug_mode: true
-  debug_mode: true
   use_scratch: true
 
 # Weight and Biases (wandb) logging configuration
@@ -38,11 +37,8 @@ random_seed: 42
 # Options for preprocessing
 preprocessing_baseline:
   replace_outliers: true # Whether to replace outliers with NaNs
-  flag_na: false # Whether to flag NA values with binary indicators
+  flag_na: true # Whether to flag NA values with binary indicators
   standardize: true # Whether to standardize features
-
-  # TODO: Define which models need standardized data
-
   static_imputation: true # Whether to perform static feature imputation
   dynamic_imputation: true # Whether to perform dynamic feature imputation
   save_data: true # Whether to save preprocessed data
@@ -50,6 +46,8 @@ preprocessing_baseline:
     train: 0.7
     val: 0.1
     test: 0.2
+
+  # TODO: Define which models need standardized data
 
 # _______ Preprocessing Advanced _______
 
@@ -72,8 +70,9 @@ benchmark_settings:
   optimizer: "adam"
 
 load_models:
-  - model_configs/CNNModel.yaml
+  # - model_configs/CNNModel.yaml
   # - model_configs/LightGBMModel.yaml
   # - model_configs/LSTMModel.yaml
   # - model_configs/RandomForestModel.yaml
   # - model_configs/XGBoost.yaml
+  - model_configs/InceptionTimeModel.yaml

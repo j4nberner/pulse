@@ -417,6 +417,8 @@ class PreprocessorBaseline:
         Returns:
             Tuple[pd.DataFrame, pd.DataFrame]: Reshaped X and y
         """
+        # TODO: reshaping needs to follow the pattern that all values for a feature are next to each other (necessary for convert_to_3d)
+
         # Identify static features (not to be repeated)
         static_features = self.static_columns.copy()
         
