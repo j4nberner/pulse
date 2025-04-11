@@ -74,9 +74,15 @@ class ModelTrainer:
                 try:
                     # Preprocess data for corresponding model. Returns X and y as pandas DataFrames
                     X_train, y_train = self.dm.get_preprocessed_data(
-                        dataset_name, model_name, mode="train"
+                        dataset_name,
+                        model_name,
+                        mode="train",
+                        dataset=self.config.data,
+                        task=self.config.task,
                     )
-                    X_val, y_val = self.dm.get_preprocessed_data(dataset_name, model_name, mode="val")
+                    X_val, y_val = self.dm.get_preprocessed_data(
+                        dataset_name, model_name, mode="val"
+                    )
 
                     # Wrap with TorchDatasetWrapper
                     train_dataset = TorchDatasetWrapper(X_train, y_train)

@@ -4,6 +4,7 @@ from .xgboost_model import XGBoostModel
 from .lightgbm_model import LightGBMModel
 from .cnn_model import CNNModel
 from .lstm_model import LSTMModel
+from .llama3_model import Llama3Model
 
 
 model_cls_name_dict = {
@@ -12,6 +13,7 @@ model_cls_name_dict = {
     "XGBoost": XGBoostModel,
     "LightGBM": LightGBMModel,
     "LSTMModel": LSTMModel,
+    "Llama3Model": Llama3Model,
 }
 
 
