@@ -1,0 +1,25 @@
+name: "LightGBM"
+params:
+  # Basic configuration
+  trainer_name: "LightGBMTrainer" # Class that implements the training process
+  objective: "binary" # For binary classification tasks like AKI prediction
+  n_estimators: 100 # Number of boosting rounds/trees to build
+  learning_rate: 0.1 # Controls how much each tree contributes to the final model
+  random_state: 42 # Seed for reproducible results
+  verbose: -1 # Controls the level of logging output (-1: silent, >=0: logging)
+  # Tree structure parameters
+  max_depth: -1 # Maximum depth of each tree (-1 means no limit)
+  num_leaves: 31 # Maximum number of leaves in each tree
+  min_child_samples: 20 # Minimum number of samples required in a leaf node
+  # Sampling parameters
+  subsample: 0.8 # Fraction of samples used for tree building
+  colsample_bytree: 0.8 # Fraction of features used for tree building
+  # Regularization parameters
+  reg_alpha: 0 # L1 regularization on weights
+  reg_lambda: 1 # L2 regularization on weights
+  # Algorithm specific parameters
+  boosting_type: "gbdt" # Boosting type (gbdt, dart, goss, rf)
+  # Performance and evaluation parameters
+  n_jobs: 4 # Number of parallel threads (-1 to use all CPUs)
+  metric: "auc" # Metric used for validation data evaluation
+  early_stopping_rounds: 10 # Stop if performance doesn't improve for this many rounds
