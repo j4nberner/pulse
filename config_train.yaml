@@ -4,12 +4,12 @@
 general:
   app_name: "Pulse"
   version: "1.0.0"
-  debug_mode: true
+  debug_mode: false
   use_scratch: true
 
 # Weight and Biases (wandb) logging configuration
 wandb:
-  enabled: false
+  enabled: true
   entity: "berner"
 
 ###### Application specific settings ######

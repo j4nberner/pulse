@@ -8,5 +8,5 @@ params:
   kernel_size: 3
   pool_size: 2
   learning_rate: 0.001
-  num_epochs: 10
+  num_epochs: 1
   verbose: 2 # Controls verbosity of output (0 = silent, 1 = log every 10 batches, 2 = log every batch)

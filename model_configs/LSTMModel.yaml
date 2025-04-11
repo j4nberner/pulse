@@ -7,6 +7,6 @@ params:
   output_shape: 1
   hidden_size: 128 # Number of hidden units in LSTM layers
   learning_rate: 0.001
-  num_epochs: 100
+  num_epochs: 1
   dropout: 0.2 # Dropout rate for LSTM layers
   verbose: 2 # Controls verbosity of output (0 = silent, 1 = log every 10 batches, 2 = log every batch)

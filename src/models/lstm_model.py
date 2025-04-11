@@ -10,6 +10,8 @@ import wandb
 from src.models.pulsetemplate_model import PulseTemplateModel
 from src.eval.metrics import calc_metric_stats, calculate_all_metrics
 from src.util.model_util import save_torch_model
+from src.eval.metrics import MetricsTracker
+
 
 
 logger = logging.getLogger("PULSE_logger")
@@ -215,18 +217,15 @@ class LSTMTrainer:
 
             # Reporting based on verbosity
             if verbose == 2 or (verbose == 1 and i % 10 == 9):
+                loss_value = running_loss / (10 if verbose == 1 else 1)
                 logger.info(
-                    f"Epoch {epoch + 1}, Batch {i + 1}: Loss = {running_loss / (10 if self.params.get('verbose', 1) == 1 else 1):.4f}"
+                    f"Epoch {epoch + 1}, Batch {i + 1}: Loss = {loss_value:.4f}"
                 )
+               
                 if self.wandb:
-                    wandb.log(
-                        {
-                            "loss": running_loss
-                            / (10 if self.params.get("verbose", 1) == 1 else 1)
-                        }
-                    )
-                if verbose == 1:
-                    running_loss = 0.0
+                    wandb.log({"train_loss": loss_value})
+
+                running_loss = 0.0
 
     def evaluate(self, test_dataloader):
         """
@@ -235,18 +234,9 @@ class LSTMTrainer:
         Args:
             test_dataloader: The DataLoader object for the testing dataset.
         """
+        metrics_tracker = MetricsTracker(self.model.model_name, self.model.save_dir)
         verbose = self.params.get("verbose", 1)
         self.model.eval()
-        metrics_tracker = {
-            "auroc": [],
-            "auprc": [],
-            "accuracy": [],
-            "precision": [],
-            "recall": [],
-            "f1_score": [],
-            "sensitivity": [],
-            "specificity": [],
-        }
 
         with torch.no_grad():
             for batch, (inputs, labels) in enumerate(test_dataloader):
@@ -258,26 +248,21 @@ class LSTMTrainer:
                 outputs = self.model(inputs)
                 _, predicted = torch.max(outputs.data, 1)
 
-                # Calculate metrics for batch
-                test_error = calculate_all_metrics(labels, predicted)
+                accuracy = (predicted == labels).sum().item() / labels.size(0)
 
-                # Store metrics in the tracker
-                for metric in metrics_tracker:
-                    metrics_tracker[metric].append(test_error[metric])
-
-                # Log metrics
+                # Append results to metrics tracker
+                metrics_tracker.add_results(
+                    predicted.cpu().numpy(), labels.cpu().numpy()
+                )
                 if verbose == 2 or (verbose == 1 and batch % 10 == 9):
-                    logger.info(test_error)
+                    logger.info(
+                        f"Evaluating batch {batch + 1}: " f"Accuracy = {accuracy}"
+                    )
 
                     if self.wandb:
-                        wandb.log(test_error)
+                        wandb.log({"accuracy": accuracy})
 
-        logger.info(f"Evaluation metrics: {metrics_tracker}")
-        if self.wandb:
-            wandb.log(metrics_tracker)
-        # Calculate statistics over all metrics and store to file
-        calc_metric_stats(
-            metrics_tracker,
-            model_id=self.model.model_name,
-            save_dir=self.model.save_dir,
-        )
+                
+        # Calculate and log metrics
+        metrics_tracker.summary = metrics_tracker.compute_overall_metrics()
+        metrics_tracker.save_report()
