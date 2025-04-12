@@ -9,7 +9,7 @@ general:
 
 # Weight and Biases (wandb) logging configuration
 wandb:
-  enabled: false
+  enabled: true
   entity: "berner"
 
 ###### Application specific settings ######
@@ -40,7 +40,7 @@ preprocessing_baseline:
   flag_na: true # Whether to flag NA values with binary indicators
   standardize: true # Whether to standardize features
   static_imputation: true # Whether to perform static feature imputation
-  dynamic_imputation: false # Whether to perform dynamic feature imputation
+  dynamic_imputation: true # Whether to perform dynamic feature imputation
   save_data: true # Whether to save preprocessed data
   split_ratios: # Train/Val/Test split ratios
     train: 0.7
@@ -70,9 +70,9 @@ benchmark_settings:
 # optimizer: "adam" # Removed. Use model-specific optimizer instead.
 
 load_models:
-  # - model_configs/CNNModel.yaml
-  # - model_configs/LightGBMModel.yaml
-  # - model_configs/LSTMModel.yaml
   # - model_configs/RandomForestModel.yaml
   # - model_configs/XGBoost.yaml
+  # - model_configs/LightGBMModel.yaml
+  # - model_configs/CNNModel.yaml
+  # - model_configs/LSTMModel.yaml
   - model_configs/InceptionTimeModel.yaml

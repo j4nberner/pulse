@@ -11,11 +11,12 @@ import os
 
 from src.models.pulsetemplate_model import PulseTemplateModel
 from src.preprocessing.preprocessing_advanced.windowing import WindowedDataTo3D
-from src.util.model_util import save_torch_model, load_torch_model, prepare_data_for_model
+from src.util.model_util import save_torch_model, load_torch_model, prepare_data_for_model_dl
 from src.eval.metrics import calculate_all_metrics, calc_metric_stats, MetricsTracker
 
 # TODO: Why are calculate_all_metrics and cal_metric_stats imported but not used?
 # TODO: add new dataloader logic with mode=train/val/test to ML models & Inception Time (-> is val already used?)
+# TODO: Model save via early stopping and at the end (use only save_torch_model util)
 
 # Set up logger
 logger = logging.getLogger("PULSE_logger")
@@ -184,6 +185,9 @@ class InceptionTimeModel(PulseTemplateModel):
         
         # Store configuration
         self.config = params
+
+        # Set the model save directory
+        self.save_dir = kwargs.get("output_dir", f"{os.getcwd()}/output")
         
         # Log configuration details including preprocessing settings
         logger.info(f"Initializing {model_name} model with parameters")
@@ -239,15 +243,16 @@ class InceptionTimeTrainer:
         # Extract training parameters
         self.num_epochs = config.get("num_epochs", 60)
         self.patience = config.get("patience", 5)
-        self.save_path = config.get("save_path", "output/models/inceptiontime_best.pt")
         
-        # TODO: adjust parameter access (save_path is not accessed properly for example)
-
-        # Set up model save directory
-        self.save_dir = config.get("save_dir", os.path.join(os.getcwd(), "output"))
+        # Use the model's save_dir
+        self.save_dir = model.save_dir
         self.model_save_dir = os.path.join(self.save_dir, "Models")
         os.makedirs(self.model_save_dir, exist_ok=True)
         os.makedirs(os.path.join(self.model_save_dir, "Checkpoints"), exist_ok=True)
+        
+        # Set save_path within the model_save_dir instead of using a separate path
+        best_model_filename = config.get("best_model_filename", f"{self.model_wrapper.model_name}_best.pt")
+        self.save_path = os.path.join(self.model_save_dir, best_model_filename)
         
         # Initialize metrics tracker
         self.metrics_tracker = MetricsTracker(
@@ -284,7 +289,7 @@ class InceptionTimeTrainer:
         Prepare data for InceptionTime by ensuring it's in 3D format.
         """
         # Use the utility function from model_util.py
-        data_prep_result = prepare_data_for_model(
+        data_prep_result = prepare_data_for_model_dl(
             self.train_loader,
             self.config,
             model_name=self.model_wrapper.model_name
