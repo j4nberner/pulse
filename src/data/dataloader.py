@@ -322,6 +322,7 @@ class DatasetManager:
         Returns:
             dict: The modified data dictionary
         """
+        # TODO: should X keep the stay_id?
         for split in ["train", "val", "test"]:
             if split in data_dict and "y" in data_dict[split]:
                 y_data = data_dict[split]["y"]
