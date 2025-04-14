@@ -2,10 +2,14 @@ from typing import Dict, Any, Optional
 import logging
 import numpy as np
 import pandas as pd
+import os
 from lightgbm import LGBMClassifier, early_stopping
+import wandb
 
 from src.models.pulsetemplate_model import PulseTemplateModel
-from src.eval.metrics import rmse
+from src.util.model_util import save_sklearn_model, load_sklearn_model, prepare_data_for_model_ml
+from src.eval.metrics import MetricsTracker, rmse
+from src.eval.metrics import calculate_all_metrics, calc_metric_stats
 
 logger = logging.getLogger("PULSE_logger")
 
@@ -37,6 +41,12 @@ class LightGBMModel(PulseTemplateModel):
         model_name = params.get("model_name", self.__class__.__name__.replace("Model", ""))
         trainer_name = params["trainer_name"]
         super().__init__(model_name, trainer_name)
+
+        # Set the model save directory
+        self.save_dir = kwargs.get("output_dir", f"{os.getcwd()}/output")
+        
+        # Check if wandb is enabled and set up
+        self.wandb = kwargs.get("wandb", False)
         
         # Define all required LightGBM parameters
         required_lgb_params = [
@@ -110,46 +120,32 @@ class LightGBMTrainer:
         self.model = model
         self.train_dataloader = train_dataloader
         self.test_dataloader = test_dataloader
+        self.wandb = model.wandb
+        self.model_save_dir = os.path.join(model.save_dir, "Models")
+        # Create model save directory if it doesn't exist
+        os.makedirs(self.model_save_dir, exist_ok=True)
 
     def train(self):
         """Train the LightGBM model using the provided data loaders."""
-        logger.info(f"Starting training process for LightGBM model...")
-
-        # Extract data from dataloader and preserve feature names
-        X_train, y_train = [], []
-        X_test, y_test = [], []
+        logger.info("Starting training process for LightGBM model...")
         
-        # Rest of your data extraction code
-        for batch in self.train_dataloader:
-            features, labels = batch
-            X_train.extend(features.numpy())
-            y_train.extend(labels.numpy().squeeze())
+        # Use the utility function to prepare data
+        prepared_data = prepare_data_for_model_ml(
+            self.train_dataloader,
+            self.test_dataloader,
+            logger_instance=logger
+        )
+        
+        # Extract all data from the prepared_data dictionary
+        X_train = prepared_data["X_train"]
+        y_train = prepared_data["y_train"] 
+        X_test = prepared_data["X_test"]
+        y_test = prepared_data["y_test"]
+        feature_names = prepared_data["feature_names"]
 
-        for batch in self.test_dataloader:
-            features, labels = batch
-            X_test.extend(features.numpy())
-            y_test.extend(labels.numpy().squeeze())
-
-        # Convert lists to numpy arrays
-        X_train = np.array(X_train)
-        y_train = np.array(y_train)
-        X_test = np.array(X_test)
-        y_test = np.array(y_test)
-
-        # Log shapes before model training
-        logger.info(f"Before LightGBM training - X_train shape: {X_train.shape}, y_train shape: {y_train.shape}")
-        logger.info(f"Before LightGBM training - X_test shape: {X_test.shape}, y_test shape: {y_test.shape}")
-
-        # Access the original x-dataframe from the TorchDatasetWrapper to get column names (e.g. for feature importance analysis)
-        feature_names = None
-        if hasattr(self.train_dataloader.dataset, 'X') and isinstance(self.train_dataloader.dataset.X, pd.DataFrame):
-            feature_names = list(self.train_dataloader.dataset.X.columns)
-            logger.info(f"Extracted {len(feature_names)} feature names from original DataFrame")
-
-        # Create fallback feature names if needed
-        if feature_names is None or len(feature_names) != X_train.shape[1]:
-            feature_names = [f'feature_{i}' for i in range(X_train.shape[1])]
-            logger.info(f"Using generated feature names (couldn't access original names)")
+        # Log training start to wandb
+        if self.wandb:
+            wandb.log({"train_samples": len(X_train), "test_samples": len(X_test)})
         
         # Create early stopping callback with verbose setting based on model configuration
         early_stopping_callback = early_stopping(
@@ -169,8 +165,40 @@ class LightGBMTrainer:
         
         # Create DataFrame with feature names for prediction to avoid warnings
         X_test_df = pd.DataFrame(X_test, columns=feature_names)
-
+        
         # Evaluate the model
         y_pred = self.model.model.predict(X_test_df)
+        y_pred_proba = self.model.model.predict_proba(X_test_df)
         rmse_score = rmse(y_test, y_pred)
         logger.info("RMSE: %f", rmse_score)
+
+        # Log metrics to wandb
+        if self.wandb:
+            wandb.log({"rmse": rmse_score})
+            
+            # Calculate and log other metrics
+            metrics = calculate_all_metrics(y_test, y_pred, y_pred_proba)
+            for metric_name, value in metrics.items():
+                wandb.log({metric_name: value})
+            
+            # Log feature importance
+            if hasattr(self.model.model, "feature_importances_"):
+                feature_importance = {
+                    f"importance_{feature_names[i]}": imp 
+                    for i, imp in enumerate(self.model.model.feature_importances_)
+                }
+                wandb.log(feature_importance)
+                
+                # Create a bar chart of feature importances
+                importance_df = pd.DataFrame({
+                    'feature': feature_names,
+                    'importance': self.model.model.feature_importances_
+                }).sort_values('importance', ascending=False)
+                
+                wandb.log({"feature_importance": wandb.plot.bar(
+                    wandb.Table(dataframe=importance_df),
+                    "feature", "importance", title="Feature Importance"
+                )})
+        
+        # Save the model
+        save_sklearn_model(self.model.model_name, self.model.model, self.model_save_dir)

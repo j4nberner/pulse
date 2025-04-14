@@ -4,7 +4,7 @@
 general:
   app_name: "Pulse"
   version: "1.0.0"
-  debug_mode: false
+  debug_mode: true
   use_scratch: true
 
 # Weight and Biases (wandb) logging configuration
@@ -13,7 +13,7 @@ wandb:
   entity: "berner"
 
 ###### Application specific settings ######
-base_path: "" #"/cluster/project/bmds_lab/sepsis_sophia/pulse" # #"/path/to/pulse"
+base_path: "/Users/sophiaehlers/Documents/pulse" #"/cluster/project/bmds_lab/sepsis_sophia/pulse" # #"/path/to/pulse"
 
 # Tasks to process
 tasks:
@@ -39,9 +39,6 @@ preprocessing_baseline:
   replace_outliers: true # Whether to replace outliers with NaNs
   flag_na: true # Whether to flag NA values with binary indicators
   standardize: true # Whether to standardize features
-
-  # TODO: Define which models need standardized data
-
   static_imputation: true # Whether to perform static feature imputation
   dynamic_imputation: true # Whether to perform dynamic feature imputation
   save_data: true # Whether to save preprocessed data
@@ -50,17 +47,19 @@ preprocessing_baseline:
     val: 0.1
     test: 0.2
 
+  # TODO: Define which models need standardized data
+
 # _______ Preprocessing Advanced _______
 
 preprocessing_advanced:
   windowing:
     enabled: false # Enable/disable windowing
-    data_window: 9 # Size of the data window
+    data_window: 3 # Size of the data window
     prediction_window: 0 # Size of the prediction window (0 = predict at the end of window)
     step_size: 1 # Step size for sliding windows
     save_data: true # Whether to save windowed data
 
-# TODO: Create a PreprocessorAdvanced class (maybe better idea than separate classes to handle data saving/loading?)
+# TODO: Create a PreprocessorAdvanced class (maybe better idea than separate classes to handle data saving/loading? -> No, we don't save advanced preprocessed data except for windowing)
 
 # _______ Model Training _______
 
@@ -71,8 +70,9 @@ benchmark_settings:
 # optimizer: "adam" # Removed. Use model-specific optimizer instead.
 
 load_models:
-  # - model_configs/CNNModel.yaml
-  # - model_configs/LightGBMModel.yaml
-  - model_configs/LSTMModel.yaml
   # - model_configs/RandomForestModel.yaml
   # - model_configs/XGBoost.yaml
+  # - model_configs/LightGBMModel.yaml
+  # - model_configs/CNNModel.yaml
+  # - model_configs/LSTMModel.yaml
+  - model_configs/InceptionTimeModel.yaml

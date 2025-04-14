@@ -5,7 +5,6 @@ import logging
 
 logger = logging.getLogger("PULSE_logger")
 
-
 def load_config_with_models(base_config_path: str) -> OmegaConf:
     # Load the base YAML configuration file
     base_config = OmegaConf.load(base_config_path)
@@ -24,6 +23,10 @@ def load_config_with_models(base_config_path: str) -> OmegaConf:
         if model_name is None:
             # If the 'name' key is missing, fall back to using the file name without extension.
             model_name = os.path.splitext(os.path.basename(file_path))[0]
+
+        # Add global preprocessing configuration to each model config
+        if "preprocessing_advanced" in base_config:
+            model_config.params["preprocessing_advanced"] = base_config.preprocessing_advanced
 
         # Add the loaded model config to the models dictionary under the extracted name
         models[model_name] = model_config
