@@ -188,6 +188,8 @@ def prepare_data_for_model_ml(
         "feature_names": feature_names
     }
 
+# implement conditional conversion for mortality (always, because it is never windowed (maybe first adapt ordering of columns during transformation in preprocessing))
+
 def prepare_data_for_model_dl(
     data_loader,
     config: Dict,

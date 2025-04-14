@@ -15,7 +15,6 @@ from src.util.model_util import save_torch_model, load_torch_model, prepare_data
 from src.eval.metrics import calculate_all_metrics, calc_metric_stats, MetricsTracker
 
 # TODO: Why are calculate_all_metrics and cal_metric_stats imported but not used?
-# TODO: Model save via early stopping and at the end (use only save_torch_model util)
 
 # Set up logger
 logger = logging.getLogger("PULSE_logger")
@@ -84,9 +83,9 @@ class InceptionTimeModel(PulseTemplateModel):
             self.early_stop = False
             self.best_val_loss = float('inf')
             self.delta = delta
-            self.model_path = None
+            self.best_state_dict = None
 
-        def __call__(self, val_loss, model, model_path):
+        def __call__(self, val_loss, model):
             if val_loss > self.best_val_loss - self.delta:
                 self.counter += 1
                 if self.verbose:
@@ -94,15 +93,15 @@ class InceptionTimeModel(PulseTemplateModel):
                 if self.counter >= self.patience:
                     self.early_stop = True
             else:
-                self.save_checkpoint(val_loss, model, model_path)
+                self.save_checkpoint(val_loss, model)
                 self.counter = 0
 
-        def save_checkpoint(self, val_loss, model, model_path):
+        def save_checkpoint(self, val_loss, model):
             if self.verbose:
-                logger.info(f'Validation loss decreased ({self.best_val_loss:.6f} --> {val_loss:.6f}). Saving model...')
-            torch.save(model.state_dict(), model_path)
+                logger.info(f'Validation loss decreased ({self.best_val_loss:.6f} --> {val_loss:.6f}). Saving model state...')
+            # Store state dict in memory instead of saving to disk
+            self.best_state_dict = model.state_dict().copy()
             self.best_val_loss = val_loss
-            self.model_path = model_path
     
     class Network(nn.Module):
         def __init__(self, in_channels, out_channels, depth=12, dropout_rate=0.3):
@@ -513,20 +512,14 @@ class InceptionTimeTrainer:
                 })
             
             # Check early stopping
-            self.early_stopping(val_loss, self.model, self.save_path)
+            self.early_stopping(val_loss, self.model)
             if self.early_stopping.early_stop:
-                logger.info("Early stopping triggered")
                 break
-        
-        # Load best model from early stopping
-        if self.early_stopping.model_path:
-            self.model.load_state_dict(torch.load(self.early_stopping.model_path))
-            logger.info(f"Loaded best model from {self.early_stopping.model_path}")
-        
-        # Save final model using the utility function
-        final_model_path = os.path.join(self.model_save_dir, f"{self.model_wrapper.model_name}_final.pt")
-        save_torch_model(f"{self.model_wrapper.model_name}_final", self.model, self.model_save_dir)
-        logger.info(f"Saved final model to {final_model_path}")
+
+            # After training loop, load best model weights and save final model
+            if self.early_stopping.best_state_dict:
+                self.model.load_state_dict(self.early_stopping.best_state_dict)
+            save_torch_model(f"{self.model_wrapper.model_name}", self.model, self.model_save_dir)
         
         # Evaluate final model
         eval_results = self._evaluate()
