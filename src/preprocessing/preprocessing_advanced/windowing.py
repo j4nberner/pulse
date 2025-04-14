@@ -1,6 +1,7 @@
 import os
 import pandas as pd
 import numpy as np
+import re
 from tqdm import tqdm
 import gc
 import logging
@@ -63,7 +64,7 @@ class Windower:
             stay_id_np = X['stay_id'].values
 
             # Define static columns that will be preserved in order
-            static_columns = ['stay_id', 'sex', 'age', 'height', 'weight']
+            static_columns = ['stay_id', 'age', 'sex', 'height', 'weight']
             columns_index = [X.columns.get_loc(col) for col in static_columns if col in X.columns]
             non_static_columns = [i for i in range(X_np.shape[1]) if i not in columns_index]
 
@@ -356,3 +357,136 @@ class Windower:
             self.save_windowed_data(windowed_data, task, dataset, data_window, prediction_window, step_size)
         
         return windowed_data
+    
+class WindowedDataTo3D:
+    """
+    Class for converting windowed ICU data from flattened 2D pandas DataFrames to 3D numpy arrays
+    suitable for deep learning models.
+    
+    This class treats static features (like demographics) as time series by repeating their values
+    across the time dimension, resulting in a single 3D array output.
+    """
+    
+    def __init__(self, logger=None, model_name=None, config=None):
+        """
+        Initialize the WindowedDataTo3D converter.
+        
+        Args:
+            logger: Logger instance for logging messages
+            model_name (str, optional): Name of the model to determine array format
+            config (dict, optional): Configuration with windowing parameters
+        """
+        self.logger = logger or logging.getLogger("PULSE_logger")
+        
+        # Dictionary mapping model names to their types (CNN or RNN)
+        self.model_type_mapping = {
+            # CNN type models
+            "CNN": "CNN",
+            "InceptionTime": "CNN",
+            
+            # RNN type models
+            "LSTM": "RNN",
+            "GRU": "RNN"
+        }
+        
+        # Set model type based on provided model name
+        self.model_type = None
+        if model_name:
+            self.model_type = self.model_type_mapping.get(model_name)
+            if not self.model_type:
+                self.logger.warning(f"Unknown model name: {model_name}. Using RNN format as default.")
+                self.model_type = "RNN"
+                
+        # Extract window size from config if available
+        self.window_size = 6  # Default
+        if config:
+            if hasattr(config, "preprocessing_advanced"):
+                preprocessing_advanced = config.preprocessing_advanced
+                
+                if hasattr(preprocessing_advanced, "windowing"):
+                    windowing_config = preprocessing_advanced.windowing
+                    
+                    if hasattr(windowing_config, "data_window"):
+                        self.window_size = windowing_config.data_window
+                        self.logger.info(f"Set window size to {self.window_size} from config")
+
+    def convert_batch_to_3d(self, batch_features, window_size=None, static_feature_count=4, id_column_index=0):
+        """
+        Convert a batch of features from 2D to 3D format suitable for temporal models.
+        Works with tensors extracted directly from the dataloader.
+        
+        Args:
+            batch_features (torch.Tensor): Batch of features in 2D format (batch_size, n_features)
+            window_size (int, optional): Size of the time window. Defaults to self.window_size
+            static_feature_count (int): Number of static features (excluding id_column)
+            id_column_index (int): Index of the ID column to exclude (typically 0 for stay_id)
+            
+        Returns:
+            torch.Tensor: Batch of features in 3D format
+        """
+        import torch
+        
+        # If already 3D, return as is
+        if len(batch_features.shape) == 3:
+            return batch_features
+        
+        batch_size, n_features = batch_features.shape
+        
+        # Use provided window_size or fall back to self.window_size
+        if window_size is None:
+            window_size = self.window_size
+        
+        # Determine model type (CNN or RNN)
+        is_cnn = self.model_type == "CNN"
+        
+        # Skip the ID column
+        if id_column_index is not None:
+            # Create a mask to exclude the ID column
+            keep_mask = torch.ones(n_features, dtype=torch.bool)
+            keep_mask[id_column_index] = False
+            
+            # Apply the mask to get features without ID
+            features_no_id = batch_features[:, keep_mask]
+            n_features = features_no_id.shape[1]
+        else:
+            features_no_id = batch_features
+        
+        # Extract static features (typically columns 0-3 after removing ID)
+        static_features = features_no_id[:, :static_feature_count]
+        
+        # Extract dynamic features (everything after static features)
+        dynamic_features = features_no_id[:, static_feature_count:]
+        n_dynamic_features = dynamic_features.shape[1]
+        
+        # Calculate number of actual features
+        n_actual_dynamic_features = n_dynamic_features // window_size
+        
+        try:
+            # Reshape dynamic features based on window size
+            if is_cnn:
+                # For CNN: (batch, features, time)
+                dynamic_3d = dynamic_features.reshape(batch_size, n_actual_dynamic_features, window_size)
+                
+                # Repeat static features for each time step
+                static_3d = static_features.unsqueeze(-1).repeat(1, 1, window_size)
+                
+                # Combine on feature dimension (static first, then dynamic)
+                return torch.cat([static_3d, dynamic_3d], dim=1)
+            else:
+                # For RNN: (batch, time, features)
+                dynamic_3d = dynamic_features.reshape(batch_size, window_size, n_actual_dynamic_features)
+                
+                # Repeat static features for each time step
+                static_3d = static_features.unsqueeze(1).repeat(1, window_size, 1)
+                
+                # Combine on feature dimension
+                return torch.cat([static_3d, dynamic_3d], dim=2)
+        
+        except Exception as e:
+            self.logger.warning(f"Error reshaping batch to 3D: {e}. Using simple approach.")
+            
+            # Fall back to simple reshape if the proper reshaping fails
+            if is_cnn:
+                return features_no_id.unsqueeze(-1)  # (batch, features, 1)
+            else:
+                return features_no_id.unsqueeze(1)   # (batch, 1, features)
