@@ -13,7 +13,7 @@ wandb:
   entity: "berner"
 
 ###### Application specific settings ######
-base_path: "/Users/sophiaehlers/Documents/pulse" #"/cluster/project/bmds_lab/sepsis_sophia/pulse" # #"/path/to/pulse"
+base_path: "" #"/cluster/project/bmds_lab/sepsis_sophia/pulse" # #"/path/to/pulse"
 
 # Tasks to process
 tasks:
@@ -70,9 +70,9 @@ benchmark_settings:
 # optimizer: "adam" # Removed. Use model-specific optimizer instead.
 
 load_models:
-  # - model_configs/RandomForestModel.yaml
-  # - model_configs/XGBoost.yaml
-  # - model_configs/LightGBMModel.yaml
-  # - model_configs/CNNModel.yaml
-  # - model_configs/LSTMModel.yaml
+  - model_configs/RandomForestModel.yaml
+  - model_configs/XGBoost.yaml
+  - model_configs/LightGBMModel.yaml
+  - model_configs/CNNModel.yaml
+  - model_configs/LSTMModel.yaml
   - model_configs/InceptionTimeModel.yaml

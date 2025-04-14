@@ -18,9 +18,12 @@ class PulseTemplateModel:
             model_name: Name of the model
             trainer_name: Optional name of the trainer
         """
+        params = kwargs.get("params", {})
         self.model_name = model_name
         self.trainer_name = trainer_name
         self.trainer = None
+        self.preprocessing_id = params.get("preprocessing_id", None)
+        self.type = params.get("type", None)
 
     def set_trainer(
         self,

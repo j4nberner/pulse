@@ -16,7 +16,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, LlamaTokenizer
 logger = logging.getLogger("PULSE_logger")
 
 
-class Llama3Model:
+class Llama3Model(PulseTemplateModel):
     def __init__(self, params: Dict[str, Any], **kwargs) -> None:
         """
         Initialize the Llama3 model.
@@ -31,6 +31,7 @@ class Llama3Model:
         )
         self.type = "llm"
         self.trainer_name = params["trainer_name"]
+        super().__init__(self.model_name, self.trainer_name, params=params)
 
         # Set the model save directory
         self.save_dir = kwargs.get("output_dir", f"{os.getcwd()}/output")
@@ -80,7 +81,7 @@ class Llama3Model:
             Dict[str, Any]: Evaluation results.
         """
         # Initialize metrics tracker
-        #metrics = MetricsTracker()
+        # metrics = MetricsTracker()
 
         # Iterate over the test dataloader
         for X, y in test_dataloader:
@@ -106,7 +107,7 @@ class Llama3Model:
             logger.info(f"Generated text: {generated_text}")
 
         # Log the evaluation results
-        #logger.info(f"Evaluation results: {metrics.get_results()}")
+        # logger.info(f"Evaluation results: {metrics.get_results()}")
 
     def set_trainer(self, trainer_name: str, train_dataloader, test_dataloader) -> None:
         """

@@ -8,36 +8,39 @@ import torch.optim as optim
 import torch
 import wandb
 from src.models.pulsetemplate_model import PulseTemplateModel
-from src.util.model_util import save_torch_model, load_torch_model
+from src.util.model_util import (
+    save_torch_model,
+    load_torch_model,
+    prepare_data_for_model_dl,
+)
 from src.eval.metrics import MetricsTracker
 from src.eval.metrics import calculate_all_metrics, calc_metric_stats
-
 
 logger = logging.getLogger("PULSE_logger")
 
 
-class CNN(nn.Module):
-    def __init__(self, num_features, window_size):
-        # call the parent constructor
-        super(CNN, self).__init__()
-        self.conv1 = nn.Conv1d(
-            in_channels=num_features, out_channels=256, kernel_size=1, padding=1
-        )
-        self.bn1 = nn.BatchNorm1d(256)
-        self.conv2 = nn.Conv1d(
-            in_channels=256, out_channels=64, kernel_size=3, padding=1
-        )
-        self.bn2 = nn.BatchNorm1d(64)
-        self.conv3 = nn.Conv1d(
-            in_channels=64, out_channels=16, kernel_size=5, padding=1
-        )
-        self.bn3 = nn.BatchNorm1d(16)
-        self.pool = nn.MaxPool1d(kernel_size=2)
-        self.dropout = nn.Dropout(0.5)
+# class CNN(nn.Module):
+#     def __init__(self, num_features, window_size):
+#         # call the parent constructor
+#         super(CNN, self).__init__()
+#         self.conv1 = nn.Conv1d(
+#             in_channels=num_features, out_channels=256, kernel_size=1, padding=1
+#         )
+#         self.bn1 = nn.BatchNorm1d(256)
+#         self.conv2 = nn.Conv1d(
+#             in_channels=256, out_channels=64, kernel_size=3, padding=1
+#         )
+#         self.bn2 = nn.BatchNorm1d(64)
+#         self.conv3 = nn.Conv1d(
+#             in_channels=64, out_channels=16, kernel_size=5, padding=1
+#         )
+#         self.bn3 = nn.BatchNorm1d(16)
+#         self.pool = nn.MaxPool1d(kernel_size=2)
+#         self.dropout = nn.Dropout(0.5)
 
-        conv_output_size = 16 * ((window_size) // 2)
-        self.fc1 = nn.Linear(conv_output_size, 16)
-        self.fc2 = nn.Linear(16, 1)
+#         conv_output_size = 16 * ((window_size) // 2)
+#         self.fc1 = nn.Linear(conv_output_size, 16)
+#         self.fc2 = nn.Linear(16, 1)
 
 
 class CNNModel(PulseTemplateModel, nn.Module):
@@ -58,7 +61,7 @@ class CNNModel(PulseTemplateModel, nn.Module):
             "model_name", self.__class__.__name__.replace("Model", "")
         )
         self.trainer_name = params["trainer_name"]
-        super().__init__(self.model_name, self.trainer_name)
+        super().__init__(self.model_name, self.trainer_name, params=params)
         nn.Module.__init__(self)
 
         # Set the model save directory
@@ -68,7 +71,6 @@ class CNNModel(PulseTemplateModel, nn.Module):
         required_params = [
             "num_features",
             "output_shape",
-            "num_channels",
             "kernel_size",
             "pool_size",
             "learning_rate",
@@ -86,10 +88,18 @@ class CNNModel(PulseTemplateModel, nn.Module):
             raise KeyError(f"Required parameters missing from config: {missing_params}")
 
         # Extract parameters from config
-        self.params = {param: params[param] for param in required_params}
+        self.params = params  # {param: params[param] for param in required_params}
 
         # Log the parameters being used
         logger.info(f"Initializing CNN with parameters: {self.params}")
+
+        # Set the number of channels based on the input shape
+        if params["preprocessing_advanced"]["windowing"]["enabled"]:
+            self.params["num_channels"] = params["preprocessing_advanced"]["windowing"][
+                "data_window"
+            ]
+        else:
+            self.params["num_channels"] = 1  # Default to 1 channel for 1 timestamp
 
         # -------------------------Define layers-------------------------
         self.conv1 = nn.Conv1d(
@@ -191,6 +201,26 @@ class CNNTrainer:
         # Create model save directory if it doesn't exist
         os.makedirs(self.model_save_dir, exist_ok=True)
 
+        # Data preparation
+        self._prepare_data()
+
+    def _prepare_data(self):
+        """
+        Prepare data for InceptionTime by ensuring it's in 3D format.
+        """
+        # Use the utility function from model_util.py
+        data_prep_result = prepare_data_for_model_dl(
+            self.train_dataloader, self.params, model_name=self.model.model_name
+        )
+
+        # Extract results
+        self.reshape_needed = data_prep_result["reshape_needed"]
+        self.convert_method = data_prep_result["convert_method"]
+        self.converter = data_prep_result["converter"]
+
+        # Log input data shape
+        logger.info(f"Input data shape: {data_prep_result['data_shape']}")
+
     def train(self):
         """Training loop."""
         save_checkpoint = self.params["save_checkpoint"]
@@ -228,11 +258,9 @@ class CNNTrainer:
         self.model.train()
         running_loss = 0.0
         for i, (inputs, labels) in enumerate(self.train_dataloader):
+            inputs = self._transform_features(inputs)
             # Move tensors to the same device as the model
             inputs, labels = inputs.to(self.device), labels.to(self.device)
-
-            # Reshape inputs to (batch_size, 1, input_size) for CNN
-            inputs = inputs.unsqueeze(1)
 
             self.optimizer.zero_grad()
             outputs = self.model(inputs)
@@ -268,10 +296,8 @@ class CNNTrainer:
 
         with torch.no_grad():
             for batch, (inputs, labels) in enumerate(val_dataloader):
+                inputs = self._transform_features(inputs)
                 inputs, labels = inputs.to(self.device), labels.to(self.device)
-
-                # Reshape inputs to (batch_size, 1, input_size) for CNN
-                inputs = inputs.unsqueeze(1)
 
                 outputs = self.model(inputs)
                 _, predicted = torch.max(outputs.data, 1)
@@ -293,3 +319,16 @@ class CNNTrainer:
         # Calculate and log metrics
         metrics_tracker.summary = metrics_tracker.compute_overall_metrics()
         metrics_tracker.save_report()
+
+    def _transform_features(self, features):
+        """Transform features to the correct format for the model."""
+        # Apply the appropriate conversions
+        if hasattr(self, "convert_method") and self.convert_method == "windowed_to_3d":
+            features = self.converter.convert_batch_to_3d(features)
+            features = features.permute(0, 2, 1)
+
+        elif hasattr(self, "reshape_needed") and self.reshape_needed:
+            # InceptionTime always uses CNN format (batch, channels, time_steps)
+            features = features.unsqueeze(1)  # Add time dimension
+
+        return features

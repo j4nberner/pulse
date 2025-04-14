@@ -44,7 +44,7 @@ class DatasetManager:
         self.preprocessor = None
         self.windower = None
 
-        self.llm_model_list = ["Llama3Model"]
+        # self.llm_model_list = ["Llama3Model"]
 
         # Initialize preprocessing tools
         self._init_preprocessing_tools()
@@ -233,6 +233,13 @@ class DatasetManager:
 
                 logger.info(f"Preprocessing completed for {dataset_id}")
 
+            # Convert labels from boolean to int if necessary
+            y_train["label"], y_val["label"], y_test["label"] = (
+                y_train["label"].astype(int),
+                y_val["label"].astype(int),
+                y_test["label"].astype(int),
+            )
+
             # Store the loaded data
             data_dict = {
                 "train": {"X": X_train, "y": y_train},
@@ -326,15 +333,21 @@ class DatasetManager:
             X = data["X_train"]
             y = data["y_train"]
 
-        # Apply any model-specific preprocessing if needed
-        if model_name in self.llm_model_list:
-            # For example, if you need to tokenize text data for LLMs
-            # Gathering dataset and task infos to pass to the model
-            dataset = kwargs.get("dataset", None)
-            task = kwargs.get("task", None)
-            info_dict = {"dataset": dataset, "task": task}
+        # Apply any model-specific preprocessing if needed. Prompt engineering for LLMs, tokenization, etc.
 
-            X, y = self._apply_llama3_preprocessing(X, y, info_dict)
+        # For example, if you need to tokenize text data for LLMs
+        preprocessing_id = kwargs.get("preprocessing_id", None)
+        match preprocessing_id:
+            case "Llama3Preprocessing":
+                # Apply Llama3-specific preprocessing
+                logger.info(f"Applying Llama3 preprocessing for {dataset_id}")
+                dataset = kwargs.get("dataset", None)
+                task = kwargs.get("task", None)
+                info_dict = {"dataset": dataset, "task": task}
+                X, y = self._apply_llama3_preprocessing(X, y, info_dict)
+            case None:
+                # No specific preprocessing needed
+                logger.info(f"No specific preprocessing needed for {dataset_id}")
 
         return X, y
 

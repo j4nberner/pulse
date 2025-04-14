@@ -98,7 +98,7 @@ This repository contains the implementation for predicting sepsis, acute kidney 
 ```python
 class ExampleModel(PulseTemplateModel):
    def __init__(self, params: Dict[str, Any], **kwargs) -> None:
-      super().__init__(model_name, trainer_name)
+      super().__init__(model_name, trainer_name, params=params)
    def set_trainer(self, trainer_name, train_dataloader, test_dataloader):
       self.trainer = ExampleTrainer(self,train_dataloader, test_dataloader)
 ```

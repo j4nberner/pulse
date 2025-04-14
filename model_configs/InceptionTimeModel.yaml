@@ -2,6 +2,7 @@ name: "InceptionTimeModel"
 params:
   # Basic configuration
   trainer_name: "InceptionTimeTrainer"
+  type: "DL" # Type of model (ML for machine learning, DL for deep learning)
   # Training parameters
   num_epochs: 60
   patience: 5
@@ -13,7 +14,7 @@ params:
     dropout_rate: 0.3
   # Optimizer settings
   optimizer:
-    name: "adamw"  # Options: adam, adamw, sgd
+    name: "adamw" # Options: adam, adamw, sgd
     learning_rate: 0.01
     weight_decay: 0.01
   # Scheduler settings
