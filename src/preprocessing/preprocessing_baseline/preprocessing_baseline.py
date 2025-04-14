@@ -16,6 +16,7 @@ warnings.filterwarnings("ignore", category=pd.errors.SettingWithCopyWarning)
 logger = logging.getLogger("PULSE_logger")
 
 # TODO: Clean up logging
+# TODO: implement temporal splitting
 
 class PreprocessorBaseline:
     """

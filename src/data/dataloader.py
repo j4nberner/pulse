@@ -300,6 +300,7 @@ class DatasetManager:
         if mode == "test":
             X = data["X_test"]
             y = data["y_test"]
+            
         elif mode == "val":
             X = data["X_val"]
             y = data["y_val"]
@@ -323,6 +324,7 @@ class DatasetManager:
             dict: The modified data dictionary
         """
         # TODO: should X keep the stay_id?
+
         for split in ["train", "val", "test"]:
             if split in data_dict and "y" in data_dict[split]:
                 y_data = data_dict[split]["y"]
@@ -375,8 +377,6 @@ class TorchDatasetWrapper(Dataset):
         Returns:
             tuple: (features, label) as torch.Tensor
         """
-
-# TODO: je nach Modell Tensor anders stacken (if DL -> apply 3D stacking)
 
         # If we pre-computed arrays, use them
         if hasattr(self, "X_array") and hasattr(self, "y_array"):

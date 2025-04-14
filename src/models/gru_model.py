@@ -14,67 +14,16 @@ from src.preprocessing.preprocessing_advanced.windowing import WindowedDataTo3D
 from src.util.model_util import save_torch_model, load_torch_model, prepare_data_for_model_dl
 from src.eval.metrics import calculate_all_metrics, calc_metric_stats, MetricsTracker
 
-# TODO: Why are calculate_all_metrics and cal_metric_stats imported but not used?
-# TODO: Model save via early stopping and at the end (use only save_torch_model util)
-
 # Set up logger
 logger = logging.getLogger("PULSE_logger")
 
-class InceptionTimeModel(PulseTemplateModel):
+class GRUModel(PulseTemplateModel):
     """
-    Implementation of InceptionTime deep learning model for time series classification.
+    Implementation of Gated Recurrent Unit (GRU) model for time series classification.
     
-    The model follows the architecture described in the InceptionTime paper
-    with inception blocks and residual connections.
+    The model uses GRU layers to process sequential data followed by
+    fully connected layers for classification.
     """
-    
-    class Inception(nn.Module):
-        def __init__(self, in_channels, out_channels):
-            super(InceptionTimeModel.Inception, self).__init__()  
-            self.bottleneck = nn.Conv1d(in_channels, out_channels, kernel_size=1, padding="same")    
-            self.conv1 = nn.Conv1d(out_channels, out_channels, kernel_size=1, padding="same")
-            self.conv2 = nn.Conv1d(out_channels, out_channels, kernel_size=3, padding="same")
-            self.conv3 = nn.Conv1d(out_channels, out_channels, kernel_size=5, padding="same")
-
-            self.conv_pool = nn.Conv1d(in_channels, out_channels, kernel_size=1, padding="same")       
-            self.pool = nn.MaxPool1d(kernel_size=3, stride=1, padding=1)
-
-            self.batch_norm = nn.BatchNorm1d(out_channels * 4)
-        
-        def forward(self, x):
-            x0 = self.bottleneck(x)
-            x1 = self.conv1(x0)
-            x2 = self.conv2(x0)
-            x3 = self.conv3(x0)
-            x4 = self.conv_pool(self.pool(x))
-            
-            out = torch.cat([x1, x2, x3, x4], dim=1)
-            out = self.batch_norm(out)
-            out = F.leaky_relu(out)
-            
-            return out
-
-    class Residual(nn.Module):
-        def __init__(self, in_channels, out_channels):
-            super(InceptionTimeModel.Residual, self).__init__()
-            # The bottleneck should match the incoming data to the target output dimension
-            self.bottleneck = nn.Conv1d(in_channels, out_channels, kernel_size=1, padding="same")
-            self.batch_norm = nn.BatchNorm1d(out_channels)
-
-        def forward(self, x, y):
-            # x is the input from 3 layers back, y is the inception output
-            # Make sure x is transformed to match y's dimensions
-            y = y + self.batch_norm(self.bottleneck(x))
-            y = F.leaky_relu(y)
-            return y
-
-    class Lambda(nn.Module):
-        def __init__(self, f):
-            super(InceptionTimeModel.Lambda, self).__init__()
-            self.f = f
-        
-        def forward(self, x):
-            return self.f(x)
     
     class EarlyStopping:
         def __init__(self, patience=5, verbose=False, delta=0):
@@ -105,65 +54,52 @@ class InceptionTimeModel(PulseTemplateModel):
             self.model_path = model_path
     
     class Network(nn.Module):
-        def __init__(self, in_channels, out_channels, depth=12, dropout_rate=0.3):
+        def __init__(self, input_dim, hidden_dim=256, layer_dim=2, output_dim=1, dropout_rate=0.3):
             super().__init__()
-            self.depth = depth
             
-            # Create modules for each depth level
-            for d in range(depth):
-                # Add inception module
-                self.add_module(
-                    f'inception_{d}',
-                    InceptionTimeModel.Inception(
-                        in_channels=in_channels[d],
-                        out_channels=out_channels[d]
-                    )
-                )
-                
-                # Add residual connection every 3 blocks
-                if d % 3 == 2:
-                    # The residual needs to connect from the input to the output of this inception block
-                    res_in = in_channels[d-2]  # Input channels from 3 layers back
-                    res_out = out_channels[d] * 4  # Output channels × 4 (because inception outputs 4x channels)
-                    
-                    self.add_module(
-                        f'residual_{d}',
-                        InceptionTimeModel.Residual(
-                            in_channels=res_in,
-                            out_channels=res_out
-                        )
-                    )
+            self.hidden_dim = hidden_dim
+            self.layer_dim = layer_dim
+            self.dropout_rate = dropout_rate
             
-            self.model = nn.Sequential(
-                InceptionTimeModel.Lambda(f=lambda x: torch.mean(x, dim=-1)),
-                nn.Dropout(dropout_rate),
-                nn.Linear(in_features=4 * out_channels[-1], out_features=64),
-                nn.LeakyReLU(),
-                nn.Dropout(dropout_rate),
-                nn.Linear(in_features=64, out_features=16),
-                nn.LeakyReLU(),
-                nn.Linear(in_features=16, out_features=1)
+            # GRU layers
+            self.gru = nn.GRU(
+                input_size=input_dim,
+                hidden_size=hidden_dim,
+                num_layers=layer_dim,
+                batch_first=True,
+                dropout=dropout_rate if layer_dim > 1 else 0
             )
-
-        def forward(self, input_tensor):
-            residual_output = None
-            for d in range(self.depth):
-                # Access modules directly from self, not from self.model
-                inception_output = self.get_submodule(f'inception_{d}')(input_tensor if d == 0 else residual_output)
-                if d % 3 == 2:
-                    residual_output = self.get_submodule(f'residual_{d}')(input_tensor, inception_output)
-                    input_tensor = residual_output
-                else:
-                    residual_output = inception_output
-
-            # Use model for the output layers that are in Sequential
-            y = self.model(residual_output)
             
-            return y
+            # Fully connected layers for classification
+            self.fc = nn.Sequential(
+                nn.Dropout(dropout_rate),
+                nn.Linear(hidden_dim, 64),
+                nn.LeakyReLU(),
+                nn.Dropout(dropout_rate),
+                nn.Linear(64, 16),
+                nn.LeakyReLU(),
+                nn.Linear(16, output_dim)
+            )
+            
+        def forward(self, x):
+            # Initialize hidden state with zeros
+            batch_size = x.size(0)
+            h0 = torch.zeros(self.layer_dim, batch_size, self.hidden_dim).to(x.device)
+            
+            # Forward propagate the GRU
+            out, _ = self.gru(x, h0)
+            
+            # Extract the output of the last time step
+            out = out[:, -1, :]
+            
+            # Feed to fully connected layers
+            out = self.fc(out)
+            
+            return out
     
     def __init__(self, params: Dict[str, Any], **kwargs) -> None:
         """
-        Initialize the InceptionTime model.
+        Initialize the GRU model.
         
         Args:
             params: Dictionary of parameters from the config file.
@@ -205,27 +141,27 @@ class InceptionTimeModel(PulseTemplateModel):
             val_dataloader: DataLoader for validation data.
             test_dataloader: DataLoader for testing data.
         """
-        if trainer_name == "InceptionTimeTrainer":
-            self.trainer = InceptionTimeTrainer(self, train_dataloader, val_dataloader, test_dataloader, self.config)
+        if trainer_name == "GRUTrainer":
+            self.trainer = GRUTrainer(self, train_dataloader, val_dataloader, test_dataloader, self.config)
         else:
             raise ValueError(f"Trainer {trainer_name} not supported for {self.model_name}.")
         
         return self.trainer
 
-class InceptionTimeTrainer:
+class GRUTrainer:
     """
-    Trainer class for InceptionTime models.
+    Trainer class for GRU models.
     
-    This class handles the training workflow for InceptionTime models
+    This class handles the training workflow for GRU models
     including data preparation, model training, evaluation and saving.
     """
     
     def __init__(self, model, train_dataloader, val_dataloader, test_dataloader, config):
         """
-        Initialize the InceptionTime trainer.
+        Initialize the GRU trainer.
         
         Args:
-            model: The InceptionTime model to train.
+            model: The GRU model to train.
             train_dataloader: DataLoader for training data.
             val_dataloader: DataLoader for validation data.
             test_dataloader: DataLoader for testing data.
@@ -252,7 +188,7 @@ class InceptionTimeTrainer:
         os.makedirs(self.model_save_dir, exist_ok=True)
         os.makedirs(os.path.join(self.model_save_dir, "Checkpoints"), exist_ok=True)
         
-        # Set save_path within the model_save_dir instead of using a separate path
+        # Set save_path within the model_save_dir
         best_model_filename = config.get("best_model_filename", f"{self.model_wrapper.model_name}_best.pt")
         self.save_path = os.path.join(self.model_save_dir, best_model_filename)
         
@@ -288,7 +224,7 @@ class InceptionTimeTrainer:
     
     def _prepare_data(self):
         """
-        Prepare data for InceptionTime by ensuring it's in 3D format.
+        Prepare data for GRU by ensuring it's in the correct format.
         """
         # Use the utility function from model_util.py
         data_prep_result = prepare_data_for_model_dl(
@@ -306,7 +242,7 @@ class InceptionTimeTrainer:
         logger.info(f"Input data shape: {data_prep_result['data_shape']}")
     
     def _init_model(self):
-        """Initialize the InceptionTime model architecture with configuration parameters."""
+        """Initialize the GRU model architecture with configuration parameters."""
         try:
             # Get sample to determine input shape
             features, _ = next(iter(self.train_loader))
@@ -316,50 +252,35 @@ class InceptionTimeTrainer:
                 features = self.converter.convert_batch_to_3d(features)
                 logger.info(f"After conversion to 3D, features shape: {features.shape}")
             elif hasattr(self, 'reshape_needed') and self.reshape_needed:
-                features = features.unsqueeze(-1)  # InceptionTime always uses CNN format
+                if len(features.shape) == 2:
+                    features = features.unsqueeze(1)  # Add feature dimension for GRU
                 logger.info(f"After reshaping, features shape: {features.shape}")
-            
-            # Get actual input dimensions
-            num_channels = features.shape[1]  # Middle dimension for CNN is channels
-            logger.info(f"Using {num_channels} input channels for InceptionTime")
             
             # Get model architecture parameters
             arch_config = self.config.get("model_architecture", {})
-            depth = arch_config.get("depth", 12)
+            
+            # Extract input dimensions - for GRU, we need the feature dimension
+            input_dim = features.shape[2]
+                
+            logger.info(f"Input dimension for GRU: {input_dim}")
+            
+            # Get GRU parameters from config
+            hidden_dim = arch_config.get("hidden_dim", 256)
+            layer_dim = arch_config.get("layer_dim", 2)
             dropout_rate = arch_config.get("dropout_rate", 0.3)
             
-            # Define dynamic channel configurations based on input
-            in_channels = [num_channels]
-            out_channels = [min(256, num_channels)]
-            
-            # Build channel architecture dynamically
-            for i in range(1, depth):
-                # Reduce channel count as we go deeper
-                prev_out = out_channels[i-1]
-                if i < depth//3:
-                    in_channels.append(prev_out * 4)  # 4× from concatenation in Inception block
-                    out_channels.append(prev_out) 
-                elif i < 2*depth//3:
-                    in_channels.append(prev_out * 4)
-                    out_channels.append(max(prev_out // 2, 32))
-                else:
-                    in_channels.append(prev_out * 4)
-                    out_channels.append(max(prev_out // 2, 16))
-            
-            # Log the channel architecture
-            logger.info(f"Dynamic channel configuration - in_channels: {in_channels}")
-            logger.info(f"Dynamic channel configuration - out_channels: {out_channels}")
-            
-            # Initialize the network with dynamic channels
-            self.model = InceptionTimeModel.Network(
-                in_channels=in_channels,
-                out_channels=out_channels,
-                depth=depth,
+            # Initialize the network
+            self.model = GRUModel.Network(
+                input_dim=input_dim,
+                hidden_dim=hidden_dim,
+                layer_dim=layer_dim,
+                output_dim=1,  # Binary classification
                 dropout_rate=dropout_rate
             ).to(self.device)
             
             # Log model architecture
-            logger.info(f"InceptionTime network initialized with depth {depth}, " +
+            logger.info(f"GRU network initialized with hidden_dim {hidden_dim}, " +
+                       f"layer_dim {layer_dim}, " +
                        f"{sum(p.numel() for p in self.model.parameters())} parameters")
             
             # Make model available to the wrapper
@@ -370,29 +291,31 @@ class InceptionTimeTrainer:
             
             # Get optimizer settings
             opt_config = self.config.get("optimizer", {})
-            optimizer_name = opt_config.get("name", "adamw").lower()
-            learning_rate = opt_config.get("learning_rate", 0.01)
-            weight_decay = opt_config.get("weight_decay", 0.01)
+            optimizer_name = opt_config.get("name", "adam").lower()
+            learning_rate = opt_config.get("learning_rate", 0.001)
+            weight_decay = opt_config.get("weight_decay", 1e-6)
             
             # Initialize loss and optimizer based on config
             self.criterion = nn.BCEWithLogitsLoss(pos_weight=torch.tensor(pos_weight).to(self.device))
             
-            if optimizer_name == "adam":
-                self.optimizer = optim.Adam(self.model.parameters(), lr=learning_rate)
-            elif optimizer_name == "sgd":
-                self.optimizer = optim.SGD(self.model.parameters(), lr=learning_rate, momentum=0.9)
-            else:  # Default to AdamW
+            if optimizer_name == "adamw":
                 self.optimizer = optim.AdamW(self.model.parameters(), 
                                           lr=learning_rate,
                                           weight_decay=weight_decay)
+            elif optimizer_name == "sgd":
+                self.optimizer = optim.SGD(self.model.parameters(), lr=learning_rate, momentum=0.9)
+            else:  # Default to Adam
+                self.optimizer = optim.Adam(self.model.parameters(), 
+                                         lr=learning_rate,
+                                         weight_decay=weight_decay)
             
             logger.info(f"Using optimizer: {optimizer_name} with learning rate: {learning_rate}")
             
             # Get scheduler configuration
             scheduler_config = self.config.get("scheduler", {})
-            factor = scheduler_config.get("factor", 0.9)
-            scheduler_patience = scheduler_config.get("patience", 5)
-            min_lr = scheduler_config.get("min_lr", 0.001)
+            factor = scheduler_config.get("factor", 0.5)
+            scheduler_patience = scheduler_config.get("patience", 3)
+            min_lr = scheduler_config.get("min_lr", 1e-6)
             
             self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(
                 self.optimizer, mode='min', factor=factor, 
@@ -400,7 +323,7 @@ class InceptionTimeTrainer:
             )
             
             # Initialize early stopping
-            self.early_stopping = InceptionTimeModel.EarlyStopping(patience=self.patience, verbose=True)
+            self.early_stopping = GRUModel.EarlyStopping(patience=self.patience, verbose=True)
             
         except Exception as e:
             logger.error(f"Error initializing model: {e}")
@@ -430,19 +353,19 @@ class InceptionTimeTrainer:
             return 1.0
         
     def _transform_features(self, features):
-        """Transform features to the correct format for the model."""
+        """Transform features to the correct format for the GRU model."""
         # Apply the appropriate conversions
         if hasattr(self, 'convert_method') and self.convert_method == "windowed_to_3d":
             features = self.converter.convert_batch_to_3d(features)
         elif hasattr(self, 'reshape_needed') and self.reshape_needed:
-            # InceptionTime always uses CNN format (batch, channels, time_steps)
-            features = features.unsqueeze(-1)  # Add time dimension
+            if len(features.shape) == 2:  # (batch, features)
+                features = features.unsqueeze(1)  # Add seq-length pseudo-dimension, for GRU, we need (batch, seq_len, features)
         
         return features
     
     def train(self):
-        """Train the InceptionTime model using the provided data loaders."""
-        logger.info("Starting InceptionTime training")
+        """Train the GRU model using the provided data loaders."""
+        logger.info("Starting GRU training")
         
         # Setup checkpoint saving
         save_checkpoint_freq = self.config.get("save_checkpoint", 5)
@@ -535,7 +458,7 @@ class InceptionTimeTrainer:
         return self.metrics
     
     def _validate(self):
-        """Validate the model and return validation loss."""
+        """Validate the model using the validation set and return validation loss."""
         self.model.eval()
         val_loss = 0.0
         
@@ -609,9 +532,8 @@ class InceptionTimeTrainer:
             if not isinstance(features, torch.Tensor):
                 features = torch.tensor(features, dtype=torch.float32)
             
-            # Convert 2D data to 3D based on model type
-            if len(features.shape) == 2:
-                features = self._transform_features(features)
+            # Apply necessary transformations
+            features = self._transform_features(features)
             
             features = features.to(self.device)
             outputs = self.model(features)

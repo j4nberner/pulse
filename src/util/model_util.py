@@ -31,7 +31,7 @@ def save_torch_model(model_name: str, model: Any, save_dir: str) -> None:
         logger.error(f"Failed to save model '{model_name}': {str(e)}")
 
 
-# TODO: not tested
+# TODO: not tested (works for ml models: .joblib files are created)
 def save_sklearn_model(model_name: str, model: Any, save_dir: str) -> None:
     """Save the trained sklearn model to disk.
 

@@ -5,6 +5,7 @@ from .lightgbm_model import LightGBMModel
 from .cnn_model import CNNModel
 from .lstm_model import LSTMModel
 from .inceptiontime_model import InceptionTimeModel
+from .gru_model import GRUModel
 
 
 model_cls_name_dict = {
@@ -13,7 +14,8 @@ model_cls_name_dict = {
     "XGBoost": XGBoostModel,
     "LightGBM": LightGBMModel,
     "LSTMModel": LSTMModel,
-    "InceptionTimeModel": InceptionTimeModel
+    "InceptionTimeModel": InceptionTimeModel,
+    "GRUModel": GRUModel
 }
 
 
