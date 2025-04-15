@@ -1,7 +1,9 @@
 name: "XGBoost"
+pretrained_model_path: null # Path to pretrained model (if any)
 params:
   # Basic configuration
   trainer_name: "XGBoostTrainer" # Class that implements the training process
+  type: "ML" # Type of model (ML for machine learning, DL for deep learning)
   objective: "binary:logistic" # For binary classification tasks like AKI prediction
   n_estimators: 100 # Number of boosting rounds/trees to build
   learning_rate: 0.1 # Controls how much each tree contributes to the final model (eta)

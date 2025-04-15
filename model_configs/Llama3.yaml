@@ -1,0 +1,7 @@
+name: "Llama3Model"
+pretrained_model_path: null # Path to pretrained model (if any)
+params:
+  trainer_name: "Llama3Trainer" # placeholder and not implemented
+  type: "LLM" # Type of model (ML for machine learning, DL for deep learning)
+  preprocessing_id: "Llama3Preprocessing"
+  verbose: 2

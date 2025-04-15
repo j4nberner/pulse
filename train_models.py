@@ -1,5 +1,6 @@
 import argparse
 import os
+import sys
 import pandas as pd
 import yaml
 from torch.utils.data import DataLoader
@@ -74,59 +75,67 @@ class ModelTrainer:
                 try:
                     # Preprocess data for corresponding model
                     X_train, y_train = self.dm.get_preprocessed_data(
-                        dataset_name, model_name, mode="train"
+                        dataset_name,
+                        model_name,
+                        mode="train",
+                        dataset=self.config.datasets[0],
+                        task=self.config.tasks[0],
+                        debug=self.config.general.debug_mode,
+                        preprocessing_id=model.preprocessing_id,
                     )
-                    X_val, y_val = self.dm.get_preprocessed_data(dataset_name, model_name, mode="val")
-                    X_test, y_test = self.dm.get_preprocessed_data(dataset_name, model_name, mode="test")
-
-                    # Wrap with TorchDatasetWrapper
-                    train_dataset = TorchDatasetWrapper(X_train, y_train)
-                    val_dataset = TorchDatasetWrapper(X_val, y_val)
-                    test_dataset = TorchDatasetWrapper(X_test, y_test)
-
-                    # Get batch size with fallback
-                    batch_size = getattr(self.config.benchmark_settings, "batch_size", 100) if hasattr(self.config, "benchmark_settings") else 100
-
-                    # Now create the DataLoaders with the wrapped datasets
-                    train_loader = DataLoader(
-                        train_dataset,
-                        batch_size=batch_size,
-                        shuffle=True,
-                        drop_last=True,
-                    )
-                    val_loader = DataLoader(
-                        val_dataset,
-                        batch_size=batch_size,
-                        shuffle=False,
-                        drop_last=True,
-                    )
-                    test_loader = DataLoader(
-                        test_dataset,
-                        batch_size=batch_size,
-                        shuffle=False,
-                        drop_last=True,
+                    X_val, y_val = self.dm.get_preprocessed_data(
+                        dataset_name,
+                        model_name,
+                        mode="val",
+                        dataset=self.config.datasets[0],
+                        task=self.config.tasks[0],
+                        debug=self.config.general.debug_mode,
+                        preprocessing_id=model.preprocessing_id,
                     )
 
-                    # If in debug mode, limit to a single batch for both training and testing
-                    if self.config.general.debug_mode:
-                        try:
-                            # Get just the first batch
-                            first_train_batch = next(iter(train_loader))
-                            first_val_batch = next(iter(val_loader))
-                            first_test_batch = next(iter(test_loader))
+                    # Choose the appropriate DataLoader based on model type
+                    if model.type == "ML":
+                        train_loader = (X_train, y_train)
+                        val_loader = (X_val, y_val)
+                    elif model.type == "LLM" or model.type == "DL":
+                        # Wrap with TorchDatasetWrapper
+                        train_dataset = TorchDatasetWrapper(X_train, y_train)
+                        val_dataset = TorchDatasetWrapper(X_val, y_val)
 
-                            # Convert to single-batch iterables
-                            train_loader = [first_train_batch]
-                            val_loader = [first_val_batch]
-                            test_loader = [first_test_batch]
-
-                            logger.info(
-                                f"DEBUG MODE: Limited to single batch for {model_name}"
+                        # Get batch size with fallback using getattr
+                        if isinstance(self.config.benchmark_settings, dict):
+                            # If benchmark_settings is a dictionary
+                            batch_size = self.config.benchmark_settings.get(
+                                "batch_size", 100
                             )
-                        except StopIteration:
-                            logger.warning(
-                                f"Dataset {dataset_name} is empty, cannot extract batch"
+                        else:
+                            # If benchmark_settings is an object with attributes
+                            batch_size = getattr(
+                                self.config.benchmark_settings, "batch_size", 100
                             )
+
+                        logger.info(
+                            f"Using batch size: {batch_size} for {model_name} on {dataset_name}"
+                        )
+
+                        # Now create the DataLoaders with the wrapped datasets
+                        train_loader = DataLoader(
+                            train_dataset,
+                            batch_size=batch_size,
+                            shuffle=True,
+                            drop_last=True,
+                        )
+                        val_loader = DataLoader(
+                            val_dataset,
+                            batch_size=batch_size,
+                            shuffle=False,
+                            drop_last=True,
+                        )
+                    else:
+                        logger.error(
+                            "Please specify a model type (ML, DL, LLM) in the config"
+                        )
+                        sys.exit(1)
 
                     # Set trainer for the model
                     model.set_trainer(trainer_name, train_loader, val_loader, test_loader)

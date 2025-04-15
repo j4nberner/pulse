@@ -13,7 +13,6 @@ from src.util.model_util import save_torch_model
 from src.eval.metrics import MetricsTracker
 
 
-
 logger = logging.getLogger("PULSE_logger")
 
 
@@ -34,8 +33,8 @@ class LSTMModel(PulseTemplateModel, nn.Module):
         self.model_name = params.get(
             "model_name", self.__class__.__name__.replace("Model", "")
         )
-        trainer_name = params["trainer_name"]
-        super().__init__(self.model_name, trainer_name)
+        self.trainer_name = params["trainer_name"]
+        super().__init__(self.model_name, self.trainer_name, params=params)
         nn.Module.__init__(self)
 
         # Set the model save directory
@@ -221,7 +220,7 @@ class LSTMTrainer:
                 logger.info(
                     f"Epoch {epoch + 1}, Batch {i + 1}: Loss = {loss_value:.4f}"
                 )
-               
+
                 if self.wandb:
                     wandb.log({"train_loss": loss_value})
 
@@ -262,7 +261,6 @@ class LSTMTrainer:
                     if self.wandb:
                         wandb.log({"accuracy": accuracy})
 
-                
         # Calculate and log metrics
         metrics_tracker.summary = metrics_tracker.compute_overall_metrics()
         metrics_tracker.save_report()
