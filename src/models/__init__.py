@@ -15,7 +15,7 @@ model_cls_name_dict = {
     "LightGBM": LightGBMModel,
     "LSTMModel": LSTMModel,
     "Llama3Model": Llama3Model,
-    "InceptionTimeModel": InceptionTimeModel,,
+    "InceptionTimeModel": InceptionTimeModel,
     "GRUModel": GRUModel
 }
 

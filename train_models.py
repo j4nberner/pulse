@@ -138,7 +138,7 @@ class ModelTrainer:
                         sys.exit(1)
 
                     # Set trainer for the model
-                    model.set_trainer(trainer_name, train_loader, val_loader, test_loader)
+                    model.set_trainer(trainer_name, train_loader, val_loader)
                     # Train and evaluate the model -> model specific
                     model.trainer.train()
 

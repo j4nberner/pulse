@@ -11,7 +11,7 @@ import os
 
 from src.models.pulsetemplate_model import PulseTemplateModel
 from src.preprocessing.preprocessing_advanced.windowing import WindowedDataTo3D
-from src.util.model_util import save_torch_model, load_torch_model, prepare_data_for_model_dl
+from src.util.model_util import save_torch_model, prepare_data_for_model_dl
 from src.eval.metrics import calculate_all_metrics, calc_metric_stats, MetricsTracker
 
 # Set up logger

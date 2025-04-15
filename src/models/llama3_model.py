@@ -8,7 +8,7 @@ import torch.optim as optim
 import torch
 import wandb
 from src.models.pulsetemplate_model import PulseTemplateModel
-from src.util.model_util import save_torch_model, load_torch_model
+from src.util.model_util import save_torch_model
 from src.eval.metrics import MetricsTracker
 from transformers import AutoModelForCausalLM, AutoTokenizer, LlamaTokenizer
 

@@ -54,7 +54,7 @@ preprocessing_baseline:
 preprocessing_advanced:
   windowing:
     enabled: true # Enable/disable windowing
-    data_window: 6 # Size of the data window
+    data_window: 24 # Size of the data window
     prediction_window: 0 # Size of the prediction window (0 = predict at the end of window)
     step_size: 1 # Step size for sliding windows
     save_data: true # Whether to save windowed data
@@ -75,5 +75,5 @@ load_models:
   # - model_configs/LightGBMModel.yaml
   # - model_configs/CNNModel.yaml
   # - model_configs/LSTMModel.yaml
-  # - model_configs/InceptionTimeModel.yaml
-  - model_configs/GRUModel.yaml
+  - model_configs/InceptionTimeModel.yaml
+  # - model_configs/GRUModel.yaml

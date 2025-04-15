@@ -12,7 +12,6 @@ import wandb
 from src.models.pulsetemplate_model import PulseTemplateModel
 from src.util.model_util import (
     save_sklearn_model,
-    load_sklearn_model,
     prepare_data_for_model_ml,
 )
 from src.eval.metrics import MetricsTracker, rmse

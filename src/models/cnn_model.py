@@ -10,7 +10,6 @@ import wandb
 from src.models.pulsetemplate_model import PulseTemplateModel
 from src.util.model_util import (
     save_torch_model,
-    load_torch_model,
     prepare_data_for_model_dl,
 )
 from src.eval.metrics import MetricsTracker
