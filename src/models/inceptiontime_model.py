@@ -17,7 +17,6 @@ from src.util.model_util import (
 from src.eval.metrics import calculate_all_metrics, calc_metric_stats, MetricsTracker
 
 # TODO: Why are calculate_all_metrics and cal_metric_stats imported but not used?
-# TODO: Können wir das direkt in den Converter als Attribut speichern? Sodass wir im Modell zB nur prepare_data_for_model_dl(batch) aufrufen müssen, und das dann automatisch richtig convertiert wird.
 
 # Set up logger
 logger = logging.getLogger("PULSE_logger")
@@ -226,8 +225,7 @@ class InceptionTimeModel(PulseTemplateModel, nn.Module):
         Args:
             num_channels: Number of input channels from the data
         """
-        logger.info(f"Updating model architecture for {num_channels} input channels")
-        
+
         # Reconfigure channel dimensions using the helper method
         self._configure_channels(num_channels)
                 
@@ -381,12 +379,39 @@ class InceptionTimeTrainer:
             self.optimizer, mode='min', factor=factor, patience=patience, min_lr=min_lr
         )
 
+    def _prepare_data(self):
+        """Prepare data for InceptionTime by getting a configured converter."""
+
+        # Get the configured converter
+        self.converter = prepare_data_for_model_dl(
+            self.train_loader, self.params, model_name=self.model.model_name
+        )
+
+        # To identify num_channels: Get a sample batch and transform using the converter
+        features, _ = next(iter(self.train_loader))
+        transformed_features = self.converter.convert_batch_to_3d(features)
+        
+        # Get the number of channels from the transformed features
+        num_channels = transformed_features.shape[1] # CNN models (batch_size, num_channels, time_steps), RNN models (batch_size, time_steps, num_features)
+        
+        # Update model architecture with correct shape
+        self.model.create_network_with_input_shape(num_channels)
+    
+        logger.info(f"Input shape to model (after transformation): {transformed_features.shape}")
+        logger.info(f"Model architecture initialized with {num_channels} input channels")
+
     def train(self):
         """Training loop."""
             
         # Move to GPU if available
         self.model.to(self.device)
         self.criterion.to(self.device)
+
+        # Initialize metrics tracking dictionary (not used for earlystopping, logging or wandb)
+        self.metrics = {
+            "train_loss": [],
+            "val_loss": []
+        }
 
         logger.info("Starting training...")
         for epoch in range(self.params["num_epochs"]):
@@ -421,7 +446,7 @@ class InceptionTimeTrainer:
         train_loss = 0.0
 
         for batch_idx, (features, labels) in enumerate(self.train_loader):
-            features = self._transform_features(features)
+            features = self.converter.convert_batch_to_3d(features)
 
             features, labels = (
                 features.to(self.device),
@@ -481,7 +506,7 @@ class InceptionTimeTrainer:
 
         with torch.no_grad():
             for features, labels in self.val_loader:
-                features = self._transform_features(features)
+                features = self.converter.convert_batch_to_3d(features)
 
                 features, labels = (
                     features.to(self.device),
@@ -509,7 +534,7 @@ class InceptionTimeTrainer:
 
         with torch.no_grad():
             for batch_idx, (features, labels) in enumerate(eval_loader):
-                features = self._transform_features(features)
+                features = self.converter.convert_batch_to_3d(features)
                 features, labels = (
                     features.to(self.device),
                     labels.to(self.device).float(),
@@ -532,54 +557,3 @@ class InceptionTimeTrainer:
         # Calculate and log metrics
         metrics_tracker.summary = metrics_tracker.compute_overall_metrics()
         metrics_tracker.save_report()
-
-    def _prepare_data(self):
-        """
-        Prepare data for InceptionTime by ensuring it's in 3D format.
-        """
-        # Initialize metrics tracking dictionary
-        self.metrics = {
-            "train_loss": [],
-            "val_loss": []
-        }
-
-        # Use the utility function from model_util.py
-        data_prep_result = prepare_data_for_model_dl(
-            self.train_loader, self.params, model_name=self.model.model_name
-        )
-
-        # Extract results
-        self.reshape_needed = data_prep_result["reshape_needed"]
-        self.convert_method = data_prep_result["convert_method"]
-        self.converter = data_prep_result["converter"]
-
-        # Log input data shape
-        logger.info(f"Input data shape: {data_prep_result['data_shape']}")
-
-        # Get a sample batch to determine the actual input shape after transformation
-        for features, _ in self.train_loader:
-            sample_features = features
-            break
-        
-        # Apply the appropriate conversions to get the actual input shape
-        if hasattr(self, "convert_method") and self.convert_method == "windowed_to_3d":
-            sample_features = self.converter.convert_batch_to_3d(sample_features)
-        elif hasattr(self, "reshape_needed") and self.reshape_needed:
-            sample_features = sample_features.unsqueeze(-1)
-        
-        # Now update the model architecture with the correct number of channels
-        input_channels = sample_features.shape[1]  # Second dimension is channels in [batch, channels, time]
-        logger.info(f"Input shape to model (after transformation): {sample_features.shape}")
-        self.model.create_network_with_input_shape(input_channels)
-
-
-    def _transform_features(self, features):
-        """Transform features to the correct format for the model."""
-        # Apply the appropriate conversions
-        if hasattr(self, "convert_method") and self.convert_method == "windowed_to_3d":
-            features = self.converter.convert_batch_to_3d(features)
-        elif hasattr(self, "reshape_needed") and self.reshape_needed:
-            # InceptionTime always uses CNN format (batch, channels, time_steps)
-            features = features.unsqueeze(-1)  # Add time dimension
-
-        return features

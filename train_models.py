@@ -97,6 +97,7 @@ class ModelTrainer:
                     if model.type == "ML":
                         train_loader = (X_train, y_train)
                         val_loader = (X_val, y_val)
+                        
                     elif model.type == "LLM" or model.type == "DL":
                         # Wrap with TorchDatasetWrapper
                         train_dataset = TorchDatasetWrapper(X_train, y_train)
