@@ -15,6 +15,7 @@ from src.util.model_util import save_torch_model, load_torch_model, prepare_data
 from src.eval.metrics import calculate_all_metrics, calc_metric_stats, MetricsTracker
 
 # TODO: Why are calculate_all_metrics and cal_metric_stats imported but not used?
+# TODO: Können wir das direkt in den Converter als Attribut speichern? Sodass wir im Modell zB nur prepare_data_for_model_dl(batch) aufrufen müssen, und das dann automatisch richtig convertiert wird.
 
 # Set up logger
 logger = logging.getLogger("PULSE_logger")
@@ -170,6 +171,9 @@ class InceptionTimeModel(PulseTemplateModel):
         Raises:
             KeyError: If any required parameters are missing from the config.
         """
+
+        # add required params (see CNN)
+
         # Validate trainer_name in params
         if "trainer_name" not in params:
             raise KeyError("Required parameter 'trainer_name' not found in config")
@@ -500,7 +504,6 @@ class InceptionTimeTrainer:
             if save_checkpoint_freq > 0 and (epoch + 1) % save_checkpoint_freq == 0:
                 checkpoint_name = f"{self.model_wrapper.model_name}_epoch_{epoch + 1}"
                 save_torch_model(checkpoint_name, self.model, checkpoint_path)
-                logger.info(f"Saved checkpoint: {checkpoint_name}")
             
             # Log to WandB if enabled
             if self.use_wandb:

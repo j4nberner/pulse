@@ -225,7 +225,7 @@ class DatasetManager:
                     )
                 )
 
-                logger.info(f"Preprocessing completed for {dataset_id}")
+                logger.info(f"Preprocessing Baseline completed for {dataset_id}")
 
             # Store the loaded data
             data_dict = {
@@ -300,7 +300,7 @@ class DatasetManager:
         if mode == "test":
             X = data["X_test"]
             y = data["y_test"]
-            
+
         elif mode == "val":
             X = data["X_val"]
             y = data["y_val"]

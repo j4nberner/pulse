@@ -424,7 +424,6 @@ class GRUTrainer:
             if save_checkpoint_freq > 0 and (epoch + 1) % save_checkpoint_freq == 0:
                 checkpoint_name = f"{self.model_wrapper.model_name}_epoch_{epoch + 1}"
                 save_torch_model(checkpoint_name, self.model, checkpoint_path)
-                logger.info(f"Saved checkpoint: {checkpoint_name}")
             
             # Log to WandB if enabled
             if self.use_wandb:

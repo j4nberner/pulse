@@ -16,7 +16,6 @@ warnings.filterwarnings("ignore", category=pd.errors.SettingWithCopyWarning)
 logger = logging.getLogger("PULSE_logger")
 
 # TODO: Clean up logging
-# TODO: implement temporal splitting
 
 class PreprocessorBaseline:
     """
@@ -225,7 +224,9 @@ class PreprocessorBaseline:
         y: pd.DataFrame
     ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
         """
-        Split data into training, validation, and testing sets using ratios from config.
+        Split data into training, validation, and testing sets based on temporal order of stay_ids.
+        The first a% of stay_ids are assigned to the training set, the next b% to validation,
+        and the remaining c% to the test set. This creates a temporal split suitable for ICU data.
         
         Args:
             X (pd.DataFrame): Features DataFrame
@@ -252,27 +253,39 @@ class PreprocessorBaseline:
             train_ratio /= total_ratio
             val_ratio /= total_ratio
             test_ratio /= total_ratio
-
-        # First split: (train+val) vs test
-        test_size = test_ratio / (train_ratio + val_ratio + test_ratio)
-        gss_test = GroupShuffleSplit(n_splits=1, test_size=test_size, random_state=self.random_seed)
-        train_val_idx, test_idx = next(gss_test.split(X, y, groups=X['stay_id']))
-
-        X_train_val, X_test = X.iloc[train_val_idx], X.iloc[test_idx]
-        y_train_val, y_test = y.iloc[train_val_idx], y.iloc[test_idx]
-
-        # Second split: train vs val
-        val_size = val_ratio / (train_ratio + val_ratio)
-        gss_val = GroupShuffleSplit(n_splits=1, test_size=val_size, random_state=self.random_seed)
-        train_idx, val_idx = next(gss_val.split(X_train_val, y_train_val, groups=X_train_val['stay_id']))
-
-        X_train, X_val = X_train_val.iloc[train_idx], X_train_val.iloc[val_idx]
-        y_train, y_val = y_train_val.iloc[train_idx], y_train_val.iloc[val_idx]
+        
+        # Get unique stay_ids in sorted order (temporal ordering)
+        unique_stay_ids = sorted(X['stay_id'].unique())
+        total_stays = len(unique_stay_ids)
+        
+        # Calculate cutoff indices
+        train_cutoff = int(total_stays * train_ratio)
+        val_cutoff = train_cutoff + int(total_stays * val_ratio)
+        
+        # Split stay_ids into train, val, and test sets
+        train_stay_ids = unique_stay_ids[:train_cutoff]
+        val_stay_ids = unique_stay_ids[train_cutoff:val_cutoff]
+        test_stay_ids = unique_stay_ids[val_cutoff:]
+        
+        # Create masks for each set
+        train_mask = X['stay_id'].isin(train_stay_ids)
+        val_mask = X['stay_id'].isin(val_stay_ids)
+        test_mask = X['stay_id'].isin(test_stay_ids)
+        
+        # Split X and y data using masks
+        X_train = X[train_mask]
+        y_train = y[train_mask]
+        
+        X_val = X[val_mask]
+        y_val = y[val_mask]
+        
+        X_test = X[test_mask]
+        y_test = y[test_mask]
         
         # Log the split information
         total_stays = X['stay_id'].nunique()
         
-        logger.info(f"Data split using GroupShuffleSplit (seed: {self.random_seed}):")
+        logger.info(f"Data split temporally based on stay_id order:")
         logger.info(f"  Training set: {X_train['stay_id'].nunique()} stays ({X_train['stay_id'].nunique()/total_stays:.1%}), {len(X_train)} rows ({len(X_train)/len(X):.1%})")
         logger.info(f"  Validation set: {X_val['stay_id'].nunique()} stays ({X_val['stay_id'].nunique()/total_stays:.1%}), {len(X_val)} rows ({len(X_val)/len(X):.1%})")
         logger.info(f"  Testing set: {X_test['stay_id'].nunique()} stays ({X_test['stay_id'].nunique()/total_stays:.1%}), {len(X_test)} rows ({len(X_test)/len(X):.1%})")
