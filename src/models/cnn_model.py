@@ -19,30 +19,6 @@ from src.eval.metrics import calculate_all_metrics, calc_metric_stats
 logger = logging.getLogger("PULSE_logger")
 
 
-# class CNN(nn.Module):
-#     def __init__(self, num_features, window_size):
-#         # call the parent constructor
-#         super(CNN, self).__init__()
-#         self.conv1 = nn.Conv1d(
-#             in_channels=num_features, out_channels=256, kernel_size=1, padding=1
-#         )
-#         self.bn1 = nn.BatchNorm1d(256)
-#         self.conv2 = nn.Conv1d(
-#             in_channels=256, out_channels=64, kernel_size=3, padding=1
-#         )
-#         self.bn2 = nn.BatchNorm1d(64)
-#         self.conv3 = nn.Conv1d(
-#             in_channels=64, out_channels=16, kernel_size=5, padding=1
-#         )
-#         self.bn3 = nn.BatchNorm1d(16)
-#         self.pool = nn.MaxPool1d(kernel_size=2)
-#         self.dropout = nn.Dropout(0.5)
-
-#         conv_output_size = 16 * ((window_size) // 2)
-#         self.fc1 = nn.Linear(conv_output_size, 16)
-#         self.fc2 = nn.Linear(16, 1)
-
-
 class CNNModel(PulseTemplateModel, nn.Module):
     def __init__(self, params: Dict[str, Any], **kwargs) -> None:
         """
@@ -100,6 +76,14 @@ class CNNModel(PulseTemplateModel, nn.Module):
             ]
         else:
             self.params["num_channels"] = 1  # Default to 1 channel for 1 timestamp
+
+        self._init_model()
+
+    def _init_model(self) -> None:
+        """
+        Initialize the CNN model.
+
+        """
 
         # -------------------------Define layers-------------------------
         self.conv1 = nn.Conv1d(
@@ -204,23 +188,6 @@ class CNNTrainer:
         # Data preparation
         self._prepare_data()
 
-    def _prepare_data(self):
-        """
-        Prepare data for InceptionTime by ensuring it's in 3D format.
-        """
-        # Use the utility function from model_util.py
-        data_prep_result = prepare_data_for_model_dl(
-            self.train_dataloader, self.params, model_name=self.model.model_name
-        )
-
-        # Extract results
-        self.reshape_needed = data_prep_result["reshape_needed"]
-        self.convert_method = data_prep_result["convert_method"]
-        self.converter = data_prep_result["converter"]
-
-        # Log input data shape
-        logger.info(f"Input data shape: {data_prep_result['data_shape']}")
-
     def train(self):
         """Training loop."""
         save_checkpoint = self.params["save_checkpoint"]
@@ -320,6 +287,25 @@ class CNNTrainer:
         metrics_tracker.summary = metrics_tracker.compute_overall_metrics()
         metrics_tracker.save_report()
 
+    # TODO: Move this to a separate function in model_util.py
+    def _prepare_data(self):
+        """
+        Prepare data for InceptionTime by ensuring it's in 3D format.
+        """
+        # Use the utility function from model_util.py
+        data_prep_result = prepare_data_for_model_dl(
+            self.train_dataloader, self.params, model_name=self.model.model_name
+        )
+
+        # Extract results
+        self.reshape_needed = data_prep_result["reshape_needed"]
+        self.convert_method = data_prep_result["convert_method"]
+        self.converter = data_prep_result["converter"]
+
+        # Log input data shape
+        logger.info(f"Input data shape: {data_prep_result['data_shape']}")
+
+    # TODO: Move this to a separate function in model_util.py
     def _transform_features(self, features):
         """Transform features to the correct format for the model."""
         # Apply the appropriate conversions

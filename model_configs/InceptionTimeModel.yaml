@@ -1,4 +1,5 @@
 name: "InceptionTimeModel"
+pretrained_model_path: null # Path to pretrained model (if any)
 params:
   # Basic configuration
   trainer_name: "InceptionTimeTrainer"

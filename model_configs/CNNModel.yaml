@@ -1,4 +1,5 @@
 name: "CNNModel"
+pretrained_model_path: null # Path to pretrained model (if any)
 params:
   trainer_name: "CNNTrainer"
   type: "DL" # Type of model (ML for machine learning, DL for deep learning)
