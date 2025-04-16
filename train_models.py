@@ -65,8 +65,16 @@ class ModelTrainer:
         for dataset_name, _ in self.dm.datasets.items():
             logger.info("Processing dataset: %s", dataset_name)
             results[dataset_name] = {}
+            
+            # Extract task from dataset_name (format: task_dataset)
+            task_name = dataset_name.split("_")[0] if "_" in dataset_name else dataset_name
+            logger.info(f"Extracted task_name: {task_name}")
 
-            for model in self.mm.models:
+            # Get fresh models for this dataset/task combination
+            fresh_models = self.mm.get_models_for_task(dataset_name)
+            
+            # Each fresh model is used only for this dataset
+            for model in fresh_models:
                 model_name = model.__class__.__name__
                 trainer_name = model.trainer_name
                 logger.info("--" * 30)
@@ -97,29 +105,20 @@ class ModelTrainer:
                     if model.type == "ML":
                         train_loader = (X_train, y_train)
                         val_loader = (X_val, y_val)
-                        
+
                     elif model.type == "LLM" or model.type == "DL":
                         # Wrap with TorchDatasetWrapper
                         train_dataset = TorchDatasetWrapper(X_train, y_train)
                         val_dataset = TorchDatasetWrapper(X_val, y_val)
 
-                        # Get batch size with fallback using getattr
+                        # Get batch size with fallback using getattr 
                         if isinstance(self.config.benchmark_settings, dict):
-                            # If benchmark_settings is a dictionary
-                            batch_size = self.config.benchmark_settings.get(
-                                "batch_size", 100
-                            )
+                            batch_size = self.config.benchmark_settings.get("batch_size", 100)
                         else:
-                            # If benchmark_settings is an object with attributes
-                            batch_size = getattr(
-                                self.config.benchmark_settings, "batch_size", 100
-                            )
+                            batch_size = getattr(self.config.benchmark_settings, "batch_size", 100)
 
-                        logger.info(
-                            f"Using batch size: {batch_size} for {model_name} on {dataset_name}"
-                        )
+                        logger.info(f"Using batch size: {batch_size} for {model_name} on {dataset_name}")
 
-                        # Now create the DataLoaders with the wrapped datasets
                         train_loader = DataLoader(
                             train_dataset,
                             batch_size=batch_size,
@@ -133,14 +132,11 @@ class ModelTrainer:
                             drop_last=True,
                         )
                     else:
-                        logger.error(
-                            "Please specify a model type (ML, DL, LLM) in the config"
-                        )
+                        logger.error("Please specify a model type (ML, DL, LLM) in the config")
                         sys.exit(1)
 
-                    # Set trainer for the model
-                    model.set_trainer(trainer_name, train_loader, val_loader)
-                    # Train and evaluate the model -> model specific
+                    # Set trainer for the model and train
+                    model.set_trainer(trainer_name, train_loader, val_loader, task_name)
                     model.trainer.train()
 
                 except Exception as e:

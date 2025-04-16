@@ -37,6 +37,7 @@ class PulseTemplateModel:
         trainer_name: str,
         train_dataloader: DataLoader,
         test_dataloader: DataLoader,
+        task_name: str
     ) -> None:
         """
         Set the trainer for this model. This method should be overridden by subclasses.
@@ -49,6 +50,7 @@ class PulseTemplateModel:
         """
         self.trainer_name = trainer_name
         self.trainer = None
+        self.task_name = task_name
         # TODO: Implement dynamic loading of trainer class based on trainer_name
 
     def load_model_weights(self, model_path: str) -> None:

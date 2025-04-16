@@ -14,7 +14,7 @@ from src.util.model_util import (
     save_torch_model,
     prepare_data_for_model_dl,
 )
-from src.eval.metrics import calculate_all_metrics, calc_metric_stats, MetricsTracker
+from src.eval.metrics import MetricsTracker
 
 # TODO: Why are calculate_all_metrics and cal_metric_stats imported but not used?
 
@@ -100,6 +100,7 @@ class InceptionTimeModel(PulseTemplateModel, nn.Module):
                     logger.info(
                         f"EarlyStopping counter: {self.counter} out of {self.patience}"
                     )
+                        # TODO: counter keeps going for next dataset_name (can be 8 out of 5)
                 if self.counter >= self.patience:
                     self.early_stop = True
             else:
@@ -260,6 +261,10 @@ class InceptionTimeModel(PulseTemplateModel, nn.Module):
         # Clear the network attribute
         self.network = None
 
+        # If available, load presaved model weights from path (specified in config)
+        # TODO: implement loading model weights logic
+        # self.model.load_model_weights()
+
     def forward(self, x):
         """
         Forward pass through the network with manual residual connection handling.
@@ -295,7 +300,7 @@ class InceptionTimeModel(PulseTemplateModel, nn.Module):
         
         return x
 
-    def set_trainer(self, trainer_name, train_loader, val_loader):
+    def set_trainer(self, trainer_name, train_loader, val_loader, task_name):
         """
         Set the trainer for the model.
 
@@ -307,26 +312,7 @@ class InceptionTimeModel(PulseTemplateModel, nn.Module):
         Returns:
             None
         """
-        self.trainer = InceptionTimeTrainer(self, train_loader, val_loader)
-
-    # def eval(self, test_loader):
-    #     """
-    #     Evaluate the model on the test set.
-    #     Used by benchmark_models.py.
-        
-    #     Args:
-    #         test_loader: DataLoader with test data
-            
-    #     Returns:
-    #         Dictionary with evaluation metrics
-    #     """
-    #     # Initialize a temporary trainer if one doesn't exist
-    #     if not hasattr(self, 'trainer'):
-    #         logger.info("Creating temporary trainer for evaluation")
-    #         self.trainer = InceptionTimeTrainer(self, None, test_loader)
-        
-    #     # Run evaluation
-    #     return self.trainer.evaluate(test_loader)
+        self.trainer = InceptionTimeTrainer(self, train_loader, val_loader, task_name)
     
 class InceptionTimeTrainer:
     """
@@ -336,13 +322,14 @@ class InceptionTimeTrainer:
     including data preparation, training, evaluation and saving.
     """
 
-    def __init__(self, model, train_loader, val_loader):
+    def __init__(self, model, train_loader, val_loader, task_name=None):
         self.model = model
         self.params = model.params
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.train_loader = train_loader
         self.val_loader = val_loader
         self.wandb = self.model.wandb
+        self.task_name = task_name
 
         # Create model save directory and checkpoint subdirectory if it doesn't exist
         self.model_save_dir = os.path.join(model.save_dir, "Models")
@@ -350,6 +337,10 @@ class InceptionTimeTrainer:
         self.checkpoint_path = os.path.join(self.model_save_dir, "Checkpoints")
         os.makedirs(os.path.join(self.model_save_dir, "Checkpoints"), exist_ok=True)
         self.save_checkpoint_freq = self.params["save_checkpoint_freq"]
+
+        # Log which task is being processed
+        if task_name:
+            logger.info(f"Preparing InceptionTime model for task: {task_name}")
 
         # Data preparation
         self._prepare_data()
@@ -384,7 +375,10 @@ class InceptionTimeTrainer:
 
         # Get the configured converter
         self.converter = prepare_data_for_model_dl(
-            self.train_loader, self.params, model_name=self.model.model_name
+            self.train_loader, 
+            self.params, 
+            model_name=self.model.model_name,
+            task_name=self.task_name
         )
 
         # To identify num_channels: Get a sample batch and transform using the converter
@@ -415,8 +409,12 @@ class InceptionTimeTrainer:
 
         logger.info("Starting training...")
         for epoch in range(self.params["num_epochs"]):
-            self.train_epoch(epoch, verbose=self.params["verbose"])
-            logger.info(f"Epoch {epoch + 1}/{self.params['num_epochs']} completed.")
+            early_stopped = self.train_epoch(epoch, verbose=self.params["verbose"])
+
+            # Check if early stopping was triggered
+            if early_stopped:
+                logger.info(f"Early stopping triggered after {epoch+1} epochs")
+                break  # Exit the training loop
 
             # Save checkpoint periodically
             if self.save_checkpoint_freq > 0 and (epoch + 1) % self.save_checkpoint_freq == 0:
@@ -473,6 +471,7 @@ class InceptionTimeTrainer:
             self.metrics["val_loss"].append(val_loss)
 
             # Update learning rate
+            # TODO: Lakmal will give feedback on whether to use val_loss or train_loss
             self.scheduler.step(val_loss)
 
             # Log progress
@@ -497,7 +496,8 @@ class InceptionTimeTrainer:
             # Check early stopping
             self.model.early_stopping(val_loss, self.model)
             if self.model.early_stopping.early_stop:
-                break
+                return True # Return True to indicate early stopping was triggered
+            return False # Return False if early stopping was not triggered
 
     def _validate(self):
         """Validate the model and return validation loss."""
@@ -518,7 +518,7 @@ class InceptionTimeTrainer:
         
         return val_loss / len(self.val_loader)
 
-    def evaluate(self, dataloader = None):
+    def evaluate(self, dataloader=None):
         """
         Evaluate the model on the specified data loader.
         

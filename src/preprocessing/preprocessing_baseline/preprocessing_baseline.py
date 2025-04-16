@@ -15,8 +15,6 @@ warnings.filterwarnings("ignore", category=pd.errors.SettingWithCopyWarning)
 # Set up logger
 logger = logging.getLogger("PULSE_logger")
 
-# TODO: Clean up logging
-
 class PreprocessorBaseline:
     """
     A modular class for preprocessing ICU dataset for ML/DL models.
@@ -421,7 +419,7 @@ class PreprocessorBaseline:
     ) -> Tuple[pd.DataFrame, pd.DataFrame]:
         """
         Reshape data for mortality task by combining all rows for each stay_id into a single row.
-        Static features are kept once, while dynamic features are repeated with different suffixes.
+        Static features are kept once, while dynamic features are grouped by feature with consecutive timesteps (ascending suffixes).
         
         Args:
             X (pd.DataFrame): Features dataframe with stay_id
@@ -431,8 +429,6 @@ class PreprocessorBaseline:
         Returns:
             Tuple[pd.DataFrame, pd.DataFrame]: Reshaped X and y
         """
-        # TODO: reshaping needs to follow the pattern that all values for a feature are next to each other (necessary for convert_to_3d)
-
         # Identify static features (not to be repeated)
         static_features = self.static_columns.copy()
         
@@ -455,11 +451,11 @@ class PreprocessorBaseline:
                 if feat != 'stay_id' and feat in group.columns:  # We'll use stay_id as index
                     stay_data[feat] = group[feat].iloc[0]  # Take the first value
             
-            # Process dynamic features with suffixes
-            for i, (_, row) in enumerate(group.iterrows(), 1):
-                for feat in dynamic_features:
+            # Process dynamic features with suffixes - group by feature first
+            for feat in dynamic_features:
+                for i, value in enumerate(group[feat].values, 1):
                     col_name = f"{feat}_{i}"
-                    stay_data[col_name] = row[feat]
+                    stay_data[col_name] = value
             
             # Store in the dictionary
             X_reshaped_dict[stay_id] = stay_data

@@ -17,7 +17,7 @@ base_path: "/Users/sophiaehlers/Documents/pulse" #"/cluster/project/bmds_lab/sep
 
 # Tasks to process
 tasks:
-  # - "mortality"
+  - "mortality"
   - "aki"
   # - "sepsis"
   # - "harmonized_icu"
@@ -53,7 +53,7 @@ preprocessing_baseline:
 
 preprocessing_advanced:
   windowing:
-    enabled: true # Enable/disable windowing
+    enabled: false # Enable/disable windowing
     data_window: 6 # Size of the data window
     prediction_window: 0 # Size of the prediction window (0 = predict at the end of window)
     step_size: 1 # Step size for sliding windows

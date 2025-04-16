@@ -365,7 +365,7 @@ class WindowedDataTo3D:
     across the time dimension, resulting in a single 3D array output.
     """
     
-    def __init__(self, model_name=None, config=None):
+    def __init__(self, model_name=None, config=None, task_name=None):
         """
         Initialize the WindowedDataTo3D converter.
         
@@ -375,6 +375,7 @@ class WindowedDataTo3D:
             config (dict, optional): Configuration with windowing parameters
         """
         self.logger = logger or logging.getLogger("PULSE_logger")
+        self.task_name = task_name
         
         # Dictionary mapping model names to their types (CNN or RNN)
         self.model_type_mapping = {
@@ -397,16 +398,19 @@ class WindowedDataTo3D:
                 
         # Extract window size from config if available
         self.window_size = 6  # Default
-        if config:
+        if task_name is not None and task_name == "mortality":
+            self.window_size = 25
+            self.logger.info(f"Mortality task detected - Setting window size to {self.window_size} for mortality task")
+        elif config:
             if hasattr(config, "preprocessing_advanced"):
                 preprocessing_advanced = config.preprocessing_advanced
-                
                 if hasattr(preprocessing_advanced, "windowing"):
                     windowing_config = preprocessing_advanced.windowing
-                    
+                    windowing_enabled = getattr(windowing_config, "enabled", False)
                     if hasattr(windowing_config, "data_window"):
                         self.window_size = windowing_config.data_window
-                        self.logger.info(f"Set window size to {self.window_size} from config")
+                        if windowing_enabled:
+                            self.logger.info(f"Setting window size to {self.window_size} from config")
         
         # Add these properties for the enhanced functionality
         self.needs_conversion = True
@@ -446,6 +450,12 @@ class WindowedDataTo3D:
         # If already 3D, return as is
         if len(batch_features.shape) == 3 or not self.needs_conversion:
             return batch_features
+        
+        # Override use_windowed_conversion for mortality task
+        mortality_specific_task = (self.task_name is not None and self.task_name == "mortality")
+        if mortality_specific_task:
+            self.use_windowed_conversion = True
+            window_size = 25
         
         # Use windowed conversion if configured
         if self.use_windowed_conversion:

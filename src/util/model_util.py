@@ -128,7 +128,7 @@ def prepare_data_for_model_ml(
 
 # implement conditional conversion for mortality (always, because it is never windowed (maybe first adapt ordering of columns during transformation in preprocessing))
 
-def prepare_data_for_model_dl(data_loader, config: Dict, model_name: Optional[str] = None) -> Any:
+def prepare_data_for_model_dl(data_loader, config: Dict, model_name: Optional[str] = None, task_name: Optional[str] = None) -> Any:
     """
     Prepare data for deep learning models by returning a configured data converter.
     
@@ -137,6 +137,7 @@ def prepare_data_for_model_dl(data_loader, config: Dict, model_name: Optional[st
         config: Configuration dictionary with preprocessing settings
         model_name: Name of the model to determine format requirements
         logger_instance: Optional logger instance
+        task_name: Name of the current task (e.g., "mortality", "aki")
         
     Returns:
         WindowedDataTo3D: Configured converter instance ready to transform batches
@@ -146,7 +147,7 @@ def prepare_data_for_model_dl(data_loader, config: Dict, model_name: Optional[st
     from src.preprocessing.preprocessing_advanced.windowing import WindowedDataTo3D
     
     # Create converter with model name and config
-    converter = WindowedDataTo3D(model_name=model_name, config=config)
+    converter = WindowedDataTo3D(model_name=model_name, config=config, task_name=task_name)
     
     try:
         # Get a batch to inspect shape
@@ -160,7 +161,9 @@ def prepare_data_for_model_dl(data_loader, config: Dict, model_name: Optional[st
         else:
             # Check if windowing is enabled in config
             windowing_enabled = False
-            if "preprocessing_advanced" in config:
+            if task_name == "mortality":
+                windowing_enabled = True
+            elif "preprocessing_advanced" in config:
                 preprocessing_advanced = config["preprocessing_advanced"]
                 if "windowing" in preprocessing_advanced:
                     windowing_config = preprocessing_advanced["windowing"]
