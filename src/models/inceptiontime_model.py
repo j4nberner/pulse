@@ -13,7 +13,6 @@ from src.models.pulsetemplate_model import PulseTemplateModel
 from src.preprocessing.preprocessing_advanced.windowing import WindowedDataTo3D
 from src.util.model_util import (
     save_torch_model,
-    load_torch_model,
     prepare_data_for_model_dl,
 )
 from src.eval.metrics import calculate_all_metrics, calc_metric_stats, MetricsTracker
@@ -225,18 +224,21 @@ class InceptionTimeModel(PulseTemplateModel):
 
         self.model = None
 
-    def set_trainer(self, trainer_name, train_dataloader, test_dataloader):
+    def set_trainer(
+        self, trainer_name, train_dataloader, val_dataloader, test_dataloader
+    ):
         """
         Set the trainer for the model.
 
         Args:
             trainer_name: Name of the trainer.
             train_dataloader: DataLoader for training data.
+            val_dataloader: DataLoader for validation data.
             test_dataloader: DataLoader for testing data.
         """
         if trainer_name == "InceptionTimeTrainer":
             self.trainer = InceptionTimeTrainer(
-                self, train_dataloader, test_dataloader, self.config
+                self, train_dataloader, val_dataloader, test_dataloader, self.config
             )
         else:
             raise ValueError(
@@ -254,18 +256,22 @@ class InceptionTimeTrainer:
     including data preparation, model training, evaluation and saving.
     """
 
-    def __init__(self, model, train_dataloader, test_dataloader, config):
+    def __init__(
+        self, model, train_dataloader, val_dataloader, test_dataloader, config
+    ):
         """
         Initialize the InceptionTime trainer.
 
         Args:
             model: The InceptionTime model to train.
             train_dataloader: DataLoader for training data.
+            val_dataloader: DataLoader for validation data.
             test_dataloader: DataLoader for testing data.
             config: Configuration dictionary for training parameters.
         """
         self.model_wrapper = model
         self.train_loader = train_dataloader
+        self.val_loader = val_dataloader
         self.test_loader = test_dataloader
         self.config = config
 

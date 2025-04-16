@@ -72,7 +72,7 @@ benchmark_settings:
 load_models:
   # - model_configs/RandomForestModel.yaml
   - model_configs/XGBoost.yaml
-  # - model_configs/LightGBMModel.yaml
-  # - model_configs/CNNModel.yaml
-  # - model_configs/LSTMModel.yaml
-  # - model_configs/InceptionTimeModel.yaml
+  - model_configs/LightGBMModel.yaml
+  - model_configs/CNNModel.yaml
+  - model_configs/LSTMModel.yaml
+  - model_configs/InceptionTimeModel.yaml

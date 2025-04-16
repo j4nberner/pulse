@@ -55,9 +55,19 @@ This repository contains the implementation for predicting sepsis, acute kidney 
 └── secrets/
 ```
 
+## Tasks
+
+- sepsis prediction
+- acute kidney injury prediction
+- mortality prediction
+
 ## Data
 
-...
+Datasets:
+
+- eICU
+- hirid
+- mimic iv
 
 ## Implemented Models
 
@@ -65,6 +75,9 @@ This repository contains the implementation for predicting sepsis, acute kidney 
 - CNN
 - XGBoost
 - LSTM
+- GRU
+- LightGBM
+- InceptionTime
 
 ## Results
 
@@ -72,7 +85,12 @@ This repository contains the implementation for predicting sepsis, acute kidney 
 
 ## Train a model
 
-1. adjust config_trian.yaml
+1. adjust config_train.yaml
+   - set debug flag to only load 100 rows of data
+   - set wandb flag and entity
+   - set project base path
+   - choose tasks & datasets to train and evaluate
+   - choose models to train
 2. run train_models.py
 
 ## Evaluate a model

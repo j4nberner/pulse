@@ -36,6 +36,7 @@ class PulseTemplateModel:
         self,
         trainer_name: str,
         train_dataloader: DataLoader,
+        val_dataloader: DataLoader,
         test_dataloader: DataLoader,
     ) -> None:
         """

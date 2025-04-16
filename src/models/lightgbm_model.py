@@ -9,7 +9,6 @@ import wandb
 from src.models.pulsetemplate_model import PulseTemplateModel
 from src.util.model_util import (
     save_sklearn_model,
-    load_sklearn_model,
     prepare_data_for_model_ml,
 )
 from src.eval.metrics import MetricsTracker, rmse
@@ -43,10 +42,10 @@ class LightGBMModel(PulseTemplateModel):
             raise KeyError("Required parameter 'trainer_name' not found in config")
 
         # Use the class name as model_name if not provided in params
-        model_name = params.get(
+        self.model_name = params.get(
             "model_name", self.__class__.__name__.replace("Model", "")
         )
-        trainer_name = params["trainer_name"]
+        self.trainer_name = params["trainer_name"]
         super().__init__(self.model_name, self.trainer_name, params=params)
 
         # Set the model save directory
@@ -98,7 +97,9 @@ class LightGBMModel(PulseTemplateModel):
         # Initialize the LightGBM model with parameters from config
         self.model = LGBMClassifier(**model_params)
 
-    def set_trainer(self, trainer_name, train_dataloader, test_dataloader):
+    def set_trainer(
+        self, trainer_name, train_dataloader, val_dataloader, test_dataloader
+    ):
         """
         Set the trainer for the model.
 
@@ -108,7 +109,9 @@ class LightGBMModel(PulseTemplateModel):
             test_dataloader: DataLoader for testing data.
         """
         if trainer_name == "LightGBMTrainer":
-            self.trainer = LightGBMTrainer(self, train_dataloader, test_dataloader)
+            self.trainer = LightGBMTrainer(
+                self, train_dataloader, val_dataloader, test_dataloader
+            )
         else:
             raise ValueError(f"Trainer {trainer_name} not supported for LightGBM.")
 
@@ -121,17 +124,21 @@ class LightGBMTrainer:
     including data preparation, model training, evaluation and saving.
     """
 
-    def __init__(self, model, train_dataloader, test_dataloader) -> None:
+    def __init__(
+        self, model, train_dataloader, val_dataloader, test_dataloader
+    ) -> None:
         """
         Initialize the LightGBM trainer.
 
         Args:
             model: The LightGBM model to train.
             train_dataloader: DataLoader for training data.
+            val_dataloader: DataLoader for validation data.
             test_dataloader: DataLoader for testing data.
         """
         self.model = model
         self.train_dataloader = train_dataloader
+        self.val_dataloader = val_dataloader
         self.test_dataloader = test_dataloader
         self.wandb = model.wandb
         self.model_save_dir = os.path.join(model.save_dir, "Models")
@@ -144,7 +151,7 @@ class LightGBMTrainer:
 
         # Use the utility function to prepare data
         prepared_data = prepare_data_for_model_ml(
-            self.train_dataloader, self.test_dataloader, logger_instance=logger
+            self.train_dataloader, self.val_dataloader, logger_instance=logger
         )
 
         # Extract all data from the prepared_data dictionary

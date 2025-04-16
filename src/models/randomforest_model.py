@@ -12,7 +12,6 @@ import wandb
 from src.models.pulsetemplate_model import PulseTemplateModel
 from src.util.model_util import (
     save_sklearn_model,
-    load_sklearn_model,
     prepare_data_for_model_ml,
 )
 from src.eval.metrics import MetricsTracker, rmse
@@ -103,7 +102,9 @@ class RandomForestModel(PulseTemplateModel):
         # Initialize the RandomForest model with parameters from config
         self.model = RandomForestClassifier(**rf_params)
 
-    def set_trainer(self, trainer_name, train_dataloader, test_dataloader):
+    def set_trainer(
+        self, trainer_name, train_dataloader, val_dataloader, test_dataloader
+    ):
         """
         Set the trainer for the model.
 
@@ -113,7 +114,9 @@ class RandomForestModel(PulseTemplateModel):
             test_dataloader: DataLoader for testing data.
         """
         if trainer_name == "RandomForestTrainer":
-            self.trainer = RandomForestTrainer(self, train_dataloader, test_dataloader)
+            self.trainer = RandomForestTrainer(
+                self, train_dataloader, val_dataloader, test_dataloader
+            )
         else:
             raise ValueError(f"Trainer {trainer_name} not supported for RandomForest.")
 
@@ -126,7 +129,9 @@ class RandomForestTrainer:
     including data preparation, model training, evaluation and saving.
     """
 
-    def __init__(self, model, train_dataloader, test_dataloader) -> None:
+    def __init__(
+        self, model, train_dataloader, val_dataloader, test_dataloader
+    ) -> None:
         """
         Initialize the RandomForest trainer.
 

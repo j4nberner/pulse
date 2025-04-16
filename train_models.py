@@ -65,6 +65,11 @@ class ModelTrainer:
         for dataset_name, _ in self.dm.datasets.items():
             logger.info("Processing dataset: %s", dataset_name)
             results[dataset_name] = {}
+            # Extract task from dataset_name (format: task_dataset)
+            task_name = (
+                dataset_name.split("_")[0] if "_" in dataset_name else dataset_name
+            )
+            logger.info(f"Extracted task: {task_name}")
 
             for model in self.mm.models:
                 model_name = model.__class__.__name__
@@ -92,15 +97,26 @@ class ModelTrainer:
                         debug=self.config.general.debug_mode,
                         preprocessing_id=model.preprocessing_id,
                     )
+                    X_test, y_test = self.dm.get_preprocessed_data(
+                        dataset_name,
+                        model_name,
+                        mode="test",
+                        dataset=self.config.datasets[0],
+                        task=self.config.tasks[0],
+                        debug=self.config.general.debug_mode,
+                        preprocessing_id=model.preprocessing_id,
+                    )
 
                     # Choose the appropriate DataLoader based on model type
                     if model.type == "ML":
                         train_loader = (X_train, y_train)
                         val_loader = (X_val, y_val)
+                        test_loader = (X_test, y_test)
                     elif model.type == "LLM" or model.type == "DL":
                         # Wrap with TorchDatasetWrapper
                         train_dataset = TorchDatasetWrapper(X_train, y_train)
                         val_dataset = TorchDatasetWrapper(X_val, y_val)
+                        test_dataset = TorchDatasetWrapper(X_test, y_test)
 
                         # Get batch size with fallback using getattr
                         if isinstance(self.config.benchmark_settings, dict):
@@ -131,6 +147,12 @@ class ModelTrainer:
                             shuffle=False,
                             drop_last=True,
                         )
+                        test_loader = DataLoader(
+                            test_dataset,
+                            batch_size=batch_size,
+                            shuffle=False,
+                            drop_last=True,
+                        )
                     else:
                         logger.error(
                             "Please specify a model type (ML, DL, LLM) in the config"
@@ -138,7 +160,9 @@ class ModelTrainer:
                         sys.exit(1)
 
                     # Set trainer for the model
-                    model.set_trainer(trainer_name, train_loader, val_loader)
+                    model.set_trainer(
+                        trainer_name, train_loader, val_loader, test_loader
+                    )
                     # Train and evaluate the model -> model specific
                     model.trainer.train()
 
