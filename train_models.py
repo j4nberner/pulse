@@ -112,7 +112,12 @@ class ModelTrainer:
                         train_loader = (X_train, y_train)
                         val_loader = (X_val, y_val)
                         test_loader = (X_test, y_test)
-                    elif model.type == "LLM" or model.type == "DL":
+                    elif model.type == "LLM":
+                        # TODO: Decide wheather to use DataLoader or not for LLMs. Tokenize?
+                        train_loader = (X_train, y_train)
+                        val_loader = (X_val, y_val)
+                        test_loader = (X_test, y_test)
+                    elif model.type == "DL":
                         # Wrap with TorchDatasetWrapper
                         train_dataset = TorchDatasetWrapper(X_train, y_train)
                         val_dataset = TorchDatasetWrapper(X_val, y_val)

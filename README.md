@@ -81,7 +81,7 @@ Datasets:
 
 ## Results
 
-...
+A Metric Tracker is running alongside each training / evaluation process. Predictions are tracked and evaluated of all validation and test runs and saved to a json file in the output.
 
 ## Train a model
 
