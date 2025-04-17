@@ -297,7 +297,7 @@ class InceptionTimeModel(PulseTemplateModel, nn.Module):
         
         return x
 
-    def set_trainer(self, trainer_name, train_loader, val_loader, task_name):
+    def set_trainer(self, trainer_name, train_loader, val_loader, test_loader):
         """
         Set the trainer for the model.
 
@@ -309,7 +309,7 @@ class InceptionTimeModel(PulseTemplateModel, nn.Module):
         Returns:
             None
         """
-        self.trainer = InceptionTimeTrainer(self, train_loader, val_loader, task_name)
+        self.trainer = InceptionTimeTrainer(self, train_loader, val_loader, test_loader)
     
 class InceptionTimeTrainer:
     """
@@ -319,14 +319,16 @@ class InceptionTimeTrainer:
     including data preparation, training, evaluation and saving.
     """
 
-    def __init__(self, model, train_loader, val_loader, task_name=None):
+    def __init__(self, model, train_loader, val_loader, test_loader):
         self.model = model
         self.params = model.params
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.train_loader = train_loader
         self.val_loader = val_loader
+        self.test_loader = test_loader
         self.wandb = self.model.wandb
-        self.task_name = task_name
+        self.task_name = self.model.task_name
+        self.dataset_name = self.model.dataset_name
 
         # Create model save directory and checkpoint subdirectory if it doesn't exist
         self.model_save_dir = os.path.join(model.save_dir, "Models")
@@ -336,8 +338,8 @@ class InceptionTimeTrainer:
         self.save_checkpoint_freq = self.params["save_checkpoint_freq"]
 
         # Log which task is being processed
-        if task_name:
-            logger.info(f"Preparing InceptionTime model for task: {task_name}")
+        if self.task_name:
+            logger.info(f"Preparing InceptionTime model for task: {self.task_name}")
 
         # Data preparation
         self._prepare_data()
@@ -468,7 +470,7 @@ class InceptionTimeTrainer:
             self.metrics["val_loss"].append(val_loss)
 
             # Update learning rate
-            # TODO: Lakmal will give feedback on whether to use val_loss or train_loss
+            # TODO: Lakmal will give feedback on whether to use val_loss or train_loss for learning rate update
             self.scheduler.step(val_loss)
 
             # Log progress
@@ -515,22 +517,13 @@ class InceptionTimeTrainer:
         
         return val_loss / len(self.val_loader)
 
-    def evaluate(self, dataloader=None):
-        """
-        Evaluate the model on the specified data loader.
-        
-        Args:
-            dataloader: DataLoader to use for evaluation. If None, uses val_loader.
-        """
+    def evaluate(self):
+        """Evaluate the model on the specified data loader."""
         metrics_tracker = MetricsTracker(self.model.model_name, self.model.save_dir)
         self.model.eval()
 
-        # Use provided dataloader or fall back to validation loader
-        eval_loader = dataloader if dataloader is not None else self.val_loader
-        logger.info(f"Evaluating model on {'test' if dataloader is not None else 'validation'} data")
-
         with torch.no_grad():
-            for batch_idx, (features, labels) in enumerate(eval_loader):
+            for batch_idx, (features, labels) in enumerate(self.test_loader):
                 features = self.converter.convert_batch_to_3d(features)
                 features, labels = (
                     features.to(self.device),

@@ -13,7 +13,6 @@ from src.util.model_util import (
     prepare_data_for_model_dl,
 )
 from src.eval.metrics import MetricsTracker
-from src.eval.metrics import calculate_all_metrics, calc_metric_stats
 
 logger = logging.getLogger("PULSE_logger")
 # TODO: testloader namen ändern
@@ -45,7 +44,7 @@ class CNNModel(PulseTemplateModel, nn.Module):
 
         # Define all required parameters
         required_params = [
-            "num_features",
+            "num_inputs",
             "output_shape",
             "kernel_size",
             "pool_size",
@@ -115,7 +114,7 @@ class CNNModel(PulseTemplateModel, nn.Module):
         self.dropout = nn.Dropout(0.5)
 
         # Fully connected layer
-        pooled_size = (self.params["num_features"] // self.params["pool_size"]) // 2
+        pooled_size = (self.params["num_inputs"] // self.params["pool_size"]) // 2
         # TODO: use pooled_size when input is fixed. hardcoded for now...
         self.fc1 = nn.Linear(
             self.params["num_channels"] * 49,
@@ -132,7 +131,7 @@ class CNNModel(PulseTemplateModel, nn.Module):
         Forward pass through the CNN model.
 
         Args:
-            x (torch.Tensor): Input tensor of shape [batch_size, num_features, seq_length]
+            x (torch.Tensor): Input tensor of shape [batch_size, num_inputs, seq_length]
 
         Returns:
             torch.Tensor: Output tensor of shape [batch_size, output_shape]
@@ -150,38 +149,40 @@ class CNNModel(PulseTemplateModel, nn.Module):
         return x
 
     def set_trainer(
-        self, trainer_name: str, train_dataloader, val_dataloader, test_dataloader
+        self, trainer_name: str, train_loader, val_loader, test_loader
     ) -> None:
         """
         Sets the trainer for the CNN model.
 
         Args:
             trainer_name (str): The name of the trainer to be used.
-            train_dataloader: The DataLoader object for the training dataset.
-            test_dataloader: The DataLoader object for the testing dataset.
+            train_loader: The DataLoader object for the training dataset.
+            test_loader: The DataLoader object for the testing dataset.
 
         Returns:
             None
         """
         self.trainer = CNNTrainer(
-            self, train_dataloader, val_dataloader, test_dataloader
+            self, train_loader, val_loader, test_loader
         )
 
 
 class CNNTrainer:
     """Trainer for the CNN model."""
 
-    def __init__(self, cnn_model, train_dataloader, val_dataloader, test_dataloader):
+    def __init__(self, cnn_model, train_loader, val_loader, test_loader):
         self.model = cnn_model
         self.params = cnn_model.params
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.train_dataloader = train_dataloader
-        self.val_dataloader = val_dataloader
-        self.test_dataloader = test_dataloader
+        self.train_loader = train_loader
+        self.val_loader = val_loader
+        self.test_loader = test_loader
         self.optimizer = optim.Adam(self.model.parameters())
         self.criterion = nn.BCEWithLogitsLoss()
         self.wandb = self.model.wandb
         self.model_save_dir = os.path.join(cnn_model.save_dir, "Models")
+        self.task_name = self.model.task_name
+        self.dataset_name = self.model.dataset_name
 
         # Log optimizer and criterion
         logger.info(f"Using optimizer: {self.optimizer.__class__.__name__}")
@@ -214,7 +215,7 @@ class CNNTrainer:
                 save_torch_model(checkpoint_name, self.model, checkpoint_path)
 
             logger.info("Training finished.")
-            self.evaluate(self.val_dataloader)
+            self.evaluate(self.val_loader)
         save_torch_model(
             self.model.model_name, self.model, self.model_save_dir
         )  # Save the final model
@@ -229,10 +230,14 @@ class CNNTrainer:
         """
         self.model.train()
         running_loss = 0.0
-        for i, (inputs, labels) in enumerate(self.train_dataloader):
-            inputs = self._transform_features(inputs)
-            # Move tensors to the same device as the model
-            inputs, labels = inputs.to(self.device), labels.to(self.device)
+
+        for i, (inputs, labels) in enumerate(self.train_loader):
+            inputs = self.converter.convert_batch_to_3d(inputs)
+
+            inputs, labels = (
+                inputs.to(self.device),
+                labels.to(self.device).float(),
+            )
 
             self.optimizer.zero_grad()
             outputs = self.model(inputs)
@@ -255,20 +260,15 @@ class CNNTrainer:
                 if verbose == 1:
                     running_loss = 0.0
 
-    def evaluate(self, dataloader):
-        """
-        Evaluates the model on the validation set.
-
-        Args:
-            dataloader: The DataLoader object for the validation or test dataset.
-        """
+    def evaluate(self):
+        """Evaluates the model on the validation set."""
         metrics_tracker = MetricsTracker(self.model.model_name, self.model.save_dir)
         verbose = self.params.get("verbose", 1)
         self.model.eval()
 
         with torch.no_grad():
-            for batch, (inputs, labels) in enumerate(dataloader):
-                inputs = self._transform_features(inputs)
+            for batch, (inputs, labels) in enumerate(self.test_loader):
+                inputs = self.converter.convert_batch_to_3d(inputs)
                 inputs, labels = inputs.to(self.device), labels.to(self.device)
 
                 outputs = self.model(inputs)
@@ -292,34 +292,13 @@ class CNNTrainer:
         metrics_tracker.summary = metrics_tracker.compute_overall_metrics()
         metrics_tracker.save_report()
 
-    # TODO: Move this to a separate function in model_util.py
     def _prepare_data(self):
-        """
-        Prepare data for InceptionTime by ensuring it's in 3D format.
-        """
-        # Use the utility function from model_util.py
-        data_prep_result = prepare_data_for_model_dl(
-            self.train_dataloader, self.params, model_name=self.model.model_name
+        """Prepare data for InceptionTime by getting a configured converter."""
+
+        # Get the configured converter
+        self.converter = prepare_data_for_model_dl(
+            self.train_loader, 
+            self.params, 
+            model_name=self.model.model_name,
+            task_name=self.task_name
         )
-
-        # Extract results
-        self.reshape_needed = data_prep_result["reshape_needed"]
-        self.convert_method = data_prep_result["convert_method"]
-        self.converter = data_prep_result["converter"]
-
-        # Log input data shape
-        logger.info(f"Input data shape: {data_prep_result['data_shape']}")
-
-    # TODO: Move this to a separate function in model_util.py
-    def _transform_features(self, features):
-        """Transform features to the correct format for the model."""
-        # Apply the appropriate conversions
-        if hasattr(self, "convert_method") and self.convert_method == "windowed_to_3d":
-            features = self.converter.convert_batch_to_3d(features)
-            features = features.permute(0, 2, 1)
-
-        elif hasattr(self, "reshape_needed") and self.reshape_needed:
-            # InceptionTime always uses CNN format (batch, channels, time_steps)
-            features = features.unsqueeze(1)  # Add time dimension
-
-        return features

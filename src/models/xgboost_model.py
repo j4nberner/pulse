@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import os
 from xgboost import XGBClassifier
+from sklearn.metrics import confusion_matrix
 import wandb
 
 from src.models.pulsetemplate_model import PulseTemplateModel
@@ -12,7 +13,6 @@ from src.util.model_util import (
     prepare_data_for_model_ml,
 )
 from src.eval.metrics import MetricsTracker, rmse
-from src.eval.metrics import calculate_all_metrics, calc_metric_stats
 
 logger = logging.getLogger("PULSE_logger")
 
@@ -95,19 +95,20 @@ class XGBoostModel(PulseTemplateModel):
         self.model = XGBClassifier(**model_params)
 
     def set_trainer(
-        self, trainer_name, train_dataloader, val_dataloader, test_dataloader
+        self, trainer_name, train_loader, val_loader, test_loader
     ):
         """
         Set the trainer for the model.
 
         Args:
             trainer_name: Name of the trainer.
-            train_dataloader: DataLoader for training data.
-            test_dataloader: DataLoader for testing data.
+            train_loader: DataLoader for training data.
+            val_loader: DataLoader for validation data. (not used)
+            test_loader: DataLoader for testing data.
         """
         if trainer_name == "XGBoostTrainer":
             self.trainer = XGBoostTrainer(
-                self, train_dataloader, val_dataloader, test_dataloader
+                self, train_loader, val_loader, test_loader
             )
         else:
             raise ValueError(f"Trainer {trainer_name} not supported for XGBoost.")
@@ -122,21 +123,23 @@ class XGBoostTrainer:
     """
 
     def __init__(
-        self, model, train_dataloader, val_dataloader, test_dataloader
+        self, model, train_loader, val_loader, test_loader
     ) -> None:
         """
         Initialize the XGBoost trainer.
 
         Args:
             model: The XGBoost model to train.
-            train_dataloader: DataLoader for training data.
-            val_dataloader: DataLoader for validation data.
-            test_dataloader: DataLoader for testing data.
+            train_loader: DataLoader for training data.
+            val_loader: DataLoader for validation data. (not used)
+            test_loader: DataLoader for testing data.
         """
         self.model = model
-        self.train_dataloader = train_dataloader
-        self.val_dataloader = val_dataloader
-        self.test_dataloader = test_dataloader
+        self.train_loader = train_loader
+        self.val_loader = val_loader
+        self.test_loader = test_loader
+        self.task_name = self.model.task_name
+        self.dataset_name = self.model.dataset_name
         self.wandb = model.wandb
         self.model_save_dir = os.path.join(model.save_dir, "Models")
         # Create model save directory if it doesn't exist
@@ -148,7 +151,7 @@ class XGBoostTrainer:
 
         # Use the utility function to prepare data
         prepared_data = prepare_data_for_model_ml(
-            self.train_dataloader, self.test_dataloader, logger_instance=logger
+            self.train_loader, self.test_loader, logger_instance=logger
         )
 
         # Extract all data from the prepared_data dictionary
@@ -172,20 +175,50 @@ class XGBoostTrainer:
         X_test_df = pd.DataFrame(X_test, columns=feature_names)
 
         # Evaluate the model
+        metrics_tracker = MetricsTracker(self.model.model_name, self.model.save_dir)
         y_pred = self.model.model.predict(X_test_df)
         y_pred_proba = self.model.model.predict_proba(X_test_df)
+        metrics_tracker.add_results(y_pred, y_test)
+
         rmse_score = rmse(y_test, y_pred)
         logger.info("RMSE: %f", rmse_score)
 
+        # Calculate and log metrics
+        metrics_tracker.summary = metrics_tracker.compute_overall_metrics()
+        metrics_tracker.save_report()
+
+        # Save the model
+        save_sklearn_model(self.model.model_name, self.model.model, self.model_save_dir)
+
         # Log metrics to wandb
         if self.wandb:
-            wandb.log({"rmse": rmse_score})
-
-            # Calculate and log other metrics
-            metrics = calculate_all_metrics(y_test, y_pred, y_pred_proba)
-            for metric_name, value in metrics.items():
-                wandb.log({metric_name: value})
-
+            # Get metrics from the metrics tracker
+            metrics = metrics_tracker.compute_overall_metrics()
+            
+            # Log all metrics from the overall summary
+            if 'overall' in metrics:
+                wandb.log(metrics['overall'])
+            
+            # Create and log confusion matrix
+            y_pred_binary = (y_pred >= 0.5).astype(int)
+            cm = confusion_matrix(y_test, y_pred_binary)
+            wandb.log({
+                "confusion_matrix": wandb.plot.confusion_matrix(
+                    preds=y_pred_binary, 
+                    y_true=y_test,
+                    class_names=["Negative", "Positive"]
+                )
+            })
+            
+            # Create and log ROC curve
+            wandb.log({
+                "roc_curve": wandb.plot.roc_curve(
+                    y_true=y_test,
+                    y_probas=y_pred_proba,
+                    labels=["Negative", "Positive"]
+                )
+            })
+            
             # Log feature importance
             if hasattr(self.model.model, "feature_importances_"):
                 feature_importance = {
@@ -193,7 +226,7 @@ class XGBoostTrainer:
                     for i, imp in enumerate(self.model.model.feature_importances_)
                 }
                 wandb.log(feature_importance)
-
+        
                 # Create a bar chart of feature importances
                 importance_df = pd.DataFrame(
                     {
@@ -201,7 +234,7 @@ class XGBoostTrainer:
                         "importance": self.model.model.feature_importances_,
                     }
                 ).sort_values("importance", ascending=False)
-
+        
                 wandb.log(
                     {
                         "feature_importance": wandb.plot.bar(
@@ -212,6 +245,3 @@ class XGBoostTrainer:
                         )
                     }
                 )
-
-        # Save the model
-        save_sklearn_model(self.model.model_name, self.model.model, self.model_save_dir)
