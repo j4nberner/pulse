@@ -12,6 +12,7 @@ from src.preprocessing.preprocessing_baseline.preprocessing_baseline import (
     PreprocessorBaseline,
 )
 from src.preprocessing.preprocessing_advanced.windowing import Windower
+from src.preprocessing.prompt_engineering import *
 
 # Set up logger
 logger = logging.getLogger("PULSE_logger")
@@ -312,7 +313,7 @@ class DatasetManager:
         # Take only 100 rows if in debug
         debug = kwargs.get("debug", False)
         if debug:
-            logger.info(f"Debug mode: limiting data to 2 rows for {dataset_id}")
+            logger.info(f"Debug mode: Taking only 100 rows for {dataset_id}")
             data = {
                 "X_train": data["X_train"].head(100),
                 "y_train": data["y_train"].head(100),
@@ -345,7 +346,7 @@ class DatasetManager:
                 dataset = kwargs.get("dataset", None)
                 task = kwargs.get("task", None)
                 info_dict = {"dataset": dataset, "task": task}
-                X, y = self._apply_llama3_preprocessing(X, y, info_dict)
+                X, y = apply_llama3_preprocessing(X, y, info_dict)
             case None:
                 # No specific preprocessing needed
                 logger.info(f"No specific preprocessing needed for {dataset_id}")
@@ -372,48 +373,6 @@ class DatasetManager:
                     data_dict[split]["y"] = y_data.drop(columns=["stay_id"])
 
         return data_dict
-
-    def _apply_llama3_preprocessing(
-        self, X: pd.DataFrame, y: pd.DataFrame, info_dict: Dict[str, Any]
-    ) -> Tuple[pd.DataFrame, pd.DataFrame]:
-        """
-        Apply Llama3-specific preprocessing to the data.
-
-        Args:
-            X (pd.DataFrame): Feature DataFrame
-            y (pd.DataFrame): Label DataFrame
-            info_dict (Dict[str, Any]): Dictionary containing dataset and task information
-
-        Returns:
-            Tuple[pd.DataFrame, pd.DataFrame]: Preprocessed features and labels
-        """
-        # Example preprocessing for Llama3
-        logger.info(f"Applying Llama3-specific preprocessing")
-        task = info_dict.get("task", "unknown_task")
-        dataset = info_dict.get("dataset", "unknown_dataset")
-
-        # Create text prompts from the features
-        processed_X = []
-
-        for _, row in X.iterrows():
-            # Extract feature values and names
-            feature_texts = []
-            for col_name, value in row.items():
-                feature_texts.append(f"{col_name}: {value}")
-
-            # Format as a prompt
-            prompt = f"Dataset: {dataset}\nTask: {task}\n"
-            prompt += "Patient data:\n" + "\n".join(feature_texts)
-
-            processed_X.append(prompt)
-
-        # Convert to DataFrame with a text column
-        X_processed = pd.DataFrame({"text": processed_X})
-
-        logger.info(f"Converted {len(processed_X)} samples to text format for Llama3")
-        X = X_processed
-
-        return X, y
 
 
 class TorchDatasetWrapper(Dataset):

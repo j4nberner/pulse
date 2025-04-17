@@ -16,8 +16,6 @@ from src.util.model_util import (
 )
 from src.eval.metrics import MetricsTracker
 
-# TODO: Why are calculate_all_metrics and cal_metric_stats imported but not used?
-
 # Set up logger
 logger = logging.getLogger("PULSE_logger")
 
@@ -100,7 +98,6 @@ class InceptionTimeModel(PulseTemplateModel, nn.Module):
                     logger.info(
                         f"EarlyStopping counter: {self.counter} out of {self.patience}"
                     )
-                        # TODO: counter keeps going for next dataset_name (can be 8 out of 5)
                 if self.counter >= self.patience:
                     self.early_stop = True
             else:

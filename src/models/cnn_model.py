@@ -16,6 +16,7 @@ from src.eval.metrics import MetricsTracker
 from src.eval.metrics import calculate_all_metrics, calc_metric_stats
 
 logger = logging.getLogger("PULSE_logger")
+# TODO: testloader namen ändern
 
 
 class CNNModel(PulseTemplateModel, nn.Module):
@@ -148,7 +149,9 @@ class CNNModel(PulseTemplateModel, nn.Module):
         x = self.fc2(x)
         return x
 
-    def set_trainer(self, trainer_name: str, train_dataloader, test_dataloader) -> None:
+    def set_trainer(
+        self, trainer_name: str, train_dataloader, val_dataloader, test_dataloader
+    ) -> None:
         """
         Sets the trainer for the CNN model.
 
@@ -160,17 +163,20 @@ class CNNModel(PulseTemplateModel, nn.Module):
         Returns:
             None
         """
-        self.trainer = CNNTrainer(self, train_dataloader, test_dataloader)
+        self.trainer = CNNTrainer(
+            self, train_dataloader, val_dataloader, test_dataloader
+        )
 
 
 class CNNTrainer:
     """Trainer for the CNN model."""
 
-    def __init__(self, cnn_model, train_dataloader, test_dataloader):
+    def __init__(self, cnn_model, train_dataloader, val_dataloader, test_dataloader):
         self.model = cnn_model
         self.params = cnn_model.params
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.train_dataloader = train_dataloader
+        self.val_dataloader = val_dataloader
         self.test_dataloader = test_dataloader
         self.optimizer = optim.Adam(self.model.parameters())
         self.criterion = nn.BCEWithLogitsLoss()
@@ -207,8 +213,8 @@ class CNNTrainer:
             if save_checkpoint != 0 and epoch % save_checkpoint == 0:
                 save_torch_model(checkpoint_name, self.model, checkpoint_path)
 
-        logger.info("Training finished.")
-        self.evaluate(self.test_dataloader)
+            logger.info("Training finished.")
+            self.evaluate(self.val_dataloader)
         save_torch_model(
             self.model.model_name, self.model, self.model_save_dir
         )  # Save the final model
@@ -249,19 +255,19 @@ class CNNTrainer:
                 if verbose == 1:
                     running_loss = 0.0
 
-    def evaluate(self, val_dataloader):
+    def evaluate(self, dataloader):
         """
         Evaluates the model on the validation set.
 
         Args:
-            val_dataloader: The DataLoader object for the validation dataset.
+            dataloader: The DataLoader object for the validation or test dataset.
         """
         metrics_tracker = MetricsTracker(self.model.model_name, self.model.save_dir)
         verbose = self.params.get("verbose", 1)
         self.model.eval()
 
         with torch.no_grad():
-            for batch, (inputs, labels) in enumerate(val_dataloader):
+            for batch, (inputs, labels) in enumerate(dataloader):
                 inputs = self._transform_features(inputs)
                 inputs, labels = inputs.to(self.device), labels.to(self.device)
 

@@ -94,7 +94,9 @@ class XGBoostModel(PulseTemplateModel):
         # Initialize the XGBoost model with parameters from config
         self.model = XGBClassifier(**model_params)
 
-    def set_trainer(self, trainer_name, train_dataloader, test_dataloader):
+    def set_trainer(
+        self, trainer_name, train_dataloader, val_dataloader, test_dataloader
+    ):
         """
         Set the trainer for the model.
 
@@ -104,7 +106,9 @@ class XGBoostModel(PulseTemplateModel):
             test_dataloader: DataLoader for testing data.
         """
         if trainer_name == "XGBoostTrainer":
-            self.trainer = XGBoostTrainer(self, train_dataloader, test_dataloader)
+            self.trainer = XGBoostTrainer(
+                self, train_dataloader, val_dataloader, test_dataloader
+            )
         else:
             raise ValueError(f"Trainer {trainer_name} not supported for XGBoost.")
 
@@ -117,17 +121,21 @@ class XGBoostTrainer:
     including data preparation, model training, evaluation and saving.
     """
 
-    def __init__(self, model, train_dataloader, test_dataloader) -> None:
+    def __init__(
+        self, model, train_dataloader, val_dataloader, test_dataloader
+    ) -> None:
         """
         Initialize the XGBoost trainer.
 
         Args:
             model: The XGBoost model to train.
             train_dataloader: DataLoader for training data.
+            val_dataloader: DataLoader for validation data.
             test_dataloader: DataLoader for testing data.
         """
         self.model = model
         self.train_dataloader = train_dataloader
+        self.val_dataloader = val_dataloader
         self.test_dataloader = test_dataloader
         self.wandb = model.wandb
         self.model_save_dir = os.path.join(model.save_dir, "Models")
