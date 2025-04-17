@@ -30,6 +30,7 @@ class ModelManager:
 
         self.wandb = kwargs.get("wandb", False)
         self.output_dir = kwargs.get("output_dir", "")
+        self.model_configs = models
         self.models = self._prepare_models(models)
 
     def _prepare_models(self, model_configs: Dict) -> List[Any]:
@@ -42,7 +43,6 @@ class ModelManager:
         Returns:
             List[Any]: List of instantiated model objects.
         """
-
         logger.info("Preparing %d models...", len(model_configs))
         prepared_models = []
 
@@ -56,29 +56,7 @@ class ModelManager:
                 logger.info(
                     "---------------Preparing model '%s'---------------", model_name
                 )
-                # Create model instance from configuration. Associate trainer with model.
-                model_cls = get_model_class(model_name)
-                model = model_cls(
-                    config.get("params", {}),
-                    wandb=self.wandb.get("enabled", False),
-                    output_dir=self.output_dir,
-                )  # Pass parameters to model constructor
-
-                # Load model weights if path is specified
-                if config.get("pretrained_model_path", None):
-                    try:
-                        model.load_model_weights(config["pretrained_model_path"])
-                        logger.info(
-                            "Loaded pretrained model weights from %s",
-                            config["pretrained_model_path"],
-                        )
-                    except Exception as e:
-                        logger.warning(
-                            "Failed to load pretrained model weights from %s: %s. Defaulting to random initialization.",
-                            config["pretrained_model_path"],
-                            str(e),
-                        )
-
+                model = self._create_model_from_config(config)
                 prepared_models.append(model)
                 logger.info("Model '%s' prepared successfully", model_name)
             except Exception as e:
@@ -89,3 +67,63 @@ class ModelManager:
             sys.exit(1)
 
         return prepared_models
+        
+    def _create_model_from_config(self, config: Dict) -> Any:
+        """
+        Create a fresh model instance from a configuration.
+        
+        Args:
+            config: Model configuration dictionary
+            
+        Returns:
+            A new model instance
+        """
+        model_name = config.get("name")
+        # Create model instance from configuration
+        model_cls = get_model_class(model_name)
+        model = model_cls(
+            config.get("params", {}),
+            wandb=self.wandb.get("enabled", False),
+            output_dir=self.output_dir,
+        )
+        
+        # Load model weights if path is specified
+        if config.get("pretrained_model_path", None):
+            try:
+                model.load_model_weights(config["pretrained_model_path"])
+                logger.info(
+                    "Loaded pretrained model weights from %s",
+                    config["pretrained_model_path"],
+                )
+            except Exception as e:
+                logger.warning(
+                    "Failed to load pretrained model weights from %s: %s. Defaulting to random initialization.",
+                    config["pretrained_model_path"],
+                    str(e),
+                )
+                
+        return model
+        
+    def get_models_for_task(self, dataset_name: str) -> List[Any]:
+        """
+        Create fresh model instances for a specific task/dataset combination.
+        
+        Args:
+            dataset_name: Name of the dataset being processed
+            
+        Returns:
+            List[Any]: List of fresh model instances
+        """
+        logger.info(f"Creating fresh model instances for dataset: {dataset_name}")
+        fresh_models = []
+        
+        for _, config in self.model_configs.items():
+            try:
+                # Create a new model instance from the saved config
+                fresh_model = self._create_model_from_config(config)
+                fresh_models.append(fresh_model)
+            except Exception as e:
+                model_name = config.get("name", "unknown")
+                logger.error(f"Failed to create fresh model '{model_name}' for dataset {dataset_name}: {str(e)}")
+                
+        return fresh_models

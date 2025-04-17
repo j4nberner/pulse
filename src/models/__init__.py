@@ -5,6 +5,7 @@ from .cnn_model import CNNModel
 from .lstm_model import LSTMModel
 from .llama3_model import Llama3Model
 from .inceptiontime_model import InceptionTimeModel
+from .gru_model import GRUModel
 
 
 model_cls_name_dict = {
@@ -15,6 +16,7 @@ model_cls_name_dict = {
     "LSTMModel": LSTMModel,
     "Llama3Model": Llama3Model,
     "InceptionTimeModel": InceptionTimeModel,
+    "GRUModel": GRUModel
 }
 
 

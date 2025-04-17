@@ -27,6 +27,10 @@ def load_config_with_models(base_config_path: str) -> OmegaConf:
         # Add global preprocessing configuration to each model config
         if "preprocessing_advanced" in base_config:
             model_config.params["preprocessing_advanced"] = base_config.preprocessing_advanced
+        
+        # Add ALL tasks to model config - this lets the training code select the current task
+        if "tasks" in base_config:
+            model_config.params["tasks"] = base_config.tasks
 
         # Add the loaded model config to the models dictionary under the extracted name
         models[model_name] = model_config

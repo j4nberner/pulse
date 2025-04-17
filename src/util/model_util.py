@@ -83,33 +83,6 @@ def prepare_data_for_model_ml(
     X_test, y_test = [], []
     feature_names = []
 
-    # # Check if we're in debug mode (dataloaders are lists)
-    # is_debug_mode = isinstance(train_dataloader, list)
-
-    # if is_debug_mode:
-    #     # In debug mode, dataloaders are already list of batches
-    #     for batch in train_dataloader:
-    #         features, labels = batch
-    #         X_train.extend(features.numpy())
-    #         y_train.extend(labels.numpy().squeeze())
-
-    #     for batch in test_dataloader:
-    #         features, labels = batch
-    #         X_test.extend(features.numpy())
-    #         y_test.extend(labels.numpy().squeeze())
-    # else:
-    #     # Process training data from DataLoader
-    #     for batch in train_dataloader:
-    #         features, labels = batch
-    #         X_train.extend(features.numpy())
-    #         y_train.extend(labels.numpy().squeeze())
-
-    #     # Process test data from DataLoader
-    #     for batch in test_dataloader:
-    #         features, labels = batch
-    #         X_test.extend(features.numpy())
-    #         y_test.extend(labels.numpy().squeeze())
-
     if isinstance(train_dataloader[0], pd.DataFrame):
         # If DataLoader is a DataFrame, extract features and labels directly
         X_train = np.array(train_dataloader[0].values)
@@ -153,95 +126,59 @@ def prepare_data_for_model_ml(
         "feature_names": feature_names,
     }
 
+# implement conditional conversion for mortality (always, because it is never windowed (maybe first adapt ordering of columns during transformation in preprocessing))
 
-def prepare_data_for_model_dl(
-    data_loader, config: Dict, model_name: Optional[str] = None, logger_instance=None
-) -> Dict:
+def prepare_data_for_model_dl(data_loader, config: Dict, model_name: Optional[str] = None, task_name: Optional[str] = None) -> Any:
     """
-    Prepare data for deep learning models by determining appropriate conversions
-    between 2D and 3D formats based on model requirements and input data shape.
-
+    Prepare data for deep learning models by returning a configured data converter.
+    
     Args:
         data_loader: DataLoader containing the input data
         config: Configuration dictionary with preprocessing settings
         model_name: Name of the model to determine format requirements
-        logger_instance: Optional logger instance (uses default PULSE_logger if None)
-
+        logger_instance: Optional logger instance
+        task_name: Name of the current task (e.g., "mortality", "aki")
+        
     Returns:
-        dict: Configuration dictionary with:
-            - reshape_needed (bool): Whether reshaping is needed for each batch
-            - convert_method (str or None): Method to use for conversion ("windowed_to_3d" or None)
-            - converter: Converter instance if needed (WindowedDataTo3D)
-            - data_shape: Shape of the input data
+        WindowedDataTo3D: Configured converter instance ready to transform batches
     """
-    # Use provided logger or default
-    log = logger_instance or logger
 
-    # Check if windowing is enabled in config
-    windowing_enabled = False
-
-    # Check for preprocessing_advanced config
-    if "preprocessing_advanced" in config:
-        preprocessing_advanced = config["preprocessing_advanced"]
-        if "windowing" in preprocessing_advanced:
-            windowing_config = preprocessing_advanced["windowing"]
-
-            # Get the enabled value with proper type handling
-            if "enabled" in windowing_config:
-                enabled_value = windowing_config["enabled"]
-
-                # Handle different boolean representations
-                if isinstance(enabled_value, bool):
-                    windowing_enabled = enabled_value
-                else:
-                    # Convert string/other types to boolean
-                    enabled_str = str(enabled_value).lower()
-                    windowing_enabled = enabled_str == "true" or enabled_str == "1"
-
-    log.info(f"Data preparation for model - Windowing enabled: {windowing_enabled}")
-
-    result = {
-        "reshape_needed": False,
-        "convert_method": None,
-        "converter": None,
-        "data_shape": None,
-    }
-
+    # Import the converter
+    from src.preprocessing.preprocessing_advanced.windowing import WindowedDataTo3D
+    
+    # Create converter with model name and config
+    converter = WindowedDataTo3D(model_name=model_name, config=config, task_name=task_name)
+    
     try:
         # Get a batch to inspect shape
         features, _ = next(iter(data_loader))
-        result["data_shape"] = features.shape
-
-        # Check data dimensionality and decide on conversion method
+        
+        # Configure converter based on data shape
         if len(features.shape) == 3:
-            log.info(f"Input data is already 3D with shape {features.shape}")
+            # Data is already 3D
+            converter.needs_conversion = False
+            logger.info("Input data is already 3D, no conversion needed")
         else:
-            log.info(
-                f"Input data is 2D with shape {features.shape}, will convert to 3D"
-            )
-
-            # Import only when needed to avoid circular imports
-            from src.preprocessing.preprocessing_advanced.windowing import (
-                WindowedDataTo3D,
-            )
-
-            # Initialize the data converter
-            converter = WindowedDataTo3D(
-                logger=log, model_name=model_name, config=config
-            )
-
-            result["converter"] = converter
-
-            # If windowing was already applied, use 3D conversion
+            # Check if windowing is enabled in config
+            windowing_enabled = False
+            if task_name == "mortality":
+                windowing_enabled = True
+            elif "preprocessing_advanced" in config:
+                preprocessing_advanced = config["preprocessing_advanced"]
+                if "windowing" in preprocessing_advanced:
+                    windowing_config = preprocessing_advanced["windowing"]
+                    if "enabled" in windowing_config:
+                        windowing_enabled = bool(windowing_config["enabled"])
+            
+            # Configure the converter based on windowing status
+            converter.configure_conversion(windowing_enabled, features.shape)
+            
             if windowing_enabled:
-                result["convert_method"] = "windowed_to_3d"
-                log.info("Will use WindowedDataTo3D converter for batches")
+                logger.info("Will use 3D windowed conversion for batches")
             else:
-                # Simple reshaping needed (handled during training)
-                result["reshape_needed"] = True
-                log.info("Will use simple reshaping for batches")
+                logger.info("Will use simple reshaping for batches")
 
     except Exception as e:
-        log.error(f"Error preparing data: {e}")
-
-    return result
+        logger.error(f"Error preparing data converter: {e}")
+    
+    return converter

@@ -232,7 +232,7 @@ class DatasetManager:
                     )
                 )
 
-                logger.info(f"Preprocessing completed for {dataset_id}")
+                logger.info(f"Preprocessing Baseline completed for {dataset_id}")
 
             # Convert labels from boolean to int if necessary
             y_train["label"], y_val["label"], y_test["label"] = (
@@ -327,6 +327,7 @@ class DatasetManager:
         if mode == "test":
             X = data["X_test"]
             y = data["y_test"]
+
         elif mode == "val":
             X = data["X_val"]
             y = data["y_val"]
@@ -363,6 +364,7 @@ class DatasetManager:
             dict: The modified data dictionary
         """
         # TODO: should X keep the stay_id?
+
         for split in ["train", "val", "test"]:
             if split in data_dict and "y" in data_dict[split]:
                 y_data = data_dict[split]["y"]

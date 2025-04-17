@@ -8,8 +8,7 @@ import torch.optim as optim
 import torch
 import wandb
 from src.models.pulsetemplate_model import PulseTemplateModel
-from src.eval.metrics import calc_metric_stats, calculate_all_metrics
-from src.util.model_util import save_torch_model
+from src.util.model_util import save_torch_model, prepare_data_for_model_dl
 from src.eval.metrics import MetricsTracker
 
 
@@ -119,42 +118,44 @@ class LSTMModel(PulseTemplateModel, nn.Module):
         return out
 
     def set_trainer(
-        self, trainer_name: str, train_dataloader, val_dataloader, test_dataloader
+        self, trainer_name: str, train_loader, val_loader, test_loader
     ) -> None:
         """
         Sets the trainer for the LSTM model.
 
         Args:
             trainer_name (str): The name of the trainer to be used.
-            train_dataloader: The DataLoader object for the training dataset.
-            val_dataloader: The DataLoader object for the validation dataset.
-            test_dataloader: The DataLoader object for the testing dataset.
+            train_loader: The DataLoader object for the training dataset.
+            val_loader: The DataLoader object for the validation dataset.
+            test_loader: The DataLoader object for the testing dataset.
 
         Returns:
             None
         """
         self.trainer = LSTMTrainer(
-            self, train_dataloader, val_dataloader, test_dataloader
+            self, train_loader, val_loader, test_loader
         )
 
 
 class LSTMTrainer:
     """Trainer for the LSTM model."""
 
-    def __init__(self, lstm_model, train_dataloader, val_dataloader, test_dataloader):
+    def __init__(self, lstm_model, train_loader, val_loader, test_loader):
         self.model = lstm_model
         self.params = lstm_model.params
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-        self.train_dataloader = train_dataloader
-        self.val_dataloader = val_dataloader
-        self.test_dataloader = test_dataloader
+        self.train_loader = train_loader
+        self.val_loader = val_loader
+        self.test_loader = test_loader
         self.optimizer = optim.Adam(
             self.model.parameters(), lr=self.params["learning_rate"]
         )
         self.criterion = nn.MSELoss()
         self.wandb = self.model.wandb
         self.model_save_dir = os.path.join(lstm_model.save_dir, "Models")
+        self.task_name = self.model.task_name
+        self.dataset_name = self.model.dataset_name
 
         # Log optimizer and criterion
         logger.info(f"Using optimizer: {self.optimizer.__class__.__name__}")
@@ -162,6 +163,9 @@ class LSTMTrainer:
 
         # Create model save directory if it doesn't exist
         os.makedirs(self.model_save_dir, exist_ok=True)
+
+        # Data preparation
+        self._prepare_data()
 
     def train(self):
         """Training loop."""
@@ -177,7 +181,7 @@ class LSTMTrainer:
         for epoch in range(num_epochs):
             self.train_epoch(epoch, verbose)
             logger.info(f"Epoch {epoch + 1} finished")
-            self.evaluate(self.val_dataloader)
+            self.evaluate(self.val_loader)
 
             # Save checkpoint every save_checkpoint epochs
             checkpoint_name = f"{self.model.model_name}_epoch_{epoch + 1}"
@@ -186,7 +190,7 @@ class LSTMTrainer:
                 save_torch_model(checkpoint_name, self.model, checkpoint_path)
 
         logger.info("Training finished.")
-        self.evaluate(self.test_dataloader)
+        self.evaluate(self.test_loader)
         save_torch_model(
             self.model.model_name, self.model, self.model_save_dir
         )  # Save the final model
@@ -201,9 +205,10 @@ class LSTMTrainer:
         """
         self.model.train()
         running_loss = 0.0
-        total_batches = len(self.train_dataloader)
+        total_batches = len(self.train_loader)
 
-        for i, (inputs, labels) in enumerate(self.train_dataloader):
+        for i, (inputs, labels) in enumerate(self.train_loader):
+            inputs = self.converter.convert_batch_to_3d(inputs)
             # Move tensors to the same device as the model
             inputs, labels = inputs.to(self.device), labels.to(self.device)
 
@@ -233,23 +238,21 @@ class LSTMTrainer:
 
                 running_loss = 0.0
 
-    def evaluate(self, test_dataloader):
+    def evaluate(self, test_loader):
         """
         Evaluates the model on the test set.
 
         Args:
-            test_dataloader: The DataLoader object for the testing dataset.
+            test_loader: The DataLoader object for the testing dataset.
         """
         metrics_tracker = MetricsTracker(self.model.model_name, self.model.save_dir)
         verbose = self.params.get("verbose", 1)
         self.model.eval()
 
         with torch.no_grad():
-            for batch, (inputs, labels) in enumerate(test_dataloader):
+            for batch, (inputs, labels) in enumerate(test_loader):
+                inputs = self.converter.convert_batch_to_3d(inputs)
                 inputs, labels = inputs.to(self.device), labels.to(self.device)
-
-                # Reshape inputs to (batch_size, 1, input_size) for CNN
-                inputs = inputs.unsqueeze(1)
 
                 outputs = self.model(inputs)
                 _, predicted = torch.max(outputs.data, 1)
@@ -271,3 +274,14 @@ class LSTMTrainer:
         # Calculate and log metrics
         metrics_tracker.summary = metrics_tracker.compute_overall_metrics()
         metrics_tracker.save_report()
+
+    def _prepare_data(self):
+        """Prepare data for InceptionTime by getting a configured converter."""
+
+        # Get the configured converter
+        self.converter = prepare_data_for_model_dl(
+            self.train_loader, 
+            self.params, 
+            model_name=self.model.model_name,
+            task_name=self.task_name
+        )
