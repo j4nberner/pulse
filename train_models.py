@@ -60,28 +60,30 @@ class ModelTrainer:
             logger.info("DEBUG MODE ACTIVE: Training will use only one batch")
 
         # Train and evaluate each model on each dataset
-        for dataset_name, _ in self.dm.datasets.items():
-            logger.info("Processing dataset: %s", dataset_name)
+        for task_dataset_name, _ in self.dm.datasets.items():
+            logger.info(f"Processing dataset: {task_dataset_name}")
+            results[task_dataset_name] = {}
+
             # Extract task from dataset_name (format: task_dataset)
-            task_name = (
-                dataset_name.split("_")[0] if "_" in dataset_name else dataset_name
-            )
-            dataset_name_split = dataset_name.split("_")[-1]
+            task_name = task_dataset_name.split("_")[0]
+            dataset_name = task_dataset_name.split("_")[-1]
 
-            logger.info(f"Extracted task: {task_name}")
+            # Get fresh models for this dataset/task combination
+            fresh_models = self.mm.get_models_for_task(task_dataset_name)
 
-            for model in self.mm.models:
+            # Each fresh model is used only for this dataset
+            for model in fresh_models:
                 model_name = model.__class__.__name__
-                model.dataset_name = dataset_name_split
                 model.task_name = task_name
+                model.dataset_name = dataset_name
                 trainer_name = model.trainer_name
                 logger.info("--" * 30)
-                logger.info("Training model: %s on %s", model_name, dataset_name)
+                logger.info(f"Training model: {model_name} on {task_dataset_name}")
 
                 try:
-                    # Preprocess data for corresponding model. Returns X and y as pandas DataFrames
+                    # Preprocess data for corresponding model
                     X_train, y_train = self.dm.get_preprocessed_data(
-                        dataset_name,
+                        task_dataset_name,
                         model_name,
                         mode="train",
                         dataset=self.config.datasets[0],
@@ -90,7 +92,7 @@ class ModelTrainer:
                         preprocessing_id=model.preprocessing_id,
                     )
                     X_val, y_val = self.dm.get_preprocessed_data(
-                        dataset_name,
+                        task_dataset_name,
                         model_name,
                         mode="val",
                         dataset=self.config.datasets[0],
@@ -99,7 +101,7 @@ class ModelTrainer:
                         preprocessing_id=model.preprocessing_id,
                     )
                     X_test, y_test = self.dm.get_preprocessed_data(
-                        dataset_name,
+                        task_dataset_name,
                         model_name,
                         mode="test",
                         dataset=self.config.datasets[0],
@@ -126,21 +128,18 @@ class ModelTrainer:
 
                         # Get batch size with fallback using getattr
                         if isinstance(self.config.benchmark_settings, dict):
-                            # If benchmark_settings is a dictionary
                             batch_size = self.config.benchmark_settings.get(
                                 "batch_size", 100
                             )
                         else:
-                            # If benchmark_settings is an object with attributes
                             batch_size = getattr(
                                 self.config.benchmark_settings, "batch_size", 100
                             )
 
                         logger.info(
-                            f"Using batch size: {batch_size} for {model_name} on {dataset_name}"
+                            f"Using batch size: {batch_size} for {model_name} on {task_dataset_name}"
                         )
 
-                        # Now create the DataLoaders with the wrapped datasets
                         train_loader = DataLoader(
                             train_dataset,
                             batch_size=batch_size,
@@ -165,20 +164,15 @@ class ModelTrainer:
                         )
                         sys.exit(1)
 
-                    # Set trainer for the model
+                    # Set trainer for the model and train
                     model.set_trainer(
                         trainer_name, train_loader, val_loader, test_loader
                     )
-
-                    # Train and evaluate the model -> model specific
                     model.trainer.train()
 
                 except Exception as e:
                     logger.error(
-                        "Error training %s on %s: %s",
-                        model_name,
-                        dataset_name,
-                        str(e),
+                        f"Error training {model_name} on {task_dataset_name}: {str(e)}",
                         exc_info=True,
                     )
 

@@ -4,22 +4,19 @@ params:
   # Basic configuration
   trainer_name: "InceptionTimeTrainer"
   type: "DL" # Type of model (ML for machine learning, DL for deep learning)
+  save_checkpoint_freq: 5
+  verbose: 2 # Controls verbosity of output (0 = silent, 1 = log every 10 batches, 2 = log every batch)
   # Training parameters
-  num_epochs: 60
+  num_epochs: 10 # should be 60! for our experiments (10 for testing purposes)
   patience: 5
   use_cuda: true
-  save_path: "output/models/inceptiontime_best.pt"
   # Model architecture
-  model_architecture:
-    depth: 12
-    dropout_rate: 0.3
+  depth: 12
+  dropout_rate: 0.3
   # Optimizer settings
-  optimizer:
-    name: "adamw" # Options: adam, adamw, sgd
-    learning_rate: 0.01
-    weight_decay: 0.01
+  optimizer_name: "adamw" # Options: adam, adamw, sgd
+  learning_rate: 0.01
+  weight_decay: 0.01
   # Scheduler settings
-  scheduler:
-    factor: 0.9
-    patience: 5
-    min_lr: 0.001
+  factor: 0.9
+  min_lr: 0.001

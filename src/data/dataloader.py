@@ -232,7 +232,7 @@ class DatasetManager:
                     )
                 )
 
-                logger.info(f"Preprocessing completed for {dataset_id}")
+                logger.info(f"Preprocessing Baseline completed for {dataset_id}")
 
             # Convert labels from boolean to int if necessary
             y_train["label"], y_val["label"], y_test["label"] = (
@@ -328,6 +328,7 @@ class DatasetManager:
         if mode == "test":
             X = data["X_test"]
             y = data["y_test"]
+
         elif mode == "val":
             X = data["X_val"]
             y = data["y_val"]
@@ -335,21 +336,22 @@ class DatasetManager:
             X = data["X_train"]
             y = data["y_train"]
 
-        # Apply any model-specific preprocessing if needed. Prompt engineering for LLMs, tokenization, etc.
-
+        # Apply any model-specific preprocessing if needed.
         # For example, if you need to tokenize text data for LLMs
         preprocessing_id = kwargs.get("preprocessing_id", None)
-        advanced_preprocessor = get_advanced_preprocessor(
-            preprocessing_id=preprocessing_id
-        )
-        # Info dict needs to contain dataset name, task, and model name
-        info_dict = {
-            "dataset_name": dataset["name"],
-            "task": dataset["task"],
-            "model_name": model_name,
-        }
-        # Apply advanced preprocessing
-        return advanced_preprocessor(X=X, y=y, info_dict=info_dict)
+        if preprocessing_id is not None:
+            advanced_preprocessor = get_advanced_preprocessor(
+                preprocessing_id=preprocessing_id
+            )
+            # Info dict needs to contain dataset name, task, and model name
+            info_dict = {
+                "dataset_name": dataset["name"],
+                "task": dataset["task"],
+                "model_name": model_name,
+            }
+            # Apply advanced preprocessing
+            X, y = advanced_preprocessor(X, y, info_dict)
+        return X, y
 
     def _drop_stay_id_if_present(self, data_dict: dict) -> dict:
         """
@@ -362,6 +364,7 @@ class DatasetManager:
             dict: The modified data dictionary
         """
         # TODO: should X keep the stay_id?
+
         for split in ["train", "val", "test"]:
             if split in data_dict and "y" in data_dict[split]:
                 y_data = data_dict[split]["y"]

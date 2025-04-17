@@ -40,7 +40,7 @@ class PulseTemplateModel:
         trainer_name: str,
         train_dataloader: DataLoader,
         val_dataloader: DataLoader,
-        test_dataloader: DataLoader,
+        test_dataloader: DataLoader
     ) -> None:
         """
         Set the trainer for this model. This method should be overridden by subclasses.
