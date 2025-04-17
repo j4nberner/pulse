@@ -1,6 +1,8 @@
 name: "RandomForest"
+pretrained_model_path: "output/20250415_100707/Models/RandomForest.joblib" # Path to pretrained model (if any)
 params:
   # Basic configuration
+  type: "ML" # Type of model (ML for machine learning, DL for deep learning)
   trainer_name: "RandomForestTrainer" # Class that implements the training process
   n_estimators: 200 # Number of trees in the forest
   random_state: 42 # Seed for reproducible results

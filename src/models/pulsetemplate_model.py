@@ -1,9 +1,15 @@
 from typing import Any, Optional
+import torch
 from torch.utils.data import DataLoader
+import logging
+import joblib
+
+logger = logging.getLogger("PULSE_logger")
 
 
 class PulseTemplateModel:
-    """Base model template that all other models will inherit from.
+    """
+    Base model template that all other models will inherit from.
 
     This class provides the common attributes and methods that all models
     in the Pulse framework should implement.
@@ -18,14 +24,19 @@ class PulseTemplateModel:
             model_name: Name of the model
             trainer_name: Optional name of the trainer
         """
+        params = kwargs.get("params", {})
         self.model_name = model_name
         self.trainer_name = trainer_name
         self.trainer = None
+        self.model = None
+        self.preprocessing_id = params.get("preprocessing_id", None)
+        self.type = params.get("type", None)
 
     def set_trainer(
         self,
         trainer_name: str,
         train_dataloader: DataLoader,
+        val_dataloader: DataLoader,
         test_dataloader: DataLoader,
     ) -> None:
         """
@@ -40,3 +51,36 @@ class PulseTemplateModel:
         self.trainer_name = trainer_name
         self.trainer = None
         # TODO: Implement dynamic loading of trainer class based on trainer_name
+
+    def load_model_weights(self, model_path: str) -> None:
+        """Load model weights from a specified path.
+
+        Args:
+            model_path: Path to the model weights file
+        """
+        if self.type == "ML":
+            # Load the sklearn model using joblib
+            self.model = joblib.load(model_path)
+
+        elif self.type == "DL":
+            # Load the state dictionary
+            state_dict = torch.load(model_path, map_location=torch.device("cpu"))
+
+            # Check if the loaded file is a full model or just weights
+            if hasattr(state_dict, "state_dict"):
+                state_dict = state_dict.state_dict()
+
+            # Load the weights into the model
+            if hasattr(self, "load_state_dict"):
+                self.load_state_dict(state_dict)
+                logger.info("Model weights loaded successfully")
+            else:
+                logger.warning(
+                    "Model does not have load_state_dict method. Cannot load weights."
+                )
+
+        elif self.type == "LLM":
+            # Load LLM model weights
+            pass
+        else:
+            logger.warning("Model type not recognized. Cannot load model weights.")

@@ -12,6 +12,7 @@ from src.preprocessing.preprocessing_baseline.preprocessing_baseline import (
     PreprocessorBaseline,
 )
 from src.preprocessing.preprocessing_advanced.windowing import Windower
+from src.preprocessing.prompt_engineering import *
 
 # Set up logger
 logger = logging.getLogger("PULSE_logger")
@@ -43,6 +44,8 @@ class DatasetManager:
         self.datasets = {}
         self.preprocessor = None
         self.windower = None
+
+        # self.llm_model_list = ["Llama3Model"]
 
         # Initialize preprocessing tools
         self._init_preprocessing_tools()
@@ -88,7 +91,7 @@ class DatasetManager:
         if hasattr(self.config, "preprocessing_advanced"):
             if hasattr(self.config.preprocessing_advanced, "windowing"):
                 windowing_config = self.config.preprocessing_advanced.windowing
-                
+
                 windowing_enabled = getattr(windowing_config, "enabled", False)
                 save_windowed_data = getattr(windowing_config, "save_data", False)
 
@@ -102,10 +105,12 @@ class DatasetManager:
                 save_data=save_windowed_data,
                 debug_mode=debug_mode,
                 original_base_path=original_base_path,
-                preprocessor_config=preprocessing_config 
+                preprocessor_config=preprocessing_config,
             )
-        
-            logger.info(f"Windower initialized for advanced preprocessing with debug mode: {debug_mode}")
+
+            logger.info(
+                f"Windower initialized for advanced preprocessing with debug mode: {debug_mode}"
+            )
 
     def _init_datasets(self) -> None:
         """Initialize datasets based on configuration."""
@@ -221,11 +226,20 @@ class DatasetManager:
                     self.preprocessor.preprocess(
                         task=task,
                         dataset_name=name,
-                        save_data=getattr(self.config.preprocessing_baseline, "save_data", True),
+                        save_data=getattr(
+                            self.config.preprocessing_baseline, "save_data", True
+                        ),
                     )
                 )
 
                 logger.info(f"Preprocessing completed for {dataset_id}")
+
+            # Convert labels from boolean to int if necessary
+            y_train["label"], y_val["label"], y_test["label"] = (
+                y_train["label"].astype(int),
+                y_val["label"].astype(int),
+                y_test["label"].astype(int),
+            )
 
             # Store the loaded data
             data_dict = {
@@ -270,7 +284,7 @@ class DatasetManager:
             return False
 
     def get_preprocessed_data(
-        self, dataset_id: str, model_name: str, mode: str = "train"
+        self, dataset_id: str, model_name: str, mode: str = "train", **kwargs: Any
     ) -> Tuple[pd.DataFrame, pd.DataFrame]:
         """
         Get preprocessed data for a specific model.
@@ -296,6 +310,19 @@ class DatasetManager:
 
         data = dataset["data"]
 
+        # Take only 100 rows if in debug
+        debug = kwargs.get("debug", False)
+        if debug:
+            logger.info(f"Debug mode: Taking only 100 rows for {dataset_id}")
+            data = {
+                "X_train": data["X_train"].head(100),
+                "y_train": data["y_train"].head(100),
+                "X_val": data["X_val"].head(100),
+                "y_val": data["y_val"].head(100),
+                "X_test": data["X_test"].head(100),
+                "y_test": data["y_test"].head(100),
+            }
+
         # Get the appropriate split
         if mode == "test":
             X = data["X_test"]
@@ -307,8 +334,21 @@ class DatasetManager:
             X = data["X_train"]
             y = data["y_train"]
 
-        # Apply any model-specific preprocessing if needed
-        # For now, we just return the data as is
+        # Apply any model-specific preprocessing if needed. Prompt engineering for LLMs, tokenization, etc.
+
+        # For example, if you need to tokenize text data for LLMs
+        preprocessing_id = kwargs.get("preprocessing_id", None)
+        match preprocessing_id:
+            case "Llama3Preprocessing":
+                # Apply Llama3-specific preprocessing
+                logger.info(f"Applying Llama3 preprocessing for {dataset_id}")
+                dataset = kwargs.get("dataset", None)
+                task = kwargs.get("task", None)
+                info_dict = {"dataset": dataset, "task": task}
+                X, y = apply_llama3_preprocessing(X, y, info_dict)
+            case None:
+                # No specific preprocessing needed
+                logger.info(f"No specific preprocessing needed for {dataset_id}")
 
         return X, y
 
@@ -376,7 +416,7 @@ class TorchDatasetWrapper(Dataset):
             tuple: (features, label) as torch.Tensor
         """
 
-# TODO: je nach Modell Tensor anders stacken (if DL -> apply 3D stacking)
+        # TODO: je nach Modell Tensor anders stacken (if DL -> apply 3D stacking)
 
         # If we pre-computed arrays, use them
         if hasattr(self, "X_array") and hasattr(self, "y_array"):

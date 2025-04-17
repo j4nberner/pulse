@@ -13,7 +13,6 @@ from src.util.model_util import save_torch_model
 from src.eval.metrics import MetricsTracker
 
 
-
 logger = logging.getLogger("PULSE_logger")
 
 
@@ -34,8 +33,8 @@ class LSTMModel(PulseTemplateModel, nn.Module):
         self.model_name = params.get(
             "model_name", self.__class__.__name__.replace("Model", "")
         )
-        trainer_name = params["trainer_name"]
-        super().__init__(self.model_name, trainer_name)
+        self.trainer_name = params["trainer_name"]
+        super().__init__(self.model_name, self.trainer_name, params=params)
         nn.Module.__init__(self)
 
         # Set the model save directory
@@ -119,30 +118,36 @@ class LSTMModel(PulseTemplateModel, nn.Module):
 
         return out
 
-    def set_trainer(self, trainer_name: str, train_dataloader, test_dataloader) -> None:
+    def set_trainer(
+        self, trainer_name: str, train_dataloader, val_dataloader, test_dataloader
+    ) -> None:
         """
         Sets the trainer for the LSTM model.
 
         Args:
             trainer_name (str): The name of the trainer to be used.
             train_dataloader: The DataLoader object for the training dataset.
+            val_dataloader: The DataLoader object for the validation dataset.
             test_dataloader: The DataLoader object for the testing dataset.
 
         Returns:
             None
         """
-        self.trainer = LSTMTrainer(self, train_dataloader, test_dataloader)
+        self.trainer = LSTMTrainer(
+            self, train_dataloader, val_dataloader, test_dataloader
+        )
 
 
 class LSTMTrainer:
     """Trainer for the LSTM model."""
 
-    def __init__(self, lstm_model, train_dataloader, test_dataloader):
+    def __init__(self, lstm_model, train_dataloader, val_dataloader, test_dataloader):
         self.model = lstm_model
         self.params = lstm_model.params
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         self.train_dataloader = train_dataloader
+        self.val_dataloader = val_dataloader
         self.test_dataloader = test_dataloader
         self.optimizer = optim.Adam(
             self.model.parameters(), lr=self.params["learning_rate"]
@@ -172,6 +177,7 @@ class LSTMTrainer:
         for epoch in range(num_epochs):
             self.train_epoch(epoch, verbose)
             logger.info(f"Epoch {epoch + 1} finished")
+            self.evaluate(self.val_dataloader)
 
             # Save checkpoint every save_checkpoint epochs
             checkpoint_name = f"{self.model.model_name}_epoch_{epoch + 1}"
@@ -221,7 +227,7 @@ class LSTMTrainer:
                 logger.info(
                     f"Epoch {epoch + 1}, Batch {i + 1}: Loss = {loss_value:.4f}"
                 )
-               
+
                 if self.wandb:
                     wandb.log({"train_loss": loss_value})
 
@@ -262,7 +268,6 @@ class LSTMTrainer:
                     if self.wandb:
                         wandb.log({"accuracy": accuracy})
 
-                
         # Calculate and log metrics
         metrics_tracker.summary = metrics_tracker.compute_overall_metrics()
         metrics_tracker.save_report()

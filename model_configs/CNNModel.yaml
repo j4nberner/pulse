@@ -1,10 +1,11 @@
 name: "CNNModel"
+pretrained_model_path: null # Path to pretrained model (if any)
 params:
   trainer_name: "CNNTrainer"
+  type: "DL" # Type of model (ML for machine learning, DL for deep learning)
   save_checkpoint: 1 # Save checkpoint every n epochs. Set to 0 to disable.
   num_features: 53
   output_shape: 1
-  num_channels: 1
   kernel_size: 3
   pool_size: 2
   learning_rate: 0.001

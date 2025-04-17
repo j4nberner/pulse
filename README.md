@@ -55,9 +55,19 @@ This repository contains the implementation for predicting sepsis, acute kidney 
 └── secrets/
 ```
 
+## Tasks
+
+- sepsis prediction
+- acute kidney injury prediction
+- mortality prediction
+
 ## Data
 
-...
+Datasets:
+
+- eICU
+- hirid
+- mimic iv
 
 ## Implemented Models
 
@@ -65,14 +75,22 @@ This repository contains the implementation for predicting sepsis, acute kidney 
 - CNN
 - XGBoost
 - LSTM
+- GRU
+- LightGBM
+- InceptionTime
 
 ## Results
 
-...
+A Metric Tracker is running alongside each training / evaluation process. Predictions are tracked and evaluated of all validation and test runs and saved to a json file in the output.
 
 ## Train a model
 
-1. adjust config_trian.yaml
+1. adjust config_train.yaml
+   - set debug flag to only load 100 rows of data
+   - set wandb flag and entity
+   - set project base path
+   - choose tasks & datasets to train and evaluate
+   - choose models to train
 2. run train_models.py
 
 ## Evaluate a model
@@ -98,7 +116,7 @@ This repository contains the implementation for predicting sepsis, acute kidney 
 ```python
 class ExampleModel(PulseTemplateModel):
    def __init__(self, params: Dict[str, Any], **kwargs) -> None:
-      super().__init__(model_name, trainer_name)
+      super().__init__(model_name, trainer_name, params=params)
    def set_trainer(self, trainer_name, train_dataloader, test_dataloader):
       self.trainer = ExampleTrainer(self,train_dataloader, test_dataloader)
 ```
