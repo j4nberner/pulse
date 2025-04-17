@@ -176,7 +176,12 @@ class RandomForestTrainer:
         X_test_df = pd.DataFrame(X_test, columns=feature_names)
 
         # Evaluate the model
-        metrics_tracker = MetricsTracker(self.model.model_name, self.model.save_dir)
+        metrics_tracker = MetricsTracker(
+            self.model.model_name,
+            self.model.task_name,
+            self.model.dataset_name,
+            self.model.save_dir,
+        )
 
         y_pred = self.model.model.predict(X_test_df)
         y_pred_proba = self.model.model.predict_proba(X_test_df)

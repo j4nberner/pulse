@@ -29,7 +29,10 @@ class PulseTemplateModel:
         self.trainer_name = trainer_name
         self.trainer = None
         self.model = None
+        self.dataset_name = None
+        self.task_name = None
         self.preprocessing_id = params.get("preprocessing_id", None)
+        self.pretrained_model_path = params.get("pretrained_model_path", None)
         self.type = params.get("type", None)
 
     def set_trainer(
@@ -58,6 +61,7 @@ class PulseTemplateModel:
         Args:
             model_path: Path to the model weights file
         """
+        model_path = self.pretrained_model_path
         if self.type == "ML":
             # Load the sklearn model using joblib
             self.model = joblib.load(model_path)

@@ -26,15 +26,22 @@ class MetricsTracker:
     A class to track and report metrics during model validation.
     """
 
-    def __init__(self, model_id, save_dir="output", metrics_to_track=None) -> None:
+    def __init__(
+        self, model_id, task_id, dataset_name, save_dir="output", metrics_to_track=None
+    ) -> None:
         """
-        Initialize the metrics tracker.
+        Initialize the metrics tracker. All tasks and datasets will be saved to the same model-metrics file.
 
         Args:
-            metrics_to_track (List[str], optional): List of metric names to track.
-                If None, all metrics will be tracked.
+            model_id: Identifier for the model
+            task_id: Identifier for the task
+            dataset_name: Name of the dataset
+            save_dir: Directory where reports will be saved
+            metrics_to_track: List of metrics to track (default is a predefined list)
         """
         self.model_id = model_id
+        self.task_id = task_id
+        self.dataset_name = dataset_name
         self.save_dir = save_dir
         self.summary = {}
         self.metrics_to_track = metrics_to_track or [
@@ -44,6 +51,7 @@ class MetricsTracker:
             "specificity",
             "f1_score",
             "accuracy",
+            "balanced_accuracy",
             "precision",
             "recall",
         ]
@@ -107,17 +115,38 @@ class MetricsTracker:
         # Create the report
         report = {
             "model_id": self.model_id,
+            "task_id": self.task_id,
+            "dataset": self.dataset_name,
             "metrics_summary": self.summary,
         }
 
-        # Save as JSON
+        # Save in append mode with proper JSON formatting
         report_path = os.path.join(
             self.save_dir, f"{self.model_id}_metrics_report.json"
         )
-        with open(report_path, "w", encoding="utf-8") as f:
-            json.dump(report, f, indent=4)
 
-        logger.info(f"Metrics report saved to {report_path}")
+        # Read existing data or create empty list if file doesn't exist
+        existing_data = []
+        if os.path.exists(report_path) and os.path.getsize(report_path) > 0:
+            try:
+                with open(report_path, "r", encoding="utf-8") as f:
+                    existing_data = json.load(f)
+                    if not isinstance(existing_data, list):
+                        existing_data = [existing_data]
+            except json.JSONDecodeError:
+                logger.warning(
+                    f"Could not decode existing JSON in {report_path}, creating new file"
+                )
+                existing_data = []
+
+        # Add the new report to the list of reports
+        existing_data.append(report)
+
+        # Write the updated data back to the file
+        with open(report_path, "w", encoding="utf-8") as f:
+            json.dump(existing_data, f, indent=4)
+
+        logger.info("Metrics report saved to %s", report_path)
         return report_path
 
 
@@ -368,12 +397,14 @@ def calculate_all_metrics(
 
     Args:
         y_true: Ground truth labels (0 or 1)
-        y_pred: Predicted probabilities
+        y_pred: Predicted probabilities (0..1)
         threshold: Threshold to convert probabilities to binary predictions
 
     Returns:
         Dictionary containing all metrics
     """
+    recall = calculate_recall(y_true, y_pred, threshold)
+    specificity = calculate_specificity(y_true, y_pred, threshold)
     return {
         "auroc": calculate_auroc(y_true, y_pred),
         "auprc": calculate_auprc(y_true, y_pred),
@@ -382,7 +413,8 @@ def calculate_all_metrics(
         "f1_score": calculate_f1_score(y_true, y_pred, threshold),
         "accuracy": calculate_accuracy(y_true, y_pred, threshold),
         "precision": calculate_precision(y_true, y_pred, threshold),
-        "recall": calculate_recall(y_true, y_pred, threshold),
+        "recall": recall,
+        "balanced_accuracy": (recall + specificity) / 2,
     }
 
 

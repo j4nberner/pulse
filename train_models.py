@@ -59,20 +59,21 @@ class ModelTrainer:
         if self.config.general.debug_mode:
             logger.info("DEBUG MODE ACTIVE: Training will use only one batch")
 
-        results = {}
-
         # Train and evaluate each model on each dataset
         for dataset_name, _ in self.dm.datasets.items():
             logger.info("Processing dataset: %s", dataset_name)
-            results[dataset_name] = {}
             # Extract task from dataset_name (format: task_dataset)
             task_name = (
                 dataset_name.split("_")[0] if "_" in dataset_name else dataset_name
             )
+            dataset_name_split = dataset_name.split("_")[-1]
+
             logger.info(f"Extracted task: {task_name}")
 
             for model in self.mm.models:
                 model_name = model.__class__.__name__
+                model.dataset_name = dataset_name_split
+                model.task_name = task_name
                 trainer_name = model.trainer_name
                 logger.info("--" * 30)
                 logger.info("Training model: %s on %s", model_name, dataset_name)
@@ -113,7 +114,7 @@ class ModelTrainer:
                         val_loader = (X_val, y_val)
                         test_loader = (X_test, y_test)
                     elif model.type == "LLM":
-                        # TODO: Decide wheather to use DataLoader or not for LLMs. Tokenize?
+                        # Passing the text and labels directly for LLMs
                         train_loader = (X_train, y_train)
                         val_loader = (X_val, y_val)
                         test_loader = (X_test, y_test)
@@ -168,6 +169,7 @@ class ModelTrainer:
                     model.set_trainer(
                         trainer_name, train_loader, val_loader, test_loader
                     )
+
                     # Train and evaluate the model -> model specific
                     model.trainer.train()
 

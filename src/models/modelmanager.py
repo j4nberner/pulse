@@ -64,20 +64,21 @@ class ModelManager:
                     output_dir=self.output_dir,
                 )  # Pass parameters to model constructor
 
-                # Load model weights if path is specified
-                if config.get("pretrained_model_path", None):
-                    try:
-                        model.load_model_weights(config["pretrained_model_path"])
-                        logger.info(
-                            "Loaded pretrained model weights from %s",
-                            config["pretrained_model_path"],
-                        )
-                    except Exception as e:
-                        logger.warning(
-                            "Failed to load pretrained model weights from %s: %s. Defaulting to random initialization.",
-                            config["pretrained_model_path"],
-                            str(e),
-                        )
+                # TODO: set in model file
+                # # Load model weights if path is specified
+                # if config.get("pretrained_model_path", None):
+                #     try:
+                #         model.load_model_weights(config["pretrained_model_path"])
+                #         logger.info(
+                #             "Loaded pretrained model weights from %s",
+                #             config["pretrained_model_path"],
+                #         )
+                #     except Exception as e:
+                #         logger.warning(
+                #             "Failed to load pretrained model weights from %s: %s. Defaulting to random initialization.",
+                #             config["pretrained_model_path"],
+                #             str(e),
+                #         )
 
                 prepared_models.append(model)
                 logger.info("Model '%s' prepared successfully", model_name)

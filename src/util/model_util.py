@@ -245,3 +245,20 @@ def prepare_data_for_model_dl(
         log.error(f"Error preparing data: {e}")
 
     return result
+
+
+def apply_model_prompt_format(model_id, prompt):
+    """
+    Apply model-specific prompt formatting.
+
+    Args:
+        model_id (str): The ID of the model.
+        prompt (str): The prompt to format.
+    """
+    # Example formatting for Llama3
+    if model_id == "Llama3Model":
+        formatted_prompt = f"<|USER|>{prompt}<|ASSISTANT|>"
+    else:
+        formatted_prompt = prompt  # No formatting needed for other models
+
+    return formatted_prompt

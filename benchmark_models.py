@@ -26,6 +26,8 @@ class ModelBenchmark:
         Args:
             config (TrainConfig): Configuration object containing training settings.
         """
+        raise NotImplementedError("ModelBenchmark is not implemented yet.")
+
         self.config = config
 
         # Log debug mode status
@@ -99,10 +101,8 @@ class ModelBenchmark:
                             drop_last=True,
                         )
 
-                    
                     # Set trainer for the model
                     model.eval(test_loader)
-                    
 
                 except Exception as e:
                     logger.error(

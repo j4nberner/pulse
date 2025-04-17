@@ -127,6 +127,13 @@ class CNNModel(PulseTemplateModel, nn.Module):
         )
         # -------------------------Define layers-------------------------
 
+    def configurechannels(self):
+        """
+        Configure the number of input channels for the model based on the input shape.
+        This method is called after the Trainer has loaded the correct data shape.
+        It sets the number of channels based on the input shape and the windowing configuration.
+        """
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
         Forward pass through the CNN model.
@@ -191,7 +198,22 @@ class CNNTrainer:
         os.makedirs(self.model_save_dir, exist_ok=True)
 
         # Data preparation
-        self._prepare_data()
+        # TODO: this function will be updated
+        batch, channel_dim = self._prepare_data()
+
+        # Update the model input shape based on the data
+        cnn_model.params["num_channels"] = channel_dim
+        cnn_model._init_model()
+
+        # Try to load the model weights if they exist
+        if cnn_model.pretrained_model_path:
+            try:
+                cnn_model.load_model_weights(cnn_model.pretrained_model_path)
+            except Exception as e:
+                logger.warning(
+                    "Failed to load pretrained model weights: %s. Defaulting to random initialization.",
+                    str(e),
+                )
 
     def train(self):
         """Training loop."""
@@ -309,6 +331,7 @@ class CNNTrainer:
 
         # Log input data shape
         logger.info(f"Input data shape: {data_prep_result['data_shape']}")
+        return data_prep_result["data_shape"]
 
     # TODO: Move this to a separate function in model_util.py
     def _transform_features(self, features):
