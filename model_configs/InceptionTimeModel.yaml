@@ -9,14 +9,15 @@ params:
   # Training parameters
   num_epochs: 10 # should be 60! for our experiments (10 for testing purposes)
   patience: 5
-  use_cuda: true
   # Model architecture
   depth: 12
   dropout_rate: 0.3
   # Optimizer settings
-  optimizer_name: "adamw" # Options: adam, adamw, sgd
+  optimizer_name: "adam" # Options: adam, adamw, sgd
   learning_rate: 0.01
   weight_decay: 0.01
   # Scheduler settings
   factor: 0.9
   min_lr: 0.001
+ 
+ #TODO: add scheduler_patience (see GRU)

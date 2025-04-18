@@ -10,10 +10,7 @@ import wandb
 import os
 
 from src.models.pulsetemplate_model import PulseTemplateModel
-from src.util.model_util import (
-    save_torch_model,
-    prepare_data_for_model_dl,
-)
+from src.util.model_util import (save_torch_model, prepare_data_for_model_dl)
 from src.eval.metrics import MetricsTracker
 
 # Set up logger
@@ -95,9 +92,7 @@ class InceptionTimeModel(PulseTemplateModel, nn.Module):
             if val_loss > self.best_val_loss - self.delta:
                 self.counter += 1
                 if self.verbose:
-                    logger.info(
-                        f"EarlyStopping counter: {self.counter} out of {self.patience}"
-                    )
+                    logger.info(f"EarlyStopping counter: {self.counter} out of {self.patience}")
                 if self.counter >= self.patience:
                     self.early_stop = True
             else:
@@ -139,7 +134,6 @@ class InceptionTimeModel(PulseTemplateModel, nn.Module):
             'verbose',
             'num_epochs',
             'patience',
-            'use_cuda',
             'depth',
             'dropout_rate',
             'optimizer_name',
@@ -320,6 +314,15 @@ class InceptionTimeTrainer:
     """
 
     def __init__(self, model, train_loader, val_loader, test_loader):
+        """
+        Initialize the InceptionTime trainer.
+        
+        Args:
+            model: The GRU model to train.
+            train_loader: DataLoader for training data.
+            val_loader: DataLoader for validation data.
+            test_loader: DataLoader for testing data.
+        """
         self.model = model
         self.params = model.params
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -356,10 +359,12 @@ class InceptionTimeTrainer:
         elif self.optimizer_name == "sgd":
             self.optimizer = optim.SGD(self.model.parameters(), lr=lr, weight_decay=weight_decay)
 
-        self.criterion = nn.BCEWithLogitsLoss()
+        # Set criterion after calculating class weights for imbalanced datasets
+        self.pos_weight = self._calculate_pos_weight()
+        self.criterion = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([self.pos_weight]).to(self.device))
 
         logger.info(f"Using optimizer: {self.optimizer.__class__.__name__}")
-        logger.info(f"Using criterion: {self.criterion.__class__.__name__}")
+        logger.info(f"Using criterion: {self.criterion.__class__.__name__} with class weight adjustment")
 
         # Initialize scheduler
         factor = self.params["factor"]
@@ -393,6 +398,29 @@ class InceptionTimeTrainer:
         logger.info(f"Input shape to model (after transformation): {transformed_features.shape}")
         logger.info(f"Model architecture initialized with {num_channels} input channels")
 
+    def _calculate_pos_weight(self):
+        """Calculate positive class weight for imbalanced data."""
+        try:
+            all_labels = []
+            for _, labels in self.train_loader:
+                all_labels.extend(labels.cpu().numpy().flatten())
+            
+            all_labels = np.array(all_labels)
+            neg_count = np.sum(all_labels == 0)
+            pos_count = np.sum(all_labels == 1)
+            
+            if pos_count == 0:
+                logger.warning("No positive samples found, using pos_weight=1.0")
+                return 1.0
+                
+            weight = neg_count / pos_count
+            logger.info(f"Class imbalance - Neg: {neg_count}, Pos: {pos_count}, Weight: {weight}")
+            return weight
+            
+        except Exception as e:
+            logger.error(f"Error calculating class weights: {e}")
+            return 1.0
+        
     def train(self):
         """Training loop."""
             
@@ -406,7 +434,8 @@ class InceptionTimeTrainer:
             "val_loss": []
         }
 
-        logger.info("Starting training...")
+        logger.info(f"Starting training on device: {self.device}")
+
         for epoch in range(self.params["num_epochs"]):
             early_stopped = self.train_epoch(epoch, verbose=self.params["verbose"])
 
@@ -438,17 +467,16 @@ class InceptionTimeTrainer:
         Args:
             epoch (int): Current epoch number.
             verbose (int): Verbosity level (0, 1, or 2).
+        
+        Returns:
+            Boolean indicating if early stopping was triggered
         """
         self.model.train()
         train_loss = 0.0
 
         for batch_idx, (features, labels) in enumerate(self.train_loader):
             features = self.converter.convert_batch_to_3d(features)
-
-            features, labels = (
-                features.to(self.device),
-                labels.to(self.device).float(),
-            )
+            features, labels = features.to(self.device), labels.to(self.device).float()
 
             # Forward pass
             self.optimizer.zero_grad()
@@ -461,42 +489,46 @@ class InceptionTimeTrainer:
 
             train_loss += loss.item()
 
-            # Calculate average loss
-            avg_train_loss = train_loss / len(self.train_loader)
-            self.metrics["train_loss"].append(avg_train_loss)
+            # Log progress for each batch if verbose=2, or every 100 batches if verbose=1
+            if verbose == 2 or verbose == 1 and batch_idx % 100 == 0:
+                logger.info(f"Epoch {epoch+1}, Batch {batch_idx+1}/{len(self.train_loader)}, Loss: {loss.item():.4f}")
+        
+        # Calculate average loss for the epoch
+        avg_train_loss = train_loss / len(self.train_loader)
+        self.metrics["train_loss"].append(avg_train_loss)
 
-            # Validation phase
-            val_loss = self._validate()
-            self.metrics["val_loss"].append(val_loss)
+        # Validation phase
+        val_loss = self._validate()
+        self.metrics["val_loss"].append(val_loss)
 
-            # Update learning rate
-            # TODO: Lakmal will give feedback on whether to use val_loss or train_loss for learning rate update
-            self.scheduler.step(val_loss)
+        # Update learning rate
+        # TODO: Lakmal will give feedback on whether to use val_loss or train_loss for learning rate update
+        self.scheduler.step(val_loss)
 
-            # Log progress
-            logger.info(
-                f"Epoch {epoch+1}/{self.params["num_epochs"]} - "
-                f"Train Loss: {avg_train_loss:.4f}, "
-                f"Val Loss: {val_loss:.4f}, "
-                f"LR: {self.optimizer.param_groups[0]['lr']:.6f}"
+        # Log progress
+        logger.info(
+            f"Epoch {epoch+1}/{self.params["num_epochs"]} - "
+            f"Train Loss: {avg_train_loss:.4f}, "
+            f"Val Loss: {val_loss:.4f}, "
+            f"LR: {self.optimizer.param_groups[0]['lr']:.6f}"
+        )
+        
+        # Log to WandB if enabled
+        if self.wandb:
+            wandb.log(
+                {
+                    "epoch": epoch + 1,
+                    "train_loss": avg_train_loss,
+                    "val_loss": val_loss,
+                    "learning_rate": self.optimizer.param_groups[0]["lr"],
+                }
             )
-            
-            # Log to WandB if enabled
-            if self.wandb:
-                wandb.log(
-                    {
-                        "epoch": epoch + 1,
-                        "train_loss": avg_train_loss,
-                        "val_loss": val_loss,
-                        "learning_rate": self.optimizer.param_groups[0]["lr"],
-                    }
-                )
 
-            # Check early stopping
-            self.model.early_stopping(val_loss, self.model)
-            if self.model.early_stopping.early_stop:
-                return True # Return True to indicate early stopping was triggered
-            return False # Return False if early stopping was not triggered
+        # Check early stopping
+        self.model.early_stopping(val_loss, self.model)
+        if self.model.early_stopping.early_stop:
+            return True # Return True to indicate early stopping was triggered
+        return False # Return False if early stopping was not triggered
 
     def _validate(self):
         """Validate the model and return validation loss."""
@@ -518,32 +550,54 @@ class InceptionTimeTrainer:
         return val_loss / len(self.val_loader)
 
     def evaluate(self):
-        """Evaluate the model on the specified data loader."""
+        """
+        Evaluate the model on the test set with comprehensive metrics.
+        Logs all metrics to wandb and returns the results.
+        """
         metrics_tracker = MetricsTracker(self.model.model_name, self.model.save_dir)
         self.model.eval()
-
+        
+        # Track both batches and per-batch metrics for logging
+        batch_metrics = []
+        
         with torch.no_grad():
             for batch_idx, (features, labels) in enumerate(self.test_loader):
+                # Convert features for the model
                 features = self.converter.convert_batch_to_3d(features)
-                features, labels = (
-                    features.to(self.device),
-                    labels.to(self.device).float(),
-                )
+                features, labels = features.to(self.device), labels.to(self.device).float()
+                
+                # Forward pass
                 outputs = self.model(features)
-                _, predicted = torch.max(outputs.data, 1)
+                
+                # Get predictions (sigmoid for binary classification)
+                probs = torch.sigmoid(outputs).squeeze()
+                preds = (probs >= 0.5).int()
+                
+                # Calculate batch accuracy for logging
+                batch_accuracy = (preds == labels).sum().item() / labels.size(0)
+                batch_metrics.append(batch_accuracy)
 
-                accuracy = (predicted == labels).sum().item() / labels.size(0)
-
-                # Append results to metrics tracker
-                metrics_tracker.add_results(predicted.cpu().numpy(), labels.cpu().numpy())
-                if self.params["verbose"] == 2 or (self.params["verbose"] == 1 and batch_idx % 10 == 9):
-                    logger.info(
-                        f"Evaluating batch {batch_idx + 1}: " f"Accuracy = {accuracy}"
-                    )
-
-                    if self.wandb:
-                        wandb.log({"accuracy": accuracy})
-
-        # Calculate and log metrics
+                # Add results to metrics tracker
+                metrics_tracker.add_results(preds.cpu().numpy(), labels.cpu().numpy())
+                
+                # Log batch progress if verbose
+                if self.params["verbose"] == 2 or (self.params["verbose"] == 1 and batch_idx % 100 == 0):
+                    logger.info(f"Evaluating batch {batch_idx+1}/{len(self.test_loader)}: Accuracy = {batch_accuracy:.4f}")
+        
+        # Calculate comprehensive metrics
         metrics_tracker.summary = metrics_tracker.compute_overall_metrics()
         metrics_tracker.save_report()
+        
+        # Log results to console
+        logger.info(f"Test evaluation completed for {self.model.model_name}")
+        logger.info(f"Test metrics: {metrics_tracker.summary}")
+        logger.info(f"Average batch accuracy: {sum(batch_metrics)/len(batch_metrics):.4f}")
+        
+        # Log all metrics to wandb if enabled
+        if self.wandb:
+            # Create a dictionary with all metrics
+            wandb_metrics = {f"test_{k}": v for k, v in metrics_tracker.summary.items()}
+            # Add average batch accuracy
+            wandb_metrics["test_avg_batch_accuracy"] = sum(batch_metrics)/len(batch_metrics)
+            # Log all metrics at once
+            wandb.log(wandb_metrics)

@@ -5,6 +5,7 @@ import re
 from tqdm import tqdm
 import gc
 import logging
+import torch
 from src.preprocessing.preprocessing_baseline.preprocessing_baseline import PreprocessorBaseline
 
 # Set up logger
@@ -484,7 +485,7 @@ class WindowedDataTo3D:
         
         self.logger.info(f"Converter configured: windowed={windowing_enabled}, input_shape={input_shape}")
 
-    def convert_batch_to_3d(self, batch_features, window_size=None, static_feature_count=4, id_column_index=0):
+    def convert_batch_to_3d(self, batch_features, window_size=None, static_feature_count=4, id_column_index=None):
         """
         Convert a batch of features from 2D to 3D format suitable for temporal models.
         Works with tensors extracted directly from the dataloader.
@@ -493,15 +494,11 @@ class WindowedDataTo3D:
             batch_features (torch.Tensor): Batch of features in 2D format (batch_size, n_features)
             window_size (int, optional): Size of the time window. Defaults to self.window_size
             static_feature_count (int): Number of static features (excluding id_column)
-            id_column_index (int): Index of the ID column to exclude (typically 0 for stay_id)
+            id_column_index (int): Index of the ID column to exclude (typically 0 for stay_id) -> in our case None because stay_id is dropped in dataloader
             
         Returns:
             torch.Tensor: 3D tensor ready for DL model input
         """
-
-        # TODO: adjust now that stay_id is dropped in dataloader?
-
-        import torch
         
         # If already 3D, return as is
         if len(batch_features.shape) == 3 or not self.needs_conversion:
