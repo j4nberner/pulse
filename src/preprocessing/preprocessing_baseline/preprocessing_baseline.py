@@ -470,9 +470,6 @@ class PreprocessorBaseline:
         # For y, take the label of the last row for each stay_id
         y_reshaped = y.groupby('stay_id')['label'].last().reset_index()
         
-        if set_name:
-            logger.info(f"Reshaped mortality data - {set_name}: X shape {X_reshaped.shape}, y shape {y_reshaped.shape}")
-        
         return X_reshaped, y_reshaped
 
     def calculate_dataset_statistics(
@@ -710,10 +707,10 @@ class PreprocessorBaseline:
             if save_data is None:
                 save_data = self.config['save_data']
             
-            logger.info(f"{'#'*40}")
+            logger.info(f"{'='*40}")
             logger.info(f"Processing Task: {task}, Dataset: {dataset_name}")
             logger.info(f"Active preprocessing options: {self.config}")
-            logger.info(f"{'#'*40}")
+            logger.info(f"{'='*40}")
             
             # Load parquet files
             logger.info("Loading parquet files (original harmonized datasets)...")
@@ -807,14 +804,6 @@ class PreprocessorBaseline:
                 X_val_imputed, y_val = self.reshape_mortality_data(X_val_imputed, y_val, set_name="val")
                 X_test_imputed, y_test = self.reshape_mortality_data(X_test_imputed, y_test, set_name="test")
             
-            # Calculate statistics
-            train_stats = self.calculate_dataset_statistics(X_train_imputed, y_train, "train")
-            val_stats = self.calculate_dataset_statistics(X_val_imputed, y_val, "validation")
-            test_stats = self.calculate_dataset_statistics(X_test_imputed, y_test, "test")
-            
-            # Display statistics
-            self.print_statistics([train_stats, val_stats, test_stats])
-            
             # Add a warning about potential missing values if imputation was skipped
             if not self.config['static_imputation'] or not self.config['dynamic_imputation']:
                 na_counts = {
@@ -826,11 +815,7 @@ class PreprocessorBaseline:
                 if any(na_counts.values()):
                     logger.warning(f"Datasets contain missing values after preprocessing: {na_counts}")
                     logger.warning("This may cause issues with models that don't handle NaN values.")
-            
-            # Save data if requested
-            if save_data:
-                self.save_preprocessed_data(X_train_imputed, X_val_imputed, X_test_imputed, y_train, y_val, y_test)
-                
+
             # Final shapes
             logger.info("Final dataset shapes:")
             logger.info(f"X_train: {X_train_imputed.shape}")
@@ -839,6 +824,16 @@ class PreprocessorBaseline:
             logger.info(f"y_val: {y_val.shape}")
             logger.info(f"X_test: {X_test_imputed.shape}")
             logger.info(f"y_test: {y_test.shape}")
+
+            # Save data if requested
+            if save_data:
+                self.save_preprocessed_data(X_train_imputed, X_val_imputed, X_test_imputed, y_train, y_val, y_test)
+
+            # # Calculate and print set statistics
+            # train_stats = self.calculate_dataset_statistics(X_train_imputed, y_train, "train")
+            # val_stats = self.calculate_dataset_statistics(X_val_imputed, y_val, "validation")
+            # test_stats = self.calculate_dataset_statistics(X_test_imputed, y_test, "test")
+            # self.print_statistics([train_stats, val_stats, test_stats])
             
             return X_train_imputed, X_val_imputed, X_test_imputed, y_train, y_val, y_test
             
@@ -897,7 +892,6 @@ class PreprocessorBaseline:
             return X_train, X_val, X_test, y_train, y_val, y_test
             
         except Exception as e:
-            logger.error(f"Error loading preprocessed data: {e}")
             raise
 
     def print_statistics(self, statistics_list: List[Dict[str, Any]]) -> None:
@@ -912,9 +906,8 @@ class PreprocessorBaseline:
             logger.info("No statistics available to display")
             return
         
-        logger.info(f"{'='*40}")
+        logger.info(f"{'.'*40}")
         logger.info(f"DATASET STATISTICS - EXCEL FORMAT (Use Text to Columns with '/' as delimiter)")
-        logger.info(f"{'='*40}")
         
         # Print header row with slash delimiters
         logger.info(f"Task/Dataset/Set/Total Stays/Cases/Controls/Total Rows/Rows of Cases/Rows of Controls/Positive Labels/Negative Labels")
@@ -957,7 +950,7 @@ class PreprocessorBaseline:
                     f"{neg_labels} ({stat['Negative Labels %']})"
                 )
         
-        logger.info(f"{'='*40}")
+        logger.info(f"{'.'*40}")
 
     def _generate_preprocessing_dirname(self) -> str:
         """

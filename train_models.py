@@ -63,6 +63,7 @@ class ModelTrainer:
 
         # Train and evaluate each model on each dataset
         for task_dataset_name, _ in self.dm.datasets.items():
+            logger.info("#" * 60)
             logger.info(f"Processing dataset: {task_dataset_name}")
             results[task_dataset_name] = {}
             
@@ -110,6 +111,8 @@ class ModelTrainer:
                         task=self.config.tasks[0],
                         debug=self.config.general.debug_mode,
                         preprocessing_id=model.preprocessing_id,
+                        limit_test_set=True,
+                        print_stats=True,
                     )
 
                     # Choose the appropriate DataLoader based on model type
@@ -159,9 +162,9 @@ class ModelTrainer:
                         sys.exit(1)
 
                     # Set trainer for the model and train
-                    model.set_trainer(
-                        trainer_name, train_loader, val_loader, test_loader)
-                    model.trainer.train()
+                    # model.set_trainer(
+                    #     trainer_name, train_loader, val_loader, test_loader)
+                    # model.trainer.train()
 
                 except Exception as e:
                     logger.error(

@@ -183,10 +183,7 @@ class DatasetManager:
                 )
 
                 if windowed_data is not None:
-                    # Successfully loaded presaved windowed data
-                    # Drop 'stay_id' column if present in y sets
-                    windowed_data = self._drop_stay_id_if_present(windowed_data)
-
+                    # load presaved windowed data
                     dataset["data"] = {
                         "X_train": windowed_data["train"]["X"],
                         "X_val": windowed_data["val"]["X"],
@@ -263,9 +260,6 @@ class DatasetManager:
                     data_dict = windowed_data
                     logger.info(f"Windowing applied to {dataset_id}")
 
-            # Drop 'stay_id' column if present in y sets (after windowing)
-            data_dict = self._drop_stay_id_if_present(data_dict)
-
             # Store the processed data
             dataset["data"] = {
                 "X_train": data_dict["train"]["X"],
@@ -293,6 +287,11 @@ class DatasetManager:
             dataset_id (str): ID of the dataset
             model_name (str): Name of the model
             mode (str): train, val, or test (default: train)
+            **kwargs: Additional keyword arguments
+            - debug (bool): If True, take only 100 rows
+            - limit_test_set (bool): If True and mode is "test", limit to first 100 stay_ids
+            - print_stats (bool): If True, print statistics for the datasets
+            - preprocessing_id (str): ID of preprocessing to apply
 
         Returns:
             Tuple[pd.DataFrame, pd.DataFrame]: Features and labels
@@ -324,16 +323,45 @@ class DatasetManager:
             }
 
         # Get the appropriate split
-        if mode == "test":
-            X = data["X_test"]
-            y = data["y_test"]
+        if mode == "train":
+            X = data["X_train"]
+            y = data["y_train"]
 
         elif mode == "val":
             X = data["X_val"]
             y = data["y_val"]
+        
         else:
-            X = data["X_train"]
-            y = data["y_train"]
+            X = data["X_test"]
+            y = data["y_test"]
+
+            # Handle limited test set if requested
+            limit_test_set = kwargs.get("limit_test_set", False)
+            X_original = X.copy()
+            y_original = y.copy()
+
+            if limit_test_set:
+                logger.info(f"Limiting test set to first 100 stay_ids for {dataset_id}")
+                # Get unique stay_ids in ascending order
+                unique_stay_ids = sorted(X["stay_id"].unique())
+                # Take only the first 100 stay_ids (or all if less than 100)
+                selected_stay_ids = unique_stay_ids[:100]
+                # Filter X and y to include only the selected stay_ids
+                X_limited = X[X["stay_id"].isin(selected_stay_ids)]
+                y_limited = y[y["stay_id"].isin(selected_stay_ids)]
+
+                # Replace X and y with the limited versions
+                X = X_limited
+                y = y_limited
+
+            # Print statistics if requested (Print train, val and both original and limited test set statistics to compare distributions)
+            print_stats = kwargs.get("print_stats", False)
+            if print_stats:
+                train_stats = self.preprocessor.calculate_dataset_statistics(data["X_train"], data["y_train"], "train")
+                val_stats = self.preprocessor.calculate_dataset_statistics(data["X_val"], data["y_val"], "val")
+                test_stats = self.preprocessor.calculate_dataset_statistics(X_original, y_original, "test")
+                test_limited_stats = self.preprocessor.calculate_dataset_statistics(X_limited, y_limited, "test_limited100")
+                self.preprocessor.print_statistics([train_stats, val_stats, test_stats, test_limited_stats])
 
         # Apply any model-specific preprocessing if needed. Prompt engineering for LLMs, tokenization, etc.
 
@@ -351,11 +379,18 @@ class DatasetManager:
                 # No specific preprocessing needed
                 logger.info(f"No specific preprocessing needed for {dataset_id}")
 
+        
+        # Drop stay_id columns from X and y sets if present
+        if "stay_id" in X.columns:
+            X = X.drop(columns=["stay_id"])
+        if "stay_id" in y.columns:
+            y = y.drop(columns=["stay_id"])
+
         return X, y
 
     def _drop_stay_id_if_present(self, data_dict: dict) -> dict:
         """
-        Check if y sets have 'stay_id' column and drop it if present.
+        Check if X and y sets have 'stay_id' column and drop it if present.
 
         Args:
             data_dict (dict): Dictionary containing X and y data splits
@@ -363,17 +398,24 @@ class DatasetManager:
         Returns:
             dict: The modified data dictionary
         """
-        # TODO: should X keep the stay_id?
-
+        # Log only once before processing all splits
+        logger.info(f"Dropping 'stay_id' column from all features and labels")
+        
         for split in ["train", "val", "test"]:
-            if split in data_dict and "y" in data_dict[split]:
-                y_data = data_dict[split]["y"]
-                if isinstance(y_data, pd.DataFrame) and "stay_id" in y_data.columns:
-                    logger.info(f"Dropping 'stay_id' column from train/val/test labels")
-                    data_dict[split]["y"] = y_data.drop(columns=["stay_id"])
+            if split in data_dict:
+                # Drop stay_id from X if present
+                if "X" in data_dict[split]:
+                    X_data = data_dict[split]["X"]
+                    if isinstance(X_data, pd.DataFrame) and "stay_id" in X_data.columns:
+                        data_dict[split]["X"] = X_data.drop(columns=["stay_id"])
+                
+                # Drop stay_id from y if present
+                if "y" in data_dict[split]:
+                    y_data = data_dict[split]["y"]
+                    if isinstance(y_data, pd.DataFrame) and "stay_id" in y_data.columns:
+                        data_dict[split]["y"] = y_data.drop(columns=["stay_id"])
 
         return data_dict
-
 
 class TorchDatasetWrapper(Dataset):
     """
