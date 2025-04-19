@@ -10,8 +10,6 @@ from src.data.dataloader import DatasetManager, TorchDatasetWrapper
 from src.models.modelmanager import ModelManager
 from src.util.slurm_util import copy_data_to_scratch, is_on_slurm, get_local_scratch_dir
 from src.util.config_util import load_config_with_models, save_config_file
-import wandb
-
 
 logger, output_dir = setup_logger()
 
@@ -53,6 +51,7 @@ class ModelTrainer:
     def run(self):
         """Run the training process for all configured models and datasets."""
         logger.info("Starting training process...")
+        timestamp = pd.Timestamp.now().strftime("%Y%m%d_%H%M%S")
 
         # Check if debug mode is enabled
         if self.config.general.debug_mode:
@@ -61,6 +60,8 @@ class ModelTrainer:
         # Train and evaluate each model on each dataset
         for task_dataset_name, _ in self.dm.datasets.items():
             logger.info(f"Processing dataset: {task_dataset_name}")
+            # Create a group name for wandb using task_dataset_name and timestamp
+            wand_group_name = f"{task_dataset_name}_{timestamp}"
 
             # Extract task from dataset_name (format: task_dataset)
             task_name = task_dataset_name.split("_")[0]
@@ -85,7 +86,7 @@ class ModelTrainer:
                     # Create wandb config as OmegaConf object
                     wandb_config = OmegaConf.create(
                         {
-                            "task_dataset_name": task_dataset_name,
+                            "task_dataset_name": wand_group_name,
                             "model_name": model_name,
                             "run_name": run_name,
                         }
