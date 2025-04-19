@@ -1,6 +1,7 @@
 import os
 import logging
 from datetime import datetime
+from omegaconf import OmegaConf
 import wandb
 
 logger = logging.getLogger("PULSE_logger")
@@ -41,14 +42,27 @@ def setup_logger():
 
 
 # Initialize wandb
-def init_wandb(config):
-    """Initialize Weights & Biases for experiment tracking"""
+def init_wandb(config: OmegaConf) -> bool:
+    """
+    Initialize Weights & Biases for experiment tracking
+
+    Args:
+        config (OmegaConf): Configuration object containing wandb settings.
+    """
+    if wandb.run is not None:
+        wandb.finish()
     try:
         wandb.init(
-            entity=config.wandb["entity"],
-            name=config.experiment_name,
+            entity=config.wandb["entity"],  # needed for wandb
+            name=config.get("run_name", None),  # optional run name
+            group=config.get("task_dataset_name", None),  # optional group name
             config={k: v for k, v in vars(config).items() if not k.startswith("_")},
+            reinit=True,
         )
+        # Log model architecture if available
+        # if hasattr(model, "get_config"):
+        #     wandb.config.update(model.get_config())
+
         logger.info("Weights & Biases initialized successfully")
         return True
     except Exception as e:

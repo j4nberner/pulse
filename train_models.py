@@ -2,16 +2,15 @@ import argparse
 import os
 import sys
 import pandas as pd
-import yaml
 from torch.utils.data import DataLoader
 from omegaconf import OmegaConf
-import shutil
 
 from src.logger_setup import setup_logger, init_wandb
 from src.data.dataloader import DatasetManager, TorchDatasetWrapper
 from src.models.modelmanager import ModelManager
 from src.util.slurm_util import copy_data_to_scratch, is_on_slurm, get_local_scratch_dir
 from src.util.config_util import load_config_with_models, save_config_file
+import wandb
 
 
 logger, output_dir = setup_logger()
@@ -62,7 +61,6 @@ class ModelTrainer:
         # Train and evaluate each model on each dataset
         for task_dataset_name, _ in self.dm.datasets.items():
             logger.info(f"Processing dataset: {task_dataset_name}")
-            results[task_dataset_name] = {}
 
             # Extract task from dataset_name (format: task_dataset)
             task_name = task_dataset_name.split("_")[0]
@@ -79,6 +77,22 @@ class ModelTrainer:
                 trainer_name = model.trainer_name
                 logger.info("--" * 30)
                 logger.info(f"Training model: {model_name} on {task_dataset_name}")
+
+                # Initialize wandb tracing for this model/dataset/task combination
+                if self.config.wandb.get("enabled", False):
+                    # Create a unique run name for this model-dataset combination
+                    run_name = f"{model_name}_{task_dataset_name}"
+                    # Create wandb config as OmegaConf object
+                    wandb_config = OmegaConf.create(
+                        {
+                            "task_dataset_name": task_dataset_name,
+                            "model_name": model_name,
+                            "run_name": run_name,
+                        }
+                    )
+                    # Merge the configurations using OmegaConf
+                    wandb_config = OmegaConf.merge(wandb_config, self.config)
+                    init_wandb(wandb_config)
 
                 try:
                     # Preprocess data for corresponding model
@@ -206,8 +220,8 @@ def main():
     if is_on_slurm():
         logger.info(f"Running on Slurm cluster (Job ID: {os.getenv('SLURM_JOB_ID')})")
 
-    if config.wandb["enabled"]:
-        init_wandb(config)  # Initialize Weights & Biases
+    # if config.wandb["enabled"]:
+    #     init_wandb(config)  # Initialize Weights & Biases
 
     # Run training
     trainer = ModelTrainer(config)

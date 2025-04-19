@@ -11,11 +11,11 @@ from src.models.pulsetemplate_model import PulseTemplateModel
 from src.util.model_util import (
     save_torch_model,
     prepare_data_for_model_dl,
+    EarlyStopping,
 )
 from src.eval.metrics import MetricsTracker
 
 logger = logging.getLogger("PULSE_logger")
-# TODO: testloader namen ändern
 
 
 class CNNModel(PulseTemplateModel, nn.Module):
@@ -44,7 +44,6 @@ class CNNModel(PulseTemplateModel, nn.Module):
 
         # Define all required parameters
         required_params = [
-            "num_inputs",
             "output_shape",
             "kernel_size",
             "pool_size",
@@ -69,12 +68,15 @@ class CNNModel(PulseTemplateModel, nn.Module):
         logger.info(f"Initializing CNN with parameters: {self.params}")
 
         # Set the number of channels based on the input shape
+        self.params["num_channels"] = (
+            10  # overwritten in trainer. needs to be > 1 for normalization to work
+        )
         if params["preprocessing_advanced"]["windowing"]["enabled"]:
-            self.params["num_channels"] = params["preprocessing_advanced"]["windowing"][
+            self.params["window_size"] = params["preprocessing_advanced"]["windowing"][
                 "data_window"
             ]
         else:
-            self.params["num_channels"] = 1  # Default to 1 channel for 1 timestamp
+            self.params["window_size"] = 1  # Default to 1
 
         self._init_model()
 
@@ -89,71 +91,63 @@ class CNNModel(PulseTemplateModel, nn.Module):
             in_channels=self.params["num_channels"],
             out_channels=self.params["num_channels"] * 4,
             kernel_size=self.params["kernel_size"],
-            stride=1,
             padding=self.params["kernel_size"] // 2,
+            stride=1,
         )
-        self.bn1 = nn.BatchNorm1d(self.params["num_channels"] * 4)
-        self.leaky_relu = nn.ReLU()
-        self.pool1 = nn.MaxPool1d(kernel_size=self.params["pool_size"])
-
         self.conv2 = nn.Conv1d(
             in_channels=self.params["num_channels"] * 4,
             out_channels=self.params["num_channels"] * 2,
-            kernel_size=3,
-            padding=1,
+            kernel_size=self.params["kernel_size"],
+            padding=self.params["kernel_size"] // 2,
         )
-        self.bn2 = nn.BatchNorm1d(self.params["num_channels"] * 2)
         self.conv3 = nn.Conv1d(
             in_channels=self.params["num_channels"] * 2,
             out_channels=self.params["num_channels"] * 1,
-            kernel_size=5,
-            padding=1,
+            kernel_size=self.params["kernel_size"],
+            padding=self.params["kernel_size"] // 2,
         )
-        self.bn3 = nn.BatchNorm1d(self.params["num_channels"] * 1)
-        self.pool = nn.MaxPool1d(kernel_size=self.params["pool_size"])
-        self.dropout = nn.Dropout(0.5)
 
-        # Fully connected layer
-        pooled_size = (self.params["num_inputs"] // self.params["pool_size"]) // 2
-        # TODO: use pooled_size when input is fixed. hardcoded for now...
-        self.fc1 = nn.Linear(
-            self.params["num_channels"] * 49,
-            self.params["num_channels"] * 49 // 2,
+        self.norm1 = nn.GroupNorm(
+            num_groups=1, num_channels=self.params["num_channels"] * 4
         )
-        self.fc2 = nn.Linear(
-            self.params["num_channels"] * 1 * 49 // 2,
-            self.params["output_shape"],
+        self.norm2 = nn.GroupNorm(
+            num_groups=1, num_channels=self.params["num_channels"] * 2
         )
+        self.norm3 = nn.GroupNorm(
+            num_groups=1, num_channels=self.params["num_channels"]
+        )
+
+        self.leaky_relu = nn.ReLU()
+
+        self.pool = nn.MaxPool1d(kernel_size=self.params["pool_size"])
+        self.dropout = nn.Dropout(0.1)
+        self.flatten = nn.Flatten()
+
+        # Dummy forward to calculate fc1 input size
+        with torch.no_grad():
+            dummy_input = torch.zeros(
+                1, self.params["num_channels"], self.params["window_size"]
+            )
+            dummy_output = self._forward_features(dummy_input)
+            flattened_size = dummy_output.view(1, -1).size(1)
+
+        self.fc1 = nn.Linear(flattened_size, flattened_size // 2)
+        self.fc2 = nn.Linear(flattened_size // 2, self.params["output_shape"])
+
         # -------------------------Define layers-------------------------
 
-    def configurechannels(self):
-        """
-        Configure the number of input channels for the model based on the input shape.
-        This method is called after the Trainer has loaded the correct data shape.
-        It sets the number of channels based on the input shape and the windowing configuration.
-        """
+    def _forward_features(self, x):
+        x = self.leaky_relu(self.norm1(self.conv1(x)))
+        x = self.leaky_relu(self.norm2(self.conv2(x)))
+        x = self.leaky_relu(self.norm3(self.conv3(x)))
+        return x
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """
-        Forward pass through the CNN model.
-
-        Args:
-            x (torch.Tensor): Input tensor of shape [batch_size, num_inputs, seq_length]
-
-        Returns:
-            torch.Tensor: Output tensor of shape [batch_size, output_shape]
-
-
-        """
-        x = self.leaky_relu(self.bn1(self.conv1(x)))
-        x = self.leaky_relu(self.bn2(self.conv2(x)))
-        x = self.leaky_relu(self.bn3(self.conv3(x)))
-        x = self.pool(x)
-        x = x.view(x.size(0), -1)  # Flatten
+    def forward(self, x):
+        x = self._forward_features(x)
+        x = self.flatten(x)
         x = self.dropout(x)
         x = self.leaky_relu(self.fc1(x))
-        x = self.fc2(x)
-        return x
+        return self.fc2(x)
 
     def set_trainer(
         self, trainer_name: str, train_loader, val_loader, test_loader
@@ -188,6 +182,10 @@ class CNNTrainer:
         self.model_save_dir = os.path.join(cnn_model.save_dir, "Models")
         self.task_name = self.model.task_name
         self.dataset_name = self.model.dataset_name
+        self.early_stopping = EarlyStopping(
+            patience=self.params["early_stopping_rounds"],
+            delta=0.0,
+        )
 
         # Log optimizer and criterion
         logger.info(f"Using optimizer: {self.optimizer.__class__.__name__}")
@@ -196,18 +194,28 @@ class CNNTrainer:
         # Create model save directory if it doesn't exist
         os.makedirs(self.model_save_dir, exist_ok=True)
 
-        # Data preparation
-        # TODO: this function will be updated
-        batch, channel_dim = self._prepare_data()
+        # Get the configured data converter
+        self.converter = prepare_data_for_model_dl(
+            self.train_loader,
+            self.params,
+            model_name=self.model.model_name,
+            task_name=self.task_name,
+        )
+        # To identify num_channels: Get a sample batch and transform using the converter
+        features, _ = next(iter(self.train_loader))
+        transformed_features = self.converter.convert_batch_to_3d(features)
+
+        # Get the number of channels from the transformed features
+        num_channels = transformed_features.shape[1]
 
         # Update the model input shape based on the data
-        cnn_model.params["num_channels"] = channel_dim
-        cnn_model._init_model()
+        self.model.params["num_channels"] = num_channels
+        self.model._init_model()
 
         # Try to load the model weights if they exist
-        if cnn_model.pretrained_model_path:
+        if self.model.pretrained_model_path:
             try:
-                cnn_model.load_model_weights(cnn_model.pretrained_model_path)
+                self.model.load_model_weights(self.model.pretrained_model_path)
             except Exception as e:
                 logger.warning(
                     "Failed to load pretrained model weights: %s. Defaulting to random initialization.",
@@ -216,7 +224,6 @@ class CNNTrainer:
 
     def train(self):
         """Training loop."""
-        save_checkpoint = self.params["save_checkpoint"]
         num_epochs = self.params["num_epochs"]
         verbose = self.params.get("verbose", 1)
 
@@ -228,16 +235,15 @@ class CNNTrainer:
         for epoch in range(num_epochs):
             self.train_epoch(epoch, verbose)
             logger.info(f"Epoch {epoch + 1} finished")
-            # Save checkpoint every epoch
-            checkpoint_name = f"{self.model.model_name}_epoch_{epoch + 1}"
-            checkpoint_path = os.path.join(self.model_save_dir, "Checkpoints")
-            if save_checkpoint != 0 and epoch % save_checkpoint == 0:
-                save_torch_model(checkpoint_name, self.model, checkpoint_path)
+            val_loss = self.evaluate(self.val_loader)  # Evaluate on validation set
+            self.early_stopping(val_loss, self.model)
 
-            logger.info("Training finished.")
-            self.evaluate(self.val_loader)
+        self.early_stopping.load_best_model(self.model)  # Load the best model
+        self.evaluate(
+            self.test_loader, save_report=True
+        )  # Evaluate on test set and save metrics
         save_torch_model(
-            self.model.model_name, self.model, self.model_save_dir
+            self.model.model_name, self.model, self.model.save_dir
         )  # Save the final model
 
     def train_epoch(self, epoch: int, verbose: int = 1) -> None:
@@ -266,59 +272,58 @@ class CNNTrainer:
             self.optimizer.step()
 
             running_loss += loss.item()
-            if verbose == 2 or (verbose == 1 and i % 10 == 9):
+            if verbose == 2:  # Verbose level 2: log every batch
                 logger.info(
-                    f"Epoch {epoch + 1}, Batch {i + 1}: Loss = {running_loss / (10 if self.params.get('verbose', 1) == 1 else 1):.4f}"
+                    f"Training - Epoch {epoch + 1}, Batch {i + 1}: Loss = {loss.item()}"
                 )
                 if self.wandb:
-                    wandb.log(
-                        {
-                            "loss": running_loss
-                            / (10 if self.params.get("verbose", 1) == 1 else 1)
-                        }
+                    wandb.log({"train_loss": loss.item()})
+            elif verbose == 1:
+                if i % 10 == 9:
+                    logger.info(
+                        f"Training - Epoch {epoch + 1}, Batch {i + 1}: Loss = {running_loss / 10:.4f}"
                     )
-                if verbose == 1:
+                    if self.wandb:
+                        wandb.log({"train_loss": running_loss / 10})
                     running_loss = 0.0
 
-    def evaluate(self):
-        """Evaluates the model on the validation set."""
-        metrics_tracker = MetricsTracker(self.model.model_name, self.model.save_dir)
+    def evaluate(self, data_loader, save_report: bool = False) -> float:
+        """Evaluates the model on the given dataset."""
+        metrics_tracker = MetricsTracker(
+            self.model.model_name,
+            self.model.task_name,
+            self.model.dataset_name,
+            self.model.save_dir,
+        )
         verbose = self.params.get("verbose", 1)
         self.model.eval()
+        val_loss = []
 
         with torch.no_grad():
-            for batch, (inputs, labels) in enumerate(self.test_loader):
+            for batch, (inputs, labels) in enumerate(data_loader):
                 inputs = self.converter.convert_batch_to_3d(inputs)
                 inputs, labels = inputs.to(self.device), labels.to(self.device)
 
                 outputs = self.model(inputs)
-                _, predicted = torch.max(outputs.data, 1)
 
-                accuracy = (predicted == labels).sum().item() / labels.size(0)
+                loss = self.criterion(outputs, labels).item()
+                val_loss.append(loss)
 
                 # Append results to metrics tracker
-                metrics_tracker.add_results(
-                    predicted.cpu().numpy(), labels.cpu().numpy()
-                )
-                if verbose == 2 or (verbose == 1 and batch % 10 == 9):
-                    logger.info(
-                        f"Evaluating batch {batch + 1}: " f"Accuracy = {accuracy}"
-                    )
+                metrics_tracker.add_results(outputs.cpu().numpy(), labels.cpu().numpy())
 
+                if verbose == 2:  # Verbose level 2: log every batch
+                    logger.info(f"Testing - Batch {batch + 1}: Loss = {loss:.4f} ")
                     if self.wandb:
-                        wandb.log({"accuracy": accuracy})
+                        wandb.log({"Test loss": loss})
+                if verbose == 1:  # Verbose level 1: log every 10 batches
+                    if batch % 10 == 0:
+                        logger.info(f"Testing - Batch {batch + 1}: Loss = {loss:.4f} ")
+                    if self.wandb:
+                        wandb.log({"Test loss": loss})
 
         # Calculate and log metrics
         metrics_tracker.summary = metrics_tracker.compute_overall_metrics()
-        metrics_tracker.save_report()
-
-    def _prepare_data(self):
-        """Prepare data for InceptionTime by getting a configured converter."""
-
-        # Get the configured converter
-        self.converter = prepare_data_for_model_dl(
-            self.train_loader,
-            self.params,
-            model_name=self.model.model_name,
-            task_name=self.task_name,
-        )
+        if save_report:
+            metrics_tracker.save_report()
+        return np.mean(val_loss)

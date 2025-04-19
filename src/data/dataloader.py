@@ -313,8 +313,10 @@ class DatasetManager:
         # Take only 100 rows if in debug
         debug = kwargs.get("debug", False)
         if debug:
-            logger.info(f"Debug mode: Taking only 100 rows for {dataset_id}")
-            debug_data_length = 200
+            debug_data_length = 1000
+            logger.info(
+                f"Debug mode: Taking only {debug_data_length} rows for {dataset_id}"
+            )
             data = {
                 "X_train": data["X_train"].iloc[:debug_data_length],
                 "y_train": data["y_train"].iloc[:debug_data_length],

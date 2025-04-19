@@ -38,9 +38,9 @@ class PulseTemplateModel:
     def set_trainer(
         self,
         trainer_name: str,
-        train_dataloader: DataLoader,
-        val_dataloader: DataLoader,
-        test_dataloader: DataLoader
+        train_loader: DataLoader,
+        val_loader: DataLoader,
+        test_loader: DataLoader,
     ) -> None:
         """
         Set the trainer for this model. This method should be overridden by subclasses.
@@ -48,8 +48,8 @@ class PulseTemplateModel:
 
         Args:
             trainer_name: Name of the trainer to use
-            train_dataloader: DataLoader for training data
-            test_dataloader: DataLoader for test data
+            train_loader: DataLoader for training data
+            test_loader: DataLoader for test data
         """
         self.trainer_name = trainer_name
         self.trainer = None

@@ -17,7 +17,6 @@ from src.util.model_util import (
 )
 from src.eval.metrics import MetricsTracker, rmse
 
-# TODO: fix evaluation metrics (report is empty) and wandb evaluation
 
 # Filter the specific warning about feature names
 # (This is because training is done with np arrays and prediction with pd dataframe to preserve feature names for feature importance etc.)
