@@ -237,6 +237,8 @@ class CNNTrainer:
             logger.info(f"Epoch {epoch + 1} finished")
             val_loss = self.evaluate(self.val_loader)  # Evaluate on validation set
             self.early_stopping(val_loss, self.model)
+            if self.early_stopping.early_stop:
+                break
 
         self.early_stopping.load_best_model(self.model)  # Load the best model
         self.evaluate(
