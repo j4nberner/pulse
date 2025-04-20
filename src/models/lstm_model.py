@@ -8,7 +8,11 @@ import torch.optim as optim
 import torch
 import wandb
 from src.models.pulsetemplate_model import PulseTemplateModel
-from src.util.model_util import save_torch_model, prepare_data_for_model_dl
+from src.util.model_util import (
+    EarlyStopping,
+    save_torch_model,
+    prepare_data_for_model_dl,
+)
 from src.eval.metrics import MetricsTracker
 
 
@@ -45,7 +49,6 @@ class LSTMModel(PulseTemplateModel, nn.Module):
             "num_epochs",
             "save_checkpoint",
             "verbose",
-            "num_features",  # Number of features in input
             "num_layers",  # Number of LSTM layers
             "output_shape",  # Size of output
             "hidden_size",  # Number of features in hidden state
@@ -66,8 +69,15 @@ class LSTMModel(PulseTemplateModel, nn.Module):
         # Log the parameters being used
         logger.info(f"Initializing LSTM with parameters: {self.params}")
 
-        # -------------------------Define layers-------------------------
-        self.input_size = self.params["num_features"]
+        # Set the number of channels based on the input shape
+        self.input_size = 1  # overwritten in trainer
+        if params["preprocessing_advanced"]["windowing"]["enabled"]:
+            self.params["window_size"] = params["preprocessing_advanced"]["windowing"][
+                "data_window"
+            ]
+        else:
+            self.params["window_size"] = 1  # Default to 1
+
         self.hidden_size = self.params[
             "hidden_size"
         ]  # Number of features in hidden state. 32-256 is standard
@@ -77,6 +87,14 @@ class LSTMModel(PulseTemplateModel, nn.Module):
         self.output_size = self.params["output_shape"]
         self.dropout = self.params["dropout"]
 
+        self._init_model()
+
+    def _init_model(self) -> None:
+        """
+        Initialize the LSTM model.
+        """
+
+        # -------------------------Define layers-------------------------
         # LSTM layer
         self.lstm = nn.LSTM(
             input_size=self.input_size,
@@ -132,9 +150,7 @@ class LSTMModel(PulseTemplateModel, nn.Module):
         Returns:
             None
         """
-        self.trainer = LSTMTrainer(
-            self, train_loader, val_loader, test_loader
-        )
+        self.trainer = LSTMTrainer(self, train_loader, val_loader, test_loader)
 
 
 class LSTMTrainer:
@@ -151,11 +167,15 @@ class LSTMTrainer:
         self.optimizer = optim.Adam(
             self.model.parameters(), lr=self.params["learning_rate"]
         )
-        self.criterion = nn.MSELoss()
+        self.criterion = nn.BCEWithLogitsLoss()
         self.wandb = self.model.wandb
         self.model_save_dir = os.path.join(lstm_model.save_dir, "Models")
         self.task_name = self.model.task_name
         self.dataset_name = self.model.dataset_name
+        self.early_stopping = EarlyStopping(
+            patience=self.params["early_stopping_rounds"],
+            delta=0.0,
+        )
 
         # Log optimizer and criterion
         logger.info(f"Using optimizer: {self.optimizer.__class__.__name__}")
@@ -165,11 +185,36 @@ class LSTMTrainer:
         os.makedirs(self.model_save_dir, exist_ok=True)
 
         # Data preparation
-        self._prepare_data()
+        # Get the configured data converter
+        self.converter = prepare_data_for_model_dl(
+            self.train_loader,
+            self.params,
+            model_name=self.model.model_name,
+            task_name=self.task_name,
+        )
+        # To identify num_channels: Get a sample batch and transform using the converter
+        features, _ = next(iter(self.train_loader))
+        transformed_features = self.converter.convert_batch_to_3d(features)
+
+        # Get the number of channels from the transformed features
+        input_dim = transformed_features.shape[-1]
+
+        # Update the model input shape based on the data
+        self.model.input_size = input_dim
+        self.model._init_model()
+
+        # Try to load the model weights if they exist
+        if self.model.pretrained_model_path:
+            try:
+                self.model.load_model_weights(self.model.pretrained_model_path)
+            except Exception as e:
+                logger.warning(
+                    "Failed to load pretrained model weights: %s. Defaulting to random initialization.",
+                    str(e),
+                )
 
     def train(self):
         """Training loop."""
-        save_checkpoint = self.params["save_checkpoint"]
         num_epochs = self.params["num_epochs"]
         verbose = self.params.get("verbose", 1)
 
@@ -181,16 +226,12 @@ class LSTMTrainer:
         for epoch in range(num_epochs):
             self.train_epoch(epoch, verbose)
             logger.info(f"Epoch {epoch + 1} finished")
-            self.evaluate(self.val_loader)
-
-            # Save checkpoint every save_checkpoint epochs
-            checkpoint_name = f"{self.model.model_name}_epoch_{epoch + 1}"
-            checkpoint_path = os.path.join(self.model_save_dir, "Checkpoints")
-            if save_checkpoint != 0 and epoch % save_checkpoint == 0:
-                save_torch_model(checkpoint_name, self.model, checkpoint_path)
+            val_loss = self.evaluate(self.val_loader)
+            self.early_stopping(val_loss, self.model)
 
         logger.info("Training finished.")
-        self.evaluate(self.test_loader)
+        self.early_stopping.load_best_model(self.model)  # Load the best model
+        self.evaluate(self.test_loader, save_report=True)
         save_torch_model(
             self.model.model_name, self.model, self.model_save_dir
         )  # Save the final model
@@ -205,7 +246,6 @@ class LSTMTrainer:
         """
         self.model.train()
         running_loss = 0.0
-        total_batches = len(self.train_loader)
 
         for i, (inputs, labels) in enumerate(self.train_loader):
             inputs = self.converter.convert_batch_to_3d(inputs)
@@ -238,16 +278,22 @@ class LSTMTrainer:
 
                 running_loss = 0.0
 
-    def evaluate(self, test_loader):
+    def evaluate(self, test_loader, save_report: bool = False) -> float:
         """
         Evaluates the model on the test set.
 
         Args:
             test_loader: The DataLoader object for the testing dataset.
         """
-        metrics_tracker = MetricsTracker(self.model.model_name, self.model.save_dir)
+        metrics_tracker = MetricsTracker(
+            self.model.model_name,
+            self.model.task_name,
+            self.model.dataset_name,
+            self.model.save_dir,
+        )
         verbose = self.params.get("verbose", 1)
         self.model.eval()
+        val_loss = []
 
         with torch.no_grad():
             for batch, (inputs, labels) in enumerate(test_loader):
@@ -255,33 +301,20 @@ class LSTMTrainer:
                 inputs, labels = inputs.to(self.device), labels.to(self.device)
 
                 outputs = self.model(inputs)
-                _, predicted = torch.max(outputs.data, 1)
+                loss = self.criterion(outputs, labels).item()
 
-                accuracy = (predicted == labels).sum().item() / labels.size(0)
+                val_loss.append(loss)
 
                 # Append results to metrics tracker
-                metrics_tracker.add_results(
-                    predicted.cpu().numpy(), labels.cpu().numpy()
-                )
+                metrics_tracker.add_results(outputs.cpu().numpy(), labels.cpu().numpy())
                 if verbose == 2 or (verbose == 1 and batch % 10 == 9):
-                    logger.info(
-                        f"Evaluating batch {batch + 1}: " f"Accuracy = {accuracy}"
-                    )
+                    logger.info(f"Evaluating batch {batch + 1}: " f"Loss = {loss}")
 
                     if self.wandb:
-                        wandb.log({"accuracy": accuracy})
+                        wandb.log({"val_loss": loss})
 
         # Calculate and log metrics
         metrics_tracker.summary = metrics_tracker.compute_overall_metrics()
-        metrics_tracker.save_report()
-
-    def _prepare_data(self):
-        """Prepare data for InceptionTime by getting a configured converter."""
-
-        # Get the configured converter
-        self.converter = prepare_data_for_model_dl(
-            self.train_loader, 
-            self.params, 
-            model_name=self.model.model_name,
-            task_name=self.task_name
-        )
+        if save_report:
+            metrics_tracker.save_report()
+        return np.mean(val_loss)

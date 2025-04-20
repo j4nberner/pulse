@@ -4,10 +4,10 @@ params:
   trainer_name: "CNNTrainer"
   type: "DL" # Type of model (ML for machine learning, DL for deep learning)
   save_checkpoint: 1 # Save checkpoint every n epochs. Set to 0 to disable.
-  num_features: 53
   output_shape: 1
-  kernel_size: 3
+  kernel_size: 1
   pool_size: 2
   learning_rate: 0.001
-  num_epochs: 1
+  num_epochs: 100
   verbose: 2 # Controls verbosity of output (0 = silent, 1 = log every 10 batches, 2 = log every batch)
+  early_stopping_rounds: 10 # Number of rounds for early stopping
