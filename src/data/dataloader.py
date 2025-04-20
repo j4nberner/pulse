@@ -381,6 +381,15 @@ class DatasetManager:
             }
             # Apply advanced preprocessing
             X, y = advanced_preprocessor(X, y, info_dict)
+    
+        # Check and drop stay_id columns if they exist
+        if isinstance(X, pd.DataFrame) and "stay_id" in X.columns:
+            logger.info(f"Dropping 'stay_id' column from features")
+            X = X.drop(columns=["stay_id"])
+        if isinstance(y, pd.DataFrame) and "stay_id" in y.columns:
+            logger.info(f"Dropping 'stay_id' column from labels")
+            y = y.drop(columns=["stay_id"])
+
         return X, y
 
     def _drop_stay_id_if_present(self, data_dict: dict) -> dict:

@@ -16,6 +16,8 @@ from src.eval.metrics import MetricsTracker
 # Set up logger
 logger = logging.getLogger("PULSE_logger")
 
+# TODO: implement EarlyStopping from src/util/model_util.py
+# TODO: implement load presaved model weights from path (specified in config)
 
 class InceptionTimeModel(PulseTemplateModel, nn.Module):
     """
@@ -136,13 +138,14 @@ class InceptionTimeModel(PulseTemplateModel, nn.Module):
             'save_checkpoint_freq',
             'verbose',
             'num_epochs',
-            'patience',
+            'earlystopping_patience',
             'depth',
             'dropout_rate',
             'optimizer_name',
             'learning_rate',
             'weight_decay',
-            'factor',
+            'scheduler_factor',
+            'scheduler_patience',
             'min_lr'   
         ]
 
@@ -257,10 +260,6 @@ class InceptionTimeModel(PulseTemplateModel, nn.Module):
 
         # Clear the network attribute
         self.network = None
-
-        # If available, load presaved model weights from path (specified in config)
-        # TODO: implement loading model weights logic
-        # self.model.load_model_weights()
 
     def forward(self, x):
         """
@@ -380,11 +379,11 @@ class InceptionTimeTrainer:
         logger.info(f"Using criterion: {self.criterion.__class__.__name__} with class weight adjustment")
 
         # Initialize scheduler
-        factor = self.params["factor"]
-        patience = self.params["patience"]
+        scheduler_factor = self.params["scheduler_factor"]
+        scheduler_patience = self.params["scheduler_patience"]
         min_lr = self.params["min_lr"]
         self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-            self.optimizer, mode="min", factor=factor, patience=patience, min_lr=min_lr
+            self.optimizer, mode="min", factor=scheduler_factor, patience=scheduler_patience, min_lr=min_lr
         )
 
     def _prepare_data(self):
@@ -403,9 +402,7 @@ class InceptionTimeTrainer:
         transformed_features = self.converter.convert_batch_to_3d(features)
 
         # Get the number of channels from the transformed features
-        num_channels = transformed_features.shape[
-            1
-        ]  # CNN models (batch_size, num_channels, time_steps), RNN models (batch_size, time_steps, num_features)
+        num_channels = transformed_features.shape[1]  # CNN models (batch_size, num_channels, time_steps), RNN models (batch_size, time_steps, num_features)
 
         # Update model architecture with correct shape
         self.model.create_network_with_input_shape(num_channels)
@@ -472,7 +469,6 @@ class InceptionTimeTrainer:
         save_torch_model(f"{self.model.model_name}", self.model, self.model_save_dir)
 
         # Evaluate the model on the testing set
-        # TODO: How does this fit into the benchmark_models.py?
         self.evaluate()
 
     def train_epoch(self, epoch: int, verbose: int = 1) -> None:
@@ -611,7 +607,6 @@ class InceptionTimeTrainer:
         logger.info(f"Average batch accuracy: {sum(batch_metrics)/len(batch_metrics):.4f}")
         
         # Log all metrics to wandb if enabled
-        # TODO: is this now implemented in the MetricsTracker class?
         if self.wandb:
             # Create a dictionary with all metrics
             wandb_metrics = {f"test_{k}": v for k, v in metrics_tracker.summary.items()}

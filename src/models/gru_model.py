@@ -290,7 +290,7 @@ class GRUTrainer:
         
         # Get the input dimension from the transformed features
         # For RNN models: (batch_size, time_steps, num_features)
-        num_channels = transformed_features.shape[2]
+        num_channels = transformed_features.shape[-1]
         
         # Update model architecture with correct shape
         self.model.create_network_with_input_shape(num_channels)
@@ -449,7 +449,12 @@ class GRUTrainer:
         Evaluate the model on the test set with comprehensive metrics.
         Logs all metrics to wandb and returns the results.
         """
-        metrics_tracker = MetricsTracker(self.model.model_name, self.model.save_dir)
+        metrics_tracker = MetricsTracker(
+            self.model.model_name,
+            self.model.task_name,
+            self.model.dataset_name,
+            self.model.save_dir,
+        )
         self.model.eval()
         
         # Track both batches and per-batch metrics for logging
