@@ -10,6 +10,34 @@ import pandas as pd
 logger = logging.getLogger("PULSE_logger")
 
 
+class EarlyStopping:
+    def __init__(self, patience=5, delta=0):
+        self.patience = patience
+        self.delta = delta
+        self.best_score = None
+        self.early_stop = False
+        self.counter = 0
+        self.best_model_state = None
+
+    def __call__(self, val_loss, model):
+        score = -val_loss
+
+        if self.best_score is None:
+            self.best_score = score
+            self.best_model_state = model.state_dict()
+        elif score < self.best_score + self.delta:
+            self.counter += 1
+            if self.counter >= self.patience:
+                self.early_stop = True
+        else:
+            self.best_score = score
+            self.best_model_state = model.state_dict()
+            self.counter = 0
+
+    def load_best_model(self, model):
+        model.load_state_dict(self.best_model_state)
+
+
 def save_torch_model(model_name: str, model: Any, save_dir: str) -> None:
     """Save the trained torch model to disk.
 
@@ -126,33 +154,42 @@ def prepare_data_for_model_ml(
         "feature_names": feature_names,
     }
 
+
 # implement conditional conversion for mortality (always, because it is never windowed (maybe first adapt ordering of columns during transformation in preprocessing))
 
-def prepare_data_for_model_dl(data_loader, config: Dict, model_name: Optional[str] = None, task_name: Optional[str] = None) -> Any:
+
+def prepare_data_for_model_dl(
+    data_loader,
+    config: Dict,
+    model_name: Optional[str] = None,
+    task_name: Optional[str] = None,
+) -> Any:
     """
     Prepare data for deep learning models by returning a configured data converter.
-    
+
     Args:
         data_loader: DataLoader containing the input data
         config: Configuration dictionary with preprocessing settings
         model_name: Name of the model to determine format requirements
         logger_instance: Optional logger instance
         task_name: Name of the current task (e.g., "mortality", "aki")
-        
+
     Returns:
         WindowedDataTo3D: Configured converter instance ready to transform batches
     """
 
     # Import the converter
     from src.preprocessing.preprocessing_advanced.windowing import WindowedDataTo3D
-    
+
     # Create converter with model name and config
-    converter = WindowedDataTo3D(model_name=model_name, config=config, task_name=task_name)
-    
+    converter = WindowedDataTo3D(
+        model_name=model_name, config=config, task_name=task_name
+    )
+
     try:
         # Get a batch to inspect shape
         features, _ = next(iter(data_loader))
-        
+
         # Configure converter based on data shape
         if len(features.shape) == 3:
             # Data is already 3D
@@ -169,10 +206,10 @@ def prepare_data_for_model_dl(data_loader, config: Dict, model_name: Optional[st
                     windowing_config = preprocessing_advanced["windowing"]
                     if "enabled" in windowing_config:
                         windowing_enabled = bool(windowing_config["enabled"])
-            
+
             # Configure the converter based on windowing status
             converter.configure_conversion(windowing_enabled, features.shape)
-            
+
             if windowing_enabled:
                 logger.info("Will use 3D windowed conversion for batches")
             else:
@@ -180,5 +217,22 @@ def prepare_data_for_model_dl(data_loader, config: Dict, model_name: Optional[st
 
     except Exception as e:
         logger.error(f"Error preparing data converter: {e}")
-    
+
     return converter
+
+
+def apply_model_prompt_format(model_id, prompt):
+    """
+    Apply model-specific prompt formatting.
+
+    Args:
+        model_id (str): The ID of the model.
+        prompt (str): The prompt to format.
+    """
+    # Example formatting for Llama3
+    if model_id == "Llama3Model":
+        formatted_prompt = f"<|USER|>{prompt}<|ASSISTANT|>"
+    else:
+        formatted_prompt = prompt  # No formatting needed for other models
+
+    return formatted_prompt

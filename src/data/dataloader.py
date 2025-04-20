@@ -12,7 +12,7 @@ from src.preprocessing.preprocessing_baseline.preprocessing_baseline import (
     PreprocessorBaseline,
 )
 from src.preprocessing.preprocessing_advanced.windowing import Windower
-from src.preprocessing.prompt_engineering import *
+from src.preprocessing.preprocessing_advanced import get_advanced_preprocessor
 
 # Set up logger
 logger = logging.getLogger("PULSE_logger")
@@ -312,14 +312,17 @@ class DatasetManager:
         # Take only 100 rows if in debug
         debug = kwargs.get("debug", False)
         if debug:
-            logger.info(f"Debug mode: Taking only 100 rows for {dataset_id}")
+            debug_data_length = 1000
+            logger.info(
+                f"Debug mode: Taking only {debug_data_length} rows for {dataset_id}"
+            )
             data = {
-                "X_train": data["X_train"].head(100),
-                "y_train": data["y_train"].head(100),
-                "X_val": data["X_val"].head(100),
-                "y_val": data["y_val"].head(100),
-                "X_test": data["X_test"].head(100),
-                "y_test": data["y_test"].head(100),
+                "X_train": data["X_train"].iloc[:debug_data_length],
+                "y_train": data["y_train"].iloc[:debug_data_length],
+                "X_val": data["X_val"].iloc[:debug_data_length],
+                "y_val": data["y_val"].iloc[:debug_data_length],
+                "X_test": data["X_test"].iloc[:debug_data_length],
+                "y_test": data["y_test"].iloc[:debug_data_length],
             }
 
         # Get the appropriate split
@@ -363,29 +366,21 @@ class DatasetManager:
                 test_limited_stats = self.preprocessor.calculate_dataset_statistics(X_limited, y_limited, "test_limited100")
                 self.preprocessor.print_statistics([train_stats, val_stats, test_stats, test_limited_stats])
 
-        # Apply any model-specific preprocessing if needed. Prompt engineering for LLMs, tokenization, etc.
-
+        # Apply any model-specific preprocessing if needed.
         # For example, if you need to tokenize text data for LLMs
         preprocessing_id = kwargs.get("preprocessing_id", None)
-        match preprocessing_id:
-            case "Llama3Preprocessing":
-                # Apply Llama3-specific preprocessing
-                logger.info(f"Applying Llama3 preprocessing for {dataset_id}")
-                dataset = kwargs.get("dataset", None)
-                task = kwargs.get("task", None)
-                info_dict = {"dataset": dataset, "task": task}
-                X, y = apply_llama3_preprocessing(X, y, info_dict)
-            case None:
-                # No specific preprocessing needed
-                logger.info(f"No specific preprocessing needed for {dataset_id}")
-
-        
-        # Drop stay_id columns from X and y sets if present
-        if "stay_id" in X.columns:
-            X = X.drop(columns=["stay_id"])
-        if "stay_id" in y.columns:
-            y = y.drop(columns=["stay_id"])
-
+        if preprocessing_id is not None:
+            advanced_preprocessor = get_advanced_preprocessor(
+                preprocessing_id=preprocessing_id
+            )
+            # Info dict needs to contain dataset name, task, and model name
+            info_dict = {
+                "dataset_name": dataset["name"],
+                "task": dataset["task"],
+                "model_name": model_name,
+            }
+            # Apply advanced preprocessing
+            X, y = advanced_preprocessor(X, y, info_dict)
         return X, y
 
     def _drop_stay_id_if_present(self, data_dict: dict) -> dict:

@@ -16,6 +16,7 @@ from src.eval.metrics import MetricsTracker
 # Set up logger
 logger = logging.getLogger("PULSE_logger")
 
+
 class InceptionTimeModel(PulseTemplateModel, nn.Module):
     """
     Implementation of InceptionTime deep learning model for time series classification.
@@ -69,7 +70,7 @@ class InceptionTimeModel(PulseTemplateModel, nn.Module):
             y = y + self.batch_norm(self.bottleneck(x))
             y = F.leaky_relu(y)
             return y
-        
+
     class Lambda(nn.Module):
         def __init__(self, f):
             super(InceptionTimeModel.Lambda, self).__init__()
@@ -101,7 +102,9 @@ class InceptionTimeModel(PulseTemplateModel, nn.Module):
 
         def save_checkpoint(self, val_loss, model):
             if self.verbose:
-                logger.info(f'Validation loss decreased ({self.best_val_loss:.6f} --> {val_loss:.6f}). Saving model state...')
+                logger.info(
+                    f"Validation loss decreased ({self.best_val_loss:.6f} --> {val_loss:.6f}). Saving model state..."
+                )
             self.best_state_dict = model.state_dict().copy()
             self.best_val_loss = val_loss
 
@@ -119,7 +122,7 @@ class InceptionTimeModel(PulseTemplateModel, nn.Module):
         # Validate trainer_name in params
         if "trainer_name" not in params:
             raise KeyError("Required parameter 'trainer_name' not found in config")
-        
+
         # Use the class name as model_name if not provided in params
         self.model_name = params.get(
             "model_name", self.__class__.__name__.replace("Model", "")
@@ -127,7 +130,7 @@ class InceptionTimeModel(PulseTemplateModel, nn.Module):
         self.trainer_name = params["trainer_name"]
         super().__init__(self.model_name, self.trainer_name, params=params)
         nn.Module.__init__(self)
-        
+
         # Define required parameters based on InceptionTimeModel.yaml
         required_params = [
             'save_checkpoint_freq',
@@ -142,18 +145,20 @@ class InceptionTimeModel(PulseTemplateModel, nn.Module):
             'factor',
             'min_lr'   
         ]
-        
+
         # Check if all required parameters exist in config
         missing_params = [param for param in required_params if param not in params]
         if missing_params:
             raise KeyError(f"Required parameters missing from config: {missing_params}")
-        
+
         # Extract parameters from config
         self.params = params
 
         # Log configuration details
-        logger.info(f"Initializing {self.model_name} model with parameters: {self.params}")
-        
+        logger.info(
+            f"Initializing {self.model_name} model with parameters: {self.params}"
+        )
+
         # Set the model save directory
         self.save_dir = kwargs.get("output_dir", f"{os.getcwd()}/output")
 
@@ -161,16 +166,18 @@ class InceptionTimeModel(PulseTemplateModel, nn.Module):
         self.wandb = kwargs.get("wandb", False)
 
         # Network architecture parameters directly from params
-        self.depth = self.params["depth"]  
+        self.depth = self.params["depth"]
         self.dropout_rate = self.params["dropout_rate"]
-        
+
         # These will be set in _init_model
         self.in_channels = None
         self.out_channels = None
         self.network = None
-        
+
         # Initialize early stopping
-        self.early_stopping = self.EarlyStopping(patience=self.params["patience"], verbose=True)
+        self.early_stopping = self.EarlyStopping(
+            patience=self.params["patience"], verbose=True
+        )
 
         # Initialize the model architecture
         self._init_model()
@@ -182,21 +189,21 @@ class InceptionTimeModel(PulseTemplateModel, nn.Module):
         """
         # Just set up placeholder values (num_channels will be determined after data preparation)
         self._configure_channels(num_channels=1)
-    
+
         # The network will be built in create_network_with_input_shape when we know the actual shape
         self.network = None
 
     def _configure_channels(self, num_channels: int) -> None:
         """
         Configure the channel dimensions for the InceptionTime network.
-        
+
         Args:
             num_channels: Number of input channels
         """
         # Reset channel configurations
         self.in_channels = [num_channels]
         self.out_channels = [min(256, num_channels)]
-        
+
         # Configure channel dimensions for each layer
         for i in range(1, self.depth):
             prev_out = self.out_channels[i - 1]
@@ -213,30 +220,29 @@ class InceptionTimeModel(PulseTemplateModel, nn.Module):
     def create_network_with_input_shape(self, num_channels: int) -> None:
         """
         Update the model architecture based on the actual input shape.
-        
+
         Args:
             num_channels: Number of input channels from the data
         """
 
         # Reconfigure channel dimensions using the helper method
         self._configure_channels(num_channels)
-                
+
         # Store inception and residual modules separately
         self.inception_modules = nn.ModuleList()
         self.residual_connections = {}
-        
+
         # Build inception modules with residual connections
         for d in range(self.depth):
             self.inception_modules.append(
                 self.Inception(
-                    in_channels=self.in_channels[d], 
-                    out_channels=self.out_channels[d]
+                    in_channels=self.in_channels[d], out_channels=self.out_channels[d]
                 )
             )
             if d % 3 == 2 and d >= 2:  # Add residual connection every 3rd block
                 self.residual_connections[d] = self.Residual(
-                    in_channels=self.out_channels[d - 2] * 4, 
-                    out_channels=self.out_channels[d] * 4
+                    in_channels=self.out_channels[d - 2] * 4,
+                    out_channels=self.out_channels[d] * 4,
                 )
 
         # Add global average pooling and fully connected layers
@@ -248,7 +254,7 @@ class InceptionTimeModel(PulseTemplateModel, nn.Module):
         self.fc2 = nn.Linear(64, 16)
         self.relu2 = nn.LeakyReLU()
         self.output = nn.Linear(16, 1)
-        
+
         # Clear the network attribute
         self.network = None
 
@@ -262,23 +268,23 @@ class InceptionTimeModel(PulseTemplateModel, nn.Module):
         """
         # Store outputs for residual connections
         layer_outputs = []
-        
+
         # Process through inception modules with residual connections
         for i in range(len(self.inception_modules)):
             # Store input for residual connection
             if i > 0 and i % 3 == 0:
-                residual_input = layer_outputs[i-3]
-            
+                residual_input = layer_outputs[i - 3]
+
             # Apply inception module
             x = self.inception_modules[i](x)
             layer_outputs.append(x)
-            
+
             # Apply residual connection if needed
             if i in self.residual_connections:
                 residual_module = self.residual_connections[i]
-                x = residual_module(layer_outputs[i-2], x)
+                x = residual_module(layer_outputs[i - 2], x)
                 layer_outputs[i] = x  # Update current output
-        
+
         # Apply final layers
         x = self.global_avg_pool(x)
         x = self.dropout1(x)
@@ -288,7 +294,7 @@ class InceptionTimeModel(PulseTemplateModel, nn.Module):
         x = self.fc2(x)
         x = self.relu2(x)
         x = self.output(x)
-        
+
         return x
 
     def set_trainer(self, trainer_name, train_loader, val_loader, test_loader):
@@ -299,12 +305,13 @@ class InceptionTimeModel(PulseTemplateModel, nn.Module):
             trainer_name: Name of the trainer.
             train_loader: DataLoader for training data.
             val_loader: DataLoader for validation data.
-                
+
         Returns:
             None
         """
         self.trainer = InceptionTimeTrainer(self, train_loader, val_loader, test_loader)
-    
+
+
 class InceptionTimeTrainer:
     """
     Trainer class for InceptionTime models.
@@ -353,11 +360,17 @@ class InceptionTimeTrainer:
         weight_decay = self.params["weight_decay"]
 
         if self.optimizer_name == "adam":
-            self.optimizer = optim.Adam(self.model.parameters(), lr=lr, weight_decay=weight_decay)
+            self.optimizer = optim.Adam(
+                self.model.parameters(), lr=lr, weight_decay=weight_decay
+            )
         elif self.optimizer_name == "adamw":
-            self.optimizer = optim.AdamW(self.model.parameters(), lr=lr, weight_decay=weight_decay)
+            self.optimizer = optim.AdamW(
+                self.model.parameters(), lr=lr, weight_decay=weight_decay
+            )
         elif self.optimizer_name == "sgd":
-            self.optimizer = optim.SGD(self.model.parameters(), lr=lr, weight_decay=weight_decay)
+            self.optimizer = optim.SGD(
+                self.model.parameters(), lr=lr, weight_decay=weight_decay
+            )
 
         # Set criterion after calculating class weights for imbalanced datasets
         self.pos_weight = self._calculate_pos_weight()
@@ -371,7 +384,7 @@ class InceptionTimeTrainer:
         patience = self.params["patience"]
         min_lr = self.params["min_lr"]
         self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-            self.optimizer, mode='min', factor=factor, patience=patience, min_lr=min_lr
+            self.optimizer, mode="min", factor=factor, patience=patience, min_lr=min_lr
         )
 
     def _prepare_data(self):
@@ -379,19 +392,21 @@ class InceptionTimeTrainer:
 
         # Get the configured converter
         self.converter = prepare_data_for_model_dl(
-            self.train_loader, 
-            self.params, 
+            self.train_loader,
+            self.params,
             model_name=self.model.model_name,
-            task_name=self.task_name
+            task_name=self.task_name,
         )
 
         # To identify num_channels: Get a sample batch and transform using the converter
         features, _ = next(iter(self.train_loader))
         transformed_features = self.converter.convert_batch_to_3d(features)
-        
+
         # Get the number of channels from the transformed features
-        num_channels = transformed_features.shape[1] # CNN models (batch_size, num_channels, time_steps), RNN models (batch_size, time_steps, num_features)
-        
+        num_channels = transformed_features.shape[
+            1
+        ]  # CNN models (batch_size, num_channels, time_steps), RNN models (batch_size, time_steps, num_features)
+
         # Update model architecture with correct shape
         self.model.create_network_with_input_shape(num_channels)
     
@@ -423,16 +438,13 @@ class InceptionTimeTrainer:
         
     def train(self):
         """Training loop."""
-            
+
         # Move to GPU if available
         self.model.to(self.device)
         self.criterion.to(self.device)
 
         # Initialize metrics tracking dictionary (not used for earlystopping, logging or wandb)
-        self.metrics = {
-            "train_loss": [],
-            "val_loss": []
-        }
+        self.metrics = {"train_loss": [], "val_loss": []}
 
         logger.info(f"Starting training on device: {self.device}")
 
@@ -445,17 +457,20 @@ class InceptionTimeTrainer:
                 break  # Exit the training loop
 
             # Save checkpoint periodically
-            if self.save_checkpoint_freq > 0 and (epoch + 1) % self.save_checkpoint_freq == 0:
+            if (
+                self.save_checkpoint_freq > 0
+                and (epoch + 1) % self.save_checkpoint_freq == 0
+            ):
                 checkpoint_name = f"{self.model.model_name}_epoch_{epoch + 1}"
                 save_torch_model(checkpoint_name, self.model, self.checkpoint_path)
-        
-        logger.info("Training completed.")    
+
+        logger.info("Training completed.")
 
         # After training loop, load best model weights and save final model
         if self.model.early_stopping.best_state_dict:
             self.model.load_state_dict(self.model.early_stopping.best_state_dict)
         save_torch_model(f"{self.model.model_name}", self.model, self.model_save_dir)
-        
+
         # Evaluate the model on the testing set
         # TODO: How does this fit into the benchmark_models.py?
         self.evaluate()
@@ -546,15 +561,17 @@ class InceptionTimeTrainer:
                 outputs = self.model(features)
                 loss = self.criterion(outputs.squeeze(), labels.squeeze())
                 val_loss += loss.item()
-        
+
         return val_loss / len(self.val_loader)
 
     def evaluate(self):
-        """
-        Evaluate the model on the test set with comprehensive metrics.
-        Logs all metrics to wandb and returns the results.
-        """
-        metrics_tracker = MetricsTracker(self.model.model_name, self.model.save_dir)
+        """Evaluate the model on the specified data loader."""
+        metrics_tracker = MetricsTracker(
+            self.model.model_name,
+            self.model.task_name,
+            self.model.dataset_name,
+            self.model.save_dir,
+        )
         self.model.eval()
         
         # Track both batches and per-batch metrics for logging
@@ -584,7 +601,7 @@ class InceptionTimeTrainer:
                 if self.params["verbose"] == 2 or (self.params["verbose"] == 1 and batch_idx % 100 == 0):
                     logger.info(f"Evaluating batch {batch_idx+1}/{len(self.test_loader)}: Accuracy = {batch_accuracy:.4f}")
         
-        # Calculate comprehensive metrics
+        # Calculate and log metrics
         metrics_tracker.summary = metrics_tracker.compute_overall_metrics()
         metrics_tracker.save_report()
         
@@ -594,6 +611,7 @@ class InceptionTimeTrainer:
         logger.info(f"Average batch accuracy: {sum(batch_metrics)/len(batch_metrics):.4f}")
         
         # Log all metrics to wandb if enabled
+        # TODO: is this now implemented in the MetricsTracker class?
         if self.wandb:
             # Create a dictionary with all metrics
             wandb_metrics = {f"test_{k}": v for k, v in metrics_tracker.summary.items()}

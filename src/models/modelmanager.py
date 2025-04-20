@@ -67,14 +67,14 @@ class ModelManager:
             sys.exit(1)
 
         return prepared_models
-        
+
     def _create_model_from_config(self, config: Dict) -> Any:
         """
         Create a fresh model instance from a configuration.
-        
+
         Args:
             config: Model configuration dictionary
-            
+
         Returns:
             A new model instance
         """
@@ -86,7 +86,7 @@ class ModelManager:
             wandb=self.wandb.get("enabled", False),
             output_dir=self.output_dir,
         )
-        
+
         # Load model weights if path is specified
         if config.get("pretrained_model_path", None):
             try:
@@ -101,22 +101,22 @@ class ModelManager:
                     config["pretrained_model_path"],
                     str(e),
                 )
-                
+
         return model
-        
+
     def get_models_for_task(self, dataset_name: str) -> List[Any]:
         """
         Create fresh model instances for a specific task/dataset combination.
-        
+
         Args:
             dataset_name: Name of the dataset being processed
-            
+
         Returns:
             List[Any]: List of fresh model instances
         """
         logger.info(f"Creating fresh model instances for dataset: {dataset_name}")
         fresh_models = []
-        
+
         for _, config in self.model_configs.items():
             try:
                 # Create a new model instance from the saved config
@@ -124,6 +124,8 @@ class ModelManager:
                 fresh_models.append(fresh_model)
             except Exception as e:
                 model_name = config.get("name", "unknown")
-                logger.error(f"Failed to create fresh model '{model_name}' for dataset {dataset_name}: {str(e)}")
-                
+                logger.error(
+                    f"Failed to create fresh model '{model_name}' for dataset {dataset_name}: {str(e)}"
+                )
+
         return fresh_models

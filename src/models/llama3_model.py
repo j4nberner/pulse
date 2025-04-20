@@ -29,7 +29,6 @@ class Llama3Model(PulseTemplateModel):
         self.model_name = params.get(
             "model_name", self.__class__.__name__.replace("Model", "")
         )
-        self.type = "llm"
         self.trainer_name = params["trainer_name"]
         super().__init__(self.model_name, self.trainer_name, params=params)
 
@@ -70,7 +69,7 @@ class Llama3Model(PulseTemplateModel):
         # Log the parameters being used
         logger.info(f"Initializing Llama3 with parameters: {self.params}")
 
-    def eval(self, test_dataloader) -> Dict[str, Any]:
+    def evaluate(self, test_dataloader) -> Dict[str, Any]:
         """
         Evaluate the Llama3 model on the provided test dataloader.
 
@@ -81,7 +80,7 @@ class Llama3Model(PulseTemplateModel):
             Dict[str, Any]: Evaluation results.
         """
         # Initialize metrics tracker
-        # metrics = MetricsTracker()
+        metrics = MetricsTracker(self.model_name, self.task_name, self.dataset_name)
 
         # Iterate over the test dataloader
         for X, y in test_dataloader:
@@ -103,19 +102,29 @@ class Llama3Model(PulseTemplateModel):
             generated_text = self.tokenizer.batch_decode(
                 outputs, skip_special_tokens=True
             )
+
+            # Extract the predicted labels from the generated text
+            predicted_labels = [
+                text.split("\n")[-1] for text in generated_text
+            ]  # TODO: adjust
+            metrics.add_results(y, predicted_labels)
             # Print the generated text
             logger.info(f"Generated text: {generated_text}")
 
         # Log the evaluation results
-        # logger.info(f"Evaluation results: {metrics.get_results()}")
+        metrics.compute_overall_metrics()
+        metrics.save_report()
 
-    def set_trainer(self, trainer_name: str, train_dataloader, test_dataloader) -> None:
+    def set_trainer(
+        self, trainer_name: str, train_dataloader, val_dataloader, test_dataloader
+    ) -> None:
         """
         Sets the trainer for the Llama3 model.
 
         Args:
             trainer_name (str): The name of the trainer to be used.
             train_dataloader: The DataLoader object for the training dataset.
+            val_dataloader: The DataLoader object for the validation dataset.
             test_dataloader: The DataLoader object for the testing dataset.
 
         Returns:

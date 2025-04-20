@@ -15,7 +15,7 @@ wandb:
 # TODO: improve wandb logging of multiple experiments in one run (e.g. multiple task/datasets/models)
 
 ###### Application specific settings ######
-base_path: "/Users/sophiaehlers/Documents/pulse" #"/cluster/project/bmds_lab/sepsis_sophia/pulse" # #"/path/to/pulse"
+base_path: "" #"/cluster/project/bmds_lab/sepsis_sophia/pulse" # #"/path/to/pulse"
 
 # Tasks to process
 tasks:
