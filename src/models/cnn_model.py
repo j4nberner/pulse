@@ -102,7 +102,7 @@ class CNNModel(PulseTemplateModel, nn.Module):
         )
         self.conv3 = nn.Conv1d(
             in_channels=self.params["num_channels"] * 2,
-            out_channels=self.params["num_channels"] * 1,
+            out_channels=16,
             kernel_size=self.params["kernel_size"],
             padding=self.params["kernel_size"] // 2,
         )
@@ -113,9 +113,7 @@ class CNNModel(PulseTemplateModel, nn.Module):
         self.norm2 = nn.GroupNorm(
             num_groups=1, num_channels=self.params["num_channels"] * 2
         )
-        self.norm3 = nn.GroupNorm(
-            num_groups=1, num_channels=self.params["num_channels"]
-        )
+        self.norm3 = nn.GroupNorm(num_groups=1, num_channels=16)
 
         self.leaky_relu = nn.ReLU()
 
@@ -176,8 +174,12 @@ class CNNTrainer:
         self.train_loader = train_loader
         self.val_loader = val_loader
         self.test_loader = test_loader
-        self.optimizer = optim.Adam(self.model.parameters())
-        self.criterion = nn.BCEWithLogitsLoss()
+        self.criterion = nn.BCEWithLogitsLoss(
+            pos_weight=torch.tensor(1.0)
+        )  # inbalanced dataset
+        self.optimizer = optim.Adam(
+            self.model.parameters()
+        )  # Update after model initialization
         self.wandb = self.model.wandb
         self.model_save_dir = os.path.join(cnn_model.save_dir, "Models")
         self.task_name = self.model.task_name
@@ -229,6 +231,10 @@ class CNNTrainer:
         num_epochs = self.params["num_epochs"]
         verbose = self.params.get("verbose", 1)
 
+        self.optimizer = optim.Adam(
+            self.model.parameters()
+        )  # Update optimizer after model initialization
+
         # Move to GPU if available
         self.model.to(self.device)
         self.criterion.to(self.device)
@@ -249,6 +255,7 @@ class CNNTrainer:
         self.evaluate(
             self.test_loader, save_report=True
         )  # Evaluate on test set and save metrics
+        # TODO: Save the model with task_name and dataset_name in the filename
         save_torch_model(
             self.model.model_name, self.model, self.model.save_dir
         )  # Save the final model
