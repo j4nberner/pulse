@@ -205,11 +205,9 @@ class CNNTrainer:
         features, _ = next(iter(self.train_loader))
         transformed_features = self.converter.convert_batch_to_3d(features)
 
-        # Get the number of channels from the transformed features
-        num_channels = transformed_features.shape[1]
-
         # Update the model input shape based on the data
-        self.model.params["num_channels"] = num_channels
+        self.model.params["num_channels"] = transformed_features.shape[1]
+        self.model.params["window_size"] = transformed_features.shape[2]
         self.model._init_model()
 
         logger.info(

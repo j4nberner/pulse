@@ -65,17 +65,9 @@ class Llama3Model(PulseTemplateModel):
             # Load the tokenizer
             self.tokenizer = AutoTokenizer.from_pretrained(self.model_id)
 
-            # Use disk_offload to handle large models
-            with init_empty_weights():
-                self.llama_model = AutoModelForCausalLM.from_pretrained(
-                    self.model_id, torch_dtype=torch.float16
-                )
-            self.llama_model = load_checkpoint_and_dispatch(
-                self.llama_model,
-                self.model_id,
-                device_map="auto",
-                offload_folder="offload",
-                offload_state_dict=True,
+            # Load the model directly from the Hugging Face Model Hub
+            self.llama_model = AutoModelForCausalLM.from_pretrained(
+                self.model_id, torch_dtype=torch.float16, device_map="auto"
             )
 
             logger.info(f"Successfully loaded Llama3 model: {self.model_id}")
@@ -122,7 +114,11 @@ class Llama3Trainer:
             val_loader: The DataLoader object for the validation dataset.
             test_loader: The DataLoader object for the testing dataset.
         """
+        # Load the model and tokenizer
+        model._load_model()
+
         self.model = model
+        self.llama_model = model.llama_model
         self.params = model.params
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.train_loader = train_loader
@@ -149,21 +145,18 @@ class Llama3Trainer:
         #     task_name=self.task_name,
         # )
 
-        # Load the model and tokenizer
-        self.model._load_model()
-
     def train(self):
         """Training loop."""
-        num_epochs = self.params["num_epochs"]
         verbose = self.params.get("verbose", 1)
 
         # Move to GPU if available
-        self.model.to(self.device)
-        self.criterion.to(self.device)
+        # TODO: Managed by accelerate. Check if this is needed at all.
+        # self.llama_model.to(self.device)
+        # self.criterion.to(self.device)
 
         logger.info("Starting training...")
-        for epoch in range(num_epochs):
-            val_loss = self.evaluate(self.val_loader)  # Evaluate on validation set
+        val_loss = self.evaluate(self.val_loader)  # Evaluate on validation set
+        logger.info(f"Validation loss: {val_loss}")
 
         self.evaluate(
             self.test_loader, save_report=True
@@ -190,15 +183,15 @@ class Llama3Trainer:
 
         # Set the model to evaluation mode
         self.model.llama_model.eval()
-        self.model.tokenizer.eval()
-
-        # Move the model and tokenizer to the appropriate device
-        self.model.tokenizer.to(self.device)
-        self.model.llama_model.to(self.device)
 
         # Iterate over the test dataloader
         # TODO: maybe need to force batch size to 1 for Llama3?
-        for X, y in test_loader:
+        for X, y in zip(test_loader[0].iterrows(), test_loader[1].iterrows()):
+
+            # TODO: handle in prepare_data_for_model_llm
+            X = X[1].iloc[0]
+            y = y[1].iloc[0]
+
             # Tokenize the input data
             inputs = self.model.tokenizer(
                 X,
@@ -207,10 +200,12 @@ class Llama3Trainer:
                 max_length=self.model.max_length,
             )
             # Generate predictions
+            # TODO: need to pass attention mask and other params to the model?
             with torch.no_grad():
                 outputs = self.model.llama_model.generate(
                     inputs["input_ids"],
                     max_length=self.model.max_length,
+                    max_new_tokens=1,  # Generate only the label
                     num_return_sequences=1,
                 )
             # Decode the generated outputs
@@ -219,22 +214,25 @@ class Llama3Trainer:
             )
 
             # Extract the predicted labels from the generated text
-            predicted_labels = [
-                text.split("\n")[-1] for text in generated_text
-            ]  # TODO: adjust
+            # TODO: implement this based on the generated text format. use helper function in prompt engineering file
+            predicted_probability = 0.5
 
-            # Convert the predicted labels to tensors
-            predicted_labels = torch.tensor(
-                [int(label) for label in predicted_labels], dtype=torch.float32
-            ).to(self.device)
-            y = y.to(self.device)
+            # Convert the predicted labels and target to tensors with proper shape and type
+            predicted_label = torch.tensor(
+                predicted_probability, dtype=torch.float32
+            ).unsqueeze(0)
+            target = torch.tensor(float(y), dtype=torch.float32).unsqueeze(0)
+
             # Calculate the loss
-            loss = self.criterion(predicted_labels, y)
+            loss = self.criterion(predicted_label, target)
             val_loss.append(loss.item())
 
-            metrics_tracker.add_results(y, predicted_labels)
-            # Print the generated text
-            logger.info(f"Generated text: {generated_text}")
+            logger.info(f"Validation loss: {loss.item()}")
+            # Log the loss to wandb if enabled
+            if self.wandb:
+                wandb.log({"val_loss": loss.item()})
+
+            metrics_tracker.add_results(y, predicted_label)
 
         # Calculate and log metrics
         metrics_tracker.summary = metrics_tracker.compute_overall_metrics()
