@@ -203,6 +203,8 @@ class LSTMTrainer:
         self.model.input_size = input_dim
         self.model._init_model()
 
+        logger.info(f"Input shape to model (after transformation): {transformed_features.shape}")
+
         # Try to load the model weights if they exist
         if self.model.pretrained_model_path:
             try:
