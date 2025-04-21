@@ -212,6 +212,10 @@ class CNNTrainer:
         self.model.params["num_channels"] = num_channels
         self.model._init_model()
 
+        logger.info(
+            f"Input shape to model (after transformation): {transformed_features.shape}"
+        )
+
         # Try to load the model weights if they exist
         if self.model.pretrained_model_path:
             try:
@@ -238,6 +242,9 @@ class CNNTrainer:
             val_loss = self.evaluate(self.val_loader)  # Evaluate on validation set
             self.early_stopping(val_loss, self.model)
             if self.early_stopping.early_stop:
+                logger.info(
+                    f"Early stopping triggered at epoch {epoch + 1}. Stopping training."
+                )
                 break
 
         self.early_stopping.load_best_model(self.model)  # Load the best model

@@ -59,6 +59,7 @@ class ModelTrainer:
 
         # Train and evaluate each model on each dataset
         for task_dataset_name, _ in self.dm.datasets.items():
+            logger.info("#" * 60)
             logger.info(f"Processing dataset: {task_dataset_name}")
             # Create a group name for wandb using task_dataset_name and timestamp
             wand_group_name = f"{task_dataset_name}_{timestamp}"
@@ -123,6 +124,8 @@ class ModelTrainer:
                         task=self.config.tasks[0],
                         debug=self.config.general.debug_mode,
                         preprocessing_id=model.preprocessing_id,
+                        limit_test_set=True,
+                        print_stats=False,
                     )
 
                     # Choose the appropriate DataLoader based on model type

@@ -1,28 +1,32 @@
 name: "GRUModel"
+pretrained_model_path: null # Path to pretrained model (if any)
 params:
   # Basic configuration
   trainer_name: "GRUTrainer"
-  
+  type: "DL" # Type of model (ML for machine learning, DL for deep learning)
+  save_checkpoint_freq: 5
+  verbose: 1 # Controls verbosity of output (0 = silent, 1 = log every 10 batches, 2 = log every batch)
   # Training parameters
-  num_epochs: 60
-  patience: 5
-  use_cuda: true
-  save_checkpoint: 5
-  
+  num_epochs: 10 # should be 60! for our experiments (10 for testing purposes)
+  earlystopping_patience: 5
   # Model architecture
-  model_architecture:
-    hidden_dim: 256
-    layer_dim: 2
-    dropout_rate: 0.3
-  
+  hidden_dim: 256
+  layer_dim: 5
+  dropout_rate: 0.3
   # Optimizer settings
-  optimizer:
-    name: "adam"
-    learning_rate: 0.0001
-    weight_decay: 1e-6
-  
+  optimizer_name: "adam" # Options: adam, adamw, sgd
+  learning_rate: 0.00001
+  weight_decay: 1e-6
   # Scheduler settings
-  scheduler:
-    factor: 0.5
-    patience: 3
-    min_lr: 1e-6
+  scheduler_factor: 0.5
+  scheduler_patience: 3
+  min_lr: 1e-6
+
+
+
+  # # YAIB implementation (-> middle values from the ranges are implemented above):
+  # optimizer_name: "adam"
+  # weight_decay: 1e-6
+  # lr: (1e-6, 1e-4, "log")
+  # hidden_dim: (32, 512, "log")
+  # layer_dim: (1, 10)

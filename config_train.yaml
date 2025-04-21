@@ -22,7 +22,6 @@ tasks:
   # - "mortality"
   - "aki"
   # - "sepsis"
-  # - "harmonized_icu"
 
 # Datasets to process
 dataset_path: datasets/original_harmonized #"/path/to/datasets"
@@ -40,22 +39,20 @@ random_seed: 42
 preprocessing_baseline:
   replace_outliers: true # Whether to replace outliers with NaNs
   flag_na: true # Whether to flag NA values with binary indicators
-  standardize: true # Whether to standardize features
+  standardize: true # Whether to standardize features (yes: DL, not required: ML, LLM)
   static_imputation: true # Whether to perform static feature imputation
   dynamic_imputation: true # Whether to perform dynamic feature imputation
   save_data: true # Whether to save preprocessed data
   split_ratios: # Train/Val/Test split ratios
     train: 0.8
     val: 0.1
-    test: 0.1
-
-  # TODO: Define which models need standardized data
+    test: 0.1 
 
 # _______ Preprocessing Advanced _______
 
 preprocessing_advanced:
   windowing:
-    enabled: false # Enable/disable windowing
+    enabled: true # Enable/disable windowing
     data_window: 6 # Size of the data window
     prediction_window: 0 # Size of the prediction window (0 = predict at the end of window)
     step_size: 1 # Step size for sliding windows
@@ -76,6 +73,7 @@ load_models:
   # - model_configs/RandomForestModel.yaml
   # - model_configs/XGBoost.yaml
   # - model_configs/LightGBMModel.yaml
-  # - model_configs/CNNModel.yaml
+  - model_configs/CNNModel.yaml
   # - model_configs/LSTMModel.yaml
   # - model_configs/InceptionTimeModel.yaml
+  # - model_configs/GRUModel.yaml
