@@ -1,8 +1,10 @@
-# Sepsis Prediction Using Large Language Models on ICU Data
+# PULSE Benchmark
+
+Predicting Sepsis, Acute kidney injury and mortality on ICU time-series data.
 
 ## Overview
 
-This repository contains the implementation for predicting sepsis, acute kidney injury and mortality in intensive care unit (ICU) patients using Large Language Models (LLMs). The project aims to leverage the power of modern language models to identify early signs of sepsis from multimodal clinical data and serves as a benchmark to compare to traditional ML approaches
+This repository contains the implementation for predicting sepsis, acute kidney injury and mortality in intensive care unit (ICU) patients using Large Language Models (LLMs). The project aims to leverage the power of modern language models to identify early signs of sepsis from multimodal clinical data and serves as a benchmark to compare to traditional ML approaches.
 
 ## Framework Overview
 
@@ -63,6 +65,8 @@ This repository contains the implementation for predicting sepsis, acute kidney 
 
 ## Data
 
+@sophiafe please update this with some specifics :)
+
 Datasets:
 
 - eICU
@@ -71,13 +75,13 @@ Datasets:
 
 ## Implemented Models
 
-- RandomForest
-- CNN
-- XGBoost
-- LSTM
-- GRU
-- LightGBM
-- InceptionTime
+## Implemented Models
+
+| Category | Models                          |
+| -------- | ------------------------------- |
+| **ML**   | RandomForest, XGBoost, LightGBM |
+| **DL**   | CNN, LSTM, GRU, InceptionTime   |
+| **LLM**  | Llama 3.1-8b                    |
 
 ## Results
 
@@ -117,25 +121,25 @@ A Metric Tracker is running alongside each training / evaluation process. Predic
 class ExampleModel(PulseTemplateModel):
    def __init__(self, params: Dict[str, Any], **kwargs) -> None:
       super().__init__(model_name, trainer_name, params=params)
-   def set_trainer(self, trainer_name, train_dataloader, test_dataloader):
-      self.trainer = ExampleTrainer(self,train_dataloader, test_dataloader)
+   def set_trainer(self, trainer_name, train_loader, val_loader, test_dataloader):
+      self.trainer = ExampleTrainer(self,train_loader, val_loader, test_dataloader)
 ```
 
 ```python
 class ExampleTrainer():
-   def __init__(self, model, train_dataloader, test_dataloader):
+   def __init__(self, model, train_loader, val_loader, test_loader):
       self.model = model
-      self.train_dataloader = train_dataloader
-      self.test_dataloader = test_dataloader
+      self.train_loader = train_loader
+      self.test_loader = test_loader
 
 
    def train(self):
       # training loop
       pass
 
-   def validate(self, val_dataloader):
+   def validate(self, val_loader):
       # validation loop
-      metrics_tracker = MetricsTracker(self.model.model_name, self.model.save_dir)
+      metrics_tracker = MetricsTracker()
 
 
 ```

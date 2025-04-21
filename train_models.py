@@ -224,9 +224,6 @@ def main():
     if is_on_slurm():
         logger.info(f"Running on Slurm cluster (Job ID: {os.getenv('SLURM_JOB_ID')})")
 
-    # if config.wandb["enabled"]:
-    #     init_wandb(config)  # Initialize Weights & Biases
-
     # Run training
     trainer = ModelTrainer(config)
     trainer.run()

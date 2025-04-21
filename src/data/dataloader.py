@@ -309,7 +309,7 @@ class DatasetManager:
 
         data = dataset["data"]
 
-        # Take only 100 rows if in debug
+        # Take only n rows if in debug
         debug = kwargs.get("debug", False)
         if debug:
             debug_data_length = 1000

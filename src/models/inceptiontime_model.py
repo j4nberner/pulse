@@ -1,3 +1,4 @@
+from datetime import datetime
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -10,7 +11,7 @@ import wandb
 import os
 
 from src.models.pulsetemplate_model import PulseTemplateModel
-from src.util.model_util import (save_torch_model, prepare_data_for_model_dl)
+from src.util.model_util import save_torch_model, prepare_data_for_model_dl
 from src.eval.metrics import MetricsTracker
 
 # Set up logger
@@ -18,6 +19,7 @@ logger = logging.getLogger("PULSE_logger")
 
 # TODO: implement EarlyStopping from src/util/model_util.py
 # TODO: implement load presaved model weights from path (specified in config)
+
 
 class InceptionTimeModel(PulseTemplateModel, nn.Module):
     """
@@ -95,7 +97,9 @@ class InceptionTimeModel(PulseTemplateModel, nn.Module):
             if val_loss > self.best_val_loss - self.delta:
                 self.counter += 1
                 if self.verbose:
-                    logger.info(f"EarlyStopping counter: {self.counter} out of {self.patience}")
+                    logger.info(
+                        f"EarlyStopping counter: {self.counter} out of {self.patience}"
+                    )
                 if self.counter >= self.patience:
                     self.early_stop = True
             else:
@@ -135,18 +139,18 @@ class InceptionTimeModel(PulseTemplateModel, nn.Module):
 
         # Define required parameters based on InceptionTimeModel.yaml
         required_params = [
-            'save_checkpoint_freq',
-            'verbose',
-            'num_epochs',
-            'earlystopping_patience',
-            'depth',
-            'dropout_rate',
-            'optimizer_name',
-            'learning_rate',
-            'weight_decay',
-            'scheduler_factor',
-            'scheduler_patience',
-            'min_lr'   
+            "save_checkpoint_freq",
+            "verbose",
+            "num_epochs",
+            "earlystopping_patience",
+            "depth",
+            "dropout_rate",
+            "optimizer_name",
+            "learning_rate",
+            "weight_decay",
+            "scheduler_factor",
+            "scheduler_patience",
+            "min_lr",
         ]
 
         # Check if all required parameters exist in config
@@ -322,7 +326,7 @@ class InceptionTimeTrainer:
     def __init__(self, model, train_loader, val_loader, test_loader):
         """
         Initialize the InceptionTime trainer.
-        
+
         Args:
             model: The GRU model to train.
             train_loader: DataLoader for training data.
@@ -373,17 +377,25 @@ class InceptionTimeTrainer:
 
         # Set criterion after calculating class weights for imbalanced datasets
         self.pos_weight = self._calculate_pos_weight()
-        self.criterion = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([self.pos_weight]).to(self.device))
+        self.criterion = nn.BCEWithLogitsLoss(
+            pos_weight=torch.tensor([self.pos_weight]).to(self.device)
+        )
 
         logger.info(f"Using optimizer: {self.optimizer.__class__.__name__}")
-        logger.info(f"Using criterion: {self.criterion.__class__.__name__} with class weight adjustment")
+        logger.info(
+            f"Using criterion: {self.criterion.__class__.__name__} with class weight adjustment"
+        )
 
         # Initialize scheduler
         scheduler_factor = self.params["scheduler_factor"]
         scheduler_patience = self.params["scheduler_patience"]
         min_lr = self.params["min_lr"]
         self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-            self.optimizer, mode="min", factor=scheduler_factor, patience=scheduler_patience, min_lr=min_lr
+            self.optimizer,
+            mode="min",
+            factor=scheduler_factor,
+            patience=scheduler_patience,
+            min_lr=min_lr,
         )
 
     def _prepare_data(self):
@@ -402,13 +414,19 @@ class InceptionTimeTrainer:
         transformed_features = self.converter.convert_batch_to_3d(features)
 
         # Get the number of channels from the transformed features
-        num_channels = transformed_features.shape[1]  # CNN models (batch_size, num_channels, time_steps), RNN models (batch_size, time_steps, num_features)
+        num_channels = transformed_features.shape[
+            1
+        ]  # CNN models (batch_size, num_channels, time_steps), RNN models (batch_size, time_steps, num_features)
 
         # Update model architecture with correct shape
         self.model.create_network_with_input_shape(num_channels)
-    
-        logger.info(f"Input shape to model (after transformation): {transformed_features.shape}")
-        logger.info(f"Model architecture initialized with {num_channels} input channels")
+
+        logger.info(
+            f"Input shape to model (after transformation): {transformed_features.shape}"
+        )
+        logger.info(
+            f"Model architecture initialized with {num_channels} input channels"
+        )
 
     def _calculate_pos_weight(self):
         """Calculate positive class weight for imbalanced data."""
@@ -416,23 +434,25 @@ class InceptionTimeTrainer:
             all_labels = []
             for _, labels in self.train_loader:
                 all_labels.extend(labels.cpu().numpy().flatten())
-            
+
             all_labels = np.array(all_labels)
             neg_count = np.sum(all_labels == 0)
             pos_count = np.sum(all_labels == 1)
-            
+
             if pos_count == 0:
                 logger.warning("No positive samples found, using pos_weight=1.0")
                 return 1.0
-                
+
             weight = neg_count / pos_count
-            logger.info(f"Class imbalance - Neg: {neg_count}, Pos: {pos_count}, Weight: {weight}")
+            logger.info(
+                f"Class imbalance - Neg: {neg_count}, Pos: {pos_count}, Weight: {weight}"
+            )
             return weight
-            
+
         except Exception as e:
             logger.error(f"Error calculating class weights: {e}")
             return 1.0
-        
+
     def train(self):
         """Training loop."""
 
@@ -468,6 +488,9 @@ class InceptionTimeTrainer:
             self.model.load_state_dict(self.model.early_stopping.best_state_dict)
         save_torch_model(f"{self.model.model_name}", self.model, self.model_save_dir)
 
+        model_save_name = f"{self.model.model_name}_{self.task_name}_{self.dataset_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pt"
+        save_torch_model(model_save_name, self.model, self.model_save_dir)
+
         # Evaluate the model on the testing set
         self.evaluate()
 
@@ -478,7 +501,7 @@ class InceptionTimeTrainer:
         Args:
             epoch (int): Current epoch number.
             verbose (int): Verbosity level (0, 1, or 2).
-        
+
         Returns:
             Boolean indicating if early stopping was triggered
         """
@@ -502,8 +525,10 @@ class InceptionTimeTrainer:
 
             # Log progress for each batch if verbose=2, or every 100 batches if verbose=1
             if verbose == 2 or verbose == 1 and batch_idx % 100 == 0:
-                logger.info(f"Epoch {epoch+1}, Batch {batch_idx+1}/{len(self.train_loader)}, Loss: {loss.item():.4f}")
-        
+                logger.info(
+                    f"Epoch {epoch+1}, Batch {batch_idx+1}/{len(self.train_loader)}, Loss: {loss.item():.4f}"
+                )
+
         # Calculate average loss for the epoch
         avg_train_loss = train_loss / len(self.train_loader)
         self.metrics["train_loss"].append(avg_train_loss)
@@ -523,7 +548,7 @@ class InceptionTimeTrainer:
             f"Val Loss: {val_loss:.4f}, "
             f"LR: {self.optimizer.param_groups[0]['lr']:.6f}"
         )
-        
+
         # Log to WandB if enabled
         if self.wandb:
             wandb.log(
@@ -538,8 +563,8 @@ class InceptionTimeTrainer:
         # Check early stopping
         self.model.early_stopping(val_loss, self.model)
         if self.model.early_stopping.early_stop:
-            return True # Return True to indicate early stopping was triggered
-        return False # Return False if early stopping was not triggered
+            return True  # Return True to indicate early stopping was triggered
+        return False  # Return False if early stopping was not triggered
 
     def _validate(self):
         """Validate the model and return validation loss."""
@@ -569,48 +594,59 @@ class InceptionTimeTrainer:
             self.model.save_dir,
         )
         self.model.eval()
-        
+
         # Track both batches and per-batch metrics for logging
         batch_metrics = []
-        
+
         with torch.no_grad():
             for batch_idx, (features, labels) in enumerate(self.test_loader):
                 # Convert features for the model
                 features = self.converter.convert_batch_to_3d(features)
-                features, labels = features.to(self.device), labels.to(self.device).float()
-                
+                features, labels = (
+                    features.to(self.device),
+                    labels.to(self.device).float(),
+                )
+
                 # Forward pass
                 outputs = self.model(features)
-                
+
                 # Get predictions (sigmoid for binary classification)
                 probs = torch.sigmoid(outputs).squeeze()
                 preds = (probs >= 0.5).int()
-                
+
                 # Calculate batch accuracy for logging
                 batch_accuracy = (preds == labels).sum().item() / labels.size(0)
                 batch_metrics.append(batch_accuracy)
 
                 # Add results to metrics tracker
                 metrics_tracker.add_results(preds.cpu().numpy(), labels.cpu().numpy())
-                
+
                 # Log batch progress if verbose
-                if self.params["verbose"] == 2 or (self.params["verbose"] == 1 and batch_idx % 100 == 0):
-                    logger.info(f"Evaluating batch {batch_idx+1}/{len(self.test_loader)}: Accuracy = {batch_accuracy:.4f}")
-        
+                if self.params["verbose"] == 2 or (
+                    self.params["verbose"] == 1 and batch_idx % 100 == 0
+                ):
+                    logger.info(
+                        f"Evaluating batch {batch_idx+1}/{len(self.test_loader)}: Accuracy = {batch_accuracy:.4f}"
+                    )
+
         # Calculate and log metrics
         metrics_tracker.summary = metrics_tracker.compute_overall_metrics()
         metrics_tracker.save_report()
-        
+
         # Log results to console
         logger.info(f"Test evaluation completed for {self.model.model_name}")
         logger.info(f"Test metrics: {metrics_tracker.summary}")
-        logger.info(f"Average batch accuracy: {sum(batch_metrics)/len(batch_metrics):.4f}")
-        
+        logger.info(
+            f"Average batch accuracy: {sum(batch_metrics)/len(batch_metrics):.4f}"
+        )
+
         # Log all metrics to wandb if enabled
         if self.wandb:
             # Create a dictionary with all metrics
             wandb_metrics = {f"test_{k}": v for k, v in metrics_tracker.summary.items()}
             # Add average batch accuracy
-            wandb_metrics["test_avg_batch_accuracy"] = sum(batch_metrics)/len(batch_metrics)
+            wandb_metrics["test_avg_batch_accuracy"] = sum(batch_metrics) / len(
+                batch_metrics
+            )
             # Log all metrics at once
             wandb.log(wandb_metrics)

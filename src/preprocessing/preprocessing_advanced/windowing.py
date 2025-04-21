@@ -1,3 +1,4 @@
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import os
 import pandas as pd
 import numpy as np
@@ -6,7 +7,9 @@ from tqdm import tqdm
 import gc
 import logging
 import torch
-from src.preprocessing.preprocessing_baseline.preprocessing_baseline import PreprocessorBaseline
+from src.preprocessing.preprocessing_baseline.preprocessing_baseline import (
+    PreprocessorBaseline,
+)
 
 # Set up logger
 logger = logging.getLogger("PULSE_logger")
@@ -67,14 +70,18 @@ class Windower:
             y = data_dict[set_type]["y"]
 
             X_np = X.values
-            y_np = y['label'].values
-            stay_id_np = X['stay_id'].values
-    
+            y_np = y["label"].values
+            stay_id_np = X["stay_id"].values
+
             # Define static columns that will be preserved in order
-            static_columns = ['stay_id', 'age', 'sex', 'height', 'weight']
-            columns_index = [X.columns.get_loc(col) for col in static_columns if col in X.columns]
-            non_static_columns = [i for i in range(X_np.shape[1]) if i not in columns_index]
-    
+            static_columns = ["stay_id", "age", "sex", "height", "weight"]
+            columns_index = [
+                X.columns.get_loc(col) for col in static_columns if col in X.columns
+            ]
+            non_static_columns = [
+                i for i in range(X_np.shape[1]) if i not in columns_index
+            ]
+
             result_rows = []
             result_labels = []
             unique_stay_ids = np.unique(stay_id_np)
@@ -83,19 +90,28 @@ class Windower:
             if self.debug_mode:
                 if len(unique_stay_ids) > 100:
                     unique_stay_ids = unique_stay_ids[:100]
-                    logger.info(f"DEBUG MODE: Limited to first 100 stay_ids for {set_type} set")
-    
-            logger.info(f"Processing {set_type} set with {len(unique_stay_ids)} stay_ids")
+                    logger.info(
+                        f"DEBUG MODE: Limited to first 100 stay_ids for {set_type} set"
+                    )
+
+            logger.info(
+                f"Processing {set_type} set with {len(unique_stay_ids)} stay_ids"
+            )
             # Update progress bar every 5000 stay_ids (or fewer in debug mode)
             miniters = 5000 if not self.debug_mode else 10
-            
+
             # Initialize variables for batch processing
             batch_size = 10000  # Adjust based on memory constraints
             current_batch = 0
             X_window = None
             y_window = None
-            
-            for stay_id in tqdm(unique_stay_ids, mininterval=1.0, miniters=miniters, desc=f"{set_type} stay_ids"):
+
+            for stay_id in tqdm(
+                unique_stay_ids,
+                mininterval=1.0,
+                miniters=miniters,
+                desc=f"{set_type} stay_ids",
+            ):
                 mask = stay_id_np == stay_id
                 X_stay = X_np[mask]
                 y_stay = y_np[mask]
@@ -109,23 +125,27 @@ class Windower:
                     continue
 
                 # Get static values for this stay
-                static_row = {X.columns[col_idx]: X_stay[0, col_idx] for col_idx in columns_index}
-    
+                static_row = {
+                    X.columns[col_idx]: X_stay[0, col_idx] for col_idx in columns_index
+                }
+
                 # Adjust the range based on prediction window
                 max_start = len(X_stay) - min_length + 1
 
                 # Use step_size for window sliding
                 for start in range(0, max_start, step_size):
-                    X_window_data = X_stay[start:start + data_window]
-                    
+                    X_window_data = X_stay[start : start + data_window]
+
                     # Skip if we don't have a full window (could happen with the last window)
                     if len(X_window_data) < data_window:
                         continue
-                    
-                    row = {f'{X.columns[col_idx]}_{hour}': X_window_data[hour, col_idx]
-                           for col_idx in non_static_columns
-                           for hour in range(data_window)}
-                    
+
+                    row = {
+                        f"{X.columns[col_idx]}_{hour}": X_window_data[hour, col_idx]
+                        for col_idx in non_static_columns
+                        for hour in range(data_window)
+                    }
+
                     row.update(static_row)
                     result_rows.append(row)
 
@@ -136,21 +156,25 @@ class Windower:
                         label_position = start + data_window + prediction_window - 1
 
                     result_labels.append(y_stay[label_position])
-                    
+
                     # Process in batches to reduce memory usage
                     if len(result_rows) >= batch_size:
-                        X_window, y_window = self._process_batch(result_rows, result_labels, X, X_window, y_window)
-                        
+                        X_window, y_window = self._process_batch(
+                            result_rows, result_labels, X, X_window, y_window
+                        )
+
                         # Clear memory
                         result_rows = []
                         result_labels = []
                         current_batch += 1
                         gc.collect()  # Force garbage collection
-    
+
             # Process any remaining data
             if result_rows:
-                X_window, y_window = self._process_batch(result_rows, result_labels, X, X_window, y_window)
-    
+                X_window, y_window = self._process_batch(
+                    result_rows, result_labels, X, X_window, y_window
+                )
+
             # Reorder columns to have stay_id, sex, age, height, weight first
             all_columns = list(X_window.columns)
             ordered_static_columns = [
@@ -170,43 +194,43 @@ class Windower:
 
         # Force garbage collection to free memory
         gc.collect()
-        
+
         return results
 
     def _process_batch(self, result_rows, result_labels, X, X_window, y_window):
         """
         Process a batch of windowed data to create DataFrames with proper data types.
-        
+
         Args:
             result_rows (list): List of dictionaries containing feature data
             result_labels (list): List of labels
             X (pd.DataFrame): Original feature DataFrame for reference
             X_window (pd.DataFrame): Existing X window DataFrame, can be None
             y_window (pd.DataFrame): Existing y window DataFrame, can be None
-            
+
         Returns:
             tuple: Updated (X_window, y_window) DataFrames
         """
         batch_X = pd.DataFrame(result_rows)
-        batch_y = pd.DataFrame(result_labels, columns=['label'])
-        
+        batch_y = pd.DataFrame(result_labels, columns=["label"])
+
         # Add stay_id to batch_y
-        batch_y['stay_id'] = [row['stay_id'] for row in result_rows]
-        
+        batch_y["stay_id"] = [row["stay_id"] for row in result_rows]
+
         # Process data types for the batch
         for col in batch_X.columns:
-            if '_' in col and col.split('_')[-1].isdigit():
+            if "_" in col and col.split("_")[-1].isdigit():
                 # Extract the base column name (everything before the last underscore)
-                base_col = '_'.join(col.split('_')[:-1])
+                base_col = "_".join(col.split("_")[:-1])
                 if base_col in X.columns:
                     batch_X[col] = batch_X[col].astype(X[base_col].dtype)
             else:
                 # For static columns
                 if col in X.columns:
                     batch_X[col] = batch_X[col].astype(X[col].dtype)
-        
-        batch_y['label'] = batch_y['label'].astype(int)
-        
+
+        batch_y["label"] = batch_y["label"].astype(int)
+
         # Either initialize or append to existing dataframes
         if X_window is None:
             X_window = batch_X
@@ -214,10 +238,12 @@ class Windower:
         else:
             X_window = pd.concat([X_window, batch_X], ignore_index=True)
             y_window = pd.concat([y_window, batch_y], ignore_index=True)
-            
+
         return X_window, y_window
-  
-    def save_windowed_data(self, results, task, dataset, data_window, prediction_window, step_size):
+
+    def save_windowed_data(
+        self, results, task, dataset, data_window, prediction_window, step_size
+    ):
         """
         Save windowed data to parquet files, both in scratch and permanent storage if applicable.
 
@@ -353,12 +379,13 @@ class Windower:
         """
         # Generate dynamic directory name based on preprocessing configuration
         preprocessor = PreprocessorBaseline(
-            base_path=self.base_path, 
-            config=self.preprocessor_config
+            base_path=self.base_path, config=self.preprocessor_config
         )  # Pass config to temporary instance
         config_dirname = preprocessor._generate_preprocessing_dirname()
-        
-        read_directory = f"datasets/preprocessed_splits/{task}/{dataset}/{config_dirname}"
+
+        read_directory = (
+            f"datasets/preprocessed_splits/{task}/{dataset}/{config_dirname}"
+        )
         full_path = os.path.join(self.base_path, read_directory)
 
         if not os.path.exists(full_path):
@@ -382,8 +409,10 @@ class Windower:
 
             # Log shapes of loaded datasets
             for set_type in data_sets:
-                logger.info(f"Loaded {set_type} set before windowing - X shape: {data_sets[set_type]['X'].shape}, y shape: {data_sets[set_type]['y'].shape}")
-            
+                logger.info(
+                    f"Loaded {set_type} set before windowing - X shape: {data_sets[set_type]['X'].shape}, y shape: {data_sets[set_type]['y'].shape}"
+                )
+
             return data_sets
 
         except Exception as e:
@@ -533,7 +562,13 @@ class WindowedDataTo3D:
             f"Converter configured: windowed={windowing_enabled}, input_shape={input_shape}"
         )
 
-    def convert_batch_to_3d(self, batch_features, window_size=None, static_feature_count=4, id_column_index=None):
+    def convert_batch_to_3d(
+        self,
+        batch_features,
+        window_size=None,
+        static_feature_count=4,
+        id_column_index=None,
+    ):
         """
         Convert a batch of features from 2D to 3D format suitable for temporal models.
         Works with tensors extracted directly from the dataloader.
@@ -543,11 +578,11 @@ class WindowedDataTo3D:
             window_size (int, optional): Size of the time window. Defaults to self.window_size
             static_feature_count (int): Number of static features (excluding id_column)
             id_column_index (int): Index of the ID column to exclude (typically 0 for stay_id) -> in our case None because stay_id is dropped in dataloader
-            
+
         Returns:
             torch.Tensor: 3D tensor ready for DL model input
         """
-        
+
         # If already 3D, return as is
         if len(batch_features.shape) == 3 or not self.needs_conversion:
             return batch_features

@@ -102,7 +102,7 @@ class CNNModel(PulseTemplateModel, nn.Module):
         )
         self.conv3 = nn.Conv1d(
             in_channels=self.params["num_channels"] * 2,
-            out_channels=self.params["num_channels"] * 1,
+            out_channels=16,
             kernel_size=self.params["kernel_size"],
             padding=self.params["kernel_size"] // 2,
         )
@@ -113,9 +113,7 @@ class CNNModel(PulseTemplateModel, nn.Module):
         self.norm2 = nn.GroupNorm(
             num_groups=1, num_channels=self.params["num_channels"] * 2
         )
-        self.norm3 = nn.GroupNorm(
-            num_groups=1, num_channels=self.params["num_channels"]
-        )
+        self.norm3 = nn.GroupNorm(num_groups=1, num_channels=16)
 
         self.leaky_relu = nn.ReLU()
 
@@ -176,8 +174,12 @@ class CNNTrainer:
         self.train_loader = train_loader
         self.val_loader = val_loader
         self.test_loader = test_loader
-        self.optimizer = optim.Adam(self.model.parameters())
-        self.criterion = nn.BCEWithLogitsLoss()
+        self.criterion = nn.BCEWithLogitsLoss(
+            pos_weight=torch.tensor(1.0)
+        )  # inbalanced dataset
+        self.optimizer = optim.Adam(
+            self.model.parameters()
+        )  # Update after model initialization
         self.wandb = self.model.wandb
         self.model_save_dir = os.path.join(cnn_model.save_dir, "Models")
         self.task_name = self.model.task_name
@@ -205,14 +207,14 @@ class CNNTrainer:
         features, _ = next(iter(self.train_loader))
         transformed_features = self.converter.convert_batch_to_3d(features)
 
-        # Get the number of channels from the transformed features
-        num_channels = transformed_features.shape[1]
-
         # Update the model input shape based on the data
-        self.model.params["num_channels"] = num_channels
+        self.model.params["num_channels"] = transformed_features.shape[1]
+        self.model.params["window_size"] = transformed_features.shape[2]
         self.model._init_model()
 
-        logger.info(f"Input shape to model (after transformation): {transformed_features.shape}")
+        logger.info(
+            f"Input shape to model (after transformation): {transformed_features.shape}"
+        )
 
         # Try to load the model weights if they exist
         if self.model.pretrained_model_path:
@@ -228,6 +230,10 @@ class CNNTrainer:
         """Training loop."""
         num_epochs = self.params["num_epochs"]
         verbose = self.params.get("verbose", 1)
+
+        self.optimizer = optim.Adam(
+            self.model.parameters()
+        )  # Update optimizer after model initialization
 
         # Move to GPU if available
         self.model.to(self.device)
@@ -249,8 +255,9 @@ class CNNTrainer:
         self.evaluate(
             self.test_loader, save_report=True
         )  # Evaluate on test set and save metrics
+        model_save_name = f"{self.model.model_name}_{self.task_name}_{self.dataset_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pt"
         save_torch_model(
-            self.model.model_name, self.model, self.model.save_dir
+            model_save_name, self.model, self.model.save_dir
         )  # Save the final model
 
     def train_epoch(self, epoch: int, verbose: int = 1) -> None:
