@@ -203,7 +203,13 @@ class LSTMTrainer:
         self.model.input_size = input_dim
         self.model._init_model()
 
-        logger.info(f"Input shape to model (after transformation): {transformed_features.shape}")
+        self.optimizer = optim.Adam(
+            self.model.parameters(), lr=self.params["learning_rate"]
+        )
+
+        logger.info(
+            f"Input shape to model (after transformation): {transformed_features.shape}"
+        )
 
         # Try to load the model weights if they exist
         if self.model.pretrained_model_path:
@@ -234,8 +240,10 @@ class LSTMTrainer:
         logger.info("Training finished.")
         self.early_stopping.load_best_model(self.model)  # Load the best model
         self.evaluate(self.test_loader, save_report=True)
+
+        model_save_name = f"{self.model.model_name}_{self.task_name}_{self.dataset_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pt"
         save_torch_model(
-            self.model.model_name, self.model, self.model_save_dir
+            model_save_name, self.model, self.model.save_dir
         )  # Save the final model
 
     def train_epoch(self, epoch: int, verbose: int = 1) -> None:

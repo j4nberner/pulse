@@ -255,9 +255,9 @@ class CNNTrainer:
         self.evaluate(
             self.test_loader, save_report=True
         )  # Evaluate on test set and save metrics
-        # TODO: Save the model with task_name and dataset_name in the filename
+        model_save_name = f"{self.model.model_name}_{self.task_name}_{self.dataset_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pt"
         save_torch_model(
-            self.model.model_name, self.model, self.model.save_dir
+            model_save_name, self.model, self.model.save_dir
         )  # Save the final model
 
     def train_epoch(self, epoch: int, verbose: int = 1) -> None:

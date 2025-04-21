@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Dict, Any, Optional
 import logging
 import numpy as np
@@ -198,7 +199,8 @@ class LightGBMTrainer:
         metrics_tracker.save_report()
 
         # Save the model
-        save_sklearn_model(self.model.model_name, self.model.model, self.model_save_dir)
+        model_save_name = f"{self.model.model_name}_{self.task_name}_{self.dataset_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pt"
+        save_sklearn_model(model_save_name, self.model.model, self.model_save_dir)
 
         # Log metrics to wandb
         if self.wandb:
