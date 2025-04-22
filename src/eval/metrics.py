@@ -14,12 +14,13 @@ from sklearn.metrics import (
     confusion_matrix,
     accuracy_score,
     precision_score,
+    balanced_accuracy_score,
+    matthews_corrcoef,
 )
 
 logger = logging.getLogger("PULSE_logger")
 
 # TODO: maybe implement sub-group AUROC and AUPRC (considering the fairness and biases of models) for different genders, age ranges, etc.
-
 
 class MetricsTracker:
     """
@@ -47,6 +48,7 @@ class MetricsTracker:
         self.metrics_to_track = metrics_to_track or [
             "auroc",
             "auprc",
+            "normalized_auprc",
             "sensitivity",
             "specificity",
             "f1_score",
@@ -54,6 +56,7 @@ class MetricsTracker:
             "balanced_accuracy",
             "precision",
             "recall",
+            "mcc",
         ]
         self.metrics = {metric: [] for metric in self.metrics_to_track}
         self.results = {
@@ -191,16 +194,19 @@ def calculate_auroc(
 
 def calculate_auprc(
     y_true: Union[np.ndarray, torch.Tensor], y_pred: Union[np.ndarray, torch.Tensor]
-) -> float:
+) -> Union[float, Dict[str, float]]:
     """
-    Calculate Area Under the Precision-Recall Curve (AUPRC)
+    Calculate Area Under the Precision-Recall Curve (AUPRC) and Normalized AUPRC
+    
+    Normalized AUPRC is calculated by dividing the AUPRC by the fraction of 
+    positive class samples in the total samples. This helps adjust for class imbalance.
 
     Args:
         y_true: Ground truth labels (0 or 1)
         y_pred: Predicted probabilities or scores
 
     Returns:
-        AUPRC score
+        Either a float (AUPRC) or a dictionary containing both AUPRC and normalized AUPRC
     """
     # Handle tensors if passed
     if isinstance(y_true, torch.Tensor):
@@ -214,8 +220,18 @@ def calculate_auprc(
         return np.nan
 
     precision, recall, _ = precision_recall_curve(y_true, y_pred)
-    return auc(recall, precision)
-
+    auprc = auc(recall, precision)
+    
+    # Calculate normalized AUPRC
+    positive_fraction = np.mean(y_true)
+    
+    if positive_fraction == 0:
+        logger.warning("No positive samples in y_true. Cannot normalize AUPRC.")
+        normalized_auprc = np.nan
+    else:
+        normalized_auprc = auprc / positive_fraction
+    
+    return {"auprc": auprc, "normalized_auprc": normalized_auprc}
 
 def calculate_sensitivity(
     y_true: Union[np.ndarray, torch.Tensor],
@@ -386,6 +402,59 @@ def calculate_recall(
 
     return recall_score(y_true, y_pred_binary, zero_division=0, labels=[0, 1])
 
+def calculate_balanced_accuracy(
+    y_true: Union[np.ndarray, torch.Tensor],
+    y_pred: Union[np.ndarray, torch.Tensor],
+    threshold: float = 0.5,
+) -> float:
+    """
+    Calculate Balanced Accuracy using sklearn's balanced_accuracy_score
+
+    Args:
+        y_true: Ground truth labels (0 or 1)
+        y_pred: Predicted probabilities
+        threshold: Threshold to convert probabilities to binary predictions
+
+    Returns:
+        Balanced accuracy score
+    """
+    # Handle tensors if passed
+    if isinstance(y_true, torch.Tensor):
+        y_true = y_true.detach().cpu().numpy()
+    if isinstance(y_pred, torch.Tensor):
+        y_pred = y_pred.detach().cpu().numpy()
+
+    # Convert probabilities to binary predictions
+    y_pred_binary = (y_pred >= threshold).astype(int)
+
+    return balanced_accuracy_score(y_true, y_pred_binary)
+
+def calculate_mcc(
+    y_true: Union[np.ndarray, torch.Tensor],
+    y_pred: Union[np.ndarray, torch.Tensor],
+    threshold: float = 0.5,
+) -> float:
+    """
+    Calculate Matthews Correlation Coefficient (MCC)
+
+    Args:
+        y_true: Ground truth labels (0 or 1)
+        y_pred: Predicted probabilities
+        threshold: Threshold to convert probabilities to binary predictions
+
+    Returns:
+        MCC score
+    """
+    # Handle tensors if passed
+    if isinstance(y_true, torch.Tensor):
+        y_true = y_true.detach().cpu().numpy()
+    if isinstance(y_pred, torch.Tensor):
+        y_pred = y_pred.detach().cpu().numpy()
+
+    # Convert probabilities to binary predictions
+    y_pred_binary = (y_pred >= threshold).astype(int)
+
+    return matthews_corrcoef(y_true, y_pred_binary)
 
 def calculate_all_metrics(
     y_true: Union[np.ndarray, torch.Tensor],
@@ -401,21 +470,29 @@ def calculate_all_metrics(
         threshold: Threshold to convert probabilities to binary predictions
 
     Returns:
-        Dictionary containing all metrics
+        Dictionary containing all metrics rounded to 3 decimal places
     """
-    recall = calculate_recall(y_true, y_pred, threshold)
-    specificity = calculate_specificity(y_true, y_pred, threshold)
-    return {
+    # Get both AUPRC and normalized AUPRC in one call
+    auprc_results = calculate_auprc(y_true, y_pred)
+    
+    metrics = {
         "auroc": calculate_auroc(y_true, y_pred),
-        "auprc": calculate_auprc(y_true, y_pred),
+        "auprc": auprc_results["auprc"],
+        "normalized_auprc": auprc_results["normalized_auprc"],
         "sensitivity": calculate_sensitivity(y_true, y_pred, threshold),
         "specificity": calculate_specificity(y_true, y_pred, threshold),
         "f1_score": calculate_f1_score(y_true, y_pred, threshold),
         "accuracy": calculate_accuracy(y_true, y_pred, threshold),
+        "balanced_accuracy": calculate_balanced_accuracy(y_true, y_pred, threshold),
         "precision": calculate_precision(y_true, y_pred, threshold),
-        "recall": recall,
-        "balanced_accuracy": (recall + specificity) / 2,
+        "recall": calculate_recall(y_true, y_pred, threshold),
+        "mcc": calculate_mcc(y_true, y_pred, threshold),
     }
+    
+    # Round all metrics to 3 decimal places
+    rounded_metrics = {k: round(v, 3) if not np.isnan(v) else v for k, v in metrics.items()}
+    
+    return rounded_metrics
 
 
 def calc_metric_stats(metrics_tracker: dict, model_id: str, save_dir=str) -> None:

@@ -238,4 +238,9 @@ class Llama3Trainer:
         metrics_tracker.summary = metrics_tracker.compute_overall_metrics()
         if save_report:
             metrics_tracker.save_report()
+
+        # Log results to console
+        logger.info(f"Test evaluation completed for {self.model.model_name}")
+        logger.info(f"Test metrics: {metrics_tracker.summary}")
+
         return np.mean(val_loss)

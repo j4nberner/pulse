@@ -140,6 +140,7 @@ class RandomForestTrainer:
         """
         self.model = model
         self.train_loader = train_loader
+        self.val_loader = val_loader
         self.test_loader = test_loader
         self.task_name = self.model.task_name
         self.dataset_name = self.model.dataset_name
@@ -154,7 +155,7 @@ class RandomForestTrainer:
 
         # Use the utility function to prepare data
         prepared_data = prepare_data_for_model_ml(
-            self.train_loader, self.test_loader, logger_instance=logger
+            self.train_loader, self.val_loader, self.test_loader,
         )
 
         # Extract all data from the prepared_data dictionary
@@ -185,14 +186,15 @@ class RandomForestTrainer:
 
         y_pred = self.model.model.predict(X_test_df)
         y_pred_proba = self.model.model.predict_proba(X_test_df)
-        metrics_tracker.add_results(y_pred, y_test)
-
-        rmse_score = rmse(y_test, y_pred)
-        logger.info("RMSE: %f", rmse_score)
+        metrics_tracker.add_results(y_pred_proba[:, 1], y_test)
 
         # Calculate and log metrics
         metrics_tracker.summary = metrics_tracker.compute_overall_metrics()
         metrics_tracker.save_report()
+
+        # Log results to console
+        logger.info(f"Test evaluation completed for {self.model.model_name}")
+        logger.info(f"Test metrics: {metrics_tracker.summary}")
 
         # Save the model
         model_save_name = f"{self.model.model_name}_{self.task_name}_{self.dataset_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pt"

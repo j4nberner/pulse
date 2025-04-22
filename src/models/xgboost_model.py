@@ -38,12 +38,14 @@ class XGBoostModel(PulseTemplateModel):
         Raises:
             KeyError: If any required parameters are missing from the config.
         """
+        self.params = params
+
         # For trainer_name we still require it to be explicitly in the params
         if "trainer_name" not in params:
             raise KeyError("Required parameter 'trainer_name' not found in config")
 
         # Use the class name as model_name if not provided in params
-        self.model_name = params.get(
+        self.model_name = self.params.get(
             "model_name", self.__class__.__name__.replace("Model", "")
         )
         self.trainer_name = params["trainer_name"]
@@ -69,7 +71,6 @@ class XGBoostModel(PulseTemplateModel):
             "colsample_bytree",
             "reg_alpha",
             "reg_lambda",
-            "scale_pos_weight",
             "n_jobs",
             "tree_method",
             "eval_metric",
@@ -93,7 +94,10 @@ class XGBoostModel(PulseTemplateModel):
         logger.info(f"Initializing XGBoost with parameters: {model_params}")
 
         # Initialize the XGBoost model with parameters from config
-        self.model = XGBClassifier(**model_params)
+        self.model = XGBClassifier(
+            **model_params,
+        )
+                                
 
     def set_trainer(self, trainer_name, train_loader, val_loader, test_loader):
         """
@@ -126,7 +130,7 @@ class XGBoostTrainer:
         Args:
             model: The XGBoost model to train.
             train_loader: DataLoader for training data.
-            val_loader: DataLoader for validation data. (not used)
+            val_loader: DataLoader for validation data.
             test_loader: DataLoader for testing data.
         """
         self.model = model
@@ -146,23 +150,28 @@ class XGBoostTrainer:
 
         # Use the utility function to prepare data
         prepared_data = prepare_data_for_model_ml(
-            self.train_loader, self.test_loader, logger_instance=logger
+            self.train_loader, self.val_loader, self.test_loader,
         )
 
         # Extract all data from the prepared_data dictionary
         X_train = prepared_data["X_train"]
         y_train = prepared_data["y_train"]
+        X_val = prepared_data["X_val"]
+        y_val = prepared_data["y_val"]
         X_test = prepared_data["X_test"]
         y_test = prepared_data["y_test"]
         feature_names = prepared_data["feature_names"]
 
         # Log training start to wandb
         if self.wandb:
-            wandb.log({"train_samples": len(X_train), "test_samples": len(X_test)})
+            wandb.log({"train_samples": len(X_train), "val_sample": len(X_val), "test_samples": len(X_test)})
 
         # Train the model
         self.model.model.fit(
-            X_train, y_train, eval_set=[(X_test, y_test)], verbose=False
+            X_train, 
+            y_train, 
+            eval_set=[(X_val, y_val)], 
+            verbose=self.model.params["verbosity"],
         )
         logger.info("XGBoost model trained successfully.")
 
@@ -179,14 +188,15 @@ class XGBoostTrainer:
 
         y_pred = self.model.model.predict(X_test_df)
         y_pred_proba = self.model.model.predict_proba(X_test_df)
-        metrics_tracker.add_results(y_pred, y_test)
-
-        rmse_score = rmse(y_test, y_pred)
-        logger.info("RMSE: %f", rmse_score)
+        metrics_tracker.add_results(y_pred_proba[:, 1], y_test)
 
         # Calculate and log metrics
         metrics_tracker.summary = metrics_tracker.compute_overall_metrics()
         metrics_tracker.save_report()
+
+        # Log results to console
+        logger.info(f"Test evaluation completed for {self.model.model_name}")
+        logger.info(f"Test metrics: {metrics_tracker.summary}")
 
         # Save the model
         model_save_name = f"{self.model.model_name}_{self.task_name}_{self.dataset_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pt"

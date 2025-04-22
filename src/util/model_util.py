@@ -9,7 +9,6 @@ import pandas as pd
 
 logger = logging.getLogger("PULSE_logger")
 
-
 class EarlyStopping:
     def __init__(self, patience=5, delta=0):
         self.patience = patience
@@ -82,9 +81,7 @@ def save_sklearn_model(model_name: str, model: Any, save_dir: str) -> None:
         logger.error(f"Failed to save model '{model_name}': {str(e)}")
 
 
-def prepare_data_for_model_ml(
-    train_dataloader, test_dataloader, logger_instance=None
-) -> Dict[str, Any]:
+def prepare_data_for_model_ml(train_loader, val_loader, test_loader) -> Dict[str, Any]:
     """
     Prepare data for machine learning models by converting PyTorch tensors
     from dataloaders to numpy arrays while preserving feature names.
@@ -92,63 +89,55 @@ def prepare_data_for_model_ml(
     Args:
         train_dataloader: DataLoader containing the training data or list of data in debug mode
         test_dataloader: DataLoader containing the test data or list of data in debug mode
-        logger_instance: Optional logger instance (uses default PULSE_logger if None)
 
     Returns:
         dict: Dictionary containing:
             - X_train: numpy array of training features
             - y_train: numpy array of training labels
+            - X_val: numpy array of validation features (if available)
+            - y_val: numpy array of validation labels (if available)
             - X_test: numpy array of test features
             - y_test: numpy array of test labels
             - feature_names: list of feature names (if available)
     """
 
-    # Use provided logger or default
-    log = logger_instance or logger
 
     # Extract data from dataloaders
     X_train, y_train = [], []
+    X_val, y_val = [], []
     X_test, y_test = [], []
     feature_names = []
 
-    if isinstance(train_dataloader[0], pd.DataFrame):
+    if isinstance(train_loader[0], pd.DataFrame):
         # If DataLoader is a DataFrame, extract features and labels directly
-        X_train = np.array(train_dataloader[0].values)
-        y_train = np.array(train_dataloader[1].values).squeeze()
-        X_test = np.array(test_dataloader[0].values)
-        y_test = np.array(test_dataloader[1].values).squeeze()
-        feature_names = list(train_dataloader[0].columns)
+        X_train = np.array(train_loader[0].values)
+        y_train = np.array(train_loader[1].values).squeeze()
+        X_val = np.array(val_loader[0].values)
+        y_val = np.array(val_loader[1].values).squeeze()
+        X_test = np.array(test_loader[0].values)
+        y_test = np.array(test_loader[1].values).squeeze()
+        feature_names = list(train_loader[0].columns)
 
     else:
         # Convert lists to numpy arrays
         X_train = np.array(X_train)
         y_train = np.array(y_train)
+        X_val = np.array(X_val)
+        y_val = np.array(y_val)
         X_test = np.array(X_test)
         y_test = np.array(y_test)
 
     # Log shapes
-    log.info(
-        f"Prepared data shapes - X_train: {X_train.shape}, y_train: {y_train.shape}"
-    )
-    log.info(f"Prepared data shapes - X_test: {X_test.shape}, y_test: {y_test.shape}")
-
-    # Try to extract feature names from the original dataframe if available
-    # feature_names = None
-
-    # # Only try to extract feature names if not in debug mode
-    # if not is_debug_mode and hasattr(train_dataloader.dataset, 'X') and isinstance(train_dataloader.dataset.X, pd.DataFrame):
-    #     feature_names = list(train_dataloader.dataset.X.columns)
-    #     log.info(f"Extracted {len(feature_names)} feature names from original DataFrame")
-
-    # # Create fallback feature names if needed
-    # if feature_names is None or len(feature_names) != X_train.shape[1]:
-    #     feature_names = [f'feature_{i}' for i in range(X_train.shape[1])]
-    #     log.info(f"Using generated feature names (for debug mode)")
+    logger.info(f"Prepared data shapes - X_train: {X_train.shape}, y_train: {y_train.shape}")
+    logger.info(f"Prepared data shapes - X_val: {X_val.shape}, y_val: {y_val.shape}")
+    logger.info(f"Prepared data shapes - X_test: {X_test.shape}, y_test: {y_test.shape}")
 
     # Return all processed data
     return {
         "X_train": X_train,
         "y_train": y_train,
+        "X_val": X_val,
+        "y_val": y_val,
         "X_test": X_test,
         "y_test": y_test,
         "feature_names": feature_names,
@@ -167,7 +156,6 @@ def prepare_data_for_model_dl(
         data_loader: DataLoader containing the input data
         config: Configuration dictionary with preprocessing settings
         model_name: Name of the model to determine format requirements
-        logger_instance: Optional logger instance
         task_name: Name of the current task (e.g., "mortality", "aki")
 
     Returns:
