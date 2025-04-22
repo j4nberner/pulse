@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>PULSE Benchmark Leaderboard</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        padding: 2em;
+        background-color: #f9f9f9;
+      }
+      h1 {
+        color: #333;
+      }
+      .controls {
+        margin-bottom: 1em;
+        display: flex;
+        gap: 1em;
+        align-items: center;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 1em;
+      }
+      th,
+      td {
+        border: 1px solid #ddd;
+        padding: 10px;
+        text-align: left;
+      }
+      th {
+        background-color: #eee;
+        cursor: pointer;
+      }
+      td a {
+        color: #007acc;
+        text-decoration: none;
+      }
+      td a:hover {
+        text-decoration: underline;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>PULSE Benchmark Leaderboard</h1>
+    <p>Live leaderboard for AKI, Sepsis, and Mortality prediction tasks.</p>
+
+    <div class="controls">
+      <input type="text" id="search" placeholder="Search model or task..." />
+      <select id="taskFilter">
+        <option value="">All Tasks</option>
+        <option value="AKI">AKI</option>
+        <option value="Sepsis">Sepsis</option>
+        <option value="Mortality">Mortality</option>
+      </select>
+    </div>
+
+    <table id="leaderboard">
+      <thead>
+        <tr>
+          <th data-sort="model">Model</th>
+          <th data-sort="task">Task</th>
+          <th data-sort="auroc">AUROC</th>
+          <th data-sort="auprc">AUPRC</th>
+          <th>Details</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <script>
+      let allData = [];
+      let currentSort = { key: "", asc: true };
+
+      fetch("results.json")
+        .then((response) => response.json())
+        .then((data) => {
+          allData = data.results;
+          renderTable(allData);
+        })
+        .catch((err) => console.error("Error loading results:", err));
+
+      function renderTable(data) {
+        const tbody = document.querySelector("#leaderboard tbody");
+        tbody.innerHTML = "";
+        data.forEach((entry) => {
+          const row = document.createElement("tr");
+          row.innerHTML = `
+          <td>${entry.model}</td>
+          <td>${entry.task}</td>
+          <td>${entry.auroc}</td>
+          <td>${entry.auprc}</td>
+          <td><a href="${entry.link}" target="_blank">Link</a></td>
+        `;
+          tbody.appendChild(row);
+        });
+      }
+
+      function filterAndSort() {
+        const search = document.getElementById("search").value.toLowerCase();
+        const task = document.getElementById("taskFilter").value;
+        let filtered = allData.filter((entry) => {
+          return (
+            (!task || entry.task === task) &&
+            (entry.model.toLowerCase().includes(search) ||
+              entry.task.toLowerCase().includes(search))
+          );
+        });
+        if (currentSort.key) {
+          filtered.sort((a, b) => {
+            const valA = a[currentSort.key];
+            const valB = b[currentSort.key];
+            if (typeof valA === "string") {
+              return currentSort.asc
+                ? valA.localeCompare(valB)
+                : valB.localeCompare(valA);
+            }
+            return currentSort.asc ? valA - valB : valB - valA;
+          });
+        }
+        renderTable(filtered);
+      }
+
+      document
+        .getElementById("search")
+        .addEventListener("input", filterAndSort);
+      document
+        .getElementById("taskFilter")
+        .addEventListener("change", filterAndSort);
+
+      document
+        .querySelectorAll("#leaderboard th[data-sort]")
+        .forEach((header) => {
+          header.addEventListener("click", () => {
+            const key = header.getAttribute("data-sort");
+            if (currentSort.key === key) {
+              currentSort.asc = !currentSort.asc;
+            } else {
+              currentSort = { key: key, asc: true };
+            }
+            filterAndSort();
+          });
+        });
+    </script>
+  </body>
+</html>
