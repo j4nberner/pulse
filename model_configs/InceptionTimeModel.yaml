@@ -7,7 +7,7 @@ params:
   save_checkpoint_freq: 5
   verbose: 1 # Controls verbosity of output (0 = silent, 1 = log every 10 batches, 2 = log every batch)
   # Training parameters
-  num_epochs: 10 # should be 60! for our experiments (10 for testing purposes)
+  num_epochs: 60
   earlystopping_patience: 5
   # Model architecture
   depth: 12

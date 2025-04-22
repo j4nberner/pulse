@@ -384,10 +384,8 @@ class DatasetManager:
     
         # Check and drop stay_id columns if they exist
         if isinstance(X, pd.DataFrame) and "stay_id" in X.columns:
-            logger.info(f"Dropping 'stay_id' column from features")
             X = X.drop(columns=["stay_id"])
         if isinstance(y, pd.DataFrame) and "stay_id" in y.columns:
-            logger.info(f"Dropping 'stay_id' column from labels")
             y = y.drop(columns=["stay_id"])
 
         return X, y

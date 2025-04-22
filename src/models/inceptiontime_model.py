@@ -183,7 +183,7 @@ class InceptionTimeModel(PulseTemplateModel, nn.Module):
 
         # Initialize early stopping
         self.early_stopping = self.EarlyStopping(
-            patience=self.params["patience"], verbose=True
+            patience=self.params["earlystopping_patience"], verbose=True
         )
 
         # Initialize the model architecture
@@ -543,7 +543,7 @@ class InceptionTimeTrainer:
 
         # Log progress
         logger.info(
-            f"Epoch {epoch+1}/{self.params["num_epochs"]} - "
+            f"Epoch {epoch+1}/{self.params['num_epochs']} - "
             f"Train Loss: {avg_train_loss:.4f}, "
             f"Val Loss: {val_loss:.4f}, "
             f"LR: {self.optimizer.param_groups[0]['lr']:.6f}"
