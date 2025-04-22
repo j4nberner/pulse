@@ -236,6 +236,11 @@ class LSTMTrainer:
             logger.info(f"Epoch {epoch + 1} finished")
             val_loss = self.evaluate(self.val_loader)
             self.early_stopping(val_loss, self.model)
+            if self.early_stopping.early_stop:
+                logger.info(
+                    f"Early stopping triggered at epoch {epoch + 1}. Stopping training."
+                )
+                break
 
         logger.info("Training finished.")
         self.early_stopping.load_best_model(self.model)  # Load the best model
