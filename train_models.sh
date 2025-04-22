@@ -29,8 +29,11 @@ exec 2> output/slurm_output/training_${TIMESTAMP}_${JOB_ID}.error
 # Change to main directory
 cd $SLURM_SUBMIT_DIR
 
-# Activate virtual environment from the venv folder in your project
+# Load python module, create/activate venv, and install requirements
+# module load python/3.11.6
+# python -m venv .venv
 source .venv/bin/activate
+# pip install -r requirements_euler.txt
 
 # Print job and node information
 echo "======================================================================="
