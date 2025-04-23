@@ -44,9 +44,7 @@ class ModelTrainer:
         logger.info("---------------Initializing Dataset Manager---------------")
         self.dm = DatasetManager(self.config)
         logger.info("---------------Initializing Model Manager---------------")
-        self.mm = ModelManager(
-            self.config.models, wandb=config.wandb, output_dir=config.output_dir
-        )
+        self.mm = ModelManager(self.config)
 
     def run(self):
         """Run the training process for all configured models and datasets."""

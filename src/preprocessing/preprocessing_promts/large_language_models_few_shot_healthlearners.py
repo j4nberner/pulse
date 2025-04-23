@@ -1,7 +1,7 @@
 # https://arxiv.org/pdf/2305.15525
 
 import logging
-from typing import Dict, Any, Tuple
+from typing import Dict, Any, List, Tuple
 import pandas as pd
 from src.util.model_util import apply_model_prompt_format
 
@@ -9,12 +9,13 @@ logger = logging.getLogger("PULSE_logger")
 
 
 def few_shot_paper_preprocessor(
-    X: pd.DataFrame, y: pd.DataFrame, info_dict: Dict[str, Any]
+    X: List[pd.DataFrame], y: List[pd.DataFrame], info_dict: Dict[str, Any]
 ) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """
     Preprocess input data into a text-based prompt format suitable for LLM models,
     as described in the Large Language Models are Few-Shot
     Health Learners.
+    If in val or test mode, the train data is used to create the few-shot examples.
 
     Promt Structure:
     Q: Classify the given ICU data sequence as either <diagnosis> or <not-diagnosis>.:
@@ -24,8 +25,8 @@ def few_shot_paper_preprocessor(
 
 
     Args:
-        X (pd.DataFrame): Input features.
-        y (pd.DataFrame): Target labels.
+        X (List[pd.DataFrame]): Input features.
+        y (List[pd.DataFrame]): Target labels.
         info_dict (Dict[str, Any]): Additional task-specific information such as
                                     'task', 'dataset', and 'model_name'.
 
@@ -41,10 +42,14 @@ def few_shot_paper_preprocessor(
     )
 
     prompts = []
+    X_in = X[0]
+    X_train = X[1]
+    y_in = y[0]
+    y_train = y[1]
 
-    for idx, row in X.iterrows():
+    for idx, row in X_in.iterrows():
         # Extract corresponding label for this row
-        label_value = y.iloc[idx].values[1] if not y.empty else None
+        label_value = y_in.iloc[idx].values[1] if not y_in.empty else None
 
         # Format the features for this instance
         feature_string = ", ".join(
@@ -62,11 +67,11 @@ def few_shot_paper_preprocessor(
                 shot_features = ", ".join(
                     [
                         f"{col} {value}"
-                        for col, value in X.iloc[shot_idx].items()
+                        for col, value in X_in.iloc[shot_idx].items()
                         if pd.notna(value)
                     ]
                 )
-                shot_label = y.iloc[shot_idx].values[0]
+                shot_label = y_in.iloc[shot_idx].values[0]
                 examples.append(
                     f"Q: Classify the given ICU data sequence as either {task} or not-{task}:\n   {shot_features}\nA: {'not-' if shot_label == 0 else ''}{task}"
                 )

@@ -1,6 +1,7 @@
 import sys
 from typing import List, Dict, Any
 import logging
+from omegaconf import OmegaConf
 import torch
 from torch import nn
 import os
@@ -14,46 +15,47 @@ logger = logging.getLogger("PULSE_logger")
 class ModelManager:
     """Manages all models for ICU predictions. Loading, Api-Access, and Saving."""
 
-    def __init__(self, models: Dict, **kwargs) -> None:
+    def __init__(self, config: OmegaConf, **kwargs) -> None:
         """
         Initialize the ModelManager with model names. Verifies model attributes.
         Converts model names to model objects with specified parameters.
 
         Args:
-            models: List of model configurations.
+            config: Omegaconf configuration object containing model settings.
+            **kwargs: Additional keyword arguments.
         """
         self.pipelines = {}
-        self.models = {}
-        if not models:
+        self.models = config.get("models", None)
+        if not self.models:
             logger.error("No models specified.")
             sys.exit()
 
-        self.wandb = kwargs.get("wandb", False)
-        self.output_dir = kwargs.get("output_dir", "")
-        self.model_configs = models
-        self.models = self._prepare_models(models)
+        self.wandb = config.get("wandb", {"enabled": False})
+        self.output_dir = config.get("output_dir", "")
+        self.model_configs = self.models
+        self.prompt_configs = config.get("prompting", None)
+        self.models = self._prepare_models()
 
-    def _prepare_models(self, model_configs: Dict) -> List[Any]:
+    def _prepare_models(self) -> List[Any]:
         """
         Checks model configurations and converts them to actual model objects.
-
-        Args:
-            model_configs: List of model configurations.
 
         Returns:
             List[Any]: List of instantiated model objects.
         """
-        logger.info("Preparing %d models...", len(model_configs))
+        logger.info("Preparing %d models...", len(self.model_configs))
         prepared_models = []
 
-        for _, config in model_configs.items():
+        for _, config in self.model_configs.items():
             model_name = config.get("name")
             if not model_name:
                 logger.error("Model name is required.")
                 continue
 
             try:
-                for preprocessing_id in config.get("preprocessing_ids", [None]):
+                for preprocessing_id in self.prompt_configs.get(
+                    "prompting_ids", [None]
+                ):
                     config.params["preprocessing_id"] = preprocessing_id
                     logger.info(
                         "---------------Preparing model '%s'---------------", model_name
