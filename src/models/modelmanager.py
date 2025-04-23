@@ -53,12 +53,15 @@ class ModelManager:
                 continue
 
             try:
-                logger.info(
-                    "---------------Preparing model '%s'---------------", model_name
-                )
-                model = self._create_model_from_config(config)
-                prepared_models.append(model)
-                logger.info("Model '%s' prepared successfully", model_name)
+                for preprocessing_id in config.get("preprocessing_ids", [None]):
+                    config.params["preprocessing_id"] = preprocessing_id
+                    logger.info(
+                        "---------------Preparing model '%s'---------------", model_name
+                    )
+                    logger.info("Advanced Preprocessing ID: %s", preprocessing_id)
+                    model = self._create_model_from_config(config)
+                    prepared_models.append(model)
+                    logger.info("Model '%s' prepared successfully", model_name)
             except Exception as e:
                 logger.error("Failed to prepare model '%s': %s", model_name, str(e))
 

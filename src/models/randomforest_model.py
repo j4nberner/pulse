@@ -145,12 +145,20 @@ class RandomForestTrainer:
     def _tune_hyperparameters(
         self, model: BaseEstimator, X_train: np.ndarray, y_train: np.ndarray
     ) -> BaseEstimator:
-        param_grid: Dict[str, Any] = {
-            "n_estimators": [100, 200],
-            "max_depth": [None, 10, 20],
-            "min_samples_split": [2, 5],
-            "min_samples_leaf": [1, 2],
-            "max_features": ["sqrt", "log2"],
+        param_grid = {
+            "n_estimators": [100, 200, 500],  # Number of trees in the forest
+            "max_depth": [None, 10, 20, 50],  # Max depth of each tree
+            "min_samples_split": [2, 5, 10],  # Minimum samples to split a node
+            "min_samples_leaf": [1, 2, 4],  # Minimum samples required at a leaf node
+            "max_features": [
+                "sqrt",
+                "log2",
+            ],  # Number of features to consider at each split
+            "class_weight": [
+                None,
+                "balanced",
+                "balanced_subsample",
+            ],  # Handling class imbalance
         }
 
         grid_search = GridSearchCV(

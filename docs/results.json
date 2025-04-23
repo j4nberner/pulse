@@ -1,18 +1,138 @@
 {
   "results": [
     {
-      "model": "Random Forest",
-      "task": "AKI",
-      "auroc": 0.78,
-      "auprc": 0.41,
-      "link": "https://github.com/j4nberner/pulse"
+      "model_id": "LightGBM",
+      "task_id": "mortality",
+      "dataset": "hirid",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.844,
+          "auprc": 0.401,
+          "normalized_auprc": 4.915,
+          "sensitivity": 0.133,
+          "specificity": 0.996,
+          "f1_score": 0.226,
+          "accuracy": 0.925,
+          "balanced_accuracy": 0.565,
+          "precision": 0.737,
+          "recall": 0.133,
+          "mcc": 0.293
+        }
+      }
     },
     {
-      "model": "XGBoost",
-      "task": "Sepsis",
-      "auroc": 0.82,
-      "auprc": 0.51,
-      "link": "https://github.com/j4nberner/pulse"
+      "model_id": "LightGBM",
+      "task_id": "aki",
+      "dataset": "hirid",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.791,
+          "auprc": 0.299,
+          "normalized_auprc": 3.642,
+          "sensitivity": 0.071,
+          "specificity": 0.996,
+          "f1_score": 0.127,
+          "accuracy": 0.92,
+          "balanced_accuracy": 0.534,
+          "precision": 0.589,
+          "recall": 0.071,
+          "mcc": 0.185
+        }
+      }
+    },
+    {
+      "model_id": "LightGBM",
+      "task_id": "sepsis",
+      "dataset": "hirid",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.783,
+          "auprc": 0.078,
+          "normalized_auprc": 3.216,
+          "sensitivity": 0.004,
+          "specificity": 0.999,
+          "f1_score": 0.009,
+          "accuracy": 0.975,
+          "balanced_accuracy": 0.502,
+          "precision": 0.143,
+          "recall": 0.004,
+          "mcc": 0.021
+        }
+      }
+    },
+    {
+      "model_id": "RandomForest",
+      "task_id": "sepsis",
+      "dataset": "hirid",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.678,
+          "auprc": 0.246,
+          "normalized_auprc": 3.779,
+          "sensitivity": 0.0,
+          "specificity": 1.0,
+          "f1_score": 0.0,
+          "accuracy": 0.935,
+          "balanced_accuracy": 0.5,
+          "precision": 0.0,
+          "recall": 0.0,
+          "mcc": 0.0
+        }
+      }
+    },
+    {
+      "model_id": "CNN",
+      "task_id": "mortality",
+      "dataset": "hirid",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.7834525025536262,
+          "auprc": 0.49764038139184785,
+          "sensitivity": 0.2727272727272727,
+          "specificity": 0.9775280898876404,
+          "f1_score": 0.375,
+          "accuracy": 0.9,
+          "balanced_accuracy": 0.6251276813074566,
+          "precision": 0.6,
+          "recall": 0.2727272727272727
+        }
+      }
+    },
+    {
+      "model_id": "CNN",
+      "task_id": "aki",
+      "dataset": "hirid",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.6551699125956552,
+          "auprc": 0.18344754441442562,
+          "sensitivity": 0.0,
+          "specificity": 1.0,
+          "f1_score": 0.0,
+          "accuracy": 0.909,
+          "balanced_accuracy": 0.5,
+          "precision": 0.0,
+          "recall": 0.0
+        }
+      }
+    },
+    {
+      "model_id": "CNN",
+      "task_id": "sepsis",
+      "dataset": "hirid",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.538413796160837,
+          "auprc": 0.07932532739574105,
+          "sensitivity": 0.0,
+          "specificity": 1.0,
+          "f1_score": 0.0,
+          "accuracy": 0.927,
+          "balanced_accuracy": 0.5,
+          "precision": 0.0,
+          "recall": 0.0
+        }
+      }
     }
   ]
 }
