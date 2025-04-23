@@ -1,8 +1,11 @@
 from .example_paper_prompts import example_paper_preprocessor
+from .large_language_models_few_shot_healthlearners import few_shot_paper_preprocessor
 
 
 preprocessor_method_dict = {
     "example_paper_preprocessor": example_paper_preprocessor,
+    "few_shot_paper_preprocessor": few_shot_paper_preprocessor,
+    # Add other preprocessor methods here as needed
 }
 
 
