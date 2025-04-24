@@ -3,8 +3,7 @@ from typing import Dict, Any, Optional
 from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
 from langchain.prompts import PromptTemplate
 from langchain.schema.runnable import Runnable
-from src.models.pulsetemplate_model import PulseTemplateModel
-from src.eval.metrics import MetricsTracker
+from peft import get_peft_model, PrefixTuningConfig, TaskType
 import logging
 import numpy as np
 import os
@@ -12,6 +11,10 @@ import torch.nn as nn
 import torch.optim as optim
 import torch
 import wandb
+
+from src.models.pulsetemplate_model import PulseTemplateModel
+from src.eval.metrics import MetricsTracker
+
 
 logger = logging.getLogger("PULSE_logger")
 
@@ -51,6 +54,19 @@ class Llama3Model(PulseTemplateModel):
             self.llama_model = AutoModelForCausalLM.from_pretrained(
                 self.model_id, torch_dtype=torch.float16, device_map="auto"
             )
+
+            if self.params.get("prefix_tuning", False):
+                logger.info("Applying Prefix Tuning")
+                prefix_config = PrefixTuningConfig(
+                    task_type=TaskType.CAUSAL_LM,
+                    inference_mode=False,
+                    num_virtual_tokens=self.params.get("num_virtual_tokens", 30),
+                    encoder_hidden_size=self.params.get(
+                        "encoder_hidden_size", 4096
+                    ),  # LLaMA 3 hidden size
+                )
+                self.llama_model = get_peft_model(self.llama_model, prefix_config)
+
             logger.info("Successfully loaded Llama3 model: %s", self.model_id)
         except Exception as e:
             logger.error("Failed to load Llama3 model: %s", e)
@@ -141,7 +157,7 @@ class Llama3Trainer:
             test_loader: The DataLoader object for the testing dataset.
         """
         # Load the model and tokenizer
-        model._load_model()  # Comment out to only test preprocessing
+        # model._load_model()  # Comment out to only test preprocessing
 
         self.model = model
         self.llama_model = model.llama_model
@@ -156,6 +172,7 @@ class Llama3Trainer:
         self.model_save_dir = os.path.join(model.save_dir, "Models")
         self.task_name = self.model.task_name
         self.dataset_name = self.model.dataset_name
+        self.prefix_tuning = self.params.get("prefix_tuning", False)
 
         logger.info("Using criterion: %s", self.criterion.__class__.__name__)
 
@@ -175,14 +192,53 @@ class Llama3Trainer:
         """Training loop."""
         verbose = self.params.get("verbose", 1)
 
-        # Move to GPU if available
-        # TODO: Managed by accelerate. Check if this is needed at all.
-        # self.llama_model.to(self.device)
-        # self.criterion.to(self.device)
-
         logger.info("Starting training...")
-        val_loss = self.evaluate(self.val_loader)  # Evaluate on validation set
-        logger.info("Validation loss: %s", val_loss)
+
+        if self.prefix_tuning:
+            logger.info(
+                "Tuning model with prefix tuning. Model is saved in %s",
+                self.model_save_dir,
+            )
+            optimizer = optim.AdamW(
+                self.llama_model.parameters(), lr=self.params.get("lr", 1e-4)
+            )
+            num_epochs = self.params.get("epochs", 3)
+
+            self.llama_model.train()
+            for epoch in range(num_epochs):
+                epoch_loss = 0.0
+                for X, y in zip(
+                    self.train_loader[0].iterrows(), self.train_loader[1].iterrows()
+                ):
+                    X_input = X[1].iloc[0]
+                    y_true = (
+                        torch.tensor(float(y[1].iloc[0]), dtype=torch.float32)
+                        .unsqueeze(0)
+                        .to(self.device)
+                    )
+
+                    inputs = self.model.tokenizer(
+                        X_input, return_tensors="pt", truncation=True, padding=True
+                    ).to(self.device)
+                    labels = y_true.unsqueeze(0).expand(
+                        inputs["input_ids"].shape[0], -1
+                    )
+
+                    outputs = self.llama_model(**inputs, labels=labels)
+                    loss = outputs.loss
+
+                    optimizer.zero_grad()
+                    loss.backward()
+                    optimizer.step()
+
+                    epoch_loss += loss.item()
+                    if self.wandb:
+                        wandb.log({"train_loss": loss.item()})
+
+                logger.info(f"Epoch {epoch + 1}/{num_epochs}, Loss: {epoch_loss:.4f}")
+
+                val_loss = self.evaluate(self.val_loader)  # Evaluate on validation set
+                logger.info("Validation loss: %s", val_loss)
 
         self.evaluate(
             self.test_loader, save_report=True

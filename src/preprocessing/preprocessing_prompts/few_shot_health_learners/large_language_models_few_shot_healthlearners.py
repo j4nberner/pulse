@@ -31,20 +31,26 @@ def few_shot_paper_preprocessor(
     dataset = info_dict.get("dataset_name", "unknown_dataset")
     model_id = info_dict.get("model_name", "unknown_model")
     num_shots = info_dict.get("shots", 0)
+    mode = info_dict.get(
+        "mode", "train"
+    )  # Few-shot examples are only used in validation and test mode
 
     logger.info(
         f"Starting preprocessing for model '{model_id}' on dataset '{dataset}' and task '{task}'."
     )
 
-    prompts = []
-    X_in = X[0]  # input data
-    X_train = X[1]  # few shot examples
-    y_train = y[1]  # few shot examples
+    # Remove all columns with _na suffix
+    X_in = X[0].filter(regex="^(?!.*_na$)")  # input data
 
+    if mode != "train":
+        X_train = X[1].filter(regex="^(?!.*_na$)")  # few shot examples
+        y_train = y[1].filter(regex="^(?!.*_na$)")  # few shot examples
+
+    prompts = []
     feature_names = [get_feature_name(name) for name in X_in.columns.tolist()]
 
     # Define the prompt template
-    example_prompt = PromptTemplate(
+    prompt_template = PromptTemplate(
         input_variables=["features", "label"],
         template="Q: Classify the given ICU data sequence as either {task} or not-{task}:\n   Features:\n{features}\nA: {label}",
     )
@@ -61,7 +67,8 @@ def few_shot_paper_preprocessor(
 
         # Prepare few-shot examples if applicable
         examples = []
-        if num_shots > 0:
+        if num_shots > 0 and mode != "train":
+            # Randomly select num_shots examples from the training set
             random_indices = np.random.choice(
                 len(X_train), size=min(num_shots, len(X_train)), replace=False
             )
@@ -80,15 +87,21 @@ def few_shot_paper_preprocessor(
                     {"features": shot_features, "label": shot_label, "task": task}
                 )  # Ensure 'task' is included
 
-        # Create the FewShotPromptTemplate
-        few_shot_prompt = FewShotPromptTemplate(
-            examples=examples,
-            example_prompt=example_prompt,
-            prefix="Below are examples of ICU data classified as '{task}' or 'not-{task}':",
-            suffix="Q: Classify the given ICU data sequence as either {task} or not-{task}:\n   Features:\n{features}\nA:",
-            input_variables=["features", "task"],
-            example_separator="\n\n",
-        )
+            # Create the FewShotPromptTemplate
+            few_shot_prompt = FewShotPromptTemplate(
+                examples=examples,
+                example_prompt=prompt_template,
+                prefix="Below are examples of ICU data classified as '{task}' or 'not-{task}':",
+                suffix="Q: Classify the given ICU data sequence as either {task} or not-{task}:\n   Features:\n{features}\nA:",
+                input_variables=["features", "task"],
+                example_separator="\n\n",
+            )
+        else:
+            # If no few-shot examples, use a simple prompt template
+            few_shot_prompt = PromptTemplate(
+                input_variables=["features", "task"],
+                template="Q: Classify the given ICU data sequence as either {task} or not-{task}:\n   Features:\n{features}\nA:",
+            )
 
         # Generate the prompt
         prompt = few_shot_prompt.format(features=feature_string, task=task)
