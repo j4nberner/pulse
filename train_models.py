@@ -94,34 +94,32 @@ class ModelTrainer:
                     wandb_config = OmegaConf.merge(wandb_config, self.config)
                     init_wandb(wandb_config)
 
+                dm_kwargs = {
+                    "dataset": self.config.datasets[0],
+                    "task": self.config.tasks[0],
+                    "debug": self.config.general.debug_mode,
+                    "preprocessing_id": model.preprocessing_id,
+                    "num_shots": model.params.get("shots", None),
+                }
+
                 try:
-                    # Preprocess data for corresponding model
-                    X_train, y_train = self.dm.get_preprocessed_data(
-                        task_dataset_name,
-                        model_name,
-                        mode="train",
-                        dataset=self.config.datasets[0],
-                        task=self.config.tasks[0],
-                        debug=self.config.general.debug_mode,
-                        preprocessing_id=model.preprocessing_id,
-                    )
-                    X_val, y_val = self.dm.get_preprocessed_data(
-                        task_dataset_name,
-                        model_name,
-                        mode="val",
-                        dataset=self.config.datasets[0],
-                        task=self.config.tasks[0],
-                        debug=self.config.general.debug_mode,
-                        preprocessing_id=model.preprocessing_id,
-                    )
+                    # Initialize variables
+                    X_train, y_train = None, None
+                    X_val, y_val = None, None
+
+                    if model.type != "LLM":
+                        # Preprocess data for corresponding model
+                        X_train, y_train = self.dm.get_preprocessed_data(
+                            task_dataset_name, model_name, mode="train", **dm_kwargs
+                        )
+                        X_val, y_val = self.dm.get_preprocessed_data(
+                            task_dataset_name, model_name, mode="val", **dm_kwargs
+                        )
                     X_test, y_test = self.dm.get_preprocessed_data(
                         task_dataset_name,
                         model_name,
                         mode="test",
-                        dataset=self.config.datasets[0],
-                        task=self.config.tasks[0],
-                        debug=self.config.general.debug_mode,
-                        preprocessing_id=model.preprocessing_id,
+                        **dm_kwargs,
                         limit_test_set=True,
                         print_stats=False,
                     )
@@ -133,8 +131,8 @@ class ModelTrainer:
                         test_loader = (X_test, y_test)
                     elif model.type == "LLM":
                         # Passing the text and labels directly for LLMs
-                        train_loader = (X_train, y_train)
-                        val_loader = (X_val, y_val)
+                        train_loader = (pd.DataFrame(), pd.DataFrame())
+                        val_loader = (pd.DataFrame(), pd.DataFrame())
                         test_loader = (X_test, y_test)
                     elif model.type == "DL":
                         # Wrap with TorchDatasetWrapper

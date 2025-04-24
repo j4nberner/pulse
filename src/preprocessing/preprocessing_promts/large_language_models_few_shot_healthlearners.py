@@ -2,8 +2,11 @@
 
 import logging
 from typing import Dict, Any, List, Tuple
+import numpy as np
 import pandas as pd
+from langchain.prompts import FewShotPromptTemplate, PromptTemplate
 from src.util.model_util import apply_model_prompt_format
+from src.util.data_util import get_feature_name
 
 logger = logging.getLogger("PULSE_logger")
 
@@ -13,16 +16,7 @@ def few_shot_paper_preprocessor(
 ) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """
     Preprocess input data into a text-based prompt format suitable for LLM models,
-    as described in the Large Language Models are Few-Shot
-    Health Learners.
-    If in val or test mode, the train data is used to create the few-shot examples.
-
-    Promt Structure:
-    Q: Classify the given ICU data sequence as either <diagnosis> or <not-diagnosis>.:
-       <feature_name> <value>, <feature_name> <value>...
-    A: <diagnosis>
-
-
+    adhering to LangChain guidelines.
 
     Args:
         X (List[pd.DataFrame]): Input features.
@@ -34,53 +28,70 @@ def few_shot_paper_preprocessor(
         Tuple[pd.DataFrame, pd.DataFrame]: Processed feature prompts and unchanged labels.
     """
     task = info_dict.get("task", "unknown_task")
-    dataset = info_dict.get("dataset", "unknown_dataset")
+    dataset = info_dict.get("dataset_name", "unknown_dataset")
     model_id = info_dict.get("model_name", "unknown_model")
+    num_shots = info_dict.get("shots", 0)
 
     logger.info(
         f"Starting preprocessing for model '{model_id}' on dataset '{dataset}' and task '{task}'."
     )
 
     prompts = []
-    X_in = X[0]
-    X_train = X[1]
-    y_in = y[0]
-    y_train = y[1]
+    X_in = X[0]  # input data
+    X_train = X[1]  # few shot examples
+    y_train = y[1]  # few shot examples
+
+    feature_names = [get_feature_name(name) for name in X_in.columns.tolist()]
+
+    # Define the prompt template
+    example_prompt = PromptTemplate(
+        input_variables=["features", "label"],
+        template="Q: Classify the given ICU data sequence as either {task} or not-{task}:\n   Features:\n{features}\nA: {label}",
+    )
 
     for idx, row in X_in.iterrows():
-        # Extract corresponding label for this row
-        label_value = y_in.iloc[idx].values[1] if not y_in.empty else None
-
         # Format the features for this instance
         feature_string = ", ".join(
-            [f"{col} {value}" for col, value in row.items() if pd.notna(value)]
+            [
+                f"{feature_names[idx]}: {value}"
+                for idx, value in enumerate(row.values)
+                if pd.notna(value)
+            ]
         )
 
-        # Get the number of examples to include
-        num_shots = info_dict.get("shots", 0)
-
-        # Build the prompt
-        if num_shots > 0 and idx >= num_shots:
-            # Include few-shot examples
-            examples = []
-            for shot_idx in range(num_shots):
+        # Prepare few-shot examples if applicable
+        examples = []
+        if num_shots > 0:
+            random_indices = np.random.choice(
+                len(X_train), size=min(num_shots, len(X_train)), replace=False
+            )
+            for shot_idx in random_indices:
                 shot_features = ", ".join(
                     [
                         f"{col} {value}"
-                        for col, value in X_in.iloc[shot_idx].items()
+                        for col, value in X_train.iloc[shot_idx].items()
                         if pd.notna(value)
                     ]
                 )
-                shot_label = y_in.iloc[shot_idx].values[0]
-                examples.append(
-                    f"Q: Classify the given ICU data sequence as either {task} or not-{task}:\n   {shot_features}\nA: {'not-' if shot_label == 0 else ''}{task}"
+                shot_label = (
+                    "not-" + task if y_train.iloc[shot_idx].values[1] == 0 else task
                 )
+                examples.append(
+                    {"features": shot_features, "label": shot_label, "task": task}
+                )  # Ensure 'task' is included
 
-            few_shot_examples = "\n\n".join(examples)
-            prompt = f"{few_shot_examples}\n\nQ: Classify the given ICU data sequence as either {task} or not-{task}:\n   {feature_string}\nA:"
-        else:
-            # Zero-shot prompt
-            prompt = f"Q: Classify the given ICU data sequence as either {task} or not-{task}:\n   {feature_string}\nA:"
+        # Create the FewShotPromptTemplate
+        few_shot_prompt = FewShotPromptTemplate(
+            examples=examples,
+            example_prompt=example_prompt,
+            prefix="Below are examples of ICU data classified as '{task}' or 'not-{task}':",
+            suffix="Q: Classify the given ICU data sequence as either {task} or not-{task}:\n   Features:\n{features}\nA:",
+            input_variables=["features", "task"],
+            example_separator="\n\n",
+        )
+
+        # Generate the prompt
+        prompt = few_shot_prompt.format(features=feature_string, task=task)
 
         # Reformat prompt according to model-specific requirements
         formatted_prompt = apply_model_prompt_format(model_id, prompt)

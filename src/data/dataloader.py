@@ -328,10 +328,12 @@ class DatasetManager:
                 "y_test": data["y_test"].iloc[:debug_data_length],
             }
 
+        # Initialize X_train and y_train to None for all modes
+        X_train = None
+        y_train = None
+
         # Get the appropriate split
         if mode == "train":
-            X_train = None
-            y_train = None
             X = data["X_train"]
             y = data["y_train"]
 
@@ -403,11 +405,13 @@ class DatasetManager:
             advanced_preprocessor = get_prompting_preprocessor(
                 preprocessing_id=preprocessing_id
             )
+            num_shots = kwargs.get("num_shots", 0)
             # Info dict needs to contain dataset name, task, and model name
             info_dict = {
                 "dataset_name": dataset["name"],
                 "task": dataset["task"],
                 "model_name": model_name,
+                "shots": num_shots,
             }
             if preprocessing_id in few_shot_list:
                 # Add few-shot examples to info_dict if needed
