@@ -12,7 +12,7 @@ from src.preprocessing.preprocessing_baseline.preprocessing_baseline import (
     PreprocessorBaseline,
 )
 from src.preprocessing.preprocessing_advanced.windowing import Windower
-from src.preprocessing.preprocessing_advanced import get_advanced_preprocessor
+from src.preprocessing.preprocessing_promts import get_prompting_preprocessor
 
 # Set up logger
 logger = logging.getLogger("PULSE_logger")
@@ -301,6 +301,7 @@ class DatasetManager:
             return None, None
 
         dataset = self.datasets[dataset_id]
+        preprocessing_id = kwargs.get("preprocessing_id", None)
 
         if not dataset["loaded"]:
             success = self.load_dataset(dataset_id)
@@ -309,10 +310,12 @@ class DatasetManager:
 
         data = dataset["data"]
 
+        few_shot_list = ["few_shot_paper_preprocessor"]
+
         # Take only n rows if in debug
         debug = kwargs.get("debug", False)
         if debug:
-            debug_data_length = 1000
+            debug_data_length = 100
             logger.info(
                 f"Debug mode: Taking only {debug_data_length} rows for {dataset_id}"
             )
@@ -325,18 +328,38 @@ class DatasetManager:
                 "y_test": data["y_test"].iloc[:debug_data_length],
             }
 
+        # Initialize X_train and y_train to None for all modes
+        X_train = None
+        y_train = None
+
         # Get the appropriate split
         if mode == "train":
             X = data["X_train"]
             y = data["y_train"]
 
         elif mode == "val":
-            X = data["X_val"]
-            y = data["y_val"]
-        
+            if preprocessing_id in few_shot_list:
+                # Some LLMs might need training data in validation set for few-shot learning
+                X_train = data["X_train"]
+                y_train = data["y_train"]
+                X = data["X_val"]
+                y = data["y_val"]
+            else:
+                # Normal case
+                X = data["X_val"]
+                y = data["y_val"]
+
         else:
-            X = data["X_test"]
-            y = data["y_test"]
+            if preprocessing_id in few_shot_list:
+                # Some LLMs might need training data in validation set for few-shot learning
+                X_train = data["X_train"]
+                y_train = data["y_train"]
+                X = data["X_test"]
+                y = data["y_test"]
+            else:
+                # Normal case
+                X = data["X_test"]
+                y = data["y_test"]
 
             # Handle limited test set if requested
             limit_test_set = kwargs.get("limit_test_set", False)
@@ -360,28 +383,44 @@ class DatasetManager:
             # Print statistics if requested (Print train, val and both original and limited test set statistics to compare distributions)
             print_stats = kwargs.get("print_stats", False)
             if print_stats:
-                train_stats = self.preprocessor.calculate_dataset_statistics(data["X_train"], data["y_train"], "train")
-                val_stats = self.preprocessor.calculate_dataset_statistics(data["X_val"], data["y_val"], "val")
-                test_stats = self.preprocessor.calculate_dataset_statistics(X_original, y_original, "test")
-                test_limited_stats = self.preprocessor.calculate_dataset_statistics(X_limited, y_limited, "test_limited100")
-                self.preprocessor.print_statistics([train_stats, val_stats, test_stats, test_limited_stats])
+                train_stats = self.preprocessor.calculate_dataset_statistics(
+                    data["X_train"], data["y_train"], "train"
+                )
+                val_stats = self.preprocessor.calculate_dataset_statistics(
+                    data["X_val"], data["y_val"], "val"
+                )
+                test_stats = self.preprocessor.calculate_dataset_statistics(
+                    X_original, y_original, "test"
+                )
+                test_limited_stats = self.preprocessor.calculate_dataset_statistics(
+                    X_limited, y_limited, "test_limited100"
+                )
+                self.preprocessor.print_statistics(
+                    [train_stats, val_stats, test_stats, test_limited_stats]
+                )
 
         # Apply any model-specific preprocessing if needed.
         # For example, if you need to tokenize text data for LLMs
-        preprocessing_id = kwargs.get("preprocessing_id", None)
         if preprocessing_id is not None:
-            advanced_preprocessor = get_advanced_preprocessor(
+            advanced_preprocessor = get_prompting_preprocessor(
                 preprocessing_id=preprocessing_id
             )
+            num_shots = kwargs.get("num_shots", 0)
             # Info dict needs to contain dataset name, task, and model name
             info_dict = {
                 "dataset_name": dataset["name"],
                 "task": dataset["task"],
                 "model_name": model_name,
+                "shots": num_shots,
             }
+            if preprocessing_id in few_shot_list:
+                # Add few-shot examples to info_dict if needed
+                X = [X, X_train]
+                y = [y, y_train]
+
             # Apply advanced preprocessing
             X, y = advanced_preprocessor(X, y, info_dict)
-    
+
         # Check and drop stay_id columns if they exist
         if isinstance(X, pd.DataFrame) and "stay_id" in X.columns:
             X = X.drop(columns=["stay_id"])
@@ -402,7 +441,7 @@ class DatasetManager:
         """
         # Log only once before processing all splits
         logger.info(f"Dropping 'stay_id' column from all features and labels")
-        
+
         for split in ["train", "val", "test"]:
             if split in data_dict:
                 # Drop stay_id from X if present
@@ -410,7 +449,7 @@ class DatasetManager:
                     X_data = data_dict[split]["X"]
                     if isinstance(X_data, pd.DataFrame) and "stay_id" in X_data.columns:
                         data_dict[split]["X"] = X_data.drop(columns=["stay_id"])
-                
+
                 # Drop stay_id from y if present
                 if "y" in data_dict[split]:
                     y_data = data_dict[split]["y"]
@@ -418,6 +457,7 @@ class DatasetManager:
                         data_dict[split]["y"] = y_data.drop(columns=["stay_id"])
 
         return data_dict
+
 
 class TorchDatasetWrapper(Dataset):
     """

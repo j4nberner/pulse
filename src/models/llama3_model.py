@@ -1,5 +1,9 @@
 from datetime import datetime
-from typing import Dict, Any
+from typing import Dict, Any, Optional
+from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
+from langchain.prompts import PromptTemplate
+from langchain.schema.runnable import Runnable
+from langchain_huggingface import HuggingFacePipeline
 import logging
 import numpy as np
 import os
@@ -7,100 +11,154 @@ import torch.nn as nn
 import torch.optim as optim
 import torch
 import wandb
-from accelerate import init_empty_weights, load_checkpoint_and_dispatch
+import time
+
 from src.models.pulsetemplate_model import PulseTemplateModel
-from src.util.model_util import prepare_data_for_model_dl, save_torch_model
 from src.eval.metrics import MetricsTracker
-from transformers import AutoModelForCausalLM, AutoTokenizer, LlamaTokenizer
 
 
 logger = logging.getLogger("PULSE_logger")
 
 
 class Llama3Model(PulseTemplateModel):
+    """Llama 3 model wrapper using LangChain for prompt templating and inference."""
+
     def __init__(self, params: Dict[str, Any], **kwargs) -> None:
-        """
-        Initialize the Llama3 model.
+        """Initializes the Llama3Model with parameters and paths.
 
         Args:
-            params (Dict[str, Any]): Configuration parameters for the model.
-            **kwargs: Additional keyword arguments.
+            params: Configuration dictionary with model parameters.
+            **kwargs: Additional optional parameters such as `output_dir` and `wandb`.
         """
-        # Use the class name as model_name if not provided in params
         self.model_name = params.get(
             "model_name", self.__class__.__name__.replace("Model", "")
         )
         self.trainer_name = params["trainer_name"]
         super().__init__(self.model_name, self.trainer_name, params=params)
 
-        # Set the model save directory
-        self.save_dir = kwargs.get("output_dir", f"{os.getcwd()}/output")
+        self.save_dir: str = kwargs.get("output_dir", f"{os.getcwd()}/output")
+        self.wandb: bool = kwargs.get("wandb", False)
+        self.params: Dict[str, Any] = params
+        self.model_id: str = self.params.get("model_id", "meta-llama/Llama-3.1-8B")
+        self.max_length: int = self.params.get("max_length", 512)
 
-        # Define all required parameters
-        required_params = []
-
-        # Check if wandb is enabled and set up
-        self.wandb = kwargs.get("wandb", False)
-
-        # Check if all required parameters exist in config
-        missing_params = [param for param in required_params if param not in params]
-        if missing_params:
-            raise KeyError(f"Required parameters missing from config: {missing_params}")
-
-        # Extract parameters from config
-        self.params = params
-
-        # Model defaults
-        self.model_id = self.params.get("model_id", "meta-llama/Llama-3.1-8B")
-        self.max_length = self.params.get("max_length", 512)
-
-        self.tokenizer = None
-        self.llama_model = None
+        self.tokenizer: Optional[Any] = None
+        self.llama_model: Optional[Any] = None
+        self.lc_llm: Optional[Any] = None
+        self.prompt_template: Optional[PromptTemplate] = None
+        self.lc_chain: Optional[Runnable] = None
 
     def _load_model(self) -> None:
-        """
-        Load the Llama3 model and tokenizer. Done only at inference time to save resources.
-        """
+        """Loads the tokenizer and model weights and initializes LangChain pipeline."""
         try:
-            # Load the tokenizer
-            self.tokenizer = AutoTokenizer.from_pretrained(self.model_id)
-
-            # Load the model directly from the Hugging Face Model Hub
+            self.tokenizer = AutoTokenizer.from_pretrained(self.model_id, use_fast=True)
             self.llama_model = AutoModelForCausalLM.from_pretrained(
                 self.model_id, torch_dtype=torch.float16, device_map="auto"
             )
-
-            logger.info(f"Successfully loaded Llama3 model: {self.model_id}")
+            logger.info("Model is on device: %s", next(self.llama_model.parameters()).device)
+            logger.info("Successfully loaded Llama3 model: %s", self.model_id)
         except Exception as e:
-            logger.error(f"Failed to load Llama3 model: {e}")
+            logger.error("Failed to load Llama3 model: %s", e)
             raise
 
-        # Log the parameters being used
-        logger.info(f"Initializing Llama3 with parameters: {self.params}")
+        logger.info("Initializing Llama3 with parameters: %s", self.params)
+        self._init_langchain()
 
-    def set_trainer(
-        self, trainer_name: str, train_dataloader, val_dataloader, test_dataloader
-    ) -> None:
-        """
-        Sets the trainer for the Llama3 model.
+    def _init_langchain(self) -> None:
+        """Initializes the LangChain LLM and prompt pipeline."""
+        hf_pipe = pipeline(
+            "text-generation",
+            model=self.llama_model,
+            tokenizer=self.tokenizer,
+            device_map="auto",
+            max_new_tokens=self.max_length,
+            pad_token_id=self.tokenizer.eos_token_id
+        )
+
+        # Wrap Hugging Face pipeline with LangChain-compatible wrapper
+        self.lc_llm = HuggingFacePipeline(pipeline=hf_pipe)
+
+        # Create a LangChain prompt template
+        self.prompt_template = PromptTemplate(
+            input_variables=["input"],
+            template=self.params.get("prompt_template", "{input}"),
+        )
+
+        # Chain prompt and LLM together
+        self.lc_chain = self.prompt_template | self.lc_llm
+
+
+    def infer_llm(self, input_text: str) -> Dict[str, Any]:
+        """Runs the LangChain pipeline with the given input and logs timing/token info.
 
         Args:
-            trainer_name (str): The name of the trainer to be used.
-            train_dataloader: The DataLoader object for the training dataset.
-            val_dataloader: The DataLoader object for the validation dataset.
-            test_dataloader: The DataLoader object for the testing dataset.
+            input_text: A string input to feed into the prompt.
 
         Returns:
-            None
+            A dictionary with the generated text, timing information, and token count.
         """
-        # This is a wrapper for inference only, so training is not implemented
+        if not isinstance(input_text, str):
+            input_text = str(input_text)
+
+        # Measure tokenization time
+        token_start = time.perf_counter()
+        tokens = self.tokenizer(input_text, return_tensors="pt")
+        token_time = time.perf_counter() - token_start
+        num_tokens = len(tokens["input_ids"][0])
+
+        # Measure inference time
+        infer_start = time.perf_counter()
+        result = self.lc_chain.invoke({"input": input_text})
+        infer_time = time.perf_counter() - infer_start
+
+        logger.info(f"Tokenization time: {token_time:.4f}s | Inference time: {infer_time:.4f}s | Tokens: {num_tokens}")
+
+        return {
+            "generated_text": result,
+            "token_time": token_time,
+            "infer_time": infer_time,
+            "num_tokens": num_tokens,
+        }
+
+    def parse_output(self, generated_text: str) -> float:
+        """Parses the generated text output into a float probability or label.
+
+        Args:
+            generated_text: Raw output from the LLM.
+
+        Returns:
+            A float probability or classification result.
+        """
+        try:
+            if "yes" in generated_text.lower():
+                return 1.0
+            elif "no" in generated_text.lower():
+                return 0.0
+            return float(generated_text.strip())
+        except Exception:
+            return 0.5
+
+    def set_trainer(
+        self,
+        trainer_name: str,
+        train_dataloader: Any,
+        val_dataloader: Any,
+        test_dataloader: Any,
+    ) -> None:
+        """Sets the associated trainer instance.
+
+        Args:
+            trainer_name: Name of the trainer class.
+            train_dataloader: DataLoader for training data.
+            val_dataloader: DataLoader for validation data.
+            test_dataloader: DataLoader for test data.
+        """
         self.trainer = Llama3Trainer(
             self, train_dataloader, val_dataloader, test_dataloader
         )
 
 
 class Llama3Trainer:
-
     def __init__(
         self, model: Llama3Model, train_loader, val_loader, test_loader
     ) -> None:
@@ -131,7 +189,7 @@ class Llama3Trainer:
         self.task_name = self.model.task_name
         self.dataset_name = self.model.dataset_name
 
-        logger.info(f"Using criterion: {self.criterion.__class__.__name__}")
+        logger.info("Using criterion: %s", self.criterion.__class__.__name__)
 
         # Create model save directory if it doesn't exist
         os.makedirs(self.model_save_dir, exist_ok=True)
@@ -154,23 +212,23 @@ class Llama3Trainer:
         # self.llama_model.to(self.device)
         # self.criterion.to(self.device)
 
-        logger.info("Starting training...")
-        val_loss = self.evaluate(self.val_loader)  # Evaluate on validation set
-        logger.info(f"Validation loss: {val_loss}")
+        # logger.info("Starting training...")
+        # val_loss = self.evaluate(self.val_loader)  # Evaluate on validation set
+        # logger.info("Validation loss: %s", val_loss)
 
         self.evaluate(
             self.test_loader, save_report=True
         )  # Evaluate on test set and save metrics
 
-    def evaluate(self, test_loader, save_report: bool = False) -> float:
-        """
-        Evaluate the Llama3 model on the provided test dataloader.
+    def evaluate(self, test_loader: Any, save_report: bool = False) -> float:
+        """Evaluates the model on a given test set.
 
         Args:
-            test_dataloader: The DataLoader object for the testing or validation dataset.
+            test_loader: Tuple of (X, y) test data in DataFrame form.
+            save_report: Whether to save the evaluation report.
 
         Returns:
-            float: The average loss on the test set.
+            The average validation loss across the test dataset.
         """
         metrics_tracker = MetricsTracker(
             self.model.model_name,
@@ -178,69 +236,59 @@ class Llama3Trainer:
             self.model.dataset_name,
             self.model.save_dir,
         )
-        verbose = self.params.get("verbose", 1)
-        val_loss = []
+        verbose: int = self.params.get("verbose", 1)
+        val_loss: list[float] = []
 
-        # Set the model to evaluation mode
-        self.model.llama_model.eval()
+        self.llama_model.eval()
 
-        # Iterate over the test dataloader
-        # TODO: maybe need to force batch size to 1 for Llama3?
+        total_tokens = 0
+        total_token_time = 0.0
+        total_infer_time = 0.0
+
         for X, y in zip(test_loader[0].iterrows(), test_loader[1].iterrows()):
+            X_input = X[1].iloc[0]
+            y_true = y[1].iloc[0]
 
-            # TODO: handle in prepare_data_for_model_llm
-            X = X[1].iloc[0]
-            y = y[1].iloc[0]
+            result_dict = self.model.infer_llm(X_input)
 
-            # Tokenize the input data
-            inputs = self.model.tokenizer(
-                X,
-                return_tensors="pt",
-                truncation=True,
-                max_length=self.model.max_length,
-            )
-            # Generate predictions
-            # TODO: need to pass attention mask and other params to the model?
-            with torch.no_grad():
-                outputs = self.model.llama_model.generate(
-                    inputs["input_ids"],
-                    max_length=self.model.max_length,
-                    max_new_tokens=1,  # Generate only the label
-                    num_return_sequences=1,
-                )
-            # Decode the generated outputs
-            generated_text = self.model.tokenizer.batch_decode(
-                outputs, skip_special_tokens=True
-            )
+            generated_text = result_dict["generated_text"]
+            token_time = result_dict["token_time"]
+            infer_time = result_dict["infer_time"]
+            num_tokens = result_dict["num_tokens"]
 
-            # Extract the predicted labels from the generated text
-            # TODO: implement this based on the generated text format. use helper function in prompt engineering file
-            predicted_probability = 0.5
+            total_token_time += token_time
+            total_infer_time += infer_time
+            total_tokens += num_tokens
 
-            # Convert the predicted labels and target to tensors with proper shape and type
-            predicted_label = torch.tensor(
-                predicted_probability, dtype=torch.float32
-            ).unsqueeze(0)
-            target = torch.tensor(float(y), dtype=torch.float32).unsqueeze(0)
+            logger.info("Generated text: %s", generated_text.strip())
+            predicted_probability = self.model.parse_output(generated_text)
 
-            # Calculate the loss
+            predicted_label = torch.tensor(predicted_probability, dtype=torch.float32).unsqueeze(0)
+            target = torch.tensor(float(y_true), dtype=torch.float32).unsqueeze(0)
+
             loss = self.criterion(predicted_label, target)
             val_loss.append(loss.item())
 
-            logger.info(f"Validation loss: {loss.item()}")
-            # Log the loss to wandb if enabled
             if self.wandb:
-                wandb.log({"val_loss": loss.item()})
+                wandb.log({
+                    "val_loss": loss.item(),
+                    "token_time": token_time,
+                    "infer_time": infer_time,
+                    "num_tokens": num_tokens,
+                })
 
-            metrics_tracker.add_results(y, predicted_label)
+            metrics_tracker.add_results(y_true, predicted_label)
 
-        # Calculate and log metrics
+        # After evaluation loop
+        logger.info(f"Total tokens: {total_tokens}")
+        logger.info(f"Average tokenization time: {total_token_time / len(test_loader[0]):.4f}s")
+        logger.info(f"Average inference time: {total_infer_time / len(test_loader[0]):.4f}s")
+
         metrics_tracker.summary = metrics_tracker.compute_overall_metrics()
         if save_report:
             metrics_tracker.save_report()
 
-        # Log results to console
-        logger.info(f"Test evaluation completed for {self.model.model_name}")
-        logger.info(f"Test metrics: {metrics_tracker.summary}")
+        logger.info("Test evaluation completed for %s", self.model.model_name)
+        logger.info("Test metrics: %s", metrics_tracker.summary)
 
-        return np.mean(val_loss)
+        return float(np.mean(val_loss))
