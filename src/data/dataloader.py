@@ -12,7 +12,7 @@ from src.preprocessing.preprocessing_baseline.preprocessing_baseline import (
     PreprocessorBaseline,
 )
 from src.preprocessing.preprocessing_advanced.windowing import Windower
-from src.preprocessing.preprocessing_promts import get_prompting_preprocessor
+from src.preprocessing.preprocessing_prompts import get_prompting_preprocessor
 
 # Set up logger
 logger = logging.getLogger("PULSE_logger")
@@ -411,6 +411,7 @@ class DatasetManager:
                 "dataset_name": dataset["name"],
                 "task": dataset["task"],
                 "model_name": model_name,
+                "mode": mode,
                 "shots": num_shots,
             }
             if preprocessing_id in few_shot_list:

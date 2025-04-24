@@ -107,14 +107,14 @@ class ModelTrainer:
                     X_train, y_train = None, None
                     X_val, y_val = None, None
 
-                    if model.type != "LLM":
-                        # Preprocess data for corresponding model
-                        X_train, y_train = self.dm.get_preprocessed_data(
-                            task_dataset_name, model_name, mode="train", **dm_kwargs
-                        )
-                        X_val, y_val = self.dm.get_preprocessed_data(
-                            task_dataset_name, model_name, mode="val", **dm_kwargs
-                        )
+                    # if model.type != "LLM":
+                    # Preprocess data for corresponding model
+                    X_train, y_train = self.dm.get_preprocessed_data(
+                        task_dataset_name, model_name, mode="train", **dm_kwargs
+                    )
+                    X_val, y_val = self.dm.get_preprocessed_data(
+                        task_dataset_name, model_name, mode="val", **dm_kwargs
+                    )
                     X_test, y_test = self.dm.get_preprocessed_data(
                         task_dataset_name,
                         model_name,

@@ -5,3 +5,4 @@ params:
   type: "LLM" # Type of model (ML for machine learning, DL for deep learning)
   verbose: 2
   shots: 3 # Number of shots for few-shot learning. Only matters if handled by preprocessor.
+  prefix_tuning: false # Whether to use prefix tuning
