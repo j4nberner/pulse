@@ -38,6 +38,7 @@ def few_shot_paper_preprocessor(
 
     prompts = []
     X_in = X[0]  # input data
+    y_in = y[0]  # labels
     X_train = X[1]  # few shot examples
     y_train = y[1]  # few shot examples
 
@@ -103,4 +104,4 @@ def few_shot_paper_preprocessor(
         f"Converted {len(prompts)} samples to text prompt format for model '{model_id}'."
     )
 
-    return X_processed, y
+    return X_processed, y_in
