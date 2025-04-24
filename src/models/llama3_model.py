@@ -50,7 +50,7 @@ class Llama3Model(PulseTemplateModel):
     def _load_model(self) -> None:
         """Loads the tokenizer and model weights and initializes LangChain pipeline."""
         try:
-            self.tokenizer = AutoTokenizer.from_pretrained(self.model_id)
+            self.tokenizer = AutoTokenizer.from_pretrained(self.model_id, use_fast=True)
             self.llama_model = AutoModelForCausalLM.from_pretrained(
                 self.model_id, torch_dtype=torch.float16, device_map="auto"
             )
@@ -77,32 +77,60 @@ class Llama3Model(PulseTemplateModel):
 
     def _init_langchain(self) -> None:
         """Initializes the LangChain LLM and prompt pipeline."""
-        pipe = pipeline(
+        hf_pipe = pipeline(
             "text-generation",
             model=self.llama_model,
             tokenizer=self.tokenizer,
             device_map="auto",
             max_new_tokens=self.max_length,
+            pad_token_id=self.tokenizer.eos_token_id,
         )
-        self.lc_llm = pipe
 
+        # Wrap Hugging Face pipeline with LangChain-compatible wrapper
+        self.lc_llm = HuggingFacePipeline(pipeline=hf_pipe)
+
+        # Create a LangChain prompt template
         self.prompt_template = PromptTemplate(
             input_variables=["input"],
             template=self.params.get("prompt_template", "{input}"),
         )
 
+        # Chain prompt and LLM together
         self.lc_chain = self.prompt_template | self.lc_llm
 
-    def infer_llm(self, input_text: str) -> str:
-        """Runs the LangChain pipeline with the given input.
+    def infer_llm(self, input_text: str) -> Dict[str, Any]:
+        """Runs the LangChain pipeline with the given input and logs timing/token info.
 
         Args:
             input_text: A string input to feed into the prompt.
 
         Returns:
-            The generated text response from the model.
+            A dictionary with the generated text, timing information, and token count.
         """
-        return self.lc_chain.invoke({"input": input_text})
+        if not isinstance(input_text, str):
+            input_text = str(input_text)
+
+        # Measure tokenization time
+        token_start = time.perf_counter()
+        tokens = self.tokenizer(input_text, return_tensors="pt")
+        token_time = time.perf_counter() - token_start
+        num_tokens = len(tokens["input_ids"][0])
+
+        # Measure inference time
+        infer_start = time.perf_counter()
+        result = self.lc_chain.invoke({"input": input_text})
+        infer_time = time.perf_counter() - infer_start
+
+        logger.info(
+            f"Tokenization time: {token_time:.4f}s | Inference time: {infer_time:.4f}s | Tokens: {num_tokens}"
+        )
+
+        return {
+            "generated_text": result,
+            "token_time": token_time,
+            "infer_time": infer_time,
+            "num_tokens": num_tokens,
+        }
 
     def parse_output(self, generated_text: str) -> float:
         """Parses the generated text output into a float probability or label.
@@ -265,12 +293,27 @@ class Llama3Trainer:
 
         self.llama_model.eval()
 
+        total_tokens = 0
+        total_token_time = 0.0
+        total_infer_time = 0.0
+
         for X, y in zip(test_loader[0].iterrows(), test_loader[1].iterrows()):
             X_input = X[1].iloc[0]
             y_true = y[1].iloc[0]
 
-            generated_text: str = self.model.infer_llm(X_input)
-            predicted_probability: float = self.model.parse_output(generated_text)
+            result_dict = self.model.infer_llm(X_input)
+
+            generated_text = result_dict["generated_text"]
+            token_time = result_dict["token_time"]
+            infer_time = result_dict["infer_time"]
+            num_tokens = result_dict["num_tokens"]
+
+            total_token_time += token_time
+            total_infer_time += infer_time
+            total_tokens += num_tokens
+
+            logger.info("Generated text: %s", generated_text.strip())
+            predicted_probability = self.model.parse_output(generated_text)
 
             predicted_label = torch.tensor(
                 predicted_probability, dtype=torch.float32
@@ -280,16 +323,26 @@ class Llama3Trainer:
             loss = self.criterion(predicted_label, target)
             val_loss.append(loss.item())
 
-            logger.info(
-                "Validation loss: %s | Prediction: %s",
-                loss.item(),
-                generated_text.strip(),
-            )
-
             if self.wandb:
-                wandb.log({"val_loss": loss.item()})
+                wandb.log(
+                    {
+                        "val_loss": loss.item(),
+                        "token_time": token_time,
+                        "infer_time": infer_time,
+                        "num_tokens": num_tokens,
+                    }
+                )
 
             metrics_tracker.add_results(y_true, predicted_label)
+
+        # After evaluation loop
+        logger.info(f"Total tokens: {total_tokens}")
+        logger.info(
+            f"Average tokenization time: {total_token_time / len(test_loader[0]):.4f}s"
+        )
+        logger.info(
+            f"Average inference time: {total_infer_time / len(test_loader[0]):.4f}s"
+        )
 
         metrics_tracker.summary = metrics_tracker.compute_overall_metrics()
         if save_report:

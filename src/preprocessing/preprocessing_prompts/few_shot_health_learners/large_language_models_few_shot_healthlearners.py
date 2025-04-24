@@ -116,4 +116,4 @@ def few_shot_paper_preprocessor(
         f"Converted {len(prompts)} samples to text prompt format for model '{model_id}'."
     )
 
-    return X_processed, y
+    return X_processed, y_in
