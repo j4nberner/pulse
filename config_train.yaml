@@ -48,6 +48,8 @@ preprocessing_baseline:
     val: 0.1
     test: 0.1 
 
+    # TODO: add param test_limited_x
+
 # _______ Preprocessing Advanced _______
 
 preprocessing_advanced:
@@ -57,6 +59,9 @@ preprocessing_advanced:
     prediction_window: 0 # Size of the prediction window (0 = predict at the end of window)
     step_size: 1 # Step size for sliding windows
     save_data: true # Whether to save windowed data
+
+  aggreagtion:
+    enabled: true
 
 # TODO: Create a PreprocessorAdvanced class (maybe better idea than separate classes to handle data saving/loading? -> No, we don't save advanced preprocessed data except for windowing)
 
