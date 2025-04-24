@@ -13,7 +13,7 @@ wandb:
   entity: "berner"
 
 ###### Application specific settings ######
-base_path: "" #"/cluster/project/bmds_lab/sepsis_sophia/pulse" # #"/path/to/pulse"
+base_path: "/Users/sophiaehlers/Documents/pulse" #"/cluster/project/bmds_lab/sepsis_sophia/pulse" # #"/path/to/pulse"
 
 # Tasks to process
 tasks:
@@ -61,6 +61,7 @@ preprocessing_advanced:
 prompting:
   prompting_ids:
     - "few_shot_paper_preprocessor" # Preprocessing ID for the model
+    - "zhu_2024_is_larger_always_better_preprocessor" 
 
 # TODO: Create a PreprocessorAdvanced class (maybe better idea than separate classes to handle data saving/loading? -> No, we don't save advanced preprocessed data except for windowing)
 
