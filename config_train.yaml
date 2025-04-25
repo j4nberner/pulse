@@ -52,7 +52,7 @@ preprocessing_baseline:
 
 preprocessing_advanced:
   windowing:
-    enabled: false # Enable/disable windowing
+    enabled: true # Enable/disable windowing
     data_window: 6 # Size of the data window
     prediction_window: 0 # Size of the prediction window (0 = predict at the end of window)
     step_size: 1 # Step size for sliding windows
@@ -60,7 +60,7 @@ preprocessing_advanced:
 
 prompting:
   prompting_ids:
-    - "few_shot_paper_preprocessor" # Preprocessing ID for the model
+    # - "few_shot_paper_preprocessor" # Preprocessing ID for the model
     - "zhu_2024_is_larger_always_better_preprocessor" 
 
 # TODO: Create a PreprocessorAdvanced class (maybe better idea than separate classes to handle data saving/loading? -> No, we don't save advanced preprocessed data except for windowing)

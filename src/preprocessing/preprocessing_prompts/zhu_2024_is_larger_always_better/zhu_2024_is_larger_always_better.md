@@ -1,5 +1,7 @@
 # Zhu et al. 2024: Is larger always better? Evaluating and prompting large language models for non-generative medical tasks
 
+Paper: https://arxiv.org/abs/2407.18525
+
 ## Complete original best performing prompt template for mortality prediction on the MIMIC dataset
 
 <div style="color:darkblue;">

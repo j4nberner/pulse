@@ -291,7 +291,7 @@ class DatasetManager:
             - debug (bool): If True, take only 100 rows
             - limit_test_set (bool): If True and mode is "test", limit to first 100 stay_ids
             - print_stats (bool): If True, print statistics for the datasets
-            - preprocessing_id (str): ID of preprocessing to apply
+            - prompting_id (str): ID of prompt preprocessing to apply
 
         Returns:
             Tuple[pd.DataFrame, pd.DataFrame]: Features and labels
@@ -301,7 +301,7 @@ class DatasetManager:
             return None, None
 
         dataset = self.datasets[dataset_id]
-        preprocessing_id = kwargs.get("preprocessing_id", None)
+        prompting_id = kwargs.get("prompting_id", None)
 
         if not dataset["loaded"]:
             success = self.load_dataset(dataset_id)
@@ -310,7 +310,7 @@ class DatasetManager:
 
         data = dataset["data"]
 
-        few_shot_list = ["few_shot_paper_preprocessor"]
+        few_shot_list = ["few_shot_paper_preprocessor", "zhu_2024_is_larger_always_better_preprocessor"]
 
         # Take only n rows if in debug
         debug = kwargs.get("debug", False)
@@ -338,7 +338,7 @@ class DatasetManager:
             y = data["y_train"]
 
         elif mode == "val":
-            if preprocessing_id in few_shot_list:
+            if prompting_id in few_shot_list:
                 # Some LLMs might need training data in validation set for few-shot learning
                 X_train = data["X_train"]
                 y_train = data["y_train"]
@@ -350,7 +350,7 @@ class DatasetManager:
                 y = data["y_val"]
 
         else:
-            if preprocessing_id in few_shot_list:
+            if prompting_id in few_shot_list:
                 # Some LLMs might need training data in validation set for few-shot learning
                 X_train = data["X_train"]
                 y_train = data["y_train"]
@@ -401,9 +401,9 @@ class DatasetManager:
 
         # Apply any model-specific preprocessing if needed.
         # For example, if you need to tokenize text data for LLMs
-        if preprocessing_id is not None:
-            advanced_preprocessor = get_prompting_preprocessor(
-                preprocessing_id=preprocessing_id
+        if prompting_id is not None:
+            prompting_preprocessor = get_prompting_preprocessor(
+                prompting_id=prompting_id
             )
             num_shots = kwargs.get("num_shots", 0)
             # Info dict needs to contain dataset name, task, and model name
@@ -414,13 +414,15 @@ class DatasetManager:
                 "mode": mode,
                 "shots": num_shots,
             }
-            if preprocessing_id in few_shot_list:
+            if prompting_id in few_shot_list:
                 # Add few-shot examples to info_dict if needed
                 X = [X, X_train]
                 y = [y, y_train]
+            
+            logger.info(f"Applying prompting preprocessor for prompting_id: {prompting_id}")
 
             # Apply advanced preprocessing
-            X, y = advanced_preprocessor(X, y, info_dict)
+            X, y = prompting_preprocessor(X, y, info_dict)
 
         # Check and drop stay_id columns if they exist
         if isinstance(X, pd.DataFrame) and "stay_id" in X.columns:

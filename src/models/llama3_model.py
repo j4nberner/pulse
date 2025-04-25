@@ -185,7 +185,7 @@ class Llama3Trainer:
             test_loader: The DataLoader object for the testing dataset.
         """
         # Load the model and tokenizer
-        # model._load_model()  # Comment out to only test preprocessing
+        model._load_model()  # Comment out to only test preprocessing
 
         self.model = model
         self.llama_model = model.llama_model

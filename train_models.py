@@ -98,7 +98,7 @@ class ModelTrainer:
                     "dataset": self.config.datasets[0],
                     "task": self.config.tasks[0],
                     "debug": self.config.general.debug_mode,
-                    "preprocessing_id": model.preprocessing_id,
+                    "prompting_id": model.prompting_id,
                     "num_shots": model.params.get("shots", None),
                 }
 
