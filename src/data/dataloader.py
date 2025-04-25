@@ -315,7 +315,7 @@ class DatasetManager:
         # Take only n rows if in debug
         debug = kwargs.get("debug", False)
         if debug:
-            debug_data_length = 100
+            debug_data_length = 50
             logger.info(
                 f"Debug mode: Taking only {debug_data_length} rows for {dataset_id}"
             )

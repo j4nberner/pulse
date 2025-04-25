@@ -1,4 +1,4 @@
-from datetime import datetime
+import time
 from typing import Dict, Any, Optional
 from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
 from langchain.prompts import PromptTemplate
@@ -48,7 +48,7 @@ class Llama3Model(PulseTemplateModel):
         self.lc_chain: Optional[Runnable] = None
 
     def _load_model(self) -> None:
-        """Loads the tokenizer and model weights and initializes LangChain pipeline."""
+        """Loads the tokenizer and model weights and initializes HF pipeline."""
         try:
             self.tokenizer = AutoTokenizer.from_pretrained(self.model_id, use_fast=True)
             self.llama_model = AutoModelForCausalLM.from_pretrained(
@@ -61,9 +61,7 @@ class Llama3Model(PulseTemplateModel):
                     task_type=TaskType.CAUSAL_LM,
                     inference_mode=False,
                     num_virtual_tokens=self.params.get("num_virtual_tokens", 30),
-                    encoder_hidden_size=self.params.get(
-                        "encoder_hidden_size", 4096
-                    ),  # LLaMA 3 hidden size
+                    encoder_hidden_size=self.params.get("encoder_hidden_size", 4096),
                 )
                 self.llama_model = get_peft_model(self.llama_model, prefix_config)
 
@@ -72,34 +70,22 @@ class Llama3Model(PulseTemplateModel):
             logger.error("Failed to load Llama3 model: %s", e)
             raise
 
-        logger.info("Initializing Llama3 with parameters: %s", self.params)
-        self._init_langchain()
+        logger.info("Initializing Hugging Face pipeline with parameters: %s", self.params)
 
-    def _init_langchain(self) -> None:
-        """Initializes the LangChain LLM and prompt pipeline."""
-        hf_pipe = pipeline(
+        self.hf_pipeline = pipeline(
             "text-generation",
             model=self.llama_model,
             tokenizer=self.tokenizer,
             device_map="auto",
-            max_new_tokens=self.max_length,
-            pad_token_id=self.tokenizer.eos_token_id,
+            max_new_tokens=5,
+            do_sample=False,
+            temperature=0.0,
+            eos_token_id=self.tokenizer.eos_token_id,
+            pad_token_id=self.tokenizer.eos_token_id, 
         )
-
-        # Wrap Hugging Face pipeline with LangChain-compatible wrapper
-        self.lc_llm = HuggingFacePipeline(pipeline=hf_pipe)
-
-        # Create a LangChain prompt template
-        self.prompt_template = PromptTemplate(
-            input_variables=["input"],
-            template=self.params.get("prompt_template", "{input}"),
-        )
-
-        # Chain prompt and LLM together
-        self.lc_chain = self.prompt_template | self.lc_llm
 
     def infer_llm(self, input_text: str) -> Dict[str, Any]:
-        """Runs the LangChain pipeline with the given input and logs timing/token info.
+        """Runs the HF pipeline with the given input and logs timing/token info.
 
         Args:
             input_text: A string input to feed into the prompt.
@@ -110,45 +96,30 @@ class Llama3Model(PulseTemplateModel):
         if not isinstance(input_text, str):
             input_text = str(input_text)
 
-        # Measure tokenization time
         token_start = time.perf_counter()
         tokens = self.tokenizer(input_text, return_tensors="pt")
         token_time = time.perf_counter() - token_start
         num_tokens = len(tokens["input_ids"][0])
 
-        # Measure inference time
         infer_start = time.perf_counter()
-        result = self.lc_chain.invoke({"input": input_text})
+        result = self.hf_pipeline(input_text)
         infer_time = time.perf_counter() - infer_start
+
+        # logger.info(f"Input text: {input_text}")
+
+        generated_text = result[0]["generated_text"].replace(input_text, "").strip()
+        logger.info(f"Generated text: {generated_text}")
 
         logger.info(
             f"Tokenization time: {token_time:.4f}s | Inference time: {infer_time:.4f}s | Tokens: {num_tokens}"
         )
 
         return {
-            "generated_text": result,
+            "generated_text": generated_text,
             "token_time": token_time,
             "infer_time": infer_time,
             "num_tokens": num_tokens,
         }
-
-    def parse_output(self, generated_text: str) -> float:
-        """Parses the generated text output into a float probability or label.
-
-        Args:
-            generated_text: Raw output from the LLM.
-
-        Returns:
-            A float probability or classification result.
-        """
-        try:
-            if "yes" in generated_text.lower():
-                return 1.0
-            elif "no" in generated_text.lower():
-                return 0.0
-            return float(generated_text.strip())
-        except Exception:
-            return 0.5
 
     def set_trainer(
         self,
@@ -169,6 +140,26 @@ class Llama3Model(PulseTemplateModel):
             self, train_dataloader, val_dataloader, test_dataloader
         )
 
+    def parse_output(self, output: str) -> float:
+        """Parses the output string to extract the predicted probability.
+
+        Args:
+            output: The generated text from the model.
+
+        Returns:
+            A float representing the predicted probability.
+        """
+        #TODO: Implement a more robust parsing method
+        try:
+            # Extract the floating-point number from the output
+            probability = float(output.split(":")[-1].strip())
+            return probability
+        except (ValueError, IndexError) as e:
+            logger.warning("Failed to parse output. Defaulting to 0.5: %s", e)
+            # Log the error and return a default value
+            logger.info("Output: %s", output)
+            return 0.5  # Default to 0.5 if parsing fails
+
 
 class Llama3Trainer:
     def __init__(
@@ -185,7 +176,7 @@ class Llama3Trainer:
             test_loader: The DataLoader object for the testing dataset.
         """
         # Load the model and tokenizer
-        # model._load_model()  # Comment out to only test preprocessing
+        model._load_model()  # Comment out to only test preprocessing
 
         self.model = model
         self.llama_model = model.llama_model
@@ -268,11 +259,12 @@ class Llama3Trainer:
                 val_loss = self.evaluate(self.val_loader)  # Evaluate on validation set
                 logger.info("Validation loss: %s", val_loss)
 
-        self.evaluate(
+        self.evaluate_single(
             self.test_loader, save_report=True
         )  # Evaluate on test set and save metrics
 
-    def evaluate(self, test_loader: Any, save_report: bool = False) -> float:
+
+    def evaluate_single(self, test_loader: Any, save_report: bool = False) -> float:
         """Evaluates the model on a given test set.
 
         Args:
@@ -312,8 +304,13 @@ class Llama3Trainer:
             total_infer_time += infer_time
             total_tokens += num_tokens
 
-            logger.info("Generated text: %s", generated_text.strip())
             predicted_probability = self.model.parse_output(generated_text)
+            
+            logger.info(
+                "Predicted probability: %s | True label: %s",
+                predicted_probability,
+                y_true,
+            )
 
             predicted_label = torch.tensor(
                 predicted_probability, dtype=torch.float32
@@ -333,7 +330,7 @@ class Llama3Trainer:
                     }
                 )
 
-            metrics_tracker.add_results(y_true, predicted_label)
+            metrics_tracker.add_results(predicted_probability, y_true)
 
         # After evaluation loop
         logger.info(f"Total tokens: {total_tokens}")
@@ -343,6 +340,73 @@ class Llama3Trainer:
         logger.info(
             f"Average inference time: {total_infer_time / len(test_loader[0]):.4f}s"
         )
+
+        metrics_tracker.summary = metrics_tracker.compute_overall_metrics()
+        if save_report:
+            metrics_tracker.save_report()
+
+        logger.info("Test evaluation completed for %s", self.model.model_name)
+        logger.info("Test metrics: %s", metrics_tracker.summary)
+
+        return float(np.mean(val_loss))
+
+    def evaluate_batched(self, test_loader: Any, save_report: bool = False) -> float:
+        """Evaluates the model on a given test set in batches.
+
+        Args:
+            test_loader: Tuple of (X, y) test data in DataFrame form.
+            save_report: Whether to save the evaluation report.
+
+        Returns:
+            The average validation loss across the test dataset.
+        """
+        NotImplementedError(
+            "Batch evaluation is not implemented for Llama3Model. Use evaluate_single instead."
+        )
+        metrics_tracker = MetricsTracker(
+            self.model.model_name,
+            self.model.task_name,
+            self.model.dataset_name,
+            self.model.save_dir,
+        )
+        verbose: int = self.params.get("verbose", 1)
+        val_loss: list[float] = []
+
+        self.llama_model.eval()
+
+        df_X, df_y = test_loader  # X: prompts, y: true labels
+        prompts = df_X.iloc[:, 0].tolist()
+        true_labels = df_y.iloc[:, 0].tolist()
+
+        # Batch inference with Hugging Face pipeline
+        results = self.model.hf_pipeline(
+            prompts,
+        )
+
+        logger.debug(f"Results from hf_pipeline: {results}")
+
+        for i, result_dict in enumerate(results):
+            generated_text = result_dict["generated_text"]
+            y_true = true_labels[i]
+
+            predicted_probability = self.model.parse_output(generated_text)
+
+            logger.info(
+                "Predicted probability: %s | True label: %s",
+                predicted_probability,
+                y_true,
+            )
+
+            predicted_label = torch.tensor(predicted_probability, dtype=torch.float32).unsqueeze(0)
+            target = torch.tensor(float(y_true), dtype=torch.float32).unsqueeze(0)
+
+            loss = self.criterion(predicted_label, target)
+            val_loss.append(loss.item())
+
+            if self.wandb:
+                wandb.log({"val_loss": loss.item()})
+
+            metrics_tracker.add_results(predicted_probability, y_true)
 
         metrics_tracker.summary = metrics_tracker.compute_overall_metrics()
         if save_report:
