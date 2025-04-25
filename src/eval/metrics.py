@@ -194,7 +194,7 @@ def calculate_auroc(
 
 def calculate_auprc(
     y_true: Union[np.ndarray, torch.Tensor], y_pred: Union[np.ndarray, torch.Tensor]
-) -> Union[float, Dict[str, float]]:
+) -> Dict[str, float]:
     """
     Calculate Area Under the Precision-Recall Curve (AUPRC) and Normalized AUPRC
     
@@ -206,7 +206,7 @@ def calculate_auprc(
         y_pred: Predicted probabilities or scores
 
     Returns:
-        Either a float (AUPRC) or a dictionary containing both AUPRC and normalized AUPRC
+        Dictionary containing both AUPRC and normalized AUPRC
     """
     # Handle tensors if passed
     if isinstance(y_true, torch.Tensor):
@@ -217,7 +217,9 @@ def calculate_auprc(
     # Check if more than one class is present
     if len(np.unique(y_true)) < 2:
         logger.warning("Only one class present in y_true. Returning NaN")
-        return np.nan
+        return {"auprc": np.nan, "normalized_auprc": np.nan}
+    
+    logger.info(y_true)
 
     precision, recall, _ = precision_recall_curve(y_true, y_pred)
     auprc = auc(recall, precision)

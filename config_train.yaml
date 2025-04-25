@@ -12,10 +12,8 @@ wandb:
   enabled: false
   entity: "berner"
 
-# TODO: improve wandb logging of multiple experiments in one run (e.g. multiple task/datasets/models)
-
 ###### Application specific settings ######
-base_path: "/Users/sophiaehlers/Documents/pulse" #"/cluster/project/bmds_lab/sepsis_sophia/pulse" # #"/path/to/pulse"
+base_path: "" #"/cluster/project/bmds_lab/sepsis_sophia/pulse" # #"/path/to/pulse"
 
 # Tasks to process
 tasks:
@@ -46,7 +44,7 @@ preprocessing_baseline:
   split_ratios: # Train/Val/Test split ratios
     train: 0.8
     val: 0.1
-    test: 0.1 
+    test: 0.1
 
 # _______ Preprocessing Advanced _______
 
@@ -58,22 +56,26 @@ preprocessing_advanced:
     step_size: 1 # Step size for sliding windows
     save_data: true # Whether to save windowed data
 
+prompting:
+  prompting_ids:
+    - "few_shot_paper_preprocessor" # Preprocessing ID for the model
+
 # TODO: Create a PreprocessorAdvanced class (maybe better idea than separate classes to handle data saving/loading? -> No, we don't save advanced preprocessed data except for windowing)
 
 # _______ Model Training _______
 
 benchmark_settings:
-  batch_size: 100
+  batch_size: 50
 #   num_epochs: 100
 # learning_rate: 0.001 # Removed. Use model-specific learning rate instead.
 # optimizer: "adam" # Removed. Use model-specific optimizer instead.
 
 load_models:
-  # - model_configs/Llama3.yaml
+  - model_configs/Llama3.yaml
   # - model_configs/RandomForestModel.yaml
   # - model_configs/XGBoost.yaml
   # - model_configs/LightGBMModel.yaml
-  - model_configs/CNNModel.yaml
-  - model_configs/LSTMModel.yaml
-  - model_configs/InceptionTimeModel.yaml
-  - model_configs/GRUModel.yaml
+  # - model_configs/CNNModel.yaml
+  # - model_configs/LSTMModel.yaml
+  # - model_configs/InceptionTimeModel.yaml
+  # - model_configs/GRUModel.yaml
