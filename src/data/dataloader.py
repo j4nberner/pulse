@@ -1,17 +1,16 @@
 import logging
 import os
 import sys
-from typing import List, Any
-from torch.utils.data import Dataset
-import torch
-from typing import Tuple, Dict, List, Optional, Union, Any
-import pandas as pd
-import numpy as np
+from typing import Any, Dict, List, Optional, Tuple, Union
 
-from src.preprocessing.preprocessing_baseline.preprocessing_baseline import (
-    PreprocessorBaseline,
-)
+import numpy as np
+import pandas as pd
+import torch
+from torch.utils.data import Dataset
+
 from src.preprocessing.preprocessing_advanced.windowing import Windower
+from src.preprocessing.preprocessing_baseline.preprocessing_baseline import \
+    PreprocessorBaseline
 from src.preprocessing.preprocessing_prompts import get_prompting_preprocessor
 
 # Set up logger

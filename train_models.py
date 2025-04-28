@@ -1,15 +1,17 @@
 import argparse
 import os
 import sys
-import pandas as pd
-from torch.utils.data import DataLoader
-from omegaconf import OmegaConf
 
-from src.logger_setup import setup_logger, init_wandb
+import pandas as pd
+from omegaconf import OmegaConf
+from torch.utils.data import DataLoader
+
 from src.data.dataloader import DatasetManager, TorchDatasetWrapper
+from src.logger_setup import init_wandb, setup_logger
 from src.models.modelmanager import ModelManager
-from src.util.slurm_util import copy_data_to_scratch, is_on_slurm, get_local_scratch_dir
 from src.util.config_util import load_config_with_models, save_config_file
+from src.util.slurm_util import (copy_data_to_scratch, get_local_scratch_dir,
+                                 is_on_slurm)
 
 logger, output_dir = setup_logger()
 

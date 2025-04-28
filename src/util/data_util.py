@@ -1,7 +1,6 @@
 # Dictionary of feature limits for outlier detection
 from typing import Tuple
 
-
 features_dict = {
     "hr": ("Heart Rate [bpm]", (60, 100), (20, 320)),
     "sbp": ("Systolic Blood Pressure\n[mmHg]", (90, 120), (30, 300)),

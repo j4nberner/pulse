@@ -1,25 +1,20 @@
-from typing import Dict, Any, Optional
 import logging
-import numpy as np
-import pandas as pd
-import psutil
 import os
-import sys
 import warnings
 from datetime import datetime
+from typing import Any, Dict, Optional
+
+import numpy as np
+import pandas as pd
 from sklearn.base import BaseEstimator
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import confusion_matrix
 from sklearn.model_selection import GridSearchCV
+
 import wandb
-
-from src.models.pulsetemplate_model import PulseTemplateModel
-from src.util.model_util import (
-    save_sklearn_model,
-    prepare_data_for_model_ml,
-)
 from src.eval.metrics import MetricsTracker, rmse
-
+from src.models.pulsetemplate_model import PulseTemplateModel
+from src.util.model_util import prepare_data_for_model_ml, save_sklearn_model
 
 # Filter the specific warning about feature names
 # (This is because training is done with np arrays and prediction with pd dataframe to preserve feature names for feature importance etc.)

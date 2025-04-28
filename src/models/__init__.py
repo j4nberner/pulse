@@ -1,12 +1,11 @@
+from .cnn_model import CNNModel
+from .gru_model import GRUModel
+from .inceptiontime_model import InceptionTimeModel
+from .lightgbm_model import LightGBMModel
+from .llama3_model import Llama3Model
+from .lstm_model import LSTMModel
 from .randomforest_model import RandomForestModel
 from .xgboost_model import XGBoostModel
-from .lightgbm_model import LightGBMModel
-from .cnn_model import CNNModel
-from .lstm_model import LSTMModel
-from .llama3_model import Llama3Model
-from .inceptiontime_model import InceptionTimeModel
-from .gru_model import GRUModel
-
 
 model_cls_name_dict = {
     "RandomForest": RandomForestModel,

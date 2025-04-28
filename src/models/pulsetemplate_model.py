@@ -1,8 +1,9 @@
+import logging
 from typing import Any, Optional
+
+import joblib
 import torch
 from torch.utils.data import DataLoader
-import logging
-import joblib
 
 logger = logging.getLogger("PULSE_logger")
 
