@@ -26,6 +26,7 @@ class PulseTemplateModel:
             trainer_name: Optional name of the trainer
         """
         params = kwargs.get("params", {})
+        self.params = params
         self.model_name = model_name
         self.trainer_name = trainer_name
         self.trainer = None

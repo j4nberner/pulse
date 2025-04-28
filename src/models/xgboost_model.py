@@ -95,7 +95,6 @@ class XGBoostModel(PulseTemplateModel):
         self.model = XGBClassifier(
             **model_params,
         )
-                                
 
     def set_trainer(self, trainer_name, train_loader, val_loader, test_loader):
         """
@@ -148,7 +147,9 @@ class XGBoostTrainer:
 
         # Use the utility function to prepare data
         prepared_data = prepare_data_for_model_ml(
-            self.train_loader, self.val_loader, self.test_loader,
+            self.train_loader,
+            self.val_loader,
+            self.test_loader,
         )
 
         # Extract all data from the prepared_data dictionary
@@ -162,13 +163,19 @@ class XGBoostTrainer:
 
         # Log training start to wandb
         if self.wandb:
-            wandb.log({"train_samples": len(X_train), "val_sample": len(X_val), "test_samples": len(X_test)})
+            wandb.log(
+                {
+                    "train_samples": len(X_train),
+                    "val_sample": len(X_val),
+                    "test_samples": len(X_test),
+                }
+            )
 
         # Train the model
         self.model.model.fit(
-            X_train, 
-            y_train, 
-            eval_set=[(X_val, y_val)], 
+            X_train,
+            y_train,
+            eval_set=[(X_val, y_val)],
             verbose=self.model.params["verbosity"],
         )
         logger.info("XGBoost model trained successfully.")
@@ -193,8 +200,8 @@ class XGBoostTrainer:
         metrics_tracker.save_report()
 
         # Log results to console
-        logger.info(f"Test evaluation completed for {self.model.model_name}")
-        logger.info(f"Test metrics: {metrics_tracker.summary}")
+        logger.info("Test evaluation completed for %s", self.model.model_name)
+        logger.info("Test metrics: %s", metrics_tracker.summary)
 
         # Save the model
         model_save_name = f"{self.model.model_name}_{self.task_name}_{self.dataset_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pt"
@@ -202,60 +209,39 @@ class XGBoostTrainer:
 
         # Log metrics to wandb
         if self.wandb:
-            # Get metrics from the metrics tracker
-            metrics = metrics_tracker.compute_overall_metrics()
+            if "overall" in metrics_tracker.summary:
+                wandb.log(metrics_tracker.summary["overall"])
 
-            # Log all metrics from the overall summary
-            if "overall" in metrics:
-                wandb.log(metrics["overall"])
-
-            # Create and log confusion matrix
             y_pred_binary = (y_pred >= 0.5).astype(int)
-            cm = confusion_matrix(y_test, y_pred_binary)
             wandb.log(
                 {
-                    "confusion_matrix": wandb.plot.confusion_matrix(
-                        preds=y_pred_binary,
+                    "confusion_matrix": wandb.sklearn.plot_confusion_matrix(
+                        y_pred=y_pred_binary,
                         y_true=y_test,
                         class_names=["Negative", "Positive"],
-                    )
-                }
-            )
-
-            # Create and log ROC curve
-            wandb.log(
-                {
-                    "roc_curve": wandb.plot.roc_curve(
+                    ),
+                    "roc_curve": wandb.sklearn.plot_roc(
                         y_true=y_test,
                         y_probas=y_pred_proba,
                         labels=["Negative", "Positive"],
-                    )
+                    ),
                 }
             )
 
-            # Log feature importance
             if hasattr(self.model.model, "feature_importances_"):
-                feature_importance = {
-                    f"importance_{feature_names[i]}": imp
-                    for i, imp in enumerate(self.model.model.feature_importances_)
-                }
-                wandb.log(feature_importance)
-
-                # Create a bar chart of feature importances
-                importance_df = pd.DataFrame(
-                    {
-                        "feature": feature_names,
-                        "importance": self.model.model.feature_importances_,
-                    }
-                ).sort_values("importance", ascending=False)
-
+                # Feature importances
+                importances = self.model.model.feature_importances_
                 wandb.log(
                     {
-                        "feature_importance": wandb.plot.bar(
-                            wandb.Table(dataframe=importance_df),
-                            "feature",
-                            "importance",
-                            title="Feature Importance",
+                        "feature_importances": wandb.plot.bar(
+                            wandb.Table(
+                                data=[
+                                    [f, i] for f, i in zip(feature_names, importances)
+                                ],
+                                columns=["Feature", "Importance"],
+                            ),
+                            "Feature",
+                            "Importance",
                         )
                     }
                 )
