@@ -40,28 +40,33 @@ def few_shot_paper_preprocessor(
     logger.info(
         f"Starting preprocessing for model '{model_id}' on dataset '{dataset}' and task '{task}'."
     )
+    prefix = ("You are an experienced doctor in the ICU.\n"
+    f"I will provide you with a sequence of ICU data, and you need to classify it as either '{task}' or 'not-{task}'.\n"
+    f"Please respond with only a floating-point number between 0 and 1, where a higher number suggests a greater likelihood of '{task}'.\n"
+    f"Below are Question-Answer pair examples of ICU data classified as '{task}' or 'not-{task}':\n")
 
     # Remove all columns with _na suffix
     X_in = X[0].filter(regex="^(?!.*_na$)")  # input data
+    y_in = y[0]  # labels
 
     if mode != "train":
         X_train = X[1].filter(regex="^(?!.*_na$)")  # few shot examples
-        y_train = y[1].filter(regex="^(?!.*_na$)")  # few shot examples
+        y_train = y[1]  # few shot examples
 
     prompts = []
-    feature_names = [get_feature_name(name) for name in X_in.columns.tolist()]
+    feature_names = [get_feature_name(name) for name in X_in.columns.tolist()]  # Apply get_feature_name() here
 
     # Define the prompt template
     prompt_template = PromptTemplate(
         input_variables=["features", "label"],
-        template="Q: Classify the given ICU data sequence as either {task} or not-{task}:\n   Features:\n{features}\nA: {label}",
+        template="Q: Classify the given ICU data sequence as either {task} or not-{task}:\nFeatures:\n{features}\nA: {label}",
     )
 
     for idx, row in X_in.iterrows():
         # Format the features for this instance
         feature_string = ", ".join(
             [
-                f"{feature_names[idx]}: {value}"
+                f"{feature_names[idx]}: {value}"  # Use feature_names from get_feature_name()
                 for idx, value in enumerate(row.values)
                 if pd.notna(value)
             ]
@@ -77,7 +82,7 @@ def few_shot_paper_preprocessor(
             for shot_idx in random_indices:
                 shot_features = ", ".join(
                     [
-                        f"{col} {value}"
+                        f"{get_feature_name(col)} {value}"  # Apply get_feature_name() here as well
                         for col, value in X_train.iloc[shot_idx].items()
                         if pd.notna(value)
                     ]
@@ -93,8 +98,8 @@ def few_shot_paper_preprocessor(
             few_shot_prompt = FewShotPromptTemplate(
                 examples=examples,
                 example_prompt=prompt_template,
-                prefix="Below are examples of ICU data classified as '{task}' or 'not-{task}':",
-                suffix="Q: Classify the given ICU data sequence as either {task} or not-{task}:\n   Features:\n{features}\nA:",
+                prefix=prefix,
+                suffix="Q: Classify the given ICU data sequence as either {task} or not-{task}:\n   Features:\n{features}\n A: ",
                 input_variables=["features", "task"],
                 example_separator="\n\n",
             )
@@ -102,15 +107,15 @@ def few_shot_paper_preprocessor(
             # If no few-shot examples, use a simple prompt template
             few_shot_prompt = PromptTemplate(
                 input_variables=["features", "task"],
-                template="Q: Classify the given ICU data sequence as either {task} or not-{task}:\n   Features:\n{features}\nA:",
+                template="Q: Classify the given ICU data sequence as either {task} or not-{task}:\n   Features:\n{features}\nA: ",
             )
 
         # Generate the prompt
         prompt = few_shot_prompt.format(features=feature_string, task=task)
 
         # Reformat prompt according to model-specific requirements
-        formatted_prompt = apply_model_prompt_format(model_id, prompt)
-        prompts.append(formatted_prompt)
+        # formatted_prompt = apply_model_prompt_format(model_id, prompt)
+        prompts.append(prompt)
 
     X_processed = pd.DataFrame({"text": prompts})
 
@@ -119,3 +124,4 @@ def few_shot_paper_preprocessor(
     )
 
     return X_processed, y_in
+
