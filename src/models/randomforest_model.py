@@ -259,29 +259,6 @@ class RandomForestTrainer:
             )
 
             if hasattr(self.model.model, "feature_importances_"):
-                # feature_importance = {
-                #     f"importance_{feature_names[i]}": imp
-                #     for i, imp in enumerate(self.model.model.feature_importances_)
-                # }
-                # wandb.log(feature_importance)
-
-                # importance_df = pd.DataFrame(
-                #     {
-                #         "feature": feature_names,
-                #         "importance": self.model.model.feature_importances_,
-                #     }
-                # ).sort_values("importance", ascending=False)
-
-                # wandb.log(
-                #     {
-                #         "feature_importance": wandb.plot.bar(
-                #             wandb.Table(dataframe=importance_df),
-                #             "feature",
-                #             "importance",
-                #             title="Feature Importance",
-                #         )
-                #     }
-                # )
                 # Feature importances
                 importances = self.model.model.feature_importances_
                 wandb.log(

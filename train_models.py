@@ -107,7 +107,7 @@ class ModelTrainer:
                     X_val, y_val = None, None
 
                     if model.type == "LLM":
-                        dm_kwargs.append(
+                        dm_kwargs.update(
                             {
                                 "preprocessing_id": model.preprocessing_id,
                                 "num_shots": model.params.get("shots", None),

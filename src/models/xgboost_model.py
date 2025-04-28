@@ -5,11 +5,12 @@ from typing import Any, Dict, Optional
 
 import numpy as np
 import pandas as pd
-from sklearn.metrics import confusion_matrix
+from sklearn.model_selection import RandomizedSearchCV
 from xgboost import XGBClassifier
 
 import wandb
-from src.eval.metrics import MetricsTracker, rmse
+import wandb.sklearn
+from src.eval.metrics import MetricsTracker
 from src.models.pulsetemplate_model import PulseTemplateModel
 from src.util.model_util import prepare_data_for_model_ml, save_sklearn_model
 
@@ -54,6 +55,8 @@ class XGBoostModel(PulseTemplateModel):
 
         # Check if wandb is enabled and set up
         self.wandb = kwargs.get("wandb", False)
+
+        self.tune_hyperparameters = params.get("tune_hyperparameters", False)
 
         # Define all required XGBoost parameters
         required_xgb_params = [
@@ -141,6 +144,52 @@ class XGBoostTrainer:
         # Create model save directory if it doesn't exist
         os.makedirs(self.model_save_dir, exist_ok=True)
 
+    def _tune_hyperparameters(
+        self,
+        model: XGBClassifier,
+        X_train: np.ndarray,
+        y_train: np.ndarray,
+        X_val: np.ndarray,
+        y_val: np.ndarray,
+    ) -> XGBClassifier:
+        param_dist = {
+            "max_depth": np.arange(3, 10),
+            "learning_rate": [0.01, 0.05, 0.1, 0.2],
+            "subsample": [0.6, 0.8, 1.0],
+            "colsample_bytree": [0.6, 0.8, 1.0],
+            "min_child_weight": np.arange(1, 10),
+            "gamma": [0, 0.1, 0.2, 0.5],
+            "reg_alpha": [0, 0.01, 0.1],
+            "reg_lambda": [1, 1.5, 2.0],
+        }
+
+        random_search = RandomizedSearchCV(
+            model,
+            param_distributions=param_dist,
+            n_iter=50,
+            scoring="roc_auc",
+            n_jobs=-1,
+            cv=3,
+            verbose=1,
+            random_state=42,
+        )
+        # Disable early stopping for hyperparameter tuning
+        model.set_params(early_stopping_rounds=None)
+
+        logger.info("Starting RandomizedSearchCV for hyperparameter tuning...")
+        random_search.fit(X_train, y_train)
+        logger.info("Best params found: %s", random_search.best_params_)
+
+        if self.wandb:
+            wandb.log(
+                {
+                    "best_params": random_search.best_params_,
+                    "best_score": random_search.best_score_,
+                }
+            )
+
+        return random_search.best_estimator_
+
     def train(self):
         """Train the XGBoost model using the provided data loaders."""
         logger.info("Starting training process for XGBoost model...")
@@ -169,6 +218,12 @@ class XGBoostTrainer:
                     "val_sample": len(X_val),
                     "test_samples": len(X_test),
                 }
+            )
+
+        # Optional: tune hyperparameters
+        if self.model.tune_hyperparameters:
+            self.model.model = self._tune_hyperparameters(
+                self.model.model, X_train, y_train, X_val, y_val
             )
 
         # Train the model
