@@ -184,10 +184,10 @@ class ModelTrainer:
                         sys.exit(1)
 
                     # Set trainer for the model and train
-                    model.set_trainer(
-                        trainer_name, train_loader, val_loader, test_loader
-                    )
-                    model.trainer.train()
+                    # model.set_trainer(
+                    #     trainer_name, train_loader, val_loader, test_loader
+                    # )
+                    # model.trainer.train()
 
                 except Exception as e:
                     logger.error(

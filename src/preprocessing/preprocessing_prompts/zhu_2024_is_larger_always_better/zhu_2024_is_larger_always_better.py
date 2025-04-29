@@ -1,4 +1,6 @@
 # https://arxiv.org/abs/2407.18525
+# zhu_2024_is_larger_always_better() implements the best setting prompt template used for mortality prediction on the MIMIC-IV dataset
+# should always use 1 shot!
 
 import logging
 from typing import Dict, Any, List, Tuple
@@ -29,7 +31,8 @@ def zhu_2024_is_larger_always_better_preprocessor(
     task = info_dict.get("task")
     dataset = info_dict.get("dataset_name")
     model_id = info_dict.get("model_name")
-    num_shots = info_dict.get("shots")
+    # num_shots = info_dict.get("shots")
+    num_shots = 1  # Fixed value of num_shots=1 for this specific implementation
     mode = info_dict.get("mode") # train/val/test, few-shot examples are only used in validation and test mode
 
     # Set the data window based on task
@@ -53,14 +56,14 @@ def zhu_2024_is_larger_always_better_preprocessor(
 
     # Define the prompt template for clinical assessment
     main_prompt_template = PromptTemplate(
-        input_variables=["task", "feature_descriptions_text", "patient_info", "patient_features_text", "data_windwo", "time_points_string"],
+        input_variables=["task_description", "likelihood_description", "feature_descriptions_text", "patient_info", "patient_features_text", "data_window", "time_points_str"],
         template="""You are an experienced doctor in Intensive Care Unit (ICU) treatment.
     
     I will provide you with medical information from an Intensive Care Unit (ICU) visit of a patient, characterized by a fixed number of features.
 
     Present multiple hours data of a patient in one batch. Represent each feature within this data as a string of values, separated by commas.
 
-    Your task is to assess the provided medical data and analyze the health records from ICU visits to determine the likelihood of the patient not surviving their hospital stay/having {task} at the end of the data batch. Please respond with only a floating-point number between 0 and 1, where a higher number suggests a greater likelihood of death/{task}.
+    Your task is to assess the provided medical data and analyze the health records from ICU visits {task_description}. Please respond with only a floating-point number between 0 and 1, where a higher number suggests {likelihood_description}.
 
     In situations where the data does not allow for a reasonable conclusion, respond with the phrase "I do not know" without any additional explanation.
 
@@ -73,7 +76,7 @@ def zhu_2024_is_larger_always_better_preprocessor(
     Details of the features for each visit are as follows:
     {patient_features_text}
 
-    Please respond with only a floating-point number between 0 and 1, where a higher number suggests a greater likelihood of {task}. Do not include any additional explanation.
+    Please respond with only a floating-point number between 0 and 1, where a higher number suggests {likelihood_description}. Do not include any additional explanation.
     RESPONSE:
     """
     )
@@ -89,6 +92,17 @@ def zhu_2024_is_larger_always_better_preprocessor(
     RESPONSE:
     {label}
     """
+
+    # Create task-specific description
+    if task == "mortality":
+        task_description = "to determine the likelihood of the patient not surviving their hospital stay"
+        likelihood_description = "a greater likelihood of death"
+    elif task == "aki":
+        task_description = f"to determine the likelihood of the patient having acute kidney injury at the end of the data batch"
+        likelihood_description = f"a greater likelihood of acute kidney injury"
+    else:  # task == "sepsis"
+        task_description = f"to determine the likelihood of the patient having sepsis at the end of the data batch"
+        likelihood_description = f"a greater likelihood of sepsis"
 
     # Extract unique feature base names (e.g., "hr" from "hr_1")
     base_features = set()
@@ -135,7 +149,7 @@ def zhu_2024_is_larger_always_better_preprocessor(
                 patient_features_text=example_patient_features_text,
                 data_window=data_window,
                 time_points_str=time_points_str,
-                label=str(float(example_label.iloc[0]))
+                label=str(int(example_label["label"]))
             )
             few_shot_examples.append(example_text)
         
@@ -144,7 +158,8 @@ def zhu_2024_is_larger_always_better_preprocessor(
     
     # Create final prompt for this patient
     prompt = main_prompt_template.format(
-        task=task,
+        task_description=task_description,
+        likelihood_description=likelihood_description,
         feature_descriptions_text=feature_descriptions_text,
         patient_info=patient_info,
         patient_features_text=patient_features_text,

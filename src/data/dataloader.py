@@ -288,7 +288,7 @@ class DatasetManager:
             model_name (str): Name of the model
             mode (str): train, val, or test (default: train)
             **kwargs: Additional keyword arguments
-            - debug (bool): If True, take only 100 rows
+            - debug (bool): If True, take only a specified number of rows
             - limit_test_set (bool): If True and mode is "test", limit to first 100 stay_ids
             - print_stats (bool): If True, print statistics for the datasets
             - prompting_id (str): ID of prompt preprocessing to apply
@@ -318,7 +318,7 @@ class DatasetManager:
         # Take only n rows if in debug
         debug = kwargs.get("debug", False)
         if debug:
-            debug_data_length = 1000
+            debug_data_length = 50
             logger.info(
                 f"Debug mode: Taking only {debug_data_length} rows for {dataset_id}"
             )
