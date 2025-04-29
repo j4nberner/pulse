@@ -1,25 +1,20 @@
-from typing import Dict, Any, Optional
 import logging
-import numpy as np
-import pandas as pd
-import psutil
 import os
-import sys
 import warnings
 from datetime import datetime
+from typing import Any, Dict, Optional
+
+import numpy as np
+import pandas as pd
 from sklearn.base import BaseEstimator
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import confusion_matrix
 from sklearn.model_selection import GridSearchCV
+
 import wandb
-
+import wandb.sklearn
+from src.eval.metrics import MetricsTracker
 from src.models.pulsetemplate_model import PulseTemplateModel
-from src.util.model_util import (
-    save_sklearn_model,
-    prepare_data_for_model_ml,
-)
-from src.eval.metrics import MetricsTracker, rmse
-
+from src.util.model_util import prepare_data_for_model_ml, save_sklearn_model
 
 # Filter the specific warning about feature names
 # (This is because training is done with np arrays and prediction with pd dataframe to preserve feature names for feature importance etc.)
@@ -36,9 +31,8 @@ class RandomForestModel(PulseTemplateModel):
     Implementation of RandomForest model for classification and regression tasks.
 
     Attributes:
-        model: The trained RandomForest model.
-        model_type: Type of the model ('classifier' or 'regressor').
         params: Parameters used for the model.
+
     """
 
     def __init__(self, params: Dict[str, Any], **kwargs) -> None:
@@ -47,6 +41,11 @@ class RandomForestModel(PulseTemplateModel):
 
         Args:
             params: Dictionary of parameters from the config file.
+            **kwargs: Additional keyword arguments:
+            - output_dir (str, optional): Directory where model outputs will be saved.
+              Defaults to `os.getcwd()/output`.
+            - wandb (bool, optional): Whether to enable Weights & Biases (wandb) logging.
+              Defaults to False.
 
         Raises:
             KeyError: If any required parameters are missing from the config.
@@ -101,7 +100,7 @@ class RandomForestModel(PulseTemplateModel):
         rf_params = {param: params[param] for param in required_rf_params}
 
         # Log the parameters being used
-        logger.info(f"Initializing RandomForest with parameters: {rf_params}")
+        logger.info("Initializing RandomForest with parameters: %s", rf_params)
 
         # Initialize the RandomForest model with parameters from config
         self.model = RandomForestClassifier(**rf_params)
@@ -185,6 +184,8 @@ class RandomForestTrainer:
         return grid_search.best_estimator_
 
     def train(self) -> None:
+        """Train and evaluate the RandomForest model using the provided data loaders."""
+
         logger.info("Starting training process for RandomForest model...")
 
         # Use the utility function to prepare data
@@ -230,27 +231,26 @@ class RandomForestTrainer:
         metrics_tracker.save_report()
 
         # Log results to console
-        logger.info(f"Test evaluation completed for {self.model.model_name}")
-        logger.info(f"Test metrics: {metrics_tracker.summary}")
+        logger.info("Test evaluation completed for %s", self.model.model_name)
+        logger.info("Test metrics: %s", metrics_tracker.summary)
 
         # Save the model
         model_save_name = f"{self.model.model_name}_{self.task_name}_{self.dataset_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pt"
         save_sklearn_model(model_save_name, self.model.model, self.model_save_dir)
 
         if self.wandb:
-            metrics = metrics_tracker.compute_overall_metrics()
-            if "overall" in metrics:
-                wandb.log(metrics["overall"])
+            if "overall" in metrics_tracker.summary:
+                wandb.log(metrics_tracker.summary["overall"])
 
             y_pred_binary = (y_pred >= 0.5).astype(int)
             wandb.log(
                 {
-                    "confusion_matrix": wandb.plot.confusion_matrix(
-                        preds=y_pred_binary,
+                    "confusion_matrix": wandb.sklearn.plot_confusion_matrix(
+                        y_pred=y_pred_binary,
                         y_true=y_test,
-                        class_names=["Negative", "Positive"],
+                        labels=["Negative", "Positive"],
                     ),
-                    "roc_curve": wandb.plot.roc_curve(
+                    "roc_curve": wandb.sklearn.plot_roc(
                         y_true=y_test,
                         y_probas=y_pred_proba,
                         labels=["Negative", "Positive"],
@@ -259,165 +259,19 @@ class RandomForestTrainer:
             )
 
             if hasattr(self.model.model, "feature_importances_"):
-                feature_importance = {
-                    f"importance_{feature_names[i]}": imp
-                    for i, imp in enumerate(self.model.model.feature_importances_)
-                }
-                wandb.log(feature_importance)
-
-                importance_df = pd.DataFrame(
-                    {
-                        "feature": feature_names,
-                        "importance": self.model.model.feature_importances_,
-                    }
-                ).sort_values("importance", ascending=False)
-
+                # Feature importances
+                importances = self.model.model.feature_importances_
                 wandb.log(
                     {
-                        "feature_importance": wandb.plot.bar(
-                            wandb.Table(dataframe=importance_df),
-                            "feature",
-                            "importance",
-                            title="Feature Importance",
+                        "feature_importances": wandb.plot.bar(
+                            wandb.Table(
+                                data=[
+                                    [f, i] for f, i in zip(feature_names, importances)
+                                ],
+                                columns=["Feature", "Importance"],
+                            ),
+                            "Feature",
+                            "Importance",
                         )
                     }
                 )
-
-
-# class RandomForestTrainer:
-#     """
-#     Trainer class for RandomForest models.
-
-#     This class handles the training workflow for RandomForest models
-#     including data preparation, model training, evaluation and saving.
-#     """
-
-#     def __init__(self, model, train_loader, val_loader, test_loader) -> None:
-#         """
-#         Initialize the RandomForest trainer.
-
-#         Args:
-#             model: The RandomForest model to train.
-#             train_loader: DataLoader for training data.
-#             val_loader: DataLoader for validation data. (not used)
-#             test_loader: DataLoader for testing data.
-#         """
-#         self.model = model
-#         self.train_loader = train_loader
-#         self.test_loader = test_loader
-#         self.task_name = self.model.task_name
-#         self.dataset_name = self.model.dataset_name
-#         self.wandb = model.wandb
-#         self.model_save_dir = os.path.join(model.save_dir, "Models")
-#         # Create model save directory if it doesn't exist
-#         os.makedirs(self.model_save_dir, exist_ok=True)
-
-#     def train(self):
-#         """Train the RandomForest model using the provided data loaders."""
-#         logger.info("Starting training process for RandomForest model...")
-
-#         # Use the utility function to prepare data
-#         prepared_data = prepare_data_for_model_ml(
-#             self.train_loader, self.test_loader, logger_instance=logger
-#         )
-
-#         # Extract all data from the prepared_data dictionary
-#         X_train = prepared_data["X_train"]
-#         y_train = prepared_data["y_train"]
-#         X_test = prepared_data["X_test"]
-#         y_test = prepared_data["y_test"]
-#         feature_names = prepared_data["feature_names"]
-
-#         # Log training start to wandb
-#         if self.wandb:
-#             wandb.log({"train_samples": len(X_train), "test_samples": len(X_test)})
-
-#         # Train the model
-#         self.model.model.fit(X_train, y_train)
-#         logger.info("RandomForest model trained successfully.")
-
-#         # Create DataFrame with feature names for prediction to avoid warnings
-#         X_test_df = pd.DataFrame(X_test, columns=feature_names)
-
-#         # Evaluate the model
-#         metrics_tracker = MetricsTracker(
-#             self.model.model_name,
-#             self.model.task_name,
-#             self.model.dataset_name,
-#             self.model.save_dir,
-#         )
-
-#         y_pred = self.model.model.predict(X_test_df)
-#         y_pred_proba = self.model.model.predict_proba(X_test_df)
-#         metrics_tracker.add_results(y_pred, y_test)
-
-#         rmse_score = rmse(y_test, y_pred)
-#         logger.info("RMSE: %f", rmse_score)
-
-#         # Calculate and log metrics
-#         metrics_tracker.summary = metrics_tracker.compute_overall_metrics()
-#         metrics_tracker.save_report()
-
-#         # Save the model
-#         model_save_name = f"{self.model.model_name}_{self.task_name}_{self.dataset_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pt"
-#         save_sklearn_model(model_save_name, self.model.model, self.model_save_dir)
-
-#         # Log metrics to wandb
-#         if self.wandb:
-#             # Get metrics from the metrics tracker
-#             metrics = metrics_tracker.compute_overall_metrics()
-
-#             # Log all metrics from the overall summary
-#             if "overall" in metrics:
-#                 wandb.log(metrics["overall"])
-
-#             # Create and log confusion matrix
-#             y_pred_binary = (y_pred >= 0.5).astype(int)
-#             cm = confusion_matrix(y_test, y_pred_binary)
-#             wandb.log(
-#                 {
-#                     "confusion_matrix": wandb.plot.confusion_matrix(
-#                         preds=y_pred_binary,
-#                         y_true=y_test,
-#                         class_names=["Negative", "Positive"],
-#                     )
-#                 }
-#             )
-
-#             # Create and log ROC curve
-#             wandb.log(
-#                 {
-#                     "roc_curve": wandb.plot.roc_curve(
-#                         y_true=y_test,
-#                         y_probas=y_pred_proba,
-#                         labels=["Negative", "Positive"],
-#                     )
-#                 }
-#             )
-
-#             # Log feature importance
-#             if hasattr(self.model.model, "feature_importances_"):
-#                 feature_importance = {
-#                     f"importance_{feature_names[i]}": imp
-#                     for i, imp in enumerate(self.model.model.feature_importances_)
-#                 }
-#                 wandb.log(feature_importance)
-
-#                 # Create a bar chart of feature importances
-#                 importance_df = pd.DataFrame(
-#                     {
-#                         "feature": feature_names,
-#                         "importance": self.model.model.feature_importances_,
-#                     }
-#                 ).sort_values("importance", ascending=False)
-
-#                 wandb.log(
-#                     {
-#                         "feature_importance": wandb.plot.bar(
-#                             wandb.Table(dataframe=importance_df),
-#                             "feature",
-#                             "importance",
-#                             title="Feature Importance",
-#                         )
-#                     }
-#                 )

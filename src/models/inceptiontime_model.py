@@ -1,18 +1,19 @@
+import logging
+import os
+from collections import OrderedDict
 from datetime import datetime
+from typing import Any, Dict, List, Optional
+
+import numpy as np
 import torch
 import torch.nn as nn
-import torch.optim as optim
 import torch.nn.functional as F
-import numpy as np
-import logging
-from collections import OrderedDict
-from typing import Dict, Any, List, Optional
-import wandb
-import os
+import torch.optim as optim
 
-from src.models.pulsetemplate_model import PulseTemplateModel
-from src.util.model_util import save_torch_model, prepare_data_for_model_dl
+import wandb
 from src.eval.metrics import MetricsTracker
+from src.models.pulsetemplate_model import PulseTemplateModel
+from src.util.model_util import prepare_data_for_model_dl, save_torch_model
 
 # Set up logger
 logger = logging.getLogger("PULSE_logger")

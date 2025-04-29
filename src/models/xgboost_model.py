@@ -1,22 +1,21 @@
-from datetime import datetime
-from typing import Dict, Any, Optional
 import logging
+import os
+from datetime import datetime
+from typing import Any, Dict, Optional
+
 import numpy as np
 import pandas as pd
-import os
+import xgboost as xgb
+from sklearn.model_selection import RandomizedSearchCV
 from xgboost import XGBClassifier
-from sklearn.metrics import confusion_matrix
-import wandb
 
+import wandb
+import wandb.sklearn
+from src.eval.metrics import MetricsTracker
 from src.models.pulsetemplate_model import PulseTemplateModel
-from src.util.model_util import (
-    save_sklearn_model,
-    prepare_data_for_model_ml,
-)
-from src.eval.metrics import MetricsTracker, rmse
+from src.util.model_util import prepare_data_for_model_ml, save_sklearn_model
 
 logger = logging.getLogger("PULSE_logger")
-
 
 class XGBoostModel(PulseTemplateModel):
     """
@@ -56,6 +55,8 @@ class XGBoostModel(PulseTemplateModel):
 
         # Check if wandb is enabled and set up
         self.wandb = kwargs.get("wandb", False)
+
+        self.tune_hyperparameters = params.get("tune_hyperparameters", False)
 
         # Define all required XGBoost parameters
         required_xgb_params = [
@@ -97,7 +98,6 @@ class XGBoostModel(PulseTemplateModel):
         self.model = XGBClassifier(
             **model_params,
         )
-                                
 
     def set_trainer(self, trainer_name, train_loader, val_loader, test_loader):
         """
@@ -144,13 +144,61 @@ class XGBoostTrainer:
         # Create model save directory if it doesn't exist
         os.makedirs(self.model_save_dir, exist_ok=True)
 
+    def _tune_hyperparameters(
+        self,
+        model: XGBClassifier,
+        X_train: np.ndarray,
+        y_train: np.ndarray,
+        X_val: np.ndarray,
+        y_val: np.ndarray,
+    ) -> XGBClassifier:
+        param_dist = {
+            "max_depth": np.arange(3, 10),
+            "learning_rate": [0.01, 0.05, 0.1, 0.2],
+            "subsample": [0.6, 0.8, 1.0],
+            "colsample_bytree": [0.6, 0.8, 1.0],
+            "min_child_weight": np.arange(1, 10),
+            "gamma": [0, 0.1, 0.2, 0.5],
+            "reg_alpha": [0, 0.01, 0.1],
+            "reg_lambda": [1, 1.5, 2.0],
+        }
+
+        random_search = RandomizedSearchCV(
+            model,
+            param_distributions=param_dist,
+            n_iter=50,
+            scoring="roc_auc",
+            n_jobs=-1,
+            cv=3,
+            verbose=1,
+            random_state=42,
+        )
+        # Disable early stopping for hyperparameter tuning
+        model.set_params(early_stopping_rounds=None)
+
+        logger.info("Starting RandomizedSearchCV for hyperparameter tuning...")
+        random_search.fit(X_train, y_train, verbose=True)
+        logger.info("Best params found: %s", random_search.best_params_)
+
+        if self.wandb:
+            wandb.log(
+                {
+                    "best_params": random_search.best_params_,
+                    "best_score": random_search.best_score_,
+                }
+            )
+
+        return random_search.best_estimator_
+
     def train(self):
         """Train the XGBoost model using the provided data loaders."""
         logger.info("Starting training process for XGBoost model...")
 
         # Use the utility function to prepare data
         prepared_data = prepare_data_for_model_ml(
-            self.train_loader, self.val_loader, self.test_loader,
+            self.train_loader,
+            self.val_loader,
+            self.test_loader,
         )
 
         # Extract all data from the prepared_data dictionary
@@ -164,16 +212,45 @@ class XGBoostTrainer:
 
         # Log training start to wandb
         if self.wandb:
-            wandb.log({"train_samples": len(X_train), "val_sample": len(X_val), "test_samples": len(X_test)})
+            wandb.log(
+                {
+                    "train_samples": len(X_train),
+                    "val_sample": len(X_val),
+                    "test_samples": len(X_test),
+                }
+            )
+
+        # Optional: tune hyperparameters
+        if self.model.tune_hyperparameters:
+            self.model.model = self._tune_hyperparameters(
+                self.model.model, X_train, y_train, X_val, y_val
+            )
 
         # Train the model
         self.model.model.fit(
-            X_train, 
-            y_train, 
-            eval_set=[(X_val, y_val)], 
-            verbose=self.model.params["verbosity"],
+            X_train,
+            y_train,
+            eval_set=[(X_val, y_val)],
+            verbose=True,
         )
         logger.info("XGBoost model trained successfully.")
+
+        results = self.model.model.evals_result()
+        
+        for i in range(len(results["validation_0"]["auc"])):
+            wandb.log({
+                "val_loss": results["validation_0"]["auc"][i],
+                "step": i
+            })
+        
+        
+        # Load the best model if early stopping was used
+        if hasattr(self.model.model, "best_iteration"):
+            self.model.model.n_estimators = self.model.model.best_iteration
+            logger.info(
+                "Loading best iteration with n_estimators: %d",
+                self.model.model.n_estimators,
+            )
 
         # Create DataFrame with feature names for prediction to avoid warnings
         X_test_df = pd.DataFrame(X_test, columns=feature_names)
@@ -195,8 +272,8 @@ class XGBoostTrainer:
         metrics_tracker.save_report()
 
         # Log results to console
-        logger.info(f"Test evaluation completed for {self.model.model_name}")
-        logger.info(f"Test metrics: {metrics_tracker.summary}")
+        logger.info("Test evaluation completed for %s", self.model.model_name)
+        logger.info("Test metrics: %s", metrics_tracker.summary)
 
         # Save the model
         model_save_name = f"{self.model.model_name}_{self.task_name}_{self.dataset_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pt"
@@ -204,60 +281,39 @@ class XGBoostTrainer:
 
         # Log metrics to wandb
         if self.wandb:
-            # Get metrics from the metrics tracker
-            metrics = metrics_tracker.compute_overall_metrics()
+            if "overall" in metrics_tracker.summary:
+                wandb.log(metrics_tracker.summary["overall"])
 
-            # Log all metrics from the overall summary
-            if "overall" in metrics:
-                wandb.log(metrics["overall"])
-
-            # Create and log confusion matrix
             y_pred_binary = (y_pred >= 0.5).astype(int)
-            cm = confusion_matrix(y_test, y_pred_binary)
             wandb.log(
                 {
-                    "confusion_matrix": wandb.plot.confusion_matrix(
-                        preds=y_pred_binary,
+                    "confusion_matrix": wandb.sklearn.plot_confusion_matrix(
+                        y_pred=y_pred_binary,
                         y_true=y_test,
-                        class_names=["Negative", "Positive"],
-                    )
-                }
-            )
-
-            # Create and log ROC curve
-            wandb.log(
-                {
-                    "roc_curve": wandb.plot.roc_curve(
+                        labels=["Negative", "Positive"],
+                    ),
+                    "roc_curve": wandb.sklearn.plot_roc(
                         y_true=y_test,
                         y_probas=y_pred_proba,
                         labels=["Negative", "Positive"],
-                    )
+                    ),
                 }
             )
 
-            # Log feature importance
             if hasattr(self.model.model, "feature_importances_"):
-                feature_importance = {
-                    f"importance_{feature_names[i]}": imp
-                    for i, imp in enumerate(self.model.model.feature_importances_)
-                }
-                wandb.log(feature_importance)
-
-                # Create a bar chart of feature importances
-                importance_df = pd.DataFrame(
-                    {
-                        "feature": feature_names,
-                        "importance": self.model.model.feature_importances_,
-                    }
-                ).sort_values("importance", ascending=False)
-
+                # Feature importances
+                importances = self.model.model.feature_importances_
                 wandb.log(
                     {
-                        "feature_importance": wandb.plot.bar(
-                            wandb.Table(dataframe=importance_df),
-                            "feature",
-                            "importance",
-                            title="Feature Importance",
+                        "feature_importances": wandb.plot.bar(
+                            wandb.Table(
+                                data=[
+                                    [f, i] for f, i in zip(feature_names, importances)
+                                ],
+                                columns=["Feature", "Importance"],
+                            ),
+                            "Feature",
+                            "Importance",
                         )
                     }
                 )

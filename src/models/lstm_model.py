@@ -1,20 +1,18 @@
-from datetime import datetime
-from typing import Dict, Any
 import logging
-import numpy as np
 import os
+from datetime import datetime
+from typing import Any, Dict
+
+import numpy as np
+import torch
 import torch.nn as nn
 import torch.optim as optim
-import torch
-import wandb
-from src.models.pulsetemplate_model import PulseTemplateModel
-from src.util.model_util import (
-    EarlyStopping,
-    save_torch_model,
-    prepare_data_for_model_dl,
-)
-from src.eval.metrics import MetricsTracker
 
+import wandb
+from src.eval.metrics import MetricsTracker
+from src.models.pulsetemplate_model import PulseTemplateModel
+from src.util.model_util import (EarlyStopping, prepare_data_for_model_dl,
+                                 save_torch_model)
 
 logger = logging.getLogger("PULSE_logger")
 

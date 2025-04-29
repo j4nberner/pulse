@@ -1,7 +1,8 @@
+import logging
 import os
 import shutil
+
 from omegaconf import OmegaConf
-import logging
 
 logger = logging.getLogger("PULSE_logger")
 

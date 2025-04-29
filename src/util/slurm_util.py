@@ -1,6 +1,7 @@
+import logging
 import os
 import shutil
-import logging
+
 from tqdm import tqdm
 
 logger = logging.getLogger(__name__)

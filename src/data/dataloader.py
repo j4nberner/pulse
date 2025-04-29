@@ -1,17 +1,17 @@
 import logging
 import os
 import sys
-from typing import List, Any
-from torch.utils.data import Dataset
-import torch
-from typing import Tuple, Dict, List, Optional, Union, Any
-import pandas as pd
-import numpy as np
+from typing import Any, Dict, List, Optional, Tuple, Union
 
+import numpy as np
+import pandas as pd
+import torch
+from torch.utils.data import Dataset
+
+from src.preprocessing.preprocessing_advanced.windowing import Windower
 from src.preprocessing.preprocessing_baseline.preprocessing_baseline import (
     PreprocessorBaseline,
 )
-from src.preprocessing.preprocessing_advanced.windowing import Windower
 from src.preprocessing.preprocessing_prompts import get_prompting_preprocessor
 
 # Set up logger
@@ -318,7 +318,7 @@ class DatasetManager:
         # Take only n rows if in debug
         debug = kwargs.get("debug", False)
         if debug:
-            debug_data_length = 50
+            debug_data_length = 1000
             logger.info(
                 f"Debug mode: Taking only {debug_data_length} rows for {dataset_id}"
             )

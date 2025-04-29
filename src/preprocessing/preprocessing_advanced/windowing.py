@@ -1,15 +1,16 @@
-from concurrent.futures import ThreadPoolExecutor, as_completed
-import os
-import pandas as pd
-import numpy as np
-import re
-from tqdm import tqdm
 import gc
 import logging
+import os
+import re
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
+import numpy as np
+import pandas as pd
 import torch
-from src.preprocessing.preprocessing_baseline.preprocessing_baseline import (
-    PreprocessorBaseline,
-)
+from tqdm import tqdm
+
+from src.preprocessing.preprocessing_baseline.preprocessing_baseline import \
+    PreprocessorBaseline
 
 # Set up logger
 logger = logging.getLogger("PULSE_logger")

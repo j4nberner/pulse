@@ -4,6 +4,7 @@ import time
 from typing import Any, Dict, Optional
 
 import numpy as np
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -19,39 +20,31 @@ from src.models.pulsetemplate_model import PulseTemplateModel
 logger = logging.getLogger("PULSE_logger")
 
 
-class Llama3Model(PulseTemplateModel):
-    """Llama 3 model wrapper using LangChain for prompt templating and inference."""
+class DeepSeekR1Model(PulseTemplateModel):
+    """DeepSeek-R1 model wrapper using LangChain for prompt templating and inference."""
 
     def __init__(self, params: Dict[str, Any], **kwargs) -> None:
-        """Initializes the Llama3Model with parameters and paths.
+        NotImplementedError("DeepSeek-R1 model is not implemented yet.")
 
-        Args:
-            params: Configuration dictionary with model parameters.
-            **kwargs: Additional optional parameters such as `output_dir` and `wandb`.
-        """
-        self.model_name = params.get(
-            "model_name", self.__class__.__name__.replace("Model", "")
-        )
+        self.model_name = params.get("model_name", "DeepSeekR1")
         self.trainer_name = params["trainer_name"]
         super().__init__(self.model_name, self.trainer_name, params=params)
 
         self.save_dir: str = kwargs.get("output_dir", f"{os.getcwd()}/output")
         self.wandb: bool = kwargs.get("wandb", False)
         self.params: Dict[str, Any] = params
-        self.model_id: str = self.params.get("model_id", "meta-llama/Llama-3.1-8B")
+        self.model_id: str = self.params.get("model_id", "deepseek-ai/DeepSeek-R1")
         self.max_length: int = self.params.get("max_length", 512)
 
         self.tokenizer: Optional[Any] = None
-        self.llama_model: Optional[Any] = None
-        self.lc_llm: Optional[Any] = None
-        self.prompt_template: Optional[PromptTemplate] = None
-        self.lc_chain: Optional[Runnable] = None
+        self.deepseek_model: Optional[Any] = None
+        self.hf_pipeline: Optional[Any] = None
 
     def _load_model(self) -> None:
         """Loads the tokenizer and model weights and initializes HF pipeline."""
         try:
             self.tokenizer = AutoTokenizer.from_pretrained(self.model_id, use_fast=True)
-            self.llama_model = AutoModelForCausalLM.from_pretrained(
+            self.deepseek_model = AutoModelForCausalLM.from_pretrained(
                 self.model_id, torch_dtype=torch.float16, device_map="auto"
             )
 
@@ -63,11 +56,11 @@ class Llama3Model(PulseTemplateModel):
                     num_virtual_tokens=self.params.get("num_virtual_tokens", 30),
                     encoder_hidden_size=self.params.get("encoder_hidden_size", 4096),
                 )
-                self.llama_model = get_peft_model(self.llama_model, prefix_config)
+                self.deepseek_model = get_peft_model(self.deepseek_model, prefix_config)
 
-            logger.info("Successfully loaded Llama3 model: %s", self.model_id)
+            logger.info("Successfully loaded DeepSeek-R1 model: %s", self.model_id)
         except Exception as e:
-            logger.error("Failed to load Llama3 model: %s", e)
+            logger.error("Failed to load DeepSeek-R1 model: %s", e)
             raise
 
         logger.info(
@@ -76,7 +69,7 @@ class Llama3Model(PulseTemplateModel):
 
         self.hf_pipeline = pipeline(
             "text-generation",
-            model=self.llama_model,
+            model=self.deepseek_model,
             tokenizer=self.tokenizer,
             device_map="auto",
             max_new_tokens=5,
@@ -87,14 +80,7 @@ class Llama3Model(PulseTemplateModel):
         )
 
     def infer_llm(self, input_text: str) -> Dict[str, Any]:
-        """Runs the HF pipeline with the given input and logs timing/token info.
-
-        Args:
-            input_text: A string input to feed into the prompt.
-
-        Returns:
-            A dictionary with the generated text, timing information, and token count.
-        """
+        """Runs the HF pipeline with the given input and logs timing/token info."""
         if not isinstance(input_text, str):
             input_text = str(input_text)
 
@@ -106,8 +92,6 @@ class Llama3Model(PulseTemplateModel):
         infer_start = time.perf_counter()
         result = self.hf_pipeline(input_text)
         infer_time = time.perf_counter() - infer_start
-
-        # logger.info(f"Input text: {input_text}")
 
         generated_text = result[0]["generated_text"].replace(input_text, "").strip()
         logger.info(f"Generated text: {generated_text}")
@@ -130,58 +114,30 @@ class Llama3Model(PulseTemplateModel):
         val_dataloader: Any,
         test_dataloader: Any,
     ) -> None:
-        """Sets the associated trainer instance.
-
-        Args:
-            trainer_name: Name of the trainer class.
-            train_dataloader: DataLoader for training data.
-            val_dataloader: DataLoader for validation data.
-            test_dataloader: DataLoader for test data.
-        """
-        self.trainer = Llama3Trainer(
+        """Sets the associated trainer instance."""
+        self.trainer = DeepSeekR1Trainer(
             self, train_dataloader, val_dataloader, test_dataloader
         )
 
     def parse_output(self, output: str) -> float:
-        """Parses the output string to extract the predicted probability.
-
-        Args:
-            output: The generated text from the model.
-
-        Returns:
-            A float representing the predicted probability.
-        """
-        # TODO: Implement a more robust parsing method
+        """Parses the output string to extract the predicted probability."""
         try:
-            # Extract the floating-point number from the output
             probability = float(output.split(":")[-1].strip())
             return probability
         except (ValueError, IndexError) as e:
             logger.warning("Failed to parse output. Defaulting to 0.5: %s", e)
-            # Log the error and return a default value
             logger.info("Output: %s", output)
             return 0.5  # Default to 0.5 if parsing fails
 
 
-class Llama3Trainer:
+class DeepSeekR1Trainer:
     def __init__(
-        self, model: Llama3Model, train_loader, val_loader, test_loader
+        self, model: DeepSeekR1Model, train_loader, val_loader, test_loader
     ) -> None:
-        """
-        Initialize the Llama3 trainer. Finetruning is not implemented yet.
-        This is a wrapper for inference only.
-
-        Args:
-            model (Llama3Model): The Llama3 model to be trained.
-            train_loader: The DataLoader object for the training dataset.
-            val_loader: The DataLoader object for the validation dataset.
-            test_loader: The DataLoader object for the testing dataset.
-        """
-        # Load the model and tokenizer
-        model._load_model()  # Comment out to only test preprocessing
+        model._load_model()
 
         self.model = model
-        self.llama_model = model.llama_model
+        self.model_instance = model.model
         self.params = model.params
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.train_loader = train_loader
@@ -197,20 +153,9 @@ class Llama3Trainer:
 
         logger.info("Using criterion: %s", self.criterion.__class__.__name__)
 
-        # Create model save directory if it doesn't exist
         os.makedirs(self.model_save_dir, exist_ok=True)
 
-        # Get the configured data converter
-        # TODO: implement this for LLMs?
-        # self.converter = prepare_data_for_model_dl(
-        #     self.train_loader,
-        #     self.params,
-        #     model_name=self.model.model_name,
-        #     task_name=self.task_name,
-        # )
-
     def train(self):
-        """Training loop."""
         verbose = self.params.get("verbose", 1)
 
         logger.info("Starting training...")
@@ -221,11 +166,11 @@ class Llama3Trainer:
                 self.model_save_dir,
             )
             optimizer = optim.AdamW(
-                self.llama_model.parameters(), lr=self.params.get("lr", 1e-4)
+                self.model_instance.parameters(), lr=self.params.get("lr", 1e-4)
             )
             num_epochs = self.params.get("epochs", 3)
 
-            self.llama_model.train()
+            self.model_instance.train()
             for epoch in range(num_epochs):
                 epoch_loss = 0.0
                 for X, y in zip(
@@ -245,7 +190,7 @@ class Llama3Trainer:
                         inputs["input_ids"].shape[0], -1
                     )
 
-                    outputs = self.llama_model(**inputs, labels=labels)
+                    outputs = self.model_instance(**inputs, labels=labels)
                     loss = outputs.loss
 
                     optimizer.zero_grad()
@@ -258,25 +203,12 @@ class Llama3Trainer:
 
                 logger.info(f"Epoch {epoch + 1}/{num_epochs}, Loss: {epoch_loss:.4f}")
 
-                val_loss = self.evaluate_single(
-                    self.val_loader
-                )  # Evaluate on validation set
+                val_loss = self.evaluate_single(self.val_loader)
                 logger.info("Validation loss: %s", val_loss)
 
-        self.evaluate_single(
-            self.test_loader, save_report=True
-        )  # Evaluate on test set and save metrics
+        self.evaluate_single(self.test_loader, save_report=True)
 
     def evaluate_single(self, test_loader: Any, save_report: bool = False) -> float:
-        """Evaluates the model on a given test set.
-
-        Args:
-            test_loader: Tuple of (X, y) test data in DataFrame form.
-            save_report: Whether to save the evaluation report.
-
-        Returns:
-            The average validation loss across the test dataset.
-        """
         metrics_tracker = MetricsTracker(
             self.model.model_name,
             self.model.task_name,
@@ -286,7 +218,7 @@ class Llama3Trainer:
         verbose: int = self.params.get("verbose", 1)
         val_loss: list[float] = []
 
-        self.llama_model.eval()
+        self.model_instance.eval()
 
         total_tokens = 0
         total_token_time = 0.0
@@ -335,7 +267,6 @@ class Llama3Trainer:
 
             metrics_tracker.add_results(predicted_probability, y_true)
 
-        # After evaluation loop
         logger.info(f"Total tokens: {total_tokens}")
         logger.info(
             f"Average tokenization time: {total_token_time / len(test_loader[0]):.4f}s"
@@ -343,75 +274,6 @@ class Llama3Trainer:
         logger.info(
             f"Average inference time: {total_infer_time / len(test_loader[0]):.4f}s"
         )
-
-        metrics_tracker.summary = metrics_tracker.compute_overall_metrics()
-        if save_report:
-            metrics_tracker.save_report()
-
-        logger.info("Test evaluation completed for %s", self.model.model_name)
-        logger.info("Test metrics: %s", metrics_tracker.summary)
-
-        return float(np.mean(val_loss))
-
-    def evaluate_batched(self, test_loader: Any, save_report: bool = False) -> float:
-        """Evaluates the model on a given test set in batches.
-
-        Args:
-            test_loader: Tuple of (X, y) test data in DataFrame form.
-            save_report: Whether to save the evaluation report.
-
-        Returns:
-            The average validation loss across the test dataset.
-        """
-        NotImplementedError(
-            "Batch evaluation is not implemented for Llama3Model. Use evaluate_single instead."
-        )
-        metrics_tracker = MetricsTracker(
-            self.model.model_name,
-            self.model.task_name,
-            self.model.dataset_name,
-            self.model.save_dir,
-        )
-        verbose: int = self.params.get("verbose", 1)
-        val_loss: list[float] = []
-
-        self.llama_model.eval()
-
-        df_X, df_y = test_loader  # X: prompts, y: true labels
-        prompts = df_X.iloc[:, 0].tolist()
-        true_labels = df_y.iloc[:, 0].tolist()
-
-        # Batch inference with Hugging Face pipeline
-        results = self.model.hf_pipeline(
-            prompts,
-        )
-
-        logger.debug(f"Results from hf_pipeline: {results}")
-
-        for i, result_dict in enumerate(results):
-            generated_text = result_dict["generated_text"]
-            y_true = true_labels[i]
-
-            predicted_probability = self.model.parse_output(generated_text)
-
-            logger.info(
-                "Predicted probability: %s | True label: %s",
-                predicted_probability,
-                y_true,
-            )
-
-            predicted_label = torch.tensor(
-                predicted_probability, dtype=torch.float32
-            ).unsqueeze(0)
-            target = torch.tensor(float(y_true), dtype=torch.float32).unsqueeze(0)
-
-            loss = self.criterion(predicted_label, target)
-            val_loss.append(loss.item())
-
-            if self.wandb:
-                wandb.log({"val_loss": loss.item()})
-
-            metrics_tracker.add_results(predicted_probability, y_true)
 
         metrics_tracker.summary = metrics_tracker.compute_overall_metrics()
         if save_report:

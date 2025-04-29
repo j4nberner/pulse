@@ -1,24 +1,30 @@
-from datetime import datetime
-from typing import Dict, Any
 import logging
-import numpy as np
 import os
+from datetime import datetime
+from typing import Any, Dict
+
+import numpy as np
+import torch
 import torch.nn as nn
 import torch.optim as optim
-import torch
+
 import wandb
+from src.eval.metrics import MetricsTracker
 from src.models.pulsetemplate_model import PulseTemplateModel
 from src.util.model_util import (
-    save_torch_model,
-    prepare_data_for_model_dl,
     EarlyStopping,
+    prepare_data_for_model_dl,
+    save_torch_model,
 )
-from src.eval.metrics import MetricsTracker
 
 logger = logging.getLogger("PULSE_logger")
 
 
 class CNNModel(PulseTemplateModel, nn.Module):
+    """
+    A Convolutional Neural Network (CNN) model for time series data.
+    """
+
     def __init__(self, params: Dict[str, Any], **kwargs) -> None:
         """
         Initialize the CNN model.
@@ -40,7 +46,7 @@ class CNNModel(PulseTemplateModel, nn.Module):
         nn.Module.__init__(self)
 
         # Set the model save directory
-        self.save_dir = kwargs.get(f"output_dir", f"{os.getcwd()}/output")
+        self.save_dir = kwargs.get("output_dir", f"{os.getcwd()}/output")
 
         # Define all required parameters
         required_params = [
@@ -65,7 +71,7 @@ class CNNModel(PulseTemplateModel, nn.Module):
         self.params = params  # {param: params[param] for param in required_params}
 
         # Log the parameters being used
-        logger.info(f"Initializing CNN with parameters: {self.params}")
+        logger.info("Initializing CNN with parameters: %s", self.params)
 
         # Set the number of channels based on the input shape
         self.params["num_channels"] = (
@@ -190,8 +196,8 @@ class CNNTrainer:
         )
 
         # Log optimizer and criterion
-        logger.info(f"Using optimizer: {self.optimizer.__class__.__name__}")
-        logger.info(f"Using criterion: {self.criterion.__class__.__name__}")
+        logger.info("Using optimizer: %s", self.optimizer.__class__.__name__)
+        logger.info("Using criterion: %s", self.criterion.__class__.__name__)
 
         # Create model save directory if it doesn't exist
         os.makedirs(self.model_save_dir, exist_ok=True)
@@ -213,7 +219,8 @@ class CNNTrainer:
         self.model._init_model()
 
         logger.info(
-            f"Input shape to model (after transformation): {transformed_features.shape}"
+            "Input shape to model (after transformation): %s",
+            transformed_features.shape,
         )
 
         # Try to load the model weights if they exist
@@ -242,12 +249,13 @@ class CNNTrainer:
         logger.info("Starting training...")
         for epoch in range(num_epochs):
             self.train_epoch(epoch, verbose)
-            logger.info(f"Epoch {epoch + 1} finished")
+            logger.info("Epoch %d finished", epoch + 1)
             val_loss = self.evaluate(self.val_loader)  # Evaluate on validation set
             self.early_stopping(val_loss, self.model)
             if self.early_stopping.early_stop:
                 logger.info(
-                    f"Early stopping triggered at epoch {epoch + 1}. Stopping training."
+                    "Early stopping triggered at epoch %d. Stopping training.",
+                    epoch + 1,
                 )
                 break
 
@@ -256,6 +264,14 @@ class CNNTrainer:
             self.test_loader, save_report=True
         )  # Evaluate on test set and save metrics
         model_save_name = f"{self.model.model_name}_{self.task_name}_{self.dataset_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pt"
+        # Log the model architecture and parameters to wandb
+        if self.wandb:
+            wandb.log(
+                {
+                    "model_architecture": str(self.model),
+                    "model_parameters": self.model.state_dict(),
+                }
+            )
         save_torch_model(
             model_save_name, self.model, self.model.save_dir
         )  # Save the final model
@@ -288,14 +304,20 @@ class CNNTrainer:
             running_loss += loss.item()
             if verbose == 2:  # Verbose level 2: log every batch
                 logger.info(
-                    f"Training - Epoch {epoch + 1}, Batch {i + 1}: Loss = {loss.item()}"
+                    "Training - Epoch %d, Batch %d: Loss = %.4f",
+                    epoch + 1,
+                    i + 1,
+                    loss.item(),
                 )
                 if self.wandb:
                     wandb.log({"train_loss": loss.item()})
             elif verbose == 1:
                 if i % 10 == 9:
                     logger.info(
-                        f"Training - Epoch {epoch + 1}, Batch {i + 1}: Loss = {running_loss / 10:.4f}"
+                        "Training - Epoch %d, Batch %d: Loss = %.4f",
+                        epoch + 1,
+                        i + 1,
+                        running_loss / 10,
                     )
                     if self.wandb:
                         wandb.log({"train_loss": running_loss / 10})
@@ -327,12 +349,12 @@ class CNNTrainer:
                 metrics_tracker.add_results(outputs.cpu().numpy(), labels.cpu().numpy())
 
                 if verbose == 2:  # Verbose level 2: log every batch
-                    logger.info(f"Testing - Batch {batch + 1}: Loss = {loss:.4f} ")
+                    logger.info("Testing - Batch %d: Loss = %.4f", batch + 1, loss)
                     if self.wandb:
                         wandb.log({"Test loss": loss})
                 if verbose == 1:  # Verbose level 1: log every 10 batches
                     if batch % 10 == 0:
-                        logger.info(f"Testing - Batch {batch + 1}: Loss = {loss:.4f} ")
+                        logger.info("Testing - Batch %d: Loss = %.4f", batch + 1, loss)
                     if self.wandb:
                         wandb.log({"Test loss": loss})
 
@@ -340,11 +362,9 @@ class CNNTrainer:
         metrics_tracker.summary = metrics_tracker.compute_overall_metrics()
         if save_report:
             metrics_tracker.save_report()
-        
+
         # Log results to console
-        logger.info(f"Test evaluation completed for {self.model.model_name}")
-        logger.info(f"Test metrics: {metrics_tracker.summary}")
-        
+        logger.info("Test evaluation completed for %s", self.model.model_name)
+        logger.info("Test metrics: %s", metrics_tracker.summary)
+
         return np.mean(val_loss)
-    
-        
