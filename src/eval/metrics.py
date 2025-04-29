@@ -122,7 +122,7 @@ class MetricsTracker:
             "model_id": self.model_id,
             "task_id": self.task_id,
             "dataset": self.dataset_name,
-            "run_id": self.task_id,
+            "run_id": self.run_id,
             "metrics_summary": self.summary,
         }
 

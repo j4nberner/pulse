@@ -5,6 +5,7 @@ from typing import Any, Dict, Optional
 
 import numpy as np
 import pandas as pd
+import xgboost as xgb
 from sklearn.model_selection import RandomizedSearchCV
 from xgboost import XGBClassifier
 
@@ -15,7 +16,6 @@ from src.models.pulsetemplate_model import PulseTemplateModel
 from src.util.model_util import prepare_data_for_model_ml, save_sklearn_model
 
 logger = logging.getLogger("PULSE_logger")
-
 
 class XGBoostModel(PulseTemplateModel):
     """
@@ -177,7 +177,7 @@ class XGBoostTrainer:
         model.set_params(early_stopping_rounds=None)
 
         logger.info("Starting RandomizedSearchCV for hyperparameter tuning...")
-        random_search.fit(X_train, y_train)
+        random_search.fit(X_train, y_train, verbose=True)
         logger.info("Best params found: %s", random_search.best_params_)
 
         if self.wandb:
@@ -231,9 +231,26 @@ class XGBoostTrainer:
             X_train,
             y_train,
             eval_set=[(X_val, y_val)],
-            verbose=self.model.params["verbosity"],
+            verbose=True,
         )
         logger.info("XGBoost model trained successfully.")
+
+        results = self.model.model.evals_result()
+        
+        for i in range(len(results["validation_0"]["auc"])):
+            wandb.log({
+                "val_loss": results["validation_0"]["auc"][i],
+                "step": i
+            })
+        
+        
+        # Load the best model if early stopping was used
+        if hasattr(self.model.model, "best_iteration"):
+            self.model.model.n_estimators = self.model.model.best_iteration
+            logger.info(
+                "Loading best iteration with n_estimators: %d",
+                self.model.model.n_estimators,
+            )
 
         # Create DataFrame with feature names for prediction to avoid warnings
         X_test_df = pd.DataFrame(X_test, columns=feature_names)
@@ -273,7 +290,7 @@ class XGBoostTrainer:
                     "confusion_matrix": wandb.sklearn.plot_confusion_matrix(
                         y_pred=y_pred_binary,
                         y_true=y_test,
-                        class_names=["Negative", "Positive"],
+                        labels=["Negative", "Positive"],
                     ),
                     "roc_curve": wandb.sklearn.plot_roc(
                         y_true=y_test,
