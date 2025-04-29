@@ -1,7 +1,5 @@
-from .few_shot_health_learners.large_language_models_few_shot_healthlearners import (
-    few_shot_paper_preprocessor,
-)
-
+from .few_shot_health_learners.large_language_models_few_shot_healthlearners import \
+    few_shot_paper_preprocessor
 
 preprocessor_method_dict = {
     "few_shot_paper_preprocessor": few_shot_paper_preprocessor,

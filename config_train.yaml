@@ -50,7 +50,7 @@ preprocessing_baseline:
 
 preprocessing_advanced:
   windowing:
-    enabled: false # Enable/disable windowing
+    enabled: true # Enable/disable windowing
     data_window: 6 # Size of the data window
     prediction_window: 0 # Size of the prediction window (0 = predict at the end of window)
     step_size: 1 # Step size for sliding windows
@@ -65,15 +65,15 @@ prompting:
 # _______ Model Training _______
 
 benchmark_settings:
-  batch_size: 50
+  batch_size: 100
 #   num_epochs: 100
 # learning_rate: 0.001 # Removed. Use model-specific learning rate instead.
 # optimizer: "adam" # Removed. Use model-specific optimizer instead.
 
 load_models:
-  - model_configs/Llama3.yaml
+  # - model_configs/Llama3.yaml
   # - model_configs/RandomForestModel.yaml
-  # - model_configs/XGBoost.yaml
+  - model_configs/XGBoost.yaml
   # - model_configs/LightGBMModel.yaml
   # - model_configs/CNNModel.yaml
   # - model_configs/LSTMModel.yaml

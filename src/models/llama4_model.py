@@ -19,16 +19,18 @@ from src.models.pulsetemplate_model import PulseTemplateModel
 logger = logging.getLogger("PULSE_logger")
 
 
-class Llama3Model(PulseTemplateModel):
+class Llama4Model(PulseTemplateModel):
     """Llama 3 model wrapper using LangChain for prompt templating and inference."""
 
     def __init__(self, params: Dict[str, Any], **kwargs) -> None:
-        """Initializes the Llama3Model with parameters and paths.
+        """Initializes the Llama4Model with parameters and paths.
 
         Args:
             params: Configuration dictionary with model parameters.
             **kwargs: Additional optional parameters such as `output_dir` and `wandb`.
         """
+        NotImplementedError("Llama4Model is not implemented or tested yet.")
+
         self.model_name = params.get(
             "model_name", self.__class__.__name__.replace("Model", "")
         )
@@ -38,7 +40,9 @@ class Llama3Model(PulseTemplateModel):
         self.save_dir: str = kwargs.get("output_dir", f"{os.getcwd()}/output")
         self.wandb: bool = kwargs.get("wandb", False)
         self.params: Dict[str, Any] = params
-        self.model_id: str = self.params.get("model_id", "meta-llama/Llama-3.1-8B")
+        self.model_id: str = self.params.get(
+            "model_id", "meta-llama/Llama-4-Scout-17B-16E-Instruct"
+        )
         self.max_length: int = self.params.get("max_length", 512)
 
         self.tokenizer: Optional[Any] = None
@@ -65,9 +69,9 @@ class Llama3Model(PulseTemplateModel):
                 )
                 self.llama_model = get_peft_model(self.llama_model, prefix_config)
 
-            logger.info("Successfully loaded Llama3 model: %s", self.model_id)
+            logger.info("Successfully loaded Llama4 model: %s", self.model_id)
         except Exception as e:
-            logger.error("Failed to load Llama3 model: %s", e)
+            logger.error("Failed to load Llama4 model: %s", e)
             raise
 
         logger.info(
@@ -138,7 +142,7 @@ class Llama3Model(PulseTemplateModel):
             val_dataloader: DataLoader for validation data.
             test_dataloader: DataLoader for test data.
         """
-        self.trainer = Llama3Trainer(
+        self.trainer = Llama4Trainer(
             self, train_dataloader, val_dataloader, test_dataloader
         )
 
@@ -163,16 +167,16 @@ class Llama3Model(PulseTemplateModel):
             return 0.5  # Default to 0.5 if parsing fails
 
 
-class Llama3Trainer:
+class Llama4Trainer:
     def __init__(
-        self, model: Llama3Model, train_loader, val_loader, test_loader
+        self, model: Llama4Model, train_loader, val_loader, test_loader
     ) -> None:
         """
-        Initialize the Llama3 trainer. Finetruning is not implemented yet.
+        Initialize the Llama4 trainer. Finetruning is not implemented yet.
         This is a wrapper for inference only.
 
         Args:
-            model (Llama3Model): The Llama3 model to be trained.
+            model (Llama4Model): The Llama4 model to be trained.
             train_loader: The DataLoader object for the training dataset.
             val_loader: The DataLoader object for the validation dataset.
             test_loader: The DataLoader object for the testing dataset.
@@ -364,7 +368,7 @@ class Llama3Trainer:
             The average validation loss across the test dataset.
         """
         NotImplementedError(
-            "Batch evaluation is not implemented for Llama3Model. Use evaluate_single instead."
+            "Batch evaluation is not implemented for Llama4Model. Use evaluate_single instead."
         )
         metrics_tracker = MetricsTracker(
             self.model.model_name,

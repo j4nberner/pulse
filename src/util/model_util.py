@@ -1,11 +1,12 @@
 import logging
-from typing import Any, Dict, Optional
 import os
+from typing import Any, Dict, Optional
+
 import joblib
-import torch
-import torch.nn as nn
 import numpy as np
 import pandas as pd
+import torch
+import torch.nn as nn
 
 logger = logging.getLogger("PULSE_logger")
 
@@ -163,7 +164,8 @@ def prepare_data_for_model_dl(
     """
 
     # Import the converter
-    from src.preprocessing.preprocessing_advanced.windowing import WindowedDataTo3D
+    from src.preprocessing.preprocessing_advanced.windowing import \
+        WindowedDataTo3D
 
     # Create converter with model name and config
     converter = WindowedDataTo3D(

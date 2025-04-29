@@ -1,15 +1,16 @@
 import argparse
 import os
 import sys
-import pandas as pd
-from torch.utils.data import DataLoader
-from omegaconf import OmegaConf
 
-from src.logger_setup import setup_logger, init_wandb
+import pandas as pd
+from omegaconf import OmegaConf
+from torch.utils.data import DataLoader
+
 from src.data.dataloader import DatasetManager, TorchDatasetWrapper
+from src.logger_setup import init_wandb, setup_logger
 from src.models.modelmanager import ModelManager
-from src.util.slurm_util import copy_data_to_scratch, is_on_slurm, get_local_scratch_dir
 from src.util.config_util import load_config_with_models, save_config_file
+from src.util.slurm_util import copy_data_to_scratch, get_local_scratch_dir, is_on_slurm
 
 logger, output_dir = setup_logger()
 
@@ -98,8 +99,6 @@ class ModelTrainer:
                     "dataset": self.config.datasets[0],
                     "task": self.config.tasks[0],
                     "debug": self.config.general.debug_mode,
-                    "preprocessing_id": model.preprocessing_id,
-                    "num_shots": model.params.get("shots", None),
                 }
 
                 try:
@@ -107,7 +106,13 @@ class ModelTrainer:
                     X_train, y_train = None, None
                     X_val, y_val = None, None
 
-                    # if model.type != "LLM":
+                    if model.type == "LLM":
+                        dm_kwargs.update(
+                            {
+                                "preprocessing_id": model.preprocessing_id,
+                                "num_shots": model.params.get("shots", None),
+                            }
+                        )
                     # Preprocess data for corresponding model
                     X_train, y_train = self.dm.get_preprocessed_data(
                         task_dataset_name, model_name, mode="train", **dm_kwargs

@@ -1,10 +1,11 @@
-import sys
-from typing import List, Dict, Any
 import logging
-from omegaconf import OmegaConf
-import torch
-from torch import nn
 import os
+import sys
+from typing import Any, Dict, List
+
+import torch
+from omegaconf import OmegaConf
+from torch import nn
 
 from . import get_model_class
 
