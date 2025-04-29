@@ -638,16 +638,9 @@ class PreprocessorBaseline:
 
         # Check if we're running on scratch (if original_base_path attribute exists)
         # Save to permanent storage as well
-        if hasattr(self, 'original_base_path') or (hasattr(globals(), 'config') and hasattr(config, 'original_base_path')):
-            # Get the original base path
-            if hasattr(self, 'original_base_path'):
-                original_base_path = self.original_base_path
-            else:
-                original_base_path = config.original_base_path
-                
-            # Construct permanent directory path
+        if hasattr(self, 'original_base_path'):
             permanent_directory = os.path.join(
-                original_base_path, 
+                self.original_base_path, 
                 f"datasets/preprocessed_splits/{self.task}/{self.dataset_name}/{config_dirname}"
             )
             

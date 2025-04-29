@@ -17,9 +17,9 @@ base_path: "/Users/sophiaehlers/Documents/pulse" #"/cluster/project/bmds_lab/sep
 
 # Tasks to process
 tasks:
-  # - "mortality"
+  - "mortality"
   # - "aki"
-  - "sepsis"
+  # - "sepsis"
 
 # Datasets to process
 dataset_path: datasets/original_harmonized #"/path/to/datasets"
@@ -62,8 +62,6 @@ prompting:
   prompting_ids:
     # - "few_shot_paper_preprocessor" # Preprocessing ID for the model
     - "zhu_2024_is_larger_always_better_preprocessor" 
-
-# TODO: Create a PreprocessorAdvanced class (maybe better idea than separate classes to handle data saving/loading? -> No, we don't save advanced preprocessed data except for windowing)
 
 # _______ Model Training _______
 

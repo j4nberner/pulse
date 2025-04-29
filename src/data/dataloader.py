@@ -310,7 +310,10 @@ class DatasetManager:
 
         data = dataset["data"]
 
-        few_shot_list = ["few_shot_paper_preprocessor", "zhu_2024_is_larger_always_better_preprocessor"]
+        few_shot_list = [
+            "few_shot_paper_preprocessor", 
+            "zhu_2024_is_larger_always_better_preprocessor",
+            ]
 
         # Take only n rows if in debug
         debug = kwargs.get("debug", False)
@@ -406,6 +409,8 @@ class DatasetManager:
                 prompting_id=prompting_id
             )
             num_shots = kwargs.get("num_shots", 0)
+            data_window = self.config.preprocessing_advanced.windowing.data_window
+
             # Info dict needs to contain dataset name, task, and model name
             info_dict = {
                 "dataset_name": dataset["name"],
@@ -413,6 +418,7 @@ class DatasetManager:
                 "model_name": model_name,
                 "mode": mode,
                 "shots": num_shots,
+                "data_window": data_window,
             }
             if prompting_id in few_shot_list:
                 # Add few-shot examples to info_dict if needed
@@ -423,6 +429,16 @@ class DatasetManager:
 
             # Apply advanced preprocessing
             X, y = prompting_preprocessor(X, y, info_dict)
+
+            # Log a sample prompt for debugging/verification
+            if isinstance(X, pd.DataFrame) and mode == "test":
+                prompt_column = "prompt" if "prompt" in X.columns else "text" if "text" in X.columns else None
+                if prompt_column and not X.empty:
+                    sample_prompt = X[prompt_column].iloc[0]
+                    logger.info(f"Sample {prompting_id} prompt with {num_shots} shots for {dataset_id}:")
+                    logger.info("-" * 50)
+                    logger.info(sample_prompt)
+                    logger.info("-" * 50)
 
         # Check and drop stay_id columns if they exist
         if isinstance(X, pd.DataFrame) and "stay_id" in X.columns:
