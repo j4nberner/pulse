@@ -96,7 +96,7 @@ class PreprocessorBaseline:
             "be": ("Base Excess [mmol/L]", (-2, 2), (-25, 25)),
             "bicar": ("Bicarbonate [mmol/L]", (22, 29), (5, 50)),
             "fio2": ("Fraction of Inspired Oxygen\n(FiO2) [%]", (21, 100), (21, 100)),
-            "inr_pt": ("International Normalised Ratio\n(INR) [-]", (0.8, 1.2), (0.5, 20)),
+            "inr_pt": ("International Normalized Ratio\n(INR) [-]", (0.8, 1.2), (0.5, 20)),
             "ptt": ("Partial Thromboplastin Time\n(PTT) [sec]", (25, 35), (10, 250)),
             "fgn": ("Fibrinogen [mg/dL]", (200, 400), (30, 1100)),
             "na": ("Sodium [mmol/L]", (135, 145), (90, 170)),
@@ -117,12 +117,12 @@ class PreprocessorBaseline:
             "bun": ("Blood Urea Nitrogen\n(BUN) [mg/dL]", (7, 20), (1, 180)),
             "crea": ("Creatinine [mg/dL]", (0.6, 1.3), (0.1, 20)),
             "urine": ("Urine Output [mL/h]", (30, 50), (0, 2000)),
-            "hgb": ("Hemoglobin [g/dL]", (13.5, 17.5), (3, 20)),
+            "hgb": ("Hemoglobin [g/dL]", (12.5, 17.5), (3, 20)),
             "mch": ("Mean Corpuscular\nHemoglobin (MCH) [pg]", (27, 33), (15, 45)),
             "mchc": ("Mean Corpuscular Hemoglobin\nConcentration (MCHC) [g/dL]", (32, 36), (20, 45)),
             "mcv": ("Mean Corpuscular\nVolume (MCV) [fL]", (80, 100), (50, 130)),
-            "plt": ("Platelets [10^3/µL]", (150, 450), (10, 1500)),
-            "wbc": ("White Blood Cell Count\n(WBC) [10^3/µL]", (4, 11), (0.1, 500)),
+            "plt": ("Platelets [1000/µL]", (150, 450), (10, 1500)),
+            "wbc": ("White Blood Cell Count\n(WBC) [1000/µL]", (4, 11), (0.1, 500)),
             "neut": ("Neutrophils [%]", (55, 70), (0, 100)),
             "bnd": ("Band Neutrophils [%]", (0, 6), (0, 50)),
             "lymph": ("Lymphocytes [%]", (20, 40), (0, 90)),
@@ -639,16 +639,9 @@ class PreprocessorBaseline:
 
         # Check if we're running on scratch (if original_base_path attribute exists)
         # Save to permanent storage as well
-        if hasattr(self, 'original_base_path') or (hasattr(globals(), 'config') and hasattr(config, 'original_base_path')):
-            # Get the original base path
-            if hasattr(self, 'original_base_path'):
-                original_base_path = self.original_base_path
-            else:
-                original_base_path = config.original_base_path
-                
-            # Construct permanent directory path
+        if hasattr(self, 'original_base_path'):
             permanent_directory = os.path.join(
-                original_base_path, 
+                self.original_base_path, 
                 f"datasets/preprocessed_splits/{self.task}/{self.dataset_name}/{config_dirname}"
             )
             

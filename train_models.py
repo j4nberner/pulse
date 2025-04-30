@@ -109,7 +109,7 @@ class ModelTrainer:
                     if model.type == "LLM":
                         dm_kwargs.update(
                             {
-                                "preprocessing_id": model.preprocessing_id,
+                                "prompting_id": model.prompting_id,
                                 "num_shots": model.params.get("shots", None),
                             }
                         )

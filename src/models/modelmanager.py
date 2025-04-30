@@ -54,14 +54,14 @@ class ModelManager:
                 continue
 
             try:
-                for preprocessing_id in self.prompt_configs.get(
+                for prompting_id in self.prompt_configs.get(
                     "prompting_ids", [None]
                 ):
-                    config.params["preprocessing_id"] = preprocessing_id
+                    config.params["prompting_id"] = prompting_id
                     logger.info(
                         "---------------Preparing model '%s'---------------", model_name
                     )
-                    logger.info("Advanced Preprocessing ID: %s", preprocessing_id)
+                    logger.info("Prompting Preprocessing ID: %s", prompting_id)
                     model = self._create_model_from_config(config)
                     prepared_models.append(model)
                     logger.info("Model '%s' prepared successfully", model_name)
