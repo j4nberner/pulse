@@ -2,7 +2,7 @@ name: "LSTMModel"
 pretrained_model_path: null # Path to pretrained model (if any)
 params:
   trainer_name: "LSTMTrainer"
-  type: "DL" # Type of model (ML for machine learning, DL for deep learning)
+  type: "convDL" # Type of model (convML for conventional machine learning, convDL for conventional deep learning and LLM for large language models)
   save_checkpoint: 0 # Save checkpoint every n epochs. Set to 0 to disable.
   num_layers: 3 # Number of LSTM layers
   output_shape: 1

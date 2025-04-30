@@ -10,6 +10,7 @@ import torch.nn as nn
 
 logger = logging.getLogger("PULSE_logger")
 
+
 class EarlyStopping:
     def __init__(self, patience=5, delta=0):
         self.patience = patience
@@ -82,9 +83,11 @@ def save_sklearn_model(model_name: str, model: Any, save_dir: str) -> None:
         logger.error(f"Failed to save model '{model_name}': {str(e)}")
 
 
-def prepare_data_for_model_ml(train_loader, val_loader, test_loader) -> Dict[str, Any]:
+def prepare_data_for_model_convml(
+    train_loader, val_loader, test_loader
+) -> Dict[str, Any]:
     """
-    Prepare data for machine learning models by converting PyTorch tensors
+    Prepare data for conventional machine learning models by converting PyTorch tensors
     from dataloaders to numpy arrays while preserving feature names.
 
     Args:
@@ -101,7 +104,6 @@ def prepare_data_for_model_ml(train_loader, val_loader, test_loader) -> Dict[str
             - y_test: numpy array of test labels
             - feature_names: list of feature names (if available)
     """
-
 
     # Extract data from dataloaders
     X_train, y_train = [], []
@@ -129,9 +131,13 @@ def prepare_data_for_model_ml(train_loader, val_loader, test_loader) -> Dict[str
         y_test = np.array(y_test)
 
     # Log shapes
-    logger.info(f"Prepared data shapes - X_train: {X_train.shape}, y_train: {y_train.shape}")
+    logger.info(
+        f"Prepared data shapes - X_train: {X_train.shape}, y_train: {y_train.shape}"
+    )
     logger.info(f"Prepared data shapes - X_val: {X_val.shape}, y_val: {y_val.shape}")
-    logger.info(f"Prepared data shapes - X_test: {X_test.shape}, y_test: {y_test.shape}")
+    logger.info(
+        f"Prepared data shapes - X_test: {X_test.shape}, y_test: {y_test.shape}"
+    )
 
     # Return all processed data
     return {
@@ -144,14 +150,15 @@ def prepare_data_for_model_ml(train_loader, val_loader, test_loader) -> Dict[str
         "feature_names": feature_names,
     }
 
-def prepare_data_for_model_dl(
+
+def prepare_data_for_model_convdl(
     data_loader,
     config: Dict,
     model_name: Optional[str] = None,
     task_name: Optional[str] = None,
 ) -> Any:
     """
-    Prepare data for deep learning models by returning a configured data converter.
+    Prepare data for conventional deep learning models by returning a configured data converter.
 
     Args:
         data_loader: DataLoader containing the input data
@@ -164,8 +171,7 @@ def prepare_data_for_model_dl(
     """
 
     # Import the converter
-    from src.preprocessing.preprocessing_advanced.windowing import \
-        WindowedDataTo3D
+    from src.preprocessing.preprocessing_advanced.windowing import WindowedDataTo3D
 
     # Create converter with model name and config
     converter = WindowedDataTo3D(
@@ -222,5 +228,6 @@ def apply_model_prompt_format(model_id, prompt):
         formatted_prompt = prompt  # No formatting needed for other models
 
     return formatted_prompt
+
 
 # TODO: delete this from prompt preprocessor and instead call the template functionality in tokenizer (see huggingface link)

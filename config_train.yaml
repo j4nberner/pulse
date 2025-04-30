@@ -5,7 +5,7 @@ general:
   app_name: "Pulse"
   version: "1.0.0"
   debug_mode: true
-  debug_data_length: 100 # Number of rows used if debug_mode is true
+  debug_data_length: 50 # Number of rows used if debug_mode is true
   use_scratch: true
 
 # Weight and Biases (wandb) logging configuration
@@ -38,7 +38,7 @@ random_seed: 42
 preprocessing_baseline:
   replace_outliers: true # Whether to replace outliers with NaNs
   flag_na: true # Whether to flag NA values with binary indicators
-  standardize: true # Whether to standardize features (yes: DL, not required: ML, LLM)
+  standardize: true # Whether to standardize features (yes: convDL, not required: convML, LLM)
   static_imputation: true # Whether to perform static feature imputation
   dynamic_imputation: true # Whether to perform dynamic feature imputation
   save_data: true # Whether to save preprocessed data

@@ -202,7 +202,7 @@ class Llama3Trainer:
 
         # Get the configured data converter
         # TODO: implement this for LLMs?
-        # self.converter = prepare_data_for_model_dl(
+        # self.converter = prepare_data_for_model_convdl(
         #     self.train_loader,
         #     self.params,
         #     model_name=self.model.model_name,

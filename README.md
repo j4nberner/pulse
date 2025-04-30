@@ -91,8 +91,8 @@ Task Definitions are in accordance with YAIB (https://arxiv.org/abs/2306.05109).
 
 | Type | Models                          |
 | -------- | ------------------------------- |
-| **ML**   | RandomForest, XGBoost, LightGBM |
-| **DL**   | CNN, LSTM, GRU, InceptionTime   |
+| **conventional ML**   | RandomForest, XGBoost, LightGBM |
+| **conventional DL**   | CNN, LSTM, GRU, InceptionTime   |
 | **LLM**  | Llama 3.1-8b                    |
 
 ## Results

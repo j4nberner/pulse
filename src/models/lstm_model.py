@@ -11,7 +11,7 @@ import torch.optim as optim
 import wandb
 from src.eval.metrics import MetricsTracker
 from src.models.pulsetemplate_model import PulseTemplateModel
-from src.util.model_util import (EarlyStopping, prepare_data_for_model_dl,
+from src.util.model_util import (EarlyStopping, prepare_data_for_model_convdl,
                                  save_torch_model)
 
 logger = logging.getLogger("PULSE_logger")
@@ -184,7 +184,7 @@ class LSTMTrainer:
 
         # Data preparation
         # Get the configured data converter
-        self.converter = prepare_data_for_model_dl(
+        self.converter = prepare_data_for_model_convdl(
             self.train_loader,
             self.params,
             model_name=self.model.model_name,

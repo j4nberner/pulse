@@ -584,7 +584,7 @@ class WindowedDataTo3D:
             id_column_index (int): Index of the ID column to exclude (typically 0 for stay_id) -> in our case None because stay_id is dropped in dataloader
 
         Returns:
-            torch.Tensor: 3D tensor ready for DL model input
+            torch.Tensor: 3D tensor ready for conventional DL model input
         """
 
         # If already 3D, return as is

@@ -550,8 +550,6 @@ class TorchDatasetWrapper(Dataset):
             tuple: (features, label) as torch.Tensor
         """
 
-        # TODO: je nach Modell Tensor anders stacken (if DL -> apply 3D stacking)
-
         # If we pre-computed arrays, use them
         if hasattr(self, "X_array") and hasattr(self, "y_array"):
             X_sample = self.X_array[idx]

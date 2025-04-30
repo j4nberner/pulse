@@ -16,7 +16,7 @@ logger, output_dir = setup_logger()
 
 
 class ModelTrainer:
-    """Core training functionality for ML/DL models and LLMs."""
+    """Core training functionality for convML/convDL models and LLMs."""
 
     def __init__(self, config: OmegaConf):
         """
@@ -129,16 +129,16 @@ class ModelTrainer:
                     )
 
                     # Choose the appropriate DataLoader based on model type
-                    if model.type == "ML":
+                    if model.type == "convML":
                         train_loader = (X_train, y_train)
                         val_loader = (X_val, y_val)
                         test_loader = (X_test, y_test)
-                    elif model.type == "LLM":
+                    elif model.type == "convLLM":
                         # Passing the text and labels directly for LLMs
                         train_loader = (pd.DataFrame(), pd.DataFrame())
                         val_loader = (pd.DataFrame(), pd.DataFrame())
                         test_loader = (X_test, y_test)
-                    elif model.type == "DL":
+                    elif model.type == "convDL":
                         # Wrap with TorchDatasetWrapper
                         train_dataset = TorchDatasetWrapper(X_train, y_train)
                         val_dataset = TorchDatasetWrapper(X_val, y_val)
@@ -172,7 +172,7 @@ class ModelTrainer:
                         )
                     else:
                         logger.error(
-                            "Please specify a model type (ML, DL, LLM) in the config"
+                            "Please specify a model type (convML, convDL, LLM) in the config"
                         )
                         sys.exit(1)
 

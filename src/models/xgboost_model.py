@@ -13,9 +13,10 @@ import wandb
 import wandb.sklearn
 from src.eval.metrics import MetricsTracker
 from src.models.pulsetemplate_model import PulseTemplateModel
-from src.util.model_util import prepare_data_for_model_ml, save_sklearn_model
+from src.util.model_util import prepare_data_for_model_convml, save_sklearn_model
 
 logger = logging.getLogger("PULSE_logger")
+
 
 class XGBoostModel(PulseTemplateModel):
     """
@@ -195,7 +196,7 @@ class XGBoostTrainer:
         logger.info("Starting training process for XGBoost model...")
 
         # Use the utility function to prepare data
-        prepared_data = prepare_data_for_model_ml(
+        prepared_data = prepare_data_for_model_convml(
             self.train_loader,
             self.val_loader,
             self.test_loader,
@@ -236,14 +237,10 @@ class XGBoostTrainer:
         logger.info("XGBoost model trained successfully.")
 
         results = self.model.model.evals_result()
-        
+
         for i in range(len(results["validation_0"]["auc"])):
-            wandb.log({
-                "val_loss": results["validation_0"]["auc"][i],
-                "step": i
-            })
-        
-        
+            wandb.log({"val_loss": results["validation_0"]["auc"][i], "step": i})
+
         # Load the best model if early stopping was used
         if hasattr(self.model.model, "best_iteration"):
             self.model.model.n_estimators = self.model.model.best_iteration

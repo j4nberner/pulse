@@ -13,7 +13,7 @@ import torch.optim as optim
 import wandb
 from src.eval.metrics import MetricsTracker
 from src.models.pulsetemplate_model import PulseTemplateModel
-from src.util.model_util import prepare_data_for_model_dl, save_torch_model
+from src.util.model_util import prepare_data_for_model_convdl, save_torch_model
 
 # Set up logger
 logger = logging.getLogger("PULSE_logger")
@@ -403,7 +403,7 @@ class InceptionTimeTrainer:
         """Prepare data for InceptionTime by getting a configured converter."""
 
         # Get the configured converter
-        self.converter = prepare_data_for_model_dl(
+        self.converter = prepare_data_for_model_convdl(
             self.train_loader,
             self.params,
             model_name=self.model.model_name,
