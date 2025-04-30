@@ -16,6 +16,7 @@ params:
   optimizer_name: "adam" # Options: adam, adamw, sgd
   learning_rate: 0.01
   weight_decay: 0.01
+  grad_clip_max_norm: 2.0 # max_norm = 1.0 (LSTM, GRU) or 2.0 (CNN, InceptionTime)
   # Scheduler settings
   scheduler_factor: 0.9
   scheduler_patience: 3

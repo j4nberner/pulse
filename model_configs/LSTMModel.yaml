@@ -12,3 +12,4 @@ params:
   early_stopping_rounds: 5
   dropout: 0.2 # Dropout rate for LSTM layers
   verbose: 2 # Controls verbosity of output (0 = silent, 1 = log every 10 batches, 2 = log every batch)
+  grad_clip_max_norm: 1.0 # max_norm = 1.0 (LSTM, GRU) or 2.0 (CNN, InceptionTime)

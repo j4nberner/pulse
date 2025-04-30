@@ -213,6 +213,40 @@ def prepare_data_for_model_convdl(
     return converter
 
 
+def calculate_pos_weight(train_loader):
+    """
+    Calculate positive class weight for imbalanced binary classification data.
+
+    Args:
+        train_loader: DataLoader containing the training data
+
+    Returns:
+        float: Weight for positive class (ratio of negative to positive samples)
+    """
+    try:
+        all_labels = []
+        for _, labels in train_loader:
+            all_labels.extend(labels.cpu().numpy().flatten())
+
+        all_labels = np.array(all_labels)
+        neg_count = np.sum(all_labels == 0)
+        pos_count = np.sum(all_labels == 1)
+
+        if pos_count == 0:
+            logger.warning("No positive samples found, using pos_weight=1.0")
+            return 1.0
+
+        weight = neg_count / pos_count
+        logger.info(
+            f"Class imbalance - Neg: {neg_count}, Pos: {pos_count}, Weight: {weight}"
+        )
+        return weight
+
+    except Exception as e:
+        logger.error(f"Error calculating class weights: {e}")
+        return 1.0
+
+
 def apply_model_prompt_format(model_id, prompt):
     """
     Apply model-specific prompt formatting.

@@ -125,7 +125,7 @@ class ModelTrainer:
                         model_name,
                         mode="test",
                         **dm_kwargs,
-                        print_stats=True,
+                        print_stats=False,
                     )
 
                     # Choose the appropriate DataLoader based on model type

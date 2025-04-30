@@ -11,8 +11,12 @@ import torch.optim as optim
 import wandb
 from src.eval.metrics import MetricsTracker
 from src.models.pulsetemplate_model import PulseTemplateModel
-from src.util.model_util import (EarlyStopping, prepare_data_for_model_convdl,
-                                 save_torch_model)
+from src.util.model_util import (
+    EarlyStopping,
+    prepare_data_for_model_convdl,
+    save_torch_model,
+    calculate_pos_weight,
+)
 
 logger = logging.getLogger("PULSE_logger")
 
@@ -51,6 +55,7 @@ class LSTMModel(PulseTemplateModel, nn.Module):
             "output_shape",  # Size of output
             "hidden_size",  # Number of features in hidden state
             "dropout",  # Dropout rate
+            "grad_clip_max_norm",
         ]
 
         # Check if wandb is enabled and set up
@@ -165,7 +170,10 @@ class LSTMTrainer:
         self.optimizer = optim.Adam(
             self.model.parameters(), lr=self.params["learning_rate"]
         )
-        self.criterion = nn.BCEWithLogitsLoss()
+        self.pos_weight = calculate_pos_weight(self.train_loader)
+        self.criterion = nn.BCEWithLogitsLoss(
+            pos_weight=torch.tensor([self.pos_weight])
+        )
         self.wandb = self.model.wandb
         self.model_save_dir = os.path.join(lstm_model.save_dir, "Models")
         self.task_name = self.model.task_name
@@ -177,7 +185,9 @@ class LSTMTrainer:
 
         # Log optimizer and criterion
         logger.info(f"Using optimizer: {self.optimizer.__class__.__name__}")
-        logger.info(f"Using criterion: {self.criterion.__class__.__name__}")
+        logger.info(
+            f"Using criterion: {self.criterion.__class__.__name__} with class weight adjustment"
+        )
 
         # Create model save directory if it doesn't exist
         os.makedirs(self.model_save_dir, exist_ok=True)
@@ -274,7 +284,15 @@ class LSTMTrainer:
             self.optimizer.zero_grad()
             outputs = self.model(inputs)
             loss = self.criterion(outputs, labels)
+
+            # Backward pass, gradient clipping and optimize
             loss.backward()
+            max_norm = self.params["grad_clip_max_norm"]
+            total_norm = torch.nn.utils.clip_grad_norm_(
+                self.model.parameters(), max_norm=max_norm
+            )
+            if total_norm > max_norm:
+                logger.info(f"Gradient norm {total_norm:.4f} clipped to {max_norm}")
             self.optimizer.step()
 
             running_loss += loss.item()
@@ -334,5 +352,5 @@ class LSTMTrainer:
         # Log results to console
         logger.info(f"Test evaluation completed for {self.model.model_name}")
         logger.info(f"Test metrics: {metrics_tracker.summary}")
-        
+
         return np.mean(val_loss)

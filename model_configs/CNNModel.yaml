@@ -11,3 +11,4 @@ params:
   num_epochs: 100
   verbose: 2 # Controls verbosity of output (0 = silent, 1 = log every 10 batches, 2 = log every batch)
   early_stopping_rounds: 10 # Number of rounds for early stopping
+  grad_clip_max_norm: 2.0 # max_norm = 1.0 (LSTM, GRU) or 2.0 (CNN, InceptionTime)
