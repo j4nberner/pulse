@@ -51,3 +51,9 @@ Using this information, please create a concise and clear summary of the patient
 - How closely do we need to follow a baseline method in order to be able to include them → e.g. EMERGE: Is it valid to just use the dynamic features with too low/high for the prompt, without RAG/KG and GRU?
 - include demographics?
 - how to implement classification of dynamic features (normal/too high/too low) -> paper uses z-score
+
+**Idea for how we can incorporate this approach:**
+1. Categorize features into too low / normal / too high (based on median value in data window) and only mention abnormal features in the prompt
+2. Give information about the task definition (how we define mortality/aki/sepsis)
+3. Create patient summary
+4. Use summary as input for a prediction (either just as a CoT component or as a separate prompt)

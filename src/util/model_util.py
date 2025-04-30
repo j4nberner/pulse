@@ -222,3 +222,5 @@ def apply_model_prompt_format(model_id, prompt):
         formatted_prompt = prompt  # No formatting needed for other models
 
     return formatted_prompt
+
+# TODO: delete this from prompt preprocessor and instead call the template functionality in tokenizer (see huggingface link)

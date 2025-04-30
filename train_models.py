@@ -125,8 +125,7 @@ class ModelTrainer:
                         model_name,
                         mode="test",
                         **dm_kwargs,
-                        limit_test_set=True,
-                        print_stats=False,
+                        print_stats=True,
                     )
 
                     # Choose the appropriate DataLoader based on model type
@@ -145,15 +144,9 @@ class ModelTrainer:
                         val_dataset = TorchDatasetWrapper(X_val, y_val)
                         test_dataset = TorchDatasetWrapper(X_test, y_test)
 
-                        # Get batch size with fallback using getattr
-                        if isinstance(self.config.benchmark_settings, dict):
-                            batch_size = self.config.benchmark_settings.get(
-                                "batch_size", 100
-                            )
-                        else:
-                            batch_size = getattr(
-                                self.config.benchmark_settings, "batch_size", 100
-                            )
+                        batch_size = getattr(
+                            self.config.benchmark_settings, "batch_size"
+                        )
 
                         logger.info(
                             f"Using batch size: {batch_size} for {model_name} on {task_dataset_name}"
