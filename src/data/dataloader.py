@@ -47,6 +47,9 @@ class DatasetManager:
 
         # self.llm_model_list = ["Llama3Model"]
 
+        self.debug_mode = getattr(self.config.general, "debug_mode", False)
+        self.debug_data_length = getattr(self.config.general, "debug_data_length", 100)
+
         # Initialize preprocessing tools
         self._init_preprocessing_tools()
 
@@ -109,6 +112,7 @@ class DatasetManager:
                 base_path=base_path,
                 save_data=save_windowed_data,
                 debug_mode=debug_mode,
+                debug_data_length=self.debug_data_length,
                 original_base_path=original_base_path,
                 preprocessor_config=preprocessing_config,
             )
@@ -326,17 +330,16 @@ class DatasetManager:
         # Take only n rows if in debug
         debug = kwargs.get("debug", False)
         if debug:
-            debug_data_length = 5000
             logger.info(
-                f"Debug mode: Taking only {debug_data_length} rows for {dataset_id}"
+                f"Debug mode: Taking only {self.debug_data_length} rows for {dataset_id}"
             )
             data = {
-                "X_train": data["X_train"].iloc[:debug_data_length],
-                "y_train": data["y_train"].iloc[:debug_data_length],
-                "X_val": data["X_val"].iloc[:debug_data_length],
-                "y_val": data["y_val"].iloc[:debug_data_length],
-                "X_test": data["X_test"].iloc[:debug_data_length],
-                "y_test": data["y_test"].iloc[:debug_data_length],
+                "X_train": data["X_train"].iloc[: self.debug_data_length],
+                "y_train": data["y_train"].iloc[: self.debug_data_length],
+                "X_val": data["X_val"].iloc[: self.debug_data_length],
+                "y_val": data["y_val"].iloc[: self.debug_data_length],
+                "X_test": data["X_test"].iloc[: self.debug_data_length],
+                "y_test": data["y_test"].iloc[: self.debug_data_length],
             }
 
         # Initialize X_train and y_train to None for all modes

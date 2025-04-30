@@ -5,6 +5,7 @@ general:
   app_name: "Pulse"
   version: "1.0.0"
   debug_mode: true
+  debug_data_length: 100 # Number of rows used if debug_mode is true
   use_scratch: true
 
 # Weight and Biases (wandb) logging configuration

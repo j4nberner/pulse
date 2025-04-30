@@ -9,8 +9,9 @@ import pandas as pd
 import torch
 from tqdm import tqdm
 
-from src.preprocessing.preprocessing_baseline.preprocessing_baseline import \
-    PreprocessorBaseline
+from src.preprocessing.preprocessing_baseline.preprocessing_baseline import (
+    PreprocessorBaseline,
+)
 
 # Set up logger
 logger = logging.getLogger("PULSE_logger")
@@ -33,6 +34,7 @@ class Windower:
         base_path,
         save_data=False,
         debug_mode=False,
+        debug_data_length=100,
         original_base_path=None,
         preprocessor_config=None,
     ):
@@ -48,6 +50,7 @@ class Windower:
         self.base_path = base_path
         self.save_data = save_data
         self.debug_mode = debug_mode
+        self.debug_data_length = debug_data_length
         self.original_base_path = original_base_path
         self.preprocessor_config = preprocessor_config
 
@@ -70,6 +73,14 @@ class Windower:
             X = data_dict[set_type]["X"]
             y = data_dict[set_type]["y"]
 
+            # If in debug mode, limit number of rows first
+            if self.debug_mode and len(X) > self.debug_data_length:
+                logger.info(
+                    f"DEBUG MODE windowing: Limiting {set_type} set to first {self.debug_data_length} rows before windowing"
+                )
+                X = X.iloc[: self.debug_data_length]
+                y = y.iloc[: self.debug_data_length]
+
             X_np = X.values
             y_np = y["label"].values
             stay_id_np = X["stay_id"].values
@@ -86,14 +97,6 @@ class Windower:
             result_rows = []
             result_labels = []
             unique_stay_ids = np.unique(stay_id_np)
-
-            # If in debug mode, limit to 100 stay_ids
-            if self.debug_mode:
-                if len(unique_stay_ids) > 100:
-                    unique_stay_ids = unique_stay_ids[:100]
-                    logger.info(
-                        f"DEBUG MODE: Limited to first 100 stay_ids for {set_type} set"
-                    )
 
             logger.info(
                 f"Processing {set_type} set with {len(unique_stay_ids)} stay_ids"
