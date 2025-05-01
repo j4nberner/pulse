@@ -56,7 +56,7 @@ This repository contains the implementation for predicting mortality, acute kidn
 │   │   ├── __init__.py
 │   │   ├── preprocessing_advanced/
 │   │   ├── preprocessing_baseline/
-│   │   └── prompt_engineering/
+│   │   └── preprocessing_prompts/
 |   └── framework.png
 ├── notebooks/
 ├── datasets/

@@ -6,6 +6,7 @@ general:
   version: "1.0.0"
   debug_mode: true
   debug_data_length: 1000 # Number of rows used if debug_mode is true
+  debug_logging: true # false: logging level DEBUG, true: logging level INFO
   use_scratch: true
 
 # Weight and Biases (wandb) logging configuration
@@ -78,7 +79,7 @@ load_models:
   # - model_configs/RandomForestModel.yaml
   # - model_configs/XGBoost.yaml
   # - model_configs/LightGBMModel.yaml
-  - model_configs/CNNModel.yaml
-  - model_configs/LSTMModel.yaml
-  - model_configs/InceptionTimeModel.yaml
+  # - model_configs/CNNModel.yaml
+  # - model_configs/LSTMModel.yaml
+  # - model_configs/InceptionTimeModel.yaml
   - model_configs/GRUModel.yaml

@@ -29,7 +29,7 @@ class ModelTrainer:
 
         # Log debug mode status
         if self.config.general.debug_mode:
-            logger.info("DEBUG MODE ACTIVE: Training will use limited dataset size")
+            logger.debug("DEBUG MODE ACTIVE: Training will use limited dataset size")
 
         # -------------------- Copy data to local scratch (Slurm) --------------------
         if is_on_slurm() and self.config.general.get("use_scratch", False):

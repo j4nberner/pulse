@@ -6,7 +6,6 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import GroupShuffleSplit
 from sklearn.preprocessing import StandardScaler
 
 # Suppress specific warnings
@@ -77,7 +76,7 @@ class PreprocessorBaseline:
 
         # Log the active configuration
         logger.info(
-            f"PreprocessorBaseline initialized with configuration: {self.config}"
+            "PreprocessorBaseline initialized with configuration: %s", self.config
         )
 
         # Dictionary of feature limits for outlier detection
@@ -227,7 +226,7 @@ class PreprocessorBaseline:
             return dyn_df, outc_df, sta_df
 
         except Exception as e:
-            logger.error(f"Error reading original from {task}/{dataset_name}: {e}")
+            logger.error("Error reading original from %s/%s: %s", task, dataset_name, e)
             raise
 
     def replace_outliers_with_nans(
@@ -313,7 +312,7 @@ class PreprocessorBaseline:
         total_ratio = train_ratio + val_ratio + test_ratio
         if abs(total_ratio - 1.0) > 0.001:  # Allow small floating point errors
             logger.warning(
-                f"Split ratios don't sum to 1.0: {total_ratio}. Normalizing..."
+                "Split ratios don't sum to 1.0: %s. Normalizing...", total_ratio
             )
             train_ratio /= total_ratio
             val_ratio /= total_ratio
@@ -350,15 +349,27 @@ class PreprocessorBaseline:
         # Log the split information
         total_stays = X["stay_id"].nunique()
 
-        logger.info(f"Data split temporally based on stay_id order:")
+        logger.info("Data split temporally based on stay_id order:")
         logger.info(
-            f"  Training set: {X_train['stay_id'].nunique()} stays ({X_train['stay_id'].nunique()/total_stays:.1%}), {len(X_train)} rows ({len(X_train)/len(X):.1%})"
+            "  Training set: %s stays (%s), %s rows (%s)",
+            X_train["stay_id"].nunique(),
+            f"{X_train['stay_id'].nunique()/total_stays:.1%}",
+            len(X_train),
+            f"{len(X_train)/len(X):.1%}",
         )
         logger.info(
-            f"  Validation set: {X_val['stay_id'].nunique()} stays ({X_val['stay_id'].nunique()/total_stays:.1%}), {len(X_val)} rows ({len(X_val)/len(X):.1%})"
+            "  Validation set: %s stays (%s), %s rows (%s)",
+            X_val["stay_id"].nunique(),
+            f"{X_val['stay_id'].nunique()/total_stays:.1%}",
+            len(X_val),
+            f"{len(X_val)/len(X):.1%}",
         )
         logger.info(
-            f"  Testing set: {X_test['stay_id'].nunique()} stays ({X_test['stay_id'].nunique()/total_stays:.1%}), {len(X_test)} rows ({len(X_test)/len(X):.1%})"
+            "  Testing set: %s stays (%s), %s rows (%s)",
+            X_test["stay_id"].nunique(),
+            f"{X_test['stay_id'].nunique()/total_stays:.1%}",
+            len(X_test),
+            f"{len(X_test)/len(X):.1%}",
         )
 
         return X_train, X_val, X_test, y_train, y_val, y_test
@@ -714,7 +725,7 @@ class PreprocessorBaseline:
             y_test (pd.DataFrame): Testing labels
         """
         # Generate directory name based on preprocessing configuration
-        config_dirname = self._generate_preprocessing_dirname()
+        config_dirname = self.generate_preprocessing_dirname()
 
         # Construct directory path with task subfolder and config-based directory name
         directory = os.path.join(
@@ -732,7 +743,7 @@ class PreprocessorBaseline:
         X_test.to_parquet(os.path.join(directory, "X_test.parquet"))
         y_test.to_parquet(os.path.join(directory, "y_test.parquet"))
 
-        logger.info(f"Data saved to {directory}")
+        logger.info("Data saved to %s", directory)
 
         # Check if we're running on scratch (if original_base_path attribute exists)
         # Save to permanent storage as well
@@ -751,7 +762,7 @@ class PreprocessorBaseline:
             X_test.to_parquet(os.path.join(permanent_directory, "X_test.parquet"))
             y_test.to_parquet(os.path.join(permanent_directory, "y_test.parquet"))
 
-            logger.info(f"Data also saved to permanent storage: {permanent_directory}")
+            logger.info("Data also saved to permanent storage: %s", permanent_directory)
 
     def preprocess(self, task: str, dataset_name: str, save_data: bool = None) -> Tuple[
         pd.DataFrame,
@@ -800,10 +811,10 @@ class PreprocessorBaseline:
             if save_data is None:
                 save_data = self.config["save_data"]
 
-            logger.info(f"{'='*40}")
-            logger.info(f"Processing Task: {task}, Dataset: {dataset_name}")
-            logger.info(f"Active preprocessing options: {self.config}")
-            logger.info(f"{'='*40}")
+            logger.info("%s", "=" * 40)
+            logger.info("Processing Task: %s, Dataset: %s", task, dataset_name)
+            logger.info("Active preprocessing options: %s", self.config)
+            logger.info("%s", "=" * 40)
 
             # Load parquet files
             logger.info("Loading parquet files (original harmonized datasets)...")
@@ -944,7 +955,8 @@ class PreprocessorBaseline:
 
                 if any(na_counts.values()):
                     logger.warning(
-                        f"Datasets contain missing values after preprocessing: {na_counts}"
+                        "Datasets contain missing values after preprocessing: %s",
+                        na_counts,
                     )
                     logger.warning(
                         "This may cause issues with models that don't handle NaN values."
@@ -952,12 +964,12 @@ class PreprocessorBaseline:
 
             # Final shapes
             logger.info("Final dataset shapes:")
-            logger.info(f"X_train: {X_train_imputed.shape}")
-            logger.info(f"y_train: {y_train.shape}")
-            logger.info(f"X_val: {X_val_imputed.shape}")
-            logger.info(f"y_val: {y_val.shape}")
-            logger.info(f"X_test: {X_test_imputed.shape}")
-            logger.info(f"y_test: {y_test.shape}")
+            logger.info("X_train: %s", X_train_imputed.shape)
+            logger.info("y_train: %s", y_train.shape)
+            logger.info("X_val: %s", X_val_imputed.shape)
+            logger.info("y_val: %s", y_val.shape)
+            logger.info("X_test: %s", X_test_imputed.shape)
+            logger.info("y_test: %s", y_test.shape)
 
             # Save data if requested
             if save_data:
@@ -986,7 +998,7 @@ class PreprocessorBaseline:
             )
 
         except Exception as e:
-            logger.error(f"Error in preprocessing pipeline: {e}")
+            logger.error("Error in preprocessing pipeline: %s", e)
             raise
 
     def load_preprocessed_data(self, task: str, dataset_name: str) -> Tuple[
@@ -1021,7 +1033,7 @@ class PreprocessorBaseline:
         self.dataset_name = dataset_name
 
         # Generate directory name based on current configuration
-        config_dirname = self._generate_preprocessing_dirname()
+        config_dirname = self.generate_preprocessing_dirname()
 
         # Construct directory path with task subfolder and config-based directory name
         directory = os.path.join(
@@ -1044,7 +1056,7 @@ class PreprocessorBaseline:
             X_test = pd.read_parquet(os.path.join(directory, "X_test.parquet"))
             y_test = pd.read_parquet(os.path.join(directory, "y_test.parquet"))
 
-            logger.info(f"Loaded preprocessed data from {directory}")
+            logger.info("Loaded preprocessed data from %s", directory)
 
             return X_train, X_val, X_test, y_train, y_val, y_test
 
@@ -1063,14 +1075,14 @@ class PreprocessorBaseline:
             logger.info("No statistics available to display")
             return
 
-        logger.info(f"{'.'*40}")
+        logger.info("%s", "." * 40)
         logger.info(
-            f"DATASET STATISTICS - EXCEL FORMAT (Use Text to Columns with '/' as delimiter)"
+            "DATASET STATISTICS - EXCEL FORMAT (Use Text to Columns with '/' as delimiter)"
         )
 
         # Print header row with slash delimiters
         logger.info(
-            f"Task/Dataset/Set/Total Stays/Cases/Controls/Total Rows/Rows of Cases/Rows of Controls/Positive Labels/Negative Labels"
+            "Task/Dataset/Set/Total Stays/Cases/Controls/Total Rows/Rows of Cases/Rows of Controls/Positive Labels/Negative Labels"
         )
 
         # Print each row of statistics with slash delimiters
@@ -1113,7 +1125,7 @@ class PreprocessorBaseline:
 
         logger.info(f"{'.'*40}")
 
-    def _generate_preprocessing_dirname(self) -> str:
+    def generate_preprocessing_dirname(self) -> str:
         """
         Generate a directory name based on the current preprocessing configuration.
         The name encodes which preprocessing steps were applied and with what parameters.
