@@ -64,11 +64,11 @@ class PulseTemplateModel:
             model_path: Path to the model weights file
         """
         model_path = self.pretrained_model_path
-        if self.type == "ML":
+        if self.type == "convML":
             # Load the sklearn model using joblib
             self.model = joblib.load(model_path)
 
-        elif self.type == "DL":
+        elif self.type == "convDL":
             # Load the state dictionary
             state_dict = torch.load(model_path, map_location=torch.device("cpu"))
 

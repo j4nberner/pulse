@@ -13,8 +13,9 @@ from src.eval.metrics import MetricsTracker
 from src.models.pulsetemplate_model import PulseTemplateModel
 from src.util.model_util import (
     EarlyStopping,
-    prepare_data_for_model_dl,
+    prepare_data_for_model_convdl,
     save_torch_model,
+    calculate_pos_weight,
 )
 
 logger = logging.getLogger("PULSE_logger")
@@ -57,6 +58,7 @@ class CNNModel(PulseTemplateModel, nn.Module):
             "num_epochs",
             "save_checkpoint",
             "verbose",
+            "grad_clip_max_norm",
         ]
 
         # Check if wandb is enabled and set up
@@ -180,8 +182,9 @@ class CNNTrainer:
         self.train_loader = train_loader
         self.val_loader = val_loader
         self.test_loader = test_loader
+        self.pos_weight = calculate_pos_weight(self.train_loader)
         self.criterion = nn.BCEWithLogitsLoss(
-            pos_weight=torch.tensor(1.0)
+            pos_weight=torch.tensor([self.pos_weight])
         )  # inbalanced dataset
         self.optimizer = optim.Adam(
             self.model.parameters()
@@ -197,13 +200,16 @@ class CNNTrainer:
 
         # Log optimizer and criterion
         logger.info("Using optimizer: %s", self.optimizer.__class__.__name__)
-        logger.info("Using criterion: %s", self.criterion.__class__.__name__)
+        logger.info(
+            "Using criterion: %s with class weight adjustment",
+            self.criterion.__class__.__name__,
+        )
 
         # Create model save directory if it doesn't exist
         os.makedirs(self.model_save_dir, exist_ok=True)
 
         # Get the configured data converter
-        self.converter = prepare_data_for_model_dl(
+        self.converter = prepare_data_for_model_convdl(
             self.train_loader,
             self.params,
             model_name=self.model.model_name,
@@ -298,7 +304,15 @@ class CNNTrainer:
             self.optimizer.zero_grad()
             outputs = self.model(inputs)
             loss = self.criterion(outputs, labels)
+
+            # Backward pass, gradient clipping and optimize
             loss.backward()
+            max_norm = self.params["grad_clip_max_norm"]
+            total_norm = torch.nn.utils.clip_grad_norm_(
+                self.model.parameters(), max_norm=max_norm
+            )
+            if total_norm > max_norm:
+                logger.info(f"Gradient norm {total_norm:.4f} clipped to {max_norm}")
             self.optimizer.step()
 
             running_loss += loss.item()

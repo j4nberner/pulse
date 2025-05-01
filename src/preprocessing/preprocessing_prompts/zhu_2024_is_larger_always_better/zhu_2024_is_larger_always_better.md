@@ -2,7 +2,7 @@
 Zhu et al. (2024)  
 Paper: https://arxiv.org/abs/2407.18525
 
-## Original best performing prompt template for mortality prediction on the MIMIC dataset
+## Original best performing prompt template for mortality prediction on the MIMIC-IV dataset
 
 <div style="color:darkblue;">
 

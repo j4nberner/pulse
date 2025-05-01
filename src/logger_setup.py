@@ -1,5 +1,6 @@
 import logging
 import os
+import yaml
 from datetime import datetime
 
 from omegaconf import OmegaConf
@@ -11,6 +12,19 @@ logger = logging.getLogger("PULSE_logger")
 
 def setup_logger():
     """Creates a logger that logs to both a file and the console."""
+    # Load the configuration file
+    try:
+        parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../"))
+        config_path = os.path.join(parent_dir, "config_train.yaml")
+        if os.path.exists(config_path):
+            with open(config_path, "r") as f:
+                config_dict = yaml.safe_load(f)
+            config = OmegaConf.create(config_dict)
+        else:
+            raise FileNotFoundError(f"Config file not found at: {config_path}")
+    except Exception as e:
+        raise RuntimeError(f"Failed to load configuration: {e}")
+
     time_stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     log_dir = os.path.join("output", time_stamp)
     os.makedirs(log_dir, exist_ok=True)
@@ -18,7 +32,19 @@ def setup_logger():
     log_file = os.path.join(log_dir, f"log_{time_stamp}.log")
 
     logger = logging.getLogger("PULSE_logger")
-    logger.setLevel(logging.INFO)
+
+    # Set log level based on debug_logging config
+    try:
+        debug_logging = config.general.debug_logging if "general" in config else False
+    except AttributeError:
+        debug_logging = False
+
+    if debug_logging:
+        logger.setLevel(logging.DEBUG)
+        log_level_msg = "Logging level DEBUG enabled"
+    else:
+        logger.setLevel(logging.INFO)
+        log_level_msg = "Logging level INFO enabled (no DEBUG logging)"
 
     # **Check if handlers already exist to prevent duplication**
     if not logger.hasHandlers():
@@ -38,7 +64,8 @@ def setup_logger():
         logger.addHandler(file_handler)
         logger.addHandler(console_handler)
 
-        logger.info(f"Logging to file: {log_file}")
+        logger.info(log_level_msg)
+        logger.info("Logging to file: %s", log_file)
 
     return logger, log_dir
 
@@ -68,5 +95,5 @@ def init_wandb(config: OmegaConf) -> bool:
         logger.info("Weights & Biases initialized successfully")
         return True
     except Exception as e:
-        logger.warning(f"Failed to initialize Weights & Biases: {e}")
+        logger.warning("Failed to initialize Weights & Biases: %s", e)
         return False

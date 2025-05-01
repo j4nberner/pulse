@@ -1,12 +1,16 @@
+<p align="center">
+  <img src="src/pulse_logo.png" alt="PULSE Logo" width="300"/>
+</p>
+
 # PULSE Benchmark
 
-Predicting Mortality, Acute Kidney Injury (AKI) and Sepsis using ICU time-series data.
+PULSE (_<u>P</u>redictive <u>U</u>nderstanding of <u>L</u>ife-threatening <u>S</u>ituations using <u>E</u>mbeddings_) benchmarks the predictive capabilities of Large Language Models (LLMs) using ICU time-series data.
+
+
 
 ## Overview
 
-This repository contains the implementation for predicting mortality, acute kidney injury and sepsis in intensive care unit (ICU) patients using Large Language Models (LLMs). The project aims to leverage the power of modern language models to identify early signs of sepsis from multimodal clinical data and serves as a benchmark to compare to traditional ML approaches.
-
-## Framework Overview
+This repository contains the implementation for predicting mortality, acute kidney injury (AKI) and sepsis in intensive care unit (ICU) patients using Large Language Models (LLMs). Conventional machine learning and deep learning models serve as baseline comparisons to previously published LLM prompting and fine-tuning methods. Data preparation and model implementation is set up in a highly configurable manner to allow for flexible experimental design.
 
 ![Framework Overview](src/framework.png)
 
@@ -52,7 +56,7 @@ This repository contains the implementation for predicting mortality, acute kidn
 │   │   ├── __init__.py
 │   │   ├── preprocessing_advanced/
 │   │   ├── preprocessing_baseline/
-│   │   └── prompt_engineering/
+│   │   └── preprocessing_prompts/
 |   └── framework.png
 ├── notebooks/
 ├── datasets/
@@ -91,8 +95,8 @@ Task Definitions are in accordance with YAIB (https://arxiv.org/abs/2306.05109).
 
 | Type | Models                          |
 | -------- | ------------------------------- |
-| **ML**   | RandomForest, XGBoost, LightGBM |
-| **DL**   | CNN, LSTM, GRU, InceptionTime   |
+| **conventional ML**   | RandomForest, XGBoost, LightGBM |
+| **conventional DL**   | CNN, LSTM, GRU, InceptionTime   |
 | **LLM**  | Llama 3.1-8b                    |
 
 ## Results

@@ -13,7 +13,11 @@ import torch.optim as optim
 import wandb
 from src.eval.metrics import MetricsTracker
 from src.models.pulsetemplate_model import PulseTemplateModel
-from src.util.model_util import prepare_data_for_model_dl, save_torch_model
+from src.util.model_util import (
+    prepare_data_for_model_convdl,
+    save_torch_model,
+    calculate_pos_weight,
+)
 
 # Set up logger
 logger = logging.getLogger("PULSE_logger")
@@ -93,6 +97,7 @@ class GRUModel(PulseTemplateModel, nn.Module):
             "optimizer_name",
             "learning_rate",
             "weight_decay",
+            "grad_clip_max_norm",
             "scheduler_factor",
             "scheduler_patience",
             "min_lr",
@@ -259,6 +264,15 @@ class GRUTrainer:
         # Data preparation
         self._prepare_data()
 
+        # Set criterion after calculating class weights for imbalanced datasets
+        self.pos_weight = calculate_pos_weight(self.train_loader)
+        self.criterion = nn.BCEWithLogitsLoss(
+            pos_weight=torch.tensor([self.pos_weight]).to(self.device)
+        )
+        logger.info(
+            f"Using criterion: {self.criterion.__class__.__name__} with class weight adjustment"
+        )
+
         # Initialize optimizer based on config
         self.optimizer_name = self.params["optimizer_name"]
         lr = self.params["learning_rate"]
@@ -274,17 +288,7 @@ class GRUTrainer:
             )
         elif self.optimizer_name == "sgd":
             self.optimizer = optim.SGD(self.model.parameters(), lr=lr, momentum=0.9)
-
-        # Set criterion after calculating class weights for imbalanced datasets
-        self.pos_weight = self._calculate_pos_weight()
-        self.criterion = nn.BCEWithLogitsLoss(
-            pos_weight=torch.tensor([self.pos_weight]).to(self.device)
-        )
-
         logger.info(f"Using optimizer: {self.optimizer.__class__.__name__}")
-        logger.info(
-            f"Using criterion: {self.criterion.__class__.__name__} with class weight adjustment"
-        )
 
         # Initialize scheduler
         scheduler_factor = self.params["scheduler_factor"]
@@ -302,7 +306,7 @@ class GRUTrainer:
         """Prepare data for GRU by getting a configured converter."""
 
         # Get the configured converter
-        self.converter = prepare_data_for_model_dl(
+        self.converter = prepare_data_for_model_convdl(
             self.train_loader,
             self.params,
             model_name=self.model.model_name,
@@ -326,31 +330,6 @@ class GRUTrainer:
         logger.info(
             f"Model architecture initialized with {num_channels} input channels"
         )
-
-    def _calculate_pos_weight(self):
-        """Calculate positive class weight for imbalanced data."""
-        try:
-            all_labels = []
-            for _, labels in self.train_loader:
-                all_labels.extend(labels.cpu().numpy().flatten())
-
-            all_labels = np.array(all_labels)
-            neg_count = np.sum(all_labels == 0)
-            pos_count = np.sum(all_labels == 1)
-
-            if pos_count == 0:
-                logger.warning("No positive samples found, using pos_weight=1.0")
-                return 1.0
-
-            weight = neg_count / pos_count
-            logger.info(
-                f"Class imbalance - Neg: {neg_count}, Pos: {pos_count}, Weight: {weight}"
-            )
-            return weight
-
-        except Exception as e:
-            logger.error(f"Error calculating class weights: {e}")
-            return 1.0
 
     def train(self):
         """Train the GRU model using the provided data loaders."""
@@ -415,11 +394,12 @@ class GRUTrainer:
 
             # Backward pass, gradient clipping and optimize
             loss.backward()
+            max_norm = self.params["grad_clip_max_norm"]
             total_norm = torch.nn.utils.clip_grad_norm_(
-                self.model.parameters(), max_norm=1.0
+                self.model.parameters(), max_norm=max_norm
             )
-            if total_norm > 1.0:
-                logger.debug(f"Gradient norm {total_norm:.4f} clipped to 1.0")
+            if total_norm > max_norm:
+                logger.info(f"Gradient norm {total_norm:.4f} clipped to {max_norm}")
             self.optimizer.step()
 
             train_loss += loss.item()

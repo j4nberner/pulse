@@ -14,7 +14,7 @@ import wandb
 import wandb.sklearn
 from src.eval.metrics import MetricsTracker
 from src.models.pulsetemplate_model import PulseTemplateModel
-from src.util.model_util import prepare_data_for_model_ml, save_sklearn_model
+from src.util.model_util import prepare_data_for_model_convml, save_sklearn_model
 
 # Filter the specific warning about feature names
 # (This is because training is done with np arrays and prediction with pd dataframe to preserve feature names for feature importance etc.)
@@ -189,7 +189,7 @@ class RandomForestTrainer:
         logger.info("Starting training process for RandomForest model...")
 
         # Use the utility function to prepare data
-        prepared_data = prepare_data_for_model_ml(
+        prepared_data = prepare_data_for_model_convml(
             self.train_loader,
             self.val_loader,
             self.test_loader,

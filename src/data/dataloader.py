@@ -47,11 +47,19 @@ class DatasetManager:
 
         # self.llm_model_list = ["Llama3Model"]
 
+        self.debug_mode = getattr(self.config.general, "debug_mode", False)
+        self.debug_data_length = getattr(self.config.general, "debug_data_length", 100)
+
         # Initialize preprocessing tools
         self._init_preprocessing_tools()
 
         # Initialize datasets based on config
         self._init_datasets()
+
+        # Extract test_limited parameter from config
+        self.test_limited = getattr(
+            self.config.preprocessing_baseline.split_ratios, "test_limited", None
+        )
 
     def _init_preprocessing_tools(self):
         """Initialize preprocessing tools based on configuration."""
@@ -104,6 +112,7 @@ class DatasetManager:
                 base_path=base_path,
                 save_data=save_windowed_data,
                 debug_mode=debug_mode,
+                debug_data_length=self.debug_data_length,
                 original_base_path=original_base_path,
                 preprocessor_config=preprocessing_config,
             )
@@ -289,12 +298,15 @@ class DatasetManager:
             mode (str): train, val, or test (default: train)
             **kwargs: Additional keyword arguments
             - debug (bool): If True, take only a specified number of rows
-            - limit_test_set (bool): If True and mode is "test", limit to first 100 stay_ids
             - print_stats (bool): If True, print statistics for the datasets
             - prompting_id (str): ID of prompt preprocessing to apply
 
         Returns:
             Tuple[pd.DataFrame, pd.DataFrame]: Features and labels
+
+        Notes:
+            - When mode is "test", if test_limited is set in config, only the first X stay_ids will be used
+            - If test_limited is None, the full test set is used
         """
         if dataset_id not in self.datasets:
             logger.error(f"Dataset {dataset_id} not found")
@@ -311,24 +323,23 @@ class DatasetManager:
         data = dataset["data"]
 
         few_shot_list = [
-            "few_shot_paper_preprocessor", 
+            "few_shot_paper_preprocessor",
             "zhu_2024_is_larger_always_better_preprocessor",
-            ]
+        ]
 
         # Take only n rows if in debug
         debug = kwargs.get("debug", False)
         if debug:
-            debug_data_length = 50
             logger.info(
-                f"Debug mode: Taking only {debug_data_length} rows for {dataset_id}"
+                f"Debug mode: Taking only {self.debug_data_length} rows for {dataset_id}"
             )
             data = {
-                "X_train": data["X_train"].iloc[:debug_data_length],
-                "y_train": data["y_train"].iloc[:debug_data_length],
-                "X_val": data["X_val"].iloc[:debug_data_length],
-                "y_val": data["y_val"].iloc[:debug_data_length],
-                "X_test": data["X_test"].iloc[:debug_data_length],
-                "y_test": data["y_test"].iloc[:debug_data_length],
+                "X_train": data["X_train"].iloc[: self.debug_data_length],
+                "y_train": data["y_train"].iloc[: self.debug_data_length],
+                "X_val": data["X_val"].iloc[: self.debug_data_length],
+                "y_val": data["y_val"].iloc[: self.debug_data_length],
+                "X_test": data["X_test"].iloc[: self.debug_data_length],
+                "y_test": data["y_test"].iloc[: self.debug_data_length],
             }
 
         # Initialize X_train and y_train to None for all modes
@@ -352,7 +363,7 @@ class DatasetManager:
                 X = data["X_val"]
                 y = data["y_val"]
 
-        else:
+        else:  # mode == "test"
             if prompting_id in few_shot_list:
                 # Some LLMs might need training data in validation set for few-shot learning
                 X_train = data["X_train"]
@@ -365,16 +376,17 @@ class DatasetManager:
                 y = data["y_test"]
 
             # Handle limited test set if requested
-            limit_test_set = kwargs.get("limit_test_set", False)
             X_original = X.copy()
             y_original = y.copy()
 
-            if limit_test_set:
-                logger.info(f"Limiting test set to first 100 stay_ids for {dataset_id}")
+            if self.test_limited is not None:
+                logger.info(
+                    f"Limiting test set to first {self.test_limited} stay_ids for {dataset_id}"
+                )
                 # Get unique stay_ids in ascending order
                 unique_stay_ids = sorted(X["stay_id"].unique())
-                # Take only the first 100 stay_ids (or all if less than 100)
-                selected_stay_ids = unique_stay_ids[:100]
+                # Take only the first x = test_limited stay_ids (or all if less than x = test_limited)
+                selected_stay_ids = unique_stay_ids[: self.test_limited]
                 # Filter X and y to include only the selected stay_ids
                 X_limited = X[X["stay_id"].isin(selected_stay_ids)]
                 y_limited = y[y["stay_id"].isin(selected_stay_ids)]
@@ -384,7 +396,7 @@ class DatasetManager:
                 y = y_limited
 
             # Print statistics if requested (Print train, val and both original and limited test set statistics to compare distributions)
-            print_stats = kwargs.get("print_stats", False)
+            print_stats = kwargs.get("print_stats", False)  # set in train_models.py
             if print_stats:
                 train_stats = self.preprocessor.calculate_dataset_statistics(
                     data["X_train"], data["y_train"], "train"
@@ -395,12 +407,21 @@ class DatasetManager:
                 test_stats = self.preprocessor.calculate_dataset_statistics(
                     X_original, y_original, "test"
                 )
-                test_limited_stats = self.preprocessor.calculate_dataset_statistics(
-                    X_limited, y_limited, "test_limited100"
-                )
-                self.preprocessor.print_statistics(
-                    [train_stats, val_stats, test_stats, test_limited_stats]
-                )
+                if self.test_limited is not None:
+                    test_limited_stats = self.preprocessor.calculate_dataset_statistics(
+                        X_limited, y_limited, f"test_limited{self.test_limited}"
+                    )
+                else:
+                    test_limited_stats = None
+
+                # Filter out None values before passing to print_statistics
+                stats_to_print = [
+                    stat
+                    for stat in [train_stats, val_stats, test_stats, test_limited_stats]
+                    if stat is not None
+                ]
+                # Print statistics for all datasets
+                self.preprocessor.print_statistics(stats_to_print)
 
         # Apply any model-specific preprocessing if needed.
         # For example, if you need to tokenize text data for LLMs
@@ -424,18 +445,26 @@ class DatasetManager:
                 # Add few-shot examples to info_dict if needed
                 X = [X, X_train]
                 y = [y, y_train]
-            
-            logger.info(f"Applying prompting preprocessor for prompting_id: {prompting_id}")
+
+            logger.info(
+                f"Applying prompting preprocessor for prompting_id: {prompting_id}"
+            )
 
             # Apply advanced preprocessing
             X, y = prompting_preprocessor(X, y, info_dict)
 
             # Log a sample prompt for debugging/verification
             if isinstance(X, pd.DataFrame) and mode == "test":
-                prompt_column = "prompt" if "prompt" in X.columns else "text" if "text" in X.columns else None
+                prompt_column = (
+                    "prompt"
+                    if "prompt" in X.columns
+                    else "text" if "text" in X.columns else None
+                )
                 if prompt_column and not X.empty:
                     sample_prompt = X[prompt_column].iloc[0]
-                    logger.info(f"Sample {prompting_id} prompt with {num_shots} shots for {dataset_id}:")
+                    logger.info(
+                        f"Sample {prompting_id} prompt with {num_shots} shots for {dataset_id}:"
+                    )
                     logger.info("-" * 50)
                     logger.info(sample_prompt)
                     logger.info("-" * 50)
@@ -520,8 +549,6 @@ class TorchDatasetWrapper(Dataset):
         Returns:
             tuple: (features, label) as torch.Tensor
         """
-
-        # TODO: je nach Modell Tensor anders stacken (if DL -> apply 3D stacking)
 
         # If we pre-computed arrays, use them
         if hasattr(self, "X_array") and hasattr(self, "y_array"):
