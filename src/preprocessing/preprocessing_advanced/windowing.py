@@ -1,16 +1,15 @@
 import gc
 import logging
 import os
-import re
-from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import numpy as np
 import pandas as pd
 import torch
 from tqdm import tqdm
 
-from src.preprocessing.preprocessing_baseline.preprocessing_baseline import \
-    PreprocessorBaseline
+from src.preprocessing.preprocessing_baseline.preprocessing_baseline import (
+    PreprocessorBaseline,
+)
 
 # Set up logger
 logger = logging.getLogger("PULSE_logger")
@@ -33,6 +32,7 @@ class Windower:
         base_path,
         save_data=False,
         debug_mode=False,
+        debug_data_length=100,
         original_base_path=None,
         preprocessor_config=None,
     ):
@@ -48,6 +48,7 @@ class Windower:
         self.base_path = base_path
         self.save_data = save_data
         self.debug_mode = debug_mode
+        self.debug_data_length = debug_data_length
         self.original_base_path = original_base_path
         self.preprocessor_config = preprocessor_config
 
@@ -70,6 +71,16 @@ class Windower:
             X = data_dict[set_type]["X"]
             y = data_dict[set_type]["y"]
 
+            # If in debug mode, limit number of rows first
+            if self.debug_mode and len(X) > self.debug_data_length:
+                logger.info(
+                    "DEBUG MODE windowing: Limiting %s set to first %s rows before windowing",
+                    set_type,
+                    self.debug_data_length,
+                )
+                X = X.iloc[: self.debug_data_length]
+                y = y.iloc[: self.debug_data_length]
+
             X_np = X.values
             y_np = y["label"].values
             stay_id_np = X["stay_id"].values
@@ -87,16 +98,8 @@ class Windower:
             result_labels = []
             unique_stay_ids = np.unique(stay_id_np)
 
-            # If in debug mode, limit to 100 stay_ids
-            if self.debug_mode:
-                if len(unique_stay_ids) > 100:
-                    unique_stay_ids = unique_stay_ids[:100]
-                    logger.info(
-                        f"DEBUG MODE: Limited to first 100 stay_ids for {set_type} set"
-                    )
-
             logger.info(
-                f"Processing {set_type} set with {len(unique_stay_ids)} stay_ids"
+                "Processing %s set with %s stay_ids", set_type, len(unique_stay_ids)
             )
             # Update progress bar every 5000 stay_ids (or fewer in debug mode)
             miniters = 5000 if not self.debug_mode else 10
@@ -188,7 +191,10 @@ class Windower:
 
             # Log the shape of the windowed dataset
             logger.info(
-                f"Windowed {set_type} set - X shape: {X_window.shape}, y shape: {y_window.shape}"
+                "Windowed %s set - X shape: %s, y shape: %s",
+                set_type,
+                X_window.shape,
+                y_window.shape,
             )
 
             results[set_type] = {"X": X_window, "y": y_window}
@@ -261,7 +267,7 @@ class Windower:
         preprocessor = PreprocessorBaseline(
             base_path=self.base_path, config=self.preprocessor_config
         )  # Pass config to temporary instance
-        config_dirname = preprocessor._generate_preprocessing_dirname()
+        config_dirname = preprocessor.generate_preprocessing_dirname()
 
         # Directory naming adjusted based on debug mode
         debug_suffix = "_debug" if self.debug_mode else ""
@@ -279,7 +285,7 @@ class Windower:
             )
 
         logger.info(
-            f"Windowed data saved to {os.path.join(self.base_path, save_directory)}"
+            "Windowed data saved to %s", os.path.join(self.base_path, save_directory)
         )
 
         # If original_base_path is set, also save to permanent storage
@@ -297,7 +303,7 @@ class Windower:
                 )
 
             logger.info(
-                f"Windowed data also saved to permanent storage: {permanent_directory}"
+                "Windowed data also saved to permanent storage: %s", permanent_directory
             )
 
     def load_windowed_data(
@@ -320,7 +326,7 @@ class Windower:
         preprocessor = PreprocessorBaseline(
             base_path=self.base_path, config=self.preprocessor_config
         )  # Pass config to temporary instance
-        config_dirname = preprocessor._generate_preprocessing_dirname()
+        config_dirname = preprocessor.generate_preprocessing_dirname()
 
         # Check for debug mode directory first
         debug_suffix = "_debug" if self.debug_mode else ""
@@ -330,13 +336,13 @@ class Windower:
         # If in debug mode but debug files don't exist, we don't want to fall back to regular files
         if self.debug_mode and not os.path.exists(full_path):
             logger.info(
-                f"Debug-mode windowed data directory {full_path} does not exist"
+                "Debug-mode windowed data directory %s does not exist", full_path
             )
             return None
 
         # If not in debug mode and regular files don't exist
         if not os.path.exists(full_path):
-            logger.info(f"Windowed data directory {full_path} does not exist")
+            logger.info("Windowed data directory %s does not exist", full_path)
             return None
 
         results = {}
@@ -347,7 +353,7 @@ class Windower:
                 y_path = os.path.join(full_path, f"y_{set_type}.parquet")
 
                 if not os.path.exists(X_path) or not os.path.exists(y_path):
-                    logger.error(f"Missing windowed data files in {full_path}")
+                    logger.error("Missing windowed data files in %s", full_path)
                     return None
 
                 X = pd.read_parquet(X_path)
@@ -356,15 +362,18 @@ class Windower:
                 results[set_type] = {"X": X, "y": y}
 
                 logger.info(
-                    f"Loaded windowed {set_type} set - X shape: {X.shape}, y shape: {y.shape}"
+                    "Loaded windowed %s set - X shape: %s, y shape: %s",
+                    set_type,
+                    X.shape,
+                    y.shape,
                 )
 
-            logger.info(f"Loaded windowed data from {full_path}")
+            logger.info("Loaded windowed data from %s", full_path)
 
             return results
 
         except Exception as e:
-            logger.error(f"Error loading windowed data from {full_path}: {e}")
+            logger.error("Error loading windowed data from %s: %s", full_path, e)
             return None
 
     def read_preprocessed_data(self, task, dataset):
@@ -382,7 +391,7 @@ class Windower:
         preprocessor = PreprocessorBaseline(
             base_path=self.base_path, config=self.preprocessor_config
         )  # Pass config to temporary instance
-        config_dirname = preprocessor._generate_preprocessing_dirname()
+        config_dirname = preprocessor.generate_preprocessing_dirname()
 
         read_directory = (
             f"datasets/preprocessed_splits/{task}/{dataset}/{config_dirname}"
@@ -411,13 +420,16 @@ class Windower:
             # Log shapes of loaded datasets
             for set_type in data_sets:
                 logger.info(
-                    f"Loaded {set_type} set before windowing - X shape: {data_sets[set_type]['X'].shape}, y shape: {data_sets[set_type]['y'].shape}"
+                    "Loaded %s set before windowing - X shape: %s, y shape: %s",
+                    set_type,
+                    data_sets[set_type]["X"].shape,
+                    data_sets[set_type]["y"].shape,
                 )
 
             return data_sets
 
         except Exception as e:
-            logger.error(f"Error reading preprocessed data from {full_path}: {e}")
+            logger.error("Error reading preprocessed data from %s: %s", full_path, e)
             return None
 
     def window_data(self, task, dataset, config, data_dict=None):
@@ -441,29 +453,39 @@ class Windower:
 
         # ALWAYS try to load presaved windowed data first
         logger.info(
-            f"Checking for presaved windowed data for {task}_{dataset} with data_window={data_window}, "
-            f"prediction_window={prediction_window}, step_size={step_size}"
+            "Checking for presaved windowed data for %s_%s with data_window=%s, "
+            "prediction_window=%s, step_size=%s",
+            task,
+            dataset,
+            data_window,
+            prediction_window,
+            step_size,
         )
         windowed_data = self.load_windowed_data(
             task, dataset, data_window, prediction_window, step_size
         )
 
         if windowed_data is not None:
-            logger.info(f"Using presaved windowed data for {task}_{dataset}")
+            logger.info("Using presaved windowed data for %s_%s", task, dataset)
             return windowed_data
 
-        logger.info(f"No presaved windowed data found, will create new windows")
+        logger.info("No presaved windowed data found, will create new windows")
 
         # If data_dict is not provided, load preprocessed data
         if data_dict is None:
-            logger.info(f"Loading preprocessed data for {task}_{dataset}")
+            logger.info("Loading preprocessed data for %s_%s", task, dataset)
             data_dict = self.read_preprocessed_data(task, dataset)
             if data_dict is None:
                 return None
 
         logger.info(
-            f"Applying windowing to {task}_{dataset} with data_window={data_window}, "
-            f"prediction_window={prediction_window}, step_size={step_size}"
+            "Applying windowing to %s_%s with data_window=%s, "
+            "prediction_window=%s, step_size=%s",
+            task,
+            dataset,
+            data_window,
+            prediction_window,
+            step_size,
         )
 
         # Create windows
@@ -473,7 +495,7 @@ class Windower:
 
         # Save windowed data if specified
         if self.save_data:
-            logger.info(f"Saving windowed data for {task}_{dataset}")
+            logger.info("Saving windowed data for %s_%s", task, dataset)
             self.save_windowed_data(
                 windowed_data, task, dataset, data_window, prediction_window, step_size
             )
@@ -527,7 +549,8 @@ class WindowedDataTo3D:
         if task_name is not None and task_name == "mortality":
             self.window_size = 25
             self.logger.info(
-                f"Mortality task detected - Setting window size to {self.window_size} for mortality task"
+                "Mortality task detected - Setting window size to %s for mortality task",
+                self.window_size,
             )
         elif config:
             if hasattr(config, "preprocessing_advanced"):
@@ -539,7 +562,8 @@ class WindowedDataTo3D:
                         self.window_size = windowing_config.data_window
                         if windowing_enabled:
                             self.logger.info(
-                                f"Setting window size to {self.window_size} from config"
+                                "Setting window size to %s from config",
+                                self.window_size,
                             )
 
         # Add these properties for the enhanced functionality
@@ -560,7 +584,9 @@ class WindowedDataTo3D:
         self.use_windowed_conversion = windowing_enabled
 
         self.logger.info(
-            f"Converter configured: windowed={windowing_enabled}, input_shape={input_shape}"
+            "Converter configured: windowed=%s, input_shape=%s",
+            windowing_enabled,
+            input_shape,
         )
 
     def convert_batch_to_3d(
@@ -581,7 +607,7 @@ class WindowedDataTo3D:
             id_column_index (int): Index of the ID column to exclude (typically 0 for stay_id) -> in our case None because stay_id is dropped in dataloader
 
         Returns:
-            torch.Tensor: 3D tensor ready for DL model input
+            torch.Tensor: 3D tensor ready for conventional DL model input
         """
 
         # If already 3D, return as is
@@ -657,7 +683,7 @@ class WindowedDataTo3D:
 
             except Exception as e:
                 self.logger.warning(
-                    f"Error reshaping batch to 3D: {e}. Using simple approach."
+                    "Error reshaping batch to 3D: %s. Using simple approach.", e
                 )
 
                 # Fall back to simple reshape if the proper reshaping fails

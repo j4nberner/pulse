@@ -11,7 +11,7 @@ from sklearn.metrics import confusion_matrix
 import wandb
 from src.eval.metrics import MetricsTracker, rmse
 from src.models.pulsetemplate_model import PulseTemplateModel
-from src.util.model_util import prepare_data_for_model_ml, save_sklearn_model
+from src.util.model_util import prepare_data_for_model_convml, save_sklearn_model
 
 logger = logging.getLogger("PULSE_logger")
 
@@ -148,14 +148,16 @@ class LightGBMTrainer:
         logger.info("Starting training process for LightGBM model...")
 
         # Use the utility function to prepare data
-        prepared_data = prepare_data_for_model_ml(
-            self.train_loader, self.val_loader, self.test_loader,
+        prepared_data = prepare_data_for_model_convml(
+            self.train_loader,
+            self.val_loader,
+            self.test_loader,
         )
 
         # Extract all data from the prepared_data dictionary
         X_train = prepared_data["X_train"]
         y_train = prepared_data["y_train"]
-        X_val = prepared_data["X_val"]  
+        X_val = prepared_data["X_val"]
         y_val = prepared_data["y_val"]
         X_test = prepared_data["X_test"]
         y_test = prepared_data["y_test"]
@@ -163,7 +165,13 @@ class LightGBMTrainer:
 
         # Log training start to wandb
         if self.wandb:
-            wandb.log({"train_samples": len(X_train), "val_sample": len(X_val), "test_samples": len(X_test)})
+            wandb.log(
+                {
+                    "train_samples": len(X_train),
+                    "val_sample": len(X_val),
+                    "test_samples": len(X_test),
+                }
+            )
 
         # Create early stopping callback with verbose setting based on model configuration
         early_stopping_callback = early_stopping(
@@ -186,10 +194,10 @@ class LightGBMTrainer:
 
         # Evaluate the model
         metrics_tracker = MetricsTracker(
-            self.model.model_name, 
-            self.model.task_name, 
+            self.model.model_name,
+            self.model.task_name,
             self.model.dataset_name,
-            self.model.save_dir
+            self.model.save_dir,
         )
         y_pred = self.model.model.predict(X_test_df)
         y_pred_proba = self.model.model.predict_proba(X_test_df)

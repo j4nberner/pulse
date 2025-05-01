@@ -16,7 +16,7 @@ logger, output_dir = setup_logger()
 
 
 class ModelTrainer:
-    """Core training functionality for ML/DL models and LLMs."""
+    """Core training functionality for convML/convDL models and LLMs."""
 
     def __init__(self, config: OmegaConf):
         """
@@ -29,7 +29,7 @@ class ModelTrainer:
 
         # Log debug mode status
         if self.config.general.debug_mode:
-            logger.info("DEBUG MODE ACTIVE: Training will use limited dataset size")
+            logger.debug("DEBUG MODE ACTIVE: Training will use limited dataset size")
 
         # -------------------- Copy data to local scratch (Slurm) --------------------
         if is_on_slurm() and self.config.general.get("use_scratch", False):
@@ -125,35 +125,28 @@ class ModelTrainer:
                         model_name,
                         mode="test",
                         **dm_kwargs,
-                        limit_test_set=True,
                         print_stats=False,
                     )
 
                     # Choose the appropriate DataLoader based on model type
-                    if model.type == "ML":
+                    if model.type == "convML":
                         train_loader = (X_train, y_train)
                         val_loader = (X_val, y_val)
                         test_loader = (X_test, y_test)
-                    elif model.type == "LLM":
+                    elif model.type == "convLLM":
                         # Passing the text and labels directly for LLMs
                         train_loader = (pd.DataFrame(), pd.DataFrame())
                         val_loader = (pd.DataFrame(), pd.DataFrame())
                         test_loader = (X_test, y_test)
-                    elif model.type == "DL":
+                    elif model.type == "convDL":
                         # Wrap with TorchDatasetWrapper
                         train_dataset = TorchDatasetWrapper(X_train, y_train)
                         val_dataset = TorchDatasetWrapper(X_val, y_val)
                         test_dataset = TorchDatasetWrapper(X_test, y_test)
 
-                        # Get batch size with fallback using getattr
-                        if isinstance(self.config.benchmark_settings, dict):
-                            batch_size = self.config.benchmark_settings.get(
-                                "batch_size", 100
-                            )
-                        else:
-                            batch_size = getattr(
-                                self.config.benchmark_settings, "batch_size", 100
-                            )
+                        batch_size = getattr(
+                            self.config.benchmark_settings, "batch_size"
+                        )
 
                         logger.info(
                             f"Using batch size: {batch_size} for {model_name} on {task_dataset_name}"
@@ -179,7 +172,7 @@ class ModelTrainer:
                         )
                     else:
                         logger.error(
-                            "Please specify a model type (ML, DL, LLM) in the config"
+                            "Please specify a model type (convML, convDL, LLM) in the config"
                         )
                         sys.exit(1)
 

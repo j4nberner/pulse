@@ -5,6 +5,8 @@ general:
   app_name: "Pulse"
   version: "1.0.0"
   debug_mode: true
+  debug_data_length: 1000 # Number of rows used if debug_mode is true
+  debug_logging: true # false: logging level DEBUG, true: logging level INFO
   use_scratch: true
 
 # Weight and Biases (wandb) logging configuration
@@ -17,9 +19,9 @@ base_path: "/Users/sophiaehlers/Documents/pulse" #"/cluster/project/bmds_lab/sep
 
 # Tasks to process
 tasks:
-  - "mortality"
+  # - "mortality"
   - "aki"
-  - "sepsis"
+  # - "sepsis"
 
 # Datasets to process
 dataset_path: datasets/original_harmonized #"/path/to/datasets"
@@ -37,7 +39,7 @@ random_seed: 42
 preprocessing_baseline:
   replace_outliers: true # Whether to replace outliers with NaNs
   flag_na: true # Whether to flag NA values with binary indicators
-  standardize: true # Whether to standardize features (yes: DL, not required: ML, LLM)
+  standardize: true # Whether to standardize features (yes: convDL, not required: convML, LLM)
   static_imputation: true # Whether to perform static feature imputation
   dynamic_imputation: true # Whether to perform dynamic feature imputation
   save_data: true # Whether to save preprocessed data
@@ -45,8 +47,7 @@ preprocessing_baseline:
     train: 0.8
     val: 0.1
     test: 0.1
-
-    # TODO: add param test_limited_x
+    test_limited: 50 # Number of stay_ids for limited test set, null = test set is not limited
 
 # _______ Preprocessing Advanced _______
 
@@ -61,22 +62,24 @@ preprocessing_advanced:
 prompting:
   prompting_ids:
     # - "few_shot_paper_preprocessor" # Preprocessing ID for the model
-    - "zhu_2024_is_larger_always_better_preprocessor" 
+    - "zhu_2024_is_larger_always_better_preprocessor"
+  shots: 3
+
+  # TODO: change shots from model config to here
+
+
 
 # _______ Model Training _______
 
 benchmark_settings:
   batch_size: 100
-#   num_epochs: 100
-# learning_rate: 0.001 # Removed. Use model-specific learning rate instead.
-# optimizer: "adam" # Removed. Use model-specific optimizer instead.
 
 load_models:
-  - model_configs/Llama3.yaml
+  # - model_configs/Llama3.yaml
   # - model_configs/RandomForestModel.yaml
   # - model_configs/XGBoost.yaml
   # - model_configs/LightGBMModel.yaml
   # - model_configs/CNNModel.yaml
   # - model_configs/LSTMModel.yaml
   # - model_configs/InceptionTimeModel.yaml
-  # - model_configs/GRUModel.yaml
+  - model_configs/GRUModel.yaml

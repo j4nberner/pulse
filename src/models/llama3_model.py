@@ -64,9 +64,7 @@ class Llama3Model(PulseTemplateModel):
         self.lc_chain: Optional[Runnable] = None
 
         self.quantization_config = BitsAndBytesConfig(
-            load_in_8bit=True,
-            llm_int8_threshold=6.0,
-            llm_int8_has_fp16_weight=True
+            load_in_8bit=True, llm_int8_threshold=6.0, llm_int8_has_fp16_weight=True
         )
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -121,9 +119,7 @@ class Llama3Model(PulseTemplateModel):
 
         token_start = time.perf_counter()
         chat_prompt = self.tokenizer.apply_chat_template(
-            input_text,
-            tokenize=False,
-            add_generation_prompt=True
+            input_text, tokenize=False, add_generation_prompt=True
         )
 
         tokenized_inputs = self.tokenizer(
@@ -153,9 +149,7 @@ class Llama3Model(PulseTemplateModel):
 
         # 4) Decode just the generated tokens:
         generated_text = self.tokenizer.decode(
-            gen_ids,
-            skip_special_tokens=True,
-            clean_up_tokenization_spaces=True
+            gen_ids, skip_special_tokens=True, clean_up_tokenization_spaces=True
         )
 
         infer_time = time.perf_counter() - infer_start
