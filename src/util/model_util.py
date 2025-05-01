@@ -160,10 +160,7 @@ def prepare_data_for_model_convml(
         "feature_names": feature_names,
     }
 
-
 def prepare_data_for_model_convdl(
-
-def prepare_data_for_model_dl(
     data_loader,
     config: Dict,
     model_name: Optional[str] = None,
@@ -183,7 +180,6 @@ def prepare_data_for_model_dl(
     """
 
     # Import the converter
-    from src.preprocessing.preprocessing_advanced.windowing import WindowedDataTo3D
     from src.preprocessing.preprocessing_advanced.windowing import WindowedDataTo3D
 
     # Create converter with model name and config
@@ -259,7 +255,7 @@ def calculate_pos_weight(train_loader):
         logger.error(f"Error calculating class weights: {e}")
         return 1.0
 
-
+@DeprecationWarning
 def apply_model_prompt_format(model_id, prompt):
     """
     Apply model-specific prompt formatting.

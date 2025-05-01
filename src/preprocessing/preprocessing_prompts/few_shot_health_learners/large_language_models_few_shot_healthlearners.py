@@ -33,7 +33,7 @@ def few_shot_paper_preprocessor(
     task = info_dict.get("task", "unknown_task")
     dataset = info_dict.get("dataset_name", "unknown_dataset")
     model_id = info_dict.get("model_name", "unknown_model")
-    num_shots = info_dict.get("shots", 0)
+    num_shots = 0 #TODO: info_dict.get("num_shots", 0) rout from kwargs
     mode = info_dict.get("mode", "train")
 
     logger.info(
