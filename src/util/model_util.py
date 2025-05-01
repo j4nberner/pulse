@@ -1,3 +1,4 @@
+import ast
 import json
 import logging
 import os
@@ -230,35 +231,6 @@ def apply_model_prompt_format(model_id, prompt):
     return formatted_prompt
 
 
-# TODO: adjust to adhere to HF apply_chat_template
-def prompt_template(input_text: str) -> str:
-    """Create a prompt that asks the LLM to return diagnosis information in a JSON format.
-
-    Args:
-        input_text: The text to analyze.
-
-    Returns:
-        A formatted string prompt for the LLM.
-    """
-    prompt = f"""
-    You are a helpful assistant. Analyze the following text and determine the most likely diagnosis. 
-
-    Return the result strictly in this JSON format:
-
-    {{
-    "diagnosis": "<short diagnosis label>",
-    "probability": "<a value between 0 and 1 representing disease probability. 0 means no deasease, 1 means certain disease>",
-    "explanation": "<a brief explanation for the prediction>"
-    }}
-
-    Text:
-    {input_text}
-
-    Respond only with a valid JSON object. Do not include any additional commentary.
-    """
-    return prompt.strip()
-
-
 def prompt_template_hf(input_text: str) -> List[Dict[str, str]]:
     """
     Create a chat-based prompt compatible with Hugging Face's apply_chat_template.
@@ -287,8 +259,8 @@ def prompt_template_hf(input_text: str) -> List[Dict[str, str]]:
     ]
 
 
-def extract_json(output_text: str) -> Optional[Dict[str, str]]:
-    """Extract and parse a JSON object from the model's output text.
+def extract_dict(output_text: str) -> Optional[Dict[str, str]]:
+    """Extract and parse the last JSON-like object from the model's output text and return it as a dictionary.
 
     Args:
         output_text: The raw string returned by the language model.
@@ -296,15 +268,30 @@ def extract_json(output_text: str) -> Optional[Dict[str, str]]:
     Returns:
         A dictionary parsed from the JSON string, or None if parsing fails.
     """
+    # 1) Find the JSON start
+    json_start = output_text.find("{")
+    if json_start == -1:
+        raise ValueError("No JSON object found in assistant output")
+
+    json_text = output_text[json_start:].strip()
+
+    # 2) Heuristic fix for unterminated string (most common case)
+    open_quotes = json_text.count('"')
+    if open_quotes % 2 != 0:
+        # Add a closing quote
+        json_text += '"'
+        logger.debug("Fixed unterminated string by adding closing quote.")
+
+    # 3) Heuristic fix for missing final brace
+    if not json_text.endswith("}"):
+        json_text += "}"
+        logger.debug("Fixed unclosed JSON object by adding closing brace.")
+
+    logger.debug("Final JSON text to parse: %s", json_text)
+
     try:
-        # Match the first JSON object in the output
-        match = re.search(r"\{.*?\}", output_text, re.DOTALL)
-        if not match:
-            print("No JSON object found.")
-            return None
-        json_str = match.group(0)
-        parsed = json.loads(json_str)
-        return parsed
-    except json.JSONDecodeError as e:
-        print(f"JSON parsing error: {e}")
+        output_dict = ast.literal_eval(json_text)
+        return output_dict
+    except (SyntaxError, ValueError) as e:
+        logger.error(f"Failed to parse model output as dict: {e}\nRaw: {json_text}")
         return None

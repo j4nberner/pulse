@@ -435,10 +435,10 @@ class DatasetManager:
                 prompt_column = "prompt" if "prompt" in X.columns else "text" if "text" in X.columns else None
                 if prompt_column and not X.empty:
                     sample_prompt = X[prompt_column].iloc[0]
-                    logger.info(f"Sample {prompting_id} prompt with {num_shots} shots for {dataset_id}:")
-                    logger.info("-" * 50)
-                    logger.info(sample_prompt)
-                    logger.info("-" * 50)
+                    logger.debug(f"Sample {prompting_id} prompt with {num_shots} shots for {dataset_id}:")
+                    logger.debug("-" * 50)
+                    logger.debug(sample_prompt)
+                    logger.debug("-" * 50)
 
         # Check and drop stay_id columns if they exist
         if isinstance(X, pd.DataFrame) and "stay_id" in X.columns:

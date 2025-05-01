@@ -10,7 +10,6 @@ from src.util.data_util import (
     get_feature_reference_range,
     get_feature_uom,
 )
-from src.util.model_util import prompt_template
 
 logger = logging.getLogger("PULSE_logger")
 
@@ -65,8 +64,8 @@ def few_shot_paper_preprocessor(
             for i, val in enumerate(row.values)
             if pd.notna(val)
         )
-        query_input_text = f"Patient ICU features: {query_features}"
-        query_prompt = prompt_template(query_input_text)
+        query_prompt = f"Patient ICU features: {query_features}"
+        # query_prompt = prompt_template(query_input_text)
 
         # 2. Build few-shot examples
         few_shot_texts = []
@@ -87,16 +86,8 @@ def few_shot_paper_preprocessor(
                 )
                 label_text = task if label == 1 else f"not-{task}"
 
-                shot_input_text = f"Patient ICU features: {train_features}"
-                # shot_prompt = prompt_template(shot_input_text)
-
-                # Replace the final JSON object with a static answer for few-shot example
-                example_json = {
-                    "diagnosis": label_text,
-                    "probability": "1.0",
-                    "explanation": "This is a known example for few-shot prompting.",
-                }
-                few_shot_texts.append(f"{shot_input_text}\n{example_json}")
+                few_shot_prompt = wrap_for_few_shot_template(train_features, label_text)
+                few_shot_texts.append(few_shot_prompt)
 
         # 3. Combine few-shot + query
         full_prompt = "\n\n".join(few_shot_texts + [query_prompt])
@@ -224,3 +215,21 @@ def format_patient_data(row, base_features, X_cols, data_window):
     patient_features_text = "\n".join(patient_features)
 
     return patient_info, patient_features_text
+
+
+def wrap_for_few_shot_template(input_text: str, label_text: str) -> str:
+
+    # Replace the final JSON object with a static answer for few-shot example
+    result_json = {
+        "diagnosis": label_text,
+        "probability": "1.0",
+        "explanation": "This is a known example explanation.",
+    }
+
+    prompt = (
+    "This is an example. Analyze the following text and determine the most likely diagnosis.\n"
+    "Text:\n"
+    f"{input_text}"
+    "Result:\n"
+    f"{result_json}")
+    return prompt.strip()

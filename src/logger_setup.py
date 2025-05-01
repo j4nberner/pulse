@@ -18,7 +18,7 @@ def setup_logger():
     log_file = os.path.join(log_dir, f"log_{time_stamp}.log")
 
     logger = logging.getLogger("PULSE_logger")
-    logger.setLevel(logging.INFO)
+    logger.setLevel(logging.DEBUG)
 
     # **Check if handlers already exist to prevent duplication**
     if not logger.hasHandlers():
