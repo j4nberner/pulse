@@ -133,7 +133,7 @@ class ModelTrainer:
                         train_loader = (X_train, y_train)
                         val_loader = (X_val, y_val)
                         test_loader = (X_test, y_test)
-                    elif model.type == "convLLM":
+                    elif model.type == "LLM":
                         # Passing the text and labels directly for LLMs
                         train_loader = (pd.DataFrame(), pd.DataFrame())
                         val_loader = (pd.DataFrame(), pd.DataFrame())
