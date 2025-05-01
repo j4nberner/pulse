@@ -51,20 +51,29 @@ features_dict = {
     "ckmb": ("Creatine Kinase-MB (CK-MB)", "ng/mL", (0, 5)),
     "tnt": ("Troponin T", "ng/mL", (0, 14)),
     "height": ("Height", "cm", ()),
-    "weight": ("Weight", "kg", ())
+    "weight": ("Weight", "kg", ()),
 }
+
 
 def _get_feature_info(feature_name: str) -> Tuple[str, str, Tuple[float, float]]:
     """Helper function to get feature information with proper fallback."""
     return features_dict.get(feature_name, (feature_name, "", (0, 0)))
 
+
+def get_feature(feature_name: str) -> tuple:
+    """Returns the converted feature for a given feature key."""
+    return _get_feature_info(feature_name)
+
+
 def get_feature_name(feature_name: str) -> str:
     """Returns the full feature name for a given feature key."""
     return _get_feature_info(feature_name)[0]
 
+
 def get_feature_uom(feature_name: str) -> str:
     """Returns the feature unit of measurement (uom) for a given feature key."""
     return _get_feature_info(feature_name)[1]
+
 
 def get_feature_reference_range(feature_name: str) -> Tuple[float, float]:
     """Returns the feature reference range for a given feature key."""

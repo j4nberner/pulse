@@ -10,11 +10,12 @@ import torch.optim as optim
 from langchain.prompts import PromptTemplate
 from langchain.schema.runnable import Runnable
 from peft import PrefixTuningConfig, TaskType, get_peft_model
-from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
+from transformers import AutoModelForCausalLM, AutoTokenizer
 
 import wandb
 from src.eval.metrics import MetricsTracker
 from src.models.pulsetemplate_model import PulseTemplateModel
+from src.util.model_util import prompt_template, prompt_template_hf
 
 logger = logging.getLogger("PULSE_logger")
 
@@ -37,8 +38,23 @@ class Llama3Model(PulseTemplateModel):
 
         self.save_dir: str = kwargs.get("output_dir", f"{os.getcwd()}/output")
         self.wandb: bool = kwargs.get("wandb", False)
+
+        required_params = [
+            "max_new_tokens",
+            "do_sample",
+            "temperature",
+        ]
+        # Check if all required parameters exist in config
+        missing_params = [param for param in required_params if param not in params]
+        if missing_params:
+            raise KeyError(f"Required parameters missing from config: {missing_params}")
+
         self.params: Dict[str, Any] = params
-        self.model_id: str = self.params.get("model_id", "meta-llama/Llama-3.1-8B")
+
+        # self.quantization_config = BitsAndBytesConfig(load_in_4bit=True)
+        self.model_id: str = self.params.get(
+            "model_id", "meta-llama/Llama-3.1-8B-Instruct"
+        )
         self.max_length: int = self.params.get("max_length", 512)
 
         self.tokenizer: Optional[Any] = None
@@ -46,13 +62,19 @@ class Llama3Model(PulseTemplateModel):
         self.lc_llm: Optional[Any] = None
         self.prompt_template: Optional[PromptTemplate] = None
         self.lc_chain: Optional[Runnable] = None
+        self.hf_pipeline: Optional[Any] = None
 
     def _load_model(self) -> None:
         """Loads the tokenizer and model weights and initializes HF pipeline."""
         try:
-            self.tokenizer = AutoTokenizer.from_pretrained(self.model_id, use_fast=True)
+            self.tokenizer = AutoTokenizer.from_pretrained(
+                self.model_id, use_fast=True, padding_side="left"
+            )
             self.llama_model = AutoModelForCausalLM.from_pretrained(
-                self.model_id, torch_dtype=torch.float16, device_map="auto"
+                self.model_id,
+                device_map="auto",
+                torch_dtype=torch.float16,
+                # quantization_config=self.quantization_config,
             )
 
             if self.params.get("prefix_tuning", False):
@@ -74,18 +96,6 @@ class Llama3Model(PulseTemplateModel):
             "Initializing Hugging Face pipeline with parameters: %s", self.params
         )
 
-        self.hf_pipeline = pipeline(
-            "text-generation",
-            model=self.llama_model,
-            tokenizer=self.tokenizer,
-            device_map="auto",
-            max_new_tokens=5,
-            do_sample=False,
-            temperature=0.0,
-            eos_token_id=self.tokenizer.eos_token_id,
-            pad_token_id=self.tokenizer.eos_token_id,
-        )
-
     def infer_llm(self, input_text: str) -> Dict[str, Any]:
         """Runs the HF pipeline with the given input and logs timing/token info.
 
@@ -98,19 +108,38 @@ class Llama3Model(PulseTemplateModel):
         if not isinstance(input_text, str):
             input_text = str(input_text)
 
+        input_text = prompt_template_hf(
+            input_text
+        )  # Apply prompt template to structure the input and guide output.
+
         token_start = time.perf_counter()
-        tokens = self.tokenizer(input_text, return_tensors="pt")
+        tokenized_inputs = self.tokenizer.apply_chat_template(
+            input_text, tokenize=True, add_generation_prompt=True, return_tensors="pt"
+        )
         token_time = time.perf_counter() - token_start
-        num_tokens = len(tokens["input_ids"][0])
+        num_tokens = len(tokenized_inputs["input_ids"][0])
 
         infer_start = time.perf_counter()
-        result = self.hf_pipeline(input_text)
+        with torch.no_grad():
+            outputs = self.llama_model.generate(
+                input_ids=tokenized_inputs["input_ids"],
+                attention_mask=tokenized_inputs["attention_mask"],
+                max_new_tokens=self.params.max_new_tokens,
+                do_sample=self.params.do_sample,
+                temperature=self.params.temperature,
+                eos_token_id=self.tokenizer.eos_token_id,
+                pad_token_id=self.tokenizer.eos_token_id,
+            )
+        decoded_outputs = self.tokenizer.batch_decode(outputs, skip_special_tokens=True)
         infer_time = time.perf_counter() - infer_start
 
-        # logger.info(f"Input text: {input_text}")
-
-        generated_text = result[0]["generated_text"].replace(input_text, "").strip()
-        logger.info(f"Generated text: {generated_text}")
+        generated_text = (
+            decoded_outputs[0]["generated_text"].replace(input_text, "").strip()
+        )
+        logger.info(
+            "Generated text: %s",
+            decoded_outputs[0]["generated_text"].replace(input_text, "").strip(),
+        )
 
         logger.info(
             f"Tokenization time: {token_time:.4f}s | Inference time: {infer_time:.4f}s | Tokens: {num_tokens}"
@@ -164,6 +193,8 @@ class Llama3Model(PulseTemplateModel):
 
 
 class Llama3Trainer:
+    """Trainer class for Llama3Model."""
+
     def __init__(
         self, model: Llama3Model, train_loader, val_loader, test_loader
     ) -> None:
@@ -178,7 +209,7 @@ class Llama3Trainer:
             test_loader: The DataLoader object for the testing dataset.
         """
         # Load the model and tokenizer
-        model._load_model()  # Comment out to only test preprocessing
+        # model._load_model()  # Comment out to only test preprocessing
 
         self.model = model
         self.llama_model = model.llama_model
@@ -199,15 +230,6 @@ class Llama3Trainer:
 
         # Create model save directory if it doesn't exist
         os.makedirs(self.model_save_dir, exist_ok=True)
-
-        # Get the configured data converter
-        # TODO: implement this for LLMs?
-        # self.converter = prepare_data_for_model_dl(
-        #     self.train_loader,
-        #     self.params,
-        #     model_name=self.model.model_name,
-        #     task_name=self.task_name,
-        # )
 
     def train(self):
         """Training loop."""
@@ -336,12 +358,12 @@ class Llama3Trainer:
             metrics_tracker.add_results(predicted_probability, y_true)
 
         # After evaluation loop
-        logger.info(f"Total tokens: {total_tokens}")
+        logger.info("Total tokens: %s", total_tokens)
         logger.info(
-            f"Average tokenization time: {total_token_time / len(test_loader[0]):.4f}s"
+            "Average tokenization time: %.4fs", total_token_time / len(test_loader[0])
         )
         logger.info(
-            f"Average inference time: {total_infer_time / len(test_loader[0]):.4f}s"
+            "Average inference time: %.4fs", total_infer_time / len(test_loader[0])
         )
 
         metrics_tracker.summary = metrics_tracker.compute_overall_metrics()

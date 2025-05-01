@@ -1,6 +1,8 @@
+import json
 import logging
 import os
-from typing import Any, Dict, Optional
+import re
+from typing import Any, Dict, List, Optional
 
 import joblib
 import numpy as np
@@ -9,6 +11,7 @@ import torch
 import torch.nn as nn
 
 logger = logging.getLogger("PULSE_logger")
+
 
 class EarlyStopping:
     def __init__(self, patience=5, delta=0):
@@ -102,7 +105,6 @@ def prepare_data_for_model_ml(train_loader, val_loader, test_loader) -> Dict[str
             - feature_names: list of feature names (if available)
     """
 
-
     # Extract data from dataloaders
     X_train, y_train = [], []
     X_val, y_val = [], []
@@ -129,9 +131,13 @@ def prepare_data_for_model_ml(train_loader, val_loader, test_loader) -> Dict[str
         y_test = np.array(y_test)
 
     # Log shapes
-    logger.info(f"Prepared data shapes - X_train: {X_train.shape}, y_train: {y_train.shape}")
+    logger.info(
+        f"Prepared data shapes - X_train: {X_train.shape}, y_train: {y_train.shape}"
+    )
     logger.info(f"Prepared data shapes - X_val: {X_val.shape}, y_val: {y_val.shape}")
-    logger.info(f"Prepared data shapes - X_test: {X_test.shape}, y_test: {y_test.shape}")
+    logger.info(
+        f"Prepared data shapes - X_test: {X_test.shape}, y_test: {y_test.shape}"
+    )
 
     # Return all processed data
     return {
@@ -143,6 +149,7 @@ def prepare_data_for_model_ml(train_loader, val_loader, test_loader) -> Dict[str
         "y_test": y_test,
         "feature_names": feature_names,
     }
+
 
 def prepare_data_for_model_dl(
     data_loader,
@@ -164,8 +171,7 @@ def prepare_data_for_model_dl(
     """
 
     # Import the converter
-    from src.preprocessing.preprocessing_advanced.windowing import \
-        WindowedDataTo3D
+    from src.preprocessing.preprocessing_advanced.windowing import WindowedDataTo3D
 
     # Create converter with model name and config
     converter = WindowedDataTo3D(
@@ -222,3 +228,83 @@ def apply_model_prompt_format(model_id, prompt):
         formatted_prompt = prompt  # No formatting needed for other models
 
     return formatted_prompt
+
+
+# TODO: adjust to adhere to HF apply_chat_template
+def prompt_template(input_text: str) -> str:
+    """Create a prompt that asks the LLM to return diagnosis information in a JSON format.
+
+    Args:
+        input_text: The text to analyze.
+
+    Returns:
+        A formatted string prompt for the LLM.
+    """
+    prompt = f"""
+    You are a helpful assistant. Analyze the following text and determine the most likely diagnosis. 
+
+    Return the result strictly in this JSON format:
+
+    {{
+    "diagnosis": "<short diagnosis label>",
+    "probability": "<a value between 0 and 1 representing disease probability. 0 means no deasease, 1 means certain disease>",
+    "explanation": "<a brief explanation for the prediction>"
+    }}
+
+    Text:
+    {input_text}
+
+    Respond only with a valid JSON object. Do not include any additional commentary.
+    """
+    return prompt.strip()
+
+
+def prompt_template_hf(input_text: str) -> List[Dict[str, str]]:
+    """
+    Create a chat-based prompt compatible with Hugging Face's apply_chat_template.
+
+    Args:
+        input_text: The text to analyze.
+
+    Returns:
+        A list of chat messages (dicts) for the LLM.
+    """
+    system_message = (
+        "You are a helpful assistant. Analyze the following patient information and determine "
+        "the most likely diagnosis.\n\n"
+        "Return the result strictly in this JSON format:\n\n"
+        "{\n"
+        '  "diagnosis": "<short diagnosis label>",\n'
+        '  "probability": "<a value between 0 and 1 representing disease probability. 0 means no disease, 1 means certain disease>",\n'
+        '  "explanation": "<a brief explanation for the prediction>"\n'
+        "}\n\n"
+        "Respond only with a valid JSON object. Do not include any additional commentary."
+    )
+
+    return [
+        {"role": "system", "content": system_message},
+        {"role": "user", "content": f"Text:\n{input_text}"},
+    ]
+
+
+def extract_json(output_text: str) -> Optional[Dict[str, str]]:
+    """Extract and parse a JSON object from the model's output text.
+
+    Args:
+        output_text: The raw string returned by the language model.
+
+    Returns:
+        A dictionary parsed from the JSON string, or None if parsing fails.
+    """
+    try:
+        # Match the first JSON object in the output
+        match = re.search(r"\{.*?\}", output_text, re.DOTALL)
+        if not match:
+            print("No JSON object found.")
+            return None
+        json_str = match.group(0)
+        parsed = json.loads(json_str)
+        return parsed
+    except json.JSONDecodeError as e:
+        print(f"JSON parsing error: {e}")
+        return None

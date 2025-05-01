@@ -1,14 +1,16 @@
-# https://arxiv.org/pdf/2305.15525
-
 import logging
 from typing import Any, Dict, List, Tuple
 
 import numpy as np
 import pandas as pd
-from langchain.prompts import FewShotPromptTemplate, PromptTemplate
 
-from src.util.data_util import get_feature_name
-from src.util.model_util import apply_model_prompt_format
+from src.util.data_util import (
+    get_feature,
+    get_feature_name,
+    get_feature_reference_range,
+    get_feature_uom,
+)
+from src.util.model_util import prompt_template
 
 logger = logging.getLogger("PULSE_logger")
 
@@ -17,111 +19,208 @@ def few_shot_paper_preprocessor(
     X: List[pd.DataFrame], y: List[pd.DataFrame], info_dict: Dict[str, Any]
 ) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """
-    Preprocess input data into a text-based prompt format suitable for LLM models,
-    adhering to LangChain guidelines.
+    Preprocess ICU data into prompts using few-shot format and centralized JSON prompt template.
+    According to the paper "Large Language Models are Few-Shot Health Learners"
+    Paper: https://arxiv.org/pdf/2305.15525
 
     Args:
-        X (List[pd.DataFrame]): Input features.
-        y (List[pd.DataFrame]): Target labels.
-        info_dict (Dict[str, Any]): Additional task-specific information such as
-                                    'task', 'dataset', and 'model_name'.
+        X (List[pd.DataFrame]): [X_eval, X_train] (test/val features + training examples).
+        y (List[pd.DataFrame]): [y_eval, y_train] (corresponding labels).
+        info_dict (Dict[str, Any]): Task metadata (e.g. task name, model ID, etc).
 
     Returns:
-        Tuple[pd.DataFrame, pd.DataFrame]: Processed feature prompts and unchanged labels.
+        Tuple[pd.DataFrame, pd.DataFrame]: Prompt DataFrame and label DataFrame.
     """
     task = info_dict.get("task", "unknown_task")
     dataset = info_dict.get("dataset_name", "unknown_dataset")
     model_id = info_dict.get("model_name", "unknown_model")
     num_shots = info_dict.get("shots", 0)
-    mode = info_dict.get(
-        "mode", "train"
-    )  # Few-shot examples are only used in validation and test mode
+    mode = info_dict.get("mode", "train")
 
     logger.info(
-        f"Starting preprocessing for model '{model_id}' on dataset '{dataset}' and task '{task}'."
+        "Preprocessing model '%s' on dataset '%s', task '%s'", model_id, dataset, task
     )
-    prefix = ("You are an experienced doctor in the ICU.\n"
-    f"I will provide you with a sequence of ICU data, and you need to classify it as either '{task}' or 'not-{task}'.\n"
-    f"Please respond with only a floating-point number between 0 and 1, where a higher number suggests a greater likelihood of '{task}'.\n"
-    f"Below are Question-Answer pair examples of ICU data classified as '{task}' or 'not-{task}':\n")
 
-    # Remove all columns with _na suffix
-    X_in = X[0].filter(regex="^(?!.*_na$)")  # input data
-    y_in = y[0]  # labels
+    X_input = X[0].filter(regex=r"^(?!.*_na(_\d+)?$)")
+    y_input = y[0]
 
-    if mode != "train":
-        X_train = X[1].filter(regex="^(?!.*_na$)")  # few shot examples
-        y_train = y[1]  # few shot examples
+    # Extract unique feature base names (e.g., "hr" from "hr_1")
+    # and prepare feature descriptions for the reference section
+    base_features = []
+    for col in X_input.columns:
+        parts = col.split("_")
+        base_features.append(get_feature(parts[0]))
+
+    # Optional few-shot examples
+    X_train, y_train = None, None
+    if mode != "train" and len(X) > 1:
+        X_train = X[1].filter(regex=r"^(?!.*_na(_\d+)?$)")
+        y_train = y[1]
 
     prompts = []
-    feature_names = [get_feature_name(name) for name in X_in.columns.tolist()]  # Apply get_feature_name() here
-
-    # Define the prompt template
-    prompt_template = PromptTemplate(
-        input_variables=["features", "label"],
-        template="Q: Classify the given ICU data sequence as either {task} or not-{task}:\nFeatures:\n{features}\nA: {label}",
-    )
-
-    for idx, row in X_in.iterrows():
-        # Format the features for this instance
-        feature_string = ", ".join(
-            [
-                f"{feature_names[idx]}: {value}"  # Use feature_names from get_feature_name()
-                for idx, value in enumerate(row.values)
-                if pd.notna(value)
-            ]
+    for idx, row in X_input.iterrows():
+        # 1. Build the real query
+        query_features = ", ".join(
+            f"{base_features[i][0]}: {val} {base_features[i][1]}"
+            for i, val in enumerate(row.values)
+            if pd.notna(val)
         )
+        query_input_text = f"Patient ICU features: {query_features}"
+        query_prompt = prompt_template(query_input_text)
 
-        # Prepare few-shot examples if applicable
-        examples = []
-        if num_shots > 0 and mode != "train":
-            # Randomly select num_shots examples from the training set
-            random_indices = np.random.choice(
+        # 2. Build few-shot examples
+        few_shot_texts = []
+        if num_shots > 0 and X_train is not None:
+            indices = np.random.choice(
                 len(X_train), size=min(num_shots, len(X_train)), replace=False
             )
-            for shot_idx in random_indices:
-                shot_features = ", ".join(
-                    [
-                        f"{get_feature_name(col)} {value}"  # Apply get_feature_name() here as well
-                        for col, value in X_train.iloc[shot_idx].items()
-                        if pd.notna(value)
-                    ]
+            for i in indices:
+                train_features = ", ".join(
+                    f"{base_features[i][0]}: {val} {base_features[i][1]}"
+                    for i, val in enumerate(X_train.iloc[i].values)
+                    if pd.notna(val)
                 )
-                shot_label = (
-                    "not-" + task if y_train.iloc[shot_idx].values[1] == 0 else task
+                label = (
+                    y_train.iloc[i].values[1]
+                    if y_train.shape[1] > 1
+                    else y_train.iloc[i].values[0]
                 )
-                examples.append(
-                    {"features": shot_features, "label": shot_label, "task": task}
-                )  # Ensure 'task' is included
+                label_text = task if label == 1 else f"not-{task}"
 
-            # Create the FewShotPromptTemplate
-            few_shot_prompt = FewShotPromptTemplate(
-                examples=examples,
-                example_prompt=prompt_template,
-                prefix=prefix,
-                suffix="Q: Classify the given ICU data sequence as either {task} or not-{task}:\n   Features:\n{features}\n A: ",
-                input_variables=["features", "task"],
-                example_separator="\n\n",
-            )
-        else:
-            # If no few-shot examples, use a simple prompt template
-            few_shot_prompt = PromptTemplate(
-                input_variables=["features", "task"],
-                template="Q: Classify the given ICU data sequence as either {task} or not-{task}:\n   Features:\n{features}\nA: ",
-            )
+                shot_input_text = f"Patient ICU features: {train_features}"
+                # shot_prompt = prompt_template(shot_input_text)
 
-        # Generate the prompt
-        prompt = few_shot_prompt.format(features=feature_string, task=task)
+                # Replace the final JSON object with a static answer for few-shot example
+                example_json = {
+                    "diagnosis": label_text,
+                    "probability": "1.0",
+                    "explanation": "This is a known example for few-shot prompting.",
+                }
+                few_shot_texts.append(f"{shot_input_text}\n{example_json}")
 
-        # Reformat prompt according to model-specific requirements
-        # formatted_prompt = apply_model_prompt_format(model_id, prompt)
-        prompts.append(prompt)
+        # 3. Combine few-shot + query
+        full_prompt = "\n\n".join(few_shot_texts + [query_prompt])
+        prompts.append(full_prompt)
 
     X_processed = pd.DataFrame({"text": prompts})
+    return X_processed, y_input
 
-    logger.info(
-        f"Converted {len(prompts)} samples to text prompt format for model '{model_id}'."
-    )
 
-    return X_processed, y_in
+# --------------------------------
+# Helper functions
+# --------------------------------
 
+
+def prepare_feature_descriptions(base_features, X_cols):
+    """Prepare feature descriptions with name, unit of measurement, and reference range.
+
+    Args:
+        base_features: Set of base feature names
+        X_cols: DataFrame columns to check for additional features
+
+    Returns:
+        Feature descriptions text as a formatted string
+    """
+    # Generate feature descriptions for the reference section
+    feature_descriptions = []
+    for feature in sorted(base_features):  # Sort for consistent order
+        feature_name = get_feature_name(feature)
+        uom = get_feature_uom(feature)
+        range_values = get_feature_reference_range(feature)
+
+        if range_values:  # Check if the range exists (not empty tuple)
+            range_str = f"{range_values[0]} - {range_values[1]}"
+            feature_descriptions.append(
+                f"- {feature_name}: Unit: {uom}. Reference range: {range_str}."
+            )
+        else:
+            feature_descriptions.append(
+                f"- {feature_name}: Unit: {uom}. Reference range: /."
+            )
+
+    # Add weight and height to feature descriptions if they exist in the columns
+    if "weight" in X_cols:
+        weight_name = get_feature_name("weight")
+        weight_uom = get_feature_uom("weight")
+        feature_descriptions.append(
+            f"- {weight_name}: Unit: {weight_uom}. Reference range: /."
+        )
+
+    if "height" in X_cols:
+        height_name = get_feature_name("height")
+        height_uom = get_feature_uom("height")
+        feature_descriptions.append(
+            f"- {height_name}: Unit: {height_uom}. Reference range: /."
+        )
+
+    # Join all feature descriptions into a single string
+    return "\n".join(feature_descriptions)
+
+
+def format_patient_data(row, base_features, X_cols, data_window):
+    """Format patient data for prompting.
+
+    Args:
+        row: Patient data row
+        base_features: Set of base feature names
+        X_cols: DataFrame columns to extract feature columns from
+
+    Returns:
+        Tuple of (patient_info, patient_features_text)
+    """
+    # Extract patient demographic info
+    sex = row.get("sex", "unknown")
+    age = row.get("age", "unknown")
+    patient_info = f"The patient is a {sex}, aged {age} years."
+
+    # Format feature values
+    patient_features = []
+
+    # Process dynamic features (those with time series)
+    for feature in sorted(base_features):
+        # Get columns for this feature (e.g., hr_1, hr_2, etc.)
+        feature_cols = [col for col in X_cols if col.startswith(f"{feature}_")]
+
+        # Filter to only include columns with numeric indices
+        feature_cols = [col for col in feature_cols if col.split("_")[1].isdigit()]
+
+        # Print warning if the number of feature columns doesn't match the data window
+        if len(feature_cols) != data_window:
+            logger.warning(
+                f"Feature '{feature}' has {len(feature_cols)} columns, but expected {data_window} columns."
+            )
+
+        # Sort columns by time point
+        if feature_cols:  # Only sort if there are valid columns
+            feature_cols.sort(key=lambda x: int(x.split("_")[1]))
+
+        # Extract values for this feature across all time points
+        values = [str(row[col]) for col in feature_cols]
+        values_str = f'"{", ".join(values)}"'
+
+        # Use the proper feature name from dictionary
+        feature_name = get_feature_name(feature)
+        patient_features.append(f"- {feature_name}: {values_str}")
+
+    # Get number of time points from dynamic features
+    num_timepoints = len(feature_cols) if "feature_cols" in locals() else 6
+
+    # Process static features (weight and height) - repeat value for all time points
+    if "weight" in row.index and not pd.isna(row["weight"]):
+        weight_value = str(row["weight"])
+        weight_values = [weight_value] * num_timepoints
+        weight_str = f'"{", ".join(weight_values)}"'
+        weight_name = get_feature_name("weight")
+        patient_features.append(f"- {weight_name}: {weight_str}")
+
+    if "height" in row.index and not pd.isna(row["height"]):
+        height_value = str(row["height"])
+        height_values = [height_value] * num_timepoints
+        height_str = f'"{", ".join(height_values)}"'
+        height_name = get_feature_name("height")
+        patient_features.append(f"- {height_name}: {height_str}")
+
+    # Join patient features into a string
+    patient_features_text = "\n".join(patient_features)
+
+    return patient_info, patient_features_text
