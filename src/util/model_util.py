@@ -14,7 +14,6 @@ import torch.nn as nn
 logger = logging.getLogger("PULSE_logger")
 
 
-
 class EarlyStopping:
     def __init__(self, patience=5, delta=0):
         self.patience = patience
@@ -138,13 +137,7 @@ def prepare_data_for_model_convml(
     logger.info(
         f"Prepared data shapes - X_train: {X_train.shape}, y_train: {y_train.shape}"
     )
-    logger.info(
-        f"Prepared data shapes - X_train: {X_train.shape}, y_train: {y_train.shape}"
-    )
     logger.info(f"Prepared data shapes - X_val: {X_val.shape}, y_val: {y_val.shape}")
-    logger.info(
-        f"Prepared data shapes - X_test: {X_test.shape}, y_test: {y_test.shape}"
-    )
     logger.info(
         f"Prepared data shapes - X_test: {X_test.shape}, y_test: {y_test.shape}"
     )
@@ -159,6 +152,7 @@ def prepare_data_for_model_convml(
         "y_test": y_test,
         "feature_names": feature_names,
     }
+
 
 def prepare_data_for_model_convdl(
     data_loader,
@@ -254,6 +248,7 @@ def calculate_pos_weight(train_loader):
     except Exception as e:
         logger.error(f"Error calculating class weights: {e}")
         return 1.0
+
 
 @DeprecationWarning
 def apply_model_prompt_format(model_id, prompt):

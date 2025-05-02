@@ -1,44 +1,39 @@
-# https://arxiv.org/abs/2407.18525
-# zhu_2024_is_larger_always_better() implements the best setting prompt template used for mortality prediction on the MIMIC-IV dataset
-# should always use 1 shot!
-
 import logging
 from typing import Dict, Any, List, Tuple
 import numpy as np
 import pandas as pd
-from langchain.prompts import FewShotPromptTemplate, PromptTemplate
-from src.util.model_util import apply_model_prompt_format
-from src.util.data_util import (
-    get_feature_name,
-    get_feature_uom,
-    get_feature_reference_range,
+from langchain.prompts import PromptTemplate
+
+from src.preprocessing.preprocessing_advanced.preprocessing_advanced import (
+    PreprocessorAdvanced,
 )
 
 logger = logging.getLogger("PULSE_logger")
-
-# TODO: limit to 2 decimal places (depends on unstandardized data)
 
 
 def zhu_2024_is_larger_always_better_preprocessor(
     X: List[pd.DataFrame], y: List[pd.DataFrame], info_dict: Dict[str, Any]
 ) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """
-    Preprocess input data into a text-based prompt format suitable for LLM models,
-    adhering to LangChain guidelines.
+    Preprocess ICU data into prompts using few-shot format and centralized JSON prompt template.
+    According to the paper "Is larger always better? Evaluating and prompting large language models for non-generative medical tasks"
+    Paper: https://arxiv.org/abs/2407.18525
+    Implements the best setting prompt template used for mortality prediction on the MIMIC-IV dataset
 
-    Args:
-        X (List[pd.DataFrame]): Input features.
-        y (List[pd.DataFrame]): Target labels.
-        info_dict (Dict[str, Any]): Additional task-specific information such as
-                                    'task', 'dataset', and 'model_name'.
+        Args:
+            X (List[pd.DataFrame]): Input features.
+            y (List[pd.DataFrame]): Target labels.
+            info_dict (Dict[str, Any]): Additional task-specific information such as
+                                        'task', 'dataset', and 'model_name'.
 
-    Returns:
-        Tuple[pd.DataFrame, pd.DataFrame]: Processed feature prompts and unchanged labels.
+        Returns:
+            Tuple[pd.DataFrame, pd.DataFrame]: Prompt DataFrame and label DataFrame.
     """
+    preprocessor_advanced = PreprocessorAdvanced()
+
     task = info_dict.get("task")
     dataset = info_dict.get("dataset_name")
     model_id = info_dict.get("model_name")
-    # num_shots = info_dict.get("shots")
     num_shots = 1  # Fixed value of num_shots=1 for this specific implementation
     mode = info_dict.get(
         "mode"
@@ -52,7 +47,13 @@ def zhu_2024_is_larger_always_better_preprocessor(
         data_window = info_dict.get("data_window")
 
     logger.info(
-        f"'{mode}'-mode: Starting prompt preprocessing for model '{model_id}', dataset '{dataset}', task '{task}' with '{num_shots}' shots and '{data_window}' h data window'."
+        "'%s'-mode: Starting prompt preprocessing for model '%s', dataset '%s', task '%s' with '%s' shots and '%s' h data window'.",
+        mode,
+        model_id,
+        dataset,
+        task,
+        num_shots,
+        data_window,
     )
 
     prompts = []
@@ -69,6 +70,7 @@ def zhu_2024_is_larger_always_better_preprocessor(
             "task_description",
             "likelihood_description",
             "feature_descriptions_text",
+            "few_shot_examples",
             "patient_info",
             "patient_features_text",
             "data_window",
@@ -115,11 +117,11 @@ def zhu_2024_is_larger_always_better_preprocessor(
         task_description = "to determine the likelihood of the patient not surviving their hospital stay"
         likelihood_description = "a greater likelihood of death"
     elif task == "aki":
-        task_description = f"to determine the likelihood of the patient having acute kidney injury at the end of the data batch"
-        likelihood_description = f"a greater likelihood of acute kidney injury"
+        task_description = "to determine the likelihood of the patient having acute kidney injury at the end of the data batch"
+        likelihood_description = "a greater likelihood of acute kidney injury"
     else:  # task == "sepsis"
-        task_description = f"to determine the likelihood of the patient having sepsis at the end of the data batch"
-        likelihood_description = f"a greater likelihood of sepsis"
+        task_description = "to determine the likelihood of the patient having sepsis at the end of the data batch"
+        likelihood_description = "a greater likelihood of sepsis"
 
     # Extract unique feature base names (e.g., "hr" from "hr_1")
     base_features = set()
@@ -129,18 +131,9 @@ def zhu_2024_is_larger_always_better_preprocessor(
             base_features.add(parts[0])
 
     # Join all feature descriptions into a single string
-    feature_descriptions_text = prepare_feature_descriptions(
+    feature_descriptions_text = preprocessor_advanced.prepare_feature_descriptions(
         base_features, X_in.columns
     )
-
-    # Process each row to create individual prompts
-    for idx, row in X_in.iterrows():
-        # Format the patient data (using the helper function)
-        patient_info, patient_features_text = format_patient_data(
-            row, base_features, X_in.columns, data_window
-        )
-
-    # TODO: loop over all rows in X_in, not just the first one
 
     # Generate the time points string
     time_points = list(range(data_window))
@@ -166,8 +159,10 @@ def zhu_2024_is_larger_always_better_preprocessor(
             example_label = y_train.iloc[idx]
 
             # Format example patient data (using the helper function)
-            example_patient_info, example_patient_features_text = format_patient_data(
-                example_row, base_features, X_in.columns, data_window
+            example_patient_info, example_patient_features_text = (
+                preprocessor_advanced.format_patient_data(
+                    example_row, base_features, X_in.columns, data_window
+                )
             )
 
             # Format the example using the template
@@ -184,147 +179,34 @@ def zhu_2024_is_larger_always_better_preprocessor(
         # Join all examples
         few_shot_examples_text = "\n".join(few_shot_examples)
 
-    # Create final prompt for this patient
-    prompt = main_prompt_template.format(
-        task_description=task_description,
-        likelihood_description=likelihood_description,
-        feature_descriptions_text=feature_descriptions_text,
-        patient_info=patient_info,
-        patient_features_text=patient_features_text,
-        data_window=data_window,
-        time_points_str=time_points_str,
-        few_shot_examples=few_shot_examples_text,
-    )
+    # Process each row to create individual prompts
+    for idx, row in X_in.iterrows():
+        # Format the patient data (using the helper function)
+        patient_info, patient_features_text = preprocessor_advanced.format_patient_data(
+            row, base_features, X_in.columns, data_window
+        )
 
-    # Reformat prompt according to model-specific requirements
-    formatted_prompt = apply_model_prompt_format(model_id, prompt)
-    prompts.append(formatted_prompt)
+        # Create final prompt for this patient
+        prompt = main_prompt_template.format(
+            task_description=task_description,
+            likelihood_description=likelihood_description,
+            feature_descriptions_text=feature_descriptions_text,
+            patient_info=patient_info,
+            patient_features_text=patient_features_text,
+            data_window=data_window,
+            time_points_str=time_points_str,
+            few_shot_examples=few_shot_examples_text,
+        )
+
+        prompts.append(prompt)
 
     # Create dataframe with prompts
-    X_processed = pd.DataFrame({"prompt": prompts})
+    X_processed = pd.DataFrame({"text": prompts})
 
     logger.info(
-        f"Converted {len(prompts)} samples to text prompt format for model '{model_id}'."
+        "Converted %s samples to text prompt format for model '%s'.",
+        len(prompts),
+        model_id,
     )
 
     return X_processed, y_in
-
-
-# --------------------------------
-# Helper functions
-# --------------------------------
-
-
-def prepare_feature_descriptions(base_features, X_cols):
-    """Prepare feature descriptions with name, unit of measurement, and reference range.
-
-    Args:
-        base_features: Set of base feature names
-        X_cols: DataFrame columns to check for additional features
-
-    Returns:
-        Feature descriptions text as a formatted string
-    """
-    # Generate feature descriptions for the reference section
-    feature_descriptions = []
-    for feature in sorted(base_features):  # Sort for consistent order
-        feature_name = get_feature_name(feature)
-        uom = get_feature_uom(feature)
-        range_values = get_feature_reference_range(feature)
-
-        if range_values:  # Check if the range exists (not empty tuple)
-            range_str = f"{range_values[0]} - {range_values[1]}"
-            feature_descriptions.append(
-                f"- {feature_name}: Unit: {uom}. Reference range: {range_str}."
-            )
-        else:
-            feature_descriptions.append(
-                f"- {feature_name}: Unit: {uom}. Reference range: /."
-            )
-
-    # Add weight and height to feature descriptions if they exist in the columns
-    if "weight" in X_cols:
-        weight_name = get_feature_name("weight")
-        weight_uom = get_feature_uom("weight")
-        feature_descriptions.append(
-            f"- {weight_name}: Unit: {weight_uom}. Reference range: /."
-        )
-
-    if "height" in X_cols:
-        height_name = get_feature_name("height")
-        height_uom = get_feature_uom("height")
-        feature_descriptions.append(
-            f"- {height_name}: Unit: {height_uom}. Reference range: /."
-        )
-
-    # Join all feature descriptions into a single string
-    return "\n".join(feature_descriptions)
-
-
-def format_patient_data(row, base_features, X_cols, data_window):
-    """Format patient data for prompting.
-
-    Args:
-        row: Patient data row
-        base_features: Set of base feature names
-        X_cols: DataFrame columns to extract feature columns from
-
-    Returns:
-        Tuple of (patient_info, patient_features_text)
-    """
-    # Extract patient demographic info
-    sex = row.get("sex", "unknown")
-    age = row.get("age", "unknown")
-    patient_info = f"The patient is a {sex}, aged {age} years."
-
-    # Format feature values
-    patient_features = []
-
-    # Process dynamic features (those with time series)
-    for feature in sorted(base_features):
-        # Get columns for this feature (e.g., hr_1, hr_2, etc.)
-        feature_cols = [col for col in X_cols if col.startswith(f"{feature}_")]
-
-        # Filter to only include columns with numeric indices
-        feature_cols = [col for col in feature_cols if col.split("_")[1].isdigit()]
-
-        # Print warning if the number of feature columns doesn't match the data window
-        if len(feature_cols) != data_window:
-            logger.warning(
-                f"Feature '{feature}' has {len(feature_cols)} columns, but expected {data_window} columns."
-            )
-
-        # Sort columns by time point
-        if feature_cols:  # Only sort if there are valid columns
-            feature_cols.sort(key=lambda x: int(x.split("_")[1]))
-
-        # Extract values for this feature across all time points
-        values = [str(row[col]) for col in feature_cols]
-        values_str = f'"{", ".join(values)}"'
-
-        # Use the proper feature name from dictionary
-        feature_name = get_feature_name(feature)
-        patient_features.append(f"- {feature_name}: {values_str}")
-
-    # Get number of time points from dynamic features
-    num_timepoints = len(feature_cols) if "feature_cols" in locals() else 6
-
-    # Process static features (weight and height) - repeat value for all time points
-    if "weight" in row.index and not pd.isna(row["weight"]):
-        weight_value = str(row["weight"])
-        weight_values = [weight_value] * num_timepoints
-        weight_str = f'"{", ".join(weight_values)}"'
-        weight_name = get_feature_name("weight")
-        patient_features.append(f"- {weight_name}: {weight_str}")
-
-    if "height" in row.index and not pd.isna(row["height"]):
-        height_value = str(row["height"])
-        height_values = [height_value] * num_timepoints
-        height_str = f'"{", ".join(height_values)}"'
-        height_name = get_feature_name("height")
-        patient_features.append(f"- {height_name}: {height_str}")
-
-    # Join patient features into a string
-    patient_features_text = "\n".join(patient_features)
-
-    return patient_info, patient_features_text

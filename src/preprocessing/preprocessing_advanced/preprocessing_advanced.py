@@ -1,9 +1,14 @@
-
 import logging
 from typing import Any, Dict, List, Optional
 
 import numpy as np
 import pandas as pd
+
+from src.util.data_util import (
+    get_feature_name,
+    get_feature_uom,
+    get_feature_reference_range,
+)
 
 # Set up logger
 logger = logging.getLogger("PULSE_logger")
@@ -30,6 +35,124 @@ class PreprocessorAdvanced:
         """
         self.config = config or {}
         logger.info("Initialized PreprocessorAdvanced")
+
+    def prepare_feature_descriptions(self, base_features, X_cols):
+        """Prepare feature descriptions with name, unit of measurement, and reference range.
+
+        Args:
+            base_features: Set of base feature names
+            X_cols: DataFrame columns to check for additional features
+
+        Returns:
+            Feature descriptions text as a formatted string
+        """
+        # Generate feature descriptions for the reference section
+        feature_descriptions = []
+        for feature in sorted(base_features):  # Sort for consistent order
+            feature_name = get_feature_name(feature)
+            uom = get_feature_uom(feature)
+            range_values = get_feature_reference_range(feature)
+
+            if range_values:  # Check if the range exists (not empty tuple)
+                range_str = f"{range_values[0]} - {range_values[1]}"
+                feature_descriptions.append(
+                    f"- {feature_name}: Unit: {uom}. Reference range: {range_str}."
+                )
+            else:
+                feature_descriptions.append(
+                    f"- {feature_name}: Unit: {uom}. Reference range: /."
+                )
+
+        # Add weight and height to feature descriptions if they exist in the columns
+        if "weight" in X_cols:
+            weight_name = get_feature_name("weight")
+            weight_uom = get_feature_uom("weight")
+            feature_descriptions.append(
+                f"- {weight_name}: Unit: {weight_uom}. Reference range: /."
+            )
+
+        if "height" in X_cols:
+            height_name = get_feature_name("height")
+            height_uom = get_feature_uom("height")
+            feature_descriptions.append(
+                f"- {height_name}: Unit: {height_uom}. Reference range: /."
+            )
+
+        # Join all feature descriptions into a single string
+        return "\n".join(feature_descriptions)
+
+
+    def format_patient_data(self, row, base_features, X_cols, data_window):
+        """Format patient data for prompting.
+
+        Args:
+            row: Patient data row
+            base_features: Set of base feature names
+            X_cols: DataFrame columns to extract feature columns from
+
+        Returns:
+            Tuple of (patient_info, patient_features_text)
+        """
+        # Extract patient demographic info
+        sex = row.get("sex", "unknown")
+        age = row.get("age", "unknown")
+        patient_info = f"The patient is a {sex}, aged {age} years."
+
+        # Format feature values
+        patient_features = []
+
+        # Process dynamic features (those with time series)
+        for feature in sorted(base_features):
+            # Get columns for this feature (e.g., hr_1, hr_2, etc.)
+            feature_cols = [col for col in X_cols if col.startswith(f"{feature}_")]
+
+            # Filter to only include columns with numeric indices
+            feature_cols = [col for col in feature_cols if col.split("_")[1].isdigit()]
+
+            # Print warning if the number of feature columns doesn't match the data window
+            if len(feature_cols) != data_window:
+                logger.warning(
+                    "Feature '%s' has %s columns, but expected %s columns.",
+                    feature,
+                    len(feature_cols),
+                    data_window,
+                )
+
+            # Sort columns by time point
+            if feature_cols:  # Only sort if there are valid columns
+                feature_cols.sort(key=lambda x: int(x.split("_")[1]))
+
+            # Extract values for this feature across all time points
+            values = [f"{float(row[col]):.2f}" for col in feature_cols]
+            values_str = f'"{", ".join(values)}"'
+
+            # Use the proper feature name from dictionary
+            feature_name = get_feature_name(feature)
+            patient_features.append(f"- {feature_name}: {values_str}")
+
+        # Get number of time points from dynamic features
+        num_timepoints = len(feature_cols) if "feature_cols" in locals() else 6
+
+        # Process static features (weight and height) - repeat value for all time points
+        if "weight" in row.index and not pd.isna(row["weight"]):
+            weight_value = f"{float(row['weight']):.2f}"
+            weight_values = [weight_value] * num_timepoints
+            weight_str = f'"{", ".join(weight_values)}"'
+            weight_name = get_feature_name("weight")
+            patient_features.append(f"- {weight_name}: {weight_str}")
+
+        if "height" in row.index and not pd.isna(row["height"]):
+            height_value = f"{float(row['height']):.2f}"
+            height_values = [height_value] * num_timepoints
+            height_str = f'"{", ".join(height_values)}"'
+            height_name = get_feature_name("height")
+            patient_features.append(f"- {height_name}: {height_str}")
+
+        # Join patient features into a string
+        patient_features_text = "\n".join(patient_features)
+
+        return patient_info, patient_features_text
+
         
     def aggregate_data_window(self,
                              windowed_df: pd.DataFrame,
@@ -85,6 +208,9 @@ class PreprocessorAdvanced:
         # WORK IN PROGRESS
         # Implementation logic here
         
+        # Placeholder for X_aligned and y_aligned until implementation is complete
+        X_aligned = X.copy()
+        y_aligned = y.copy()
         return X_aligned, y_aligned
         
     def select_features(self,
