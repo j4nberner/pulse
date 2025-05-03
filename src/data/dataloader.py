@@ -324,7 +324,9 @@ class DatasetManager:
 
         few_shot_list = [
             "few_shot_paper_preprocessor",
-            "zhu_2024_is_larger_always_better_preprocessor",
+            "zhu_2024a_one_shot_cot_preprocessor",
+            "zhu_2024b_one_shot_preprocessor",
+            "zhu_2024c_categorized_summary_preprocessor",
         ]
 
         # Take only n rows if in debug
