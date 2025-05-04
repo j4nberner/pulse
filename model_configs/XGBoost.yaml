@@ -5,7 +5,7 @@ params:
   trainer_name: "XGBoostTrainer" # Class that implements the training process
   type: "convML" # Type of model (convML for conventional machine learning, convDL for conventional deep learning and LLM for large language models)
   tune_hyperparameters: false # Whether to tune hyperparameters
-  objective: "binary:logistic" # For binary classification tasks like AKI prediction
+  objective: "binary:logistic" # For binary classification tasks
   n_estimators: 80 # Number of boosting rounds/trees to build
   learning_rate: 0.05 # Controls how much each tree contributes to the final model (eta)
   random_state: 42 # Seed for reproducible results

@@ -1,10 +1,8 @@
 import logging
 import os
-from collections import OrderedDict
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -32,36 +30,40 @@ class InceptionTimeModel(PulseTemplateModel, nn.Module):
     """
 
     class Inception(nn.Module):
-        def __init__(self, in_channels, out_channels):
+        def __init__(self, in_channels, out_channels, kernel_sizes=[1, 3, 5]):
             super(InceptionTimeModel.Inception, self).__init__()
             self.bottleneck = nn.Conv1d(
                 in_channels, out_channels, kernel_size=1, padding="same"
             )
-            self.conv1 = nn.Conv1d(
-                out_channels, out_channels, kernel_size=1, padding="same"
-            )
-            self.conv2 = nn.Conv1d(
-                out_channels, out_channels, kernel_size=3, padding="same"
-            )
-            self.conv3 = nn.Conv1d(
-                out_channels, out_channels, kernel_size=5, padding="same"
-            )
+            # Create convolutional layers based on provided kernel sizes
+            self.conv_layers = nn.ModuleList()
+            for k_size in kernel_sizes:
+                self.conv_layers.append(
+                    nn.Conv1d(
+                        out_channels, out_channels, kernel_size=k_size, padding="same"
+                    )
+                )
 
             self.conv_pool = nn.Conv1d(
                 in_channels, out_channels, kernel_size=1, padding="same"
             )
             self.pool = nn.MaxPool1d(kernel_size=3, stride=1, padding=1)
 
-            self.batch_norm = nn.BatchNorm1d(out_channels * 4)
+            # BatchNorm layer needs to account for all kernel paths plus the pooling path
+            self.batch_norm = nn.BatchNorm1d(out_channels * (len(kernel_sizes) + 1))
 
         def forward(self, x):
             x0 = self.bottleneck(x)
-            x1 = self.conv1(x0)
-            x2 = self.conv2(x0)
-            x3 = self.conv3(x0)
-            x4 = self.conv_pool(self.pool(x))
 
-            out = torch.cat([x1, x2, x3, x4], dim=1)
+            # Apply each conv layer to the bottleneck output
+            conv_outputs = [conv(x0) for conv in self.conv_layers]
+
+            # Add the pooling path
+            pool_output = self.conv_pool(self.pool(x))
+
+            # Concatenate all outputs
+            out = torch.cat(conv_outputs + [pool_output], dim=1)
+
             out = self.batch_norm(out)
             out = F.leaky_relu(out)
 
@@ -103,7 +105,9 @@ class InceptionTimeModel(PulseTemplateModel, nn.Module):
                 self.counter += 1
                 if self.verbose:
                     logger.info(
-                        f"EarlyStopping counter: {self.counter} out of {self.patience}"
+                        "EarlyStopping counter: %d out of %d",
+                        self.counter,
+                        self.patience,
                     )
                 if self.counter >= self.patience:
                     self.early_stop = True
@@ -114,7 +118,9 @@ class InceptionTimeModel(PulseTemplateModel, nn.Module):
         def save_checkpoint(self, val_loss, model):
             if self.verbose:
                 logger.info(
-                    f"Validation loss decreased ({self.best_val_loss:.6f} --> {val_loss:.6f}). Saving model state..."
+                    "Validation loss decreased (%.6f --> %.6f). Saving model state...",
+                    self.best_val_loss,
+                    val_loss,
                 )
             self.best_state_dict = model.state_dict().copy()
             self.best_val_loss = val_loss
@@ -149,6 +155,7 @@ class InceptionTimeModel(PulseTemplateModel, nn.Module):
             "num_epochs",
             "earlystopping_patience",
             "depth",
+            "kernel_sizes",
             "dropout_rate",
             "optimizer_name",
             "learning_rate",
@@ -169,7 +176,7 @@ class InceptionTimeModel(PulseTemplateModel, nn.Module):
 
         # Log configuration details
         logger.info(
-            f"Initializing {self.model_name} model with parameters: {self.params}"
+            "Initializing %s model with parameters: %s", self.model_name, self.params
         )
 
         # Set the model save directory
@@ -180,6 +187,8 @@ class InceptionTimeModel(PulseTemplateModel, nn.Module):
 
         # Network architecture parameters directly from params
         self.depth = self.params["depth"]
+        self.kernel_sizes = self.params["kernel_sizes"]
+        logger.debug(f"Using kernel sizes: {self.kernel_sizes} for inception modules")
         self.dropout_rate = self.params["dropout_rate"]
 
         # These will be set in _init_model
@@ -213,22 +222,28 @@ class InceptionTimeModel(PulseTemplateModel, nn.Module):
         Args:
             num_channels: Number of input channels
         """
+        # Calculate number of paths in each inception block
+        num_paths_per_block = len(self.kernel_sizes) + 1  # kernels + pooling path
+
         # Reset channel configurations
-        self.in_channels = [num_channels]
-        self.out_channels = [min(256, num_channels)]
+        self.in_channels = [num_channels]  # First layer input is data channels
+        self.out_channels = [min(256, num_channels)]  # First layer output channels
 
         # Configure channel dimensions for each layer
         for i in range(1, self.depth):
+            # Input to this layer is the concatenated output from previous layer
             prev_out = self.out_channels[i - 1]
+            prev_in = prev_out * num_paths_per_block
+
+            self.in_channels.append(prev_in)
+
+            # Determine output channels based on depth position
             if i < self.depth // 3:
-                self.in_channels.append(prev_out * 4)
-                self.out_channels.append(prev_out)
+                self.out_channels.append(prev_out)  # Same as previous
             elif i < 2 * self.depth // 3:
-                self.in_channels.append(prev_out * 4)
-                self.out_channels.append(max(prev_out // 2, 32))
+                self.out_channels.append(max(prev_out // 2, 32))  # Half, min 32
             else:
-                self.in_channels.append(prev_out * 4)
-                self.out_channels.append(max(prev_out // 2, 16))
+                self.out_channels.append(max(prev_out // 2, 16))  # Half, min 16
 
     def create_network_with_input_shape(self, num_channels: int) -> None:
         """
@@ -241,6 +256,10 @@ class InceptionTimeModel(PulseTemplateModel, nn.Module):
         # Reconfigure channel dimensions using the helper method
         self._configure_channels(num_channels)
 
+        # Calculate output channels for each inception block based on kernel sizes
+        # Each kernel size contributes one path, plus there's one pooling path
+        num_paths_per_block = len(self.kernel_sizes) + 1
+
         # Store inception and residual modules separately
         self.inception_modules = nn.ModuleList()
         self.residual_connections = {}
@@ -249,19 +268,22 @@ class InceptionTimeModel(PulseTemplateModel, nn.Module):
         for d in range(self.depth):
             self.inception_modules.append(
                 self.Inception(
-                    in_channels=self.in_channels[d], out_channels=self.out_channels[d]
+                    in_channels=self.in_channels[d],
+                    out_channels=self.out_channels[d],
+                    kernel_sizes=self.kernel_sizes,
                 )
             )
             if d % 3 == 2 and d >= 2:  # Add residual connection every 3rd block
                 self.residual_connections[d] = self.Residual(
-                    in_channels=self.out_channels[d - 2] * 4,
-                    out_channels=self.out_channels[d] * 4,
+                    in_channels=self.out_channels[d - 2] * num_paths_per_block,
+                    out_channels=self.out_channels[d] * num_paths_per_block,
                 )
 
         # Add global average pooling and fully connected layers
         self.global_avg_pool = self.Lambda(lambda x: torch.mean(x, dim=-1))
         self.dropout1 = nn.Dropout(self.dropout_rate)
-        self.fc1 = nn.Linear(4 * self.out_channels[-1], 64)
+        # Update FC layer input size to account for variable number of paths
+        self.fc1 = nn.Linear(num_paths_per_block * self.out_channels[-1], 64)
         self.relu1 = nn.LeakyReLU()
         self.dropout2 = nn.Dropout(self.dropout_rate)
         self.fc2 = nn.Linear(64, 16)
@@ -273,26 +295,29 @@ class InceptionTimeModel(PulseTemplateModel, nn.Module):
 
     def forward(self, x):
         """
-        Forward pass through the network with manual residual connection handling.
+        Forward pass through the network with optimized residual connection handling.
         """
-        # Store outputs for residual connections
-        layer_outputs = []
+        # Use a fixed-size list to track only the outputs needed for residual connections
+        # We only need to remember the last 3 outputs (for the residual connections)
+        recent_outputs = [None, None, None]
 
         # Process through inception modules with residual connections
-        for i in range(len(self.inception_modules)):
-            # Store input for residual connection
-            if i > 0 and i % 3 == 0:
-                residual_input = layer_outputs[i - 3]
-
+        for i, inception_module in enumerate(self.inception_modules):
             # Apply inception module
-            x = self.inception_modules[i](x)
-            layer_outputs.append(x)
+            x = inception_module(x)
 
             # Apply residual connection if needed
-            if i in self.residual_connections:
+            if i in self.residual_connections and recent_outputs[0] is not None:
+                # Only use residual connection if we have a valid tensor
+                residual_input = recent_outputs[0]  # first element is oldest
                 residual_module = self.residual_connections[i]
-                x = residual_module(layer_outputs[i - 2], x)
-                layer_outputs[i] = x  # Update current output
+                x = residual_module(residual_input, x)
+
+            # Shift outputs window and store current output (circular buffer style)
+            recent_outputs.pop(0)  # Remove oldest output
+            recent_outputs.append(
+                x.clone()
+            )  # Add current output (use clone for safety)
 
         # Apply final layers
         x = self.global_avg_pool(x)
@@ -358,7 +383,7 @@ class InceptionTimeTrainer:
 
         # Log which task is being processed
         if self.task_name:
-            logger.info(f"Preparing InceptionTime model for task: {self.task_name}")
+            logger.info("Preparing InceptionTime model for task: %s", self.task_name)
 
         # Data preparation
         self._prepare_data()
@@ -369,7 +394,8 @@ class InceptionTimeTrainer:
             pos_weight=torch.tensor([self.pos_weight]).to(self.device)
         )
         logger.info(
-            f"Using criterion: {self.criterion.__class__.__name__} with class weight adjustment"
+            "Using criterion: %s with class weight adjustment",
+            self.criterion.__class__.__name__,
         )
 
         # Initialize optimizer based on config
@@ -389,7 +415,7 @@ class InceptionTimeTrainer:
             self.optimizer = optim.SGD(
                 self.model.parameters(), lr=lr, weight_decay=weight_decay
             )
-        logger.info(f"Using optimizer: {self.optimizer.__class__.__name__}")
+        logger.info("Using optimizer: %s", self.optimizer.__class__.__name__)
 
         # Initialize scheduler
         scheduler_factor = self.params["scheduler_factor"]
@@ -427,10 +453,11 @@ class InceptionTimeTrainer:
         self.model.create_network_with_input_shape(num_channels)
 
         logger.info(
-            f"Input shape to model (after transformation): {transformed_features.shape}"
+            "Input shape to model (after transformation): %s",
+            transformed_features.shape,
         )
         logger.info(
-            f"Model architecture initialized with {num_channels} input channels"
+            "Model architecture initialized with %d input channels", num_channels
         )
 
     def train(self):
@@ -443,14 +470,14 @@ class InceptionTimeTrainer:
         # Initialize metrics tracking dictionary (not used for earlystopping, logging or wandb)
         self.metrics = {"train_loss": [], "val_loss": []}
 
-        logger.info(f"Starting training on device: {self.device}")
+        logger.info("Starting training on device: %s", self.device)
 
         for epoch in range(self.params["num_epochs"]):
             early_stopped = self.train_epoch(epoch, verbose=self.params["verbose"])
 
             # Check if early stopping was triggered
             if early_stopped:
-                logger.info(f"Early stopping triggered after {epoch+1} epochs")
+                logger.info("Early stopping triggered after %d epochs", epoch + 1)
                 break  # Exit the training loop
 
             # Save checkpoint periodically
@@ -504,15 +531,19 @@ class InceptionTimeTrainer:
                 self.model.parameters(), max_norm=max_norm
             )
             if total_norm > max_norm:
-                logger.info(f"Gradient norm {total_norm:.4f} clipped to {max_norm}")
+                logger.info("Gradient norm %.4f clipped to %.4f", total_norm, max_norm)
             self.optimizer.step()
 
             train_loss += loss.item()
 
-            # Log progress for each batch if verbose=2, or every 100 batches if verbose=1
-            if verbose == 2 or verbose == 1 and batch_idx % 100 == 0:
+            # Log progress for each batch if verbose=2, or every 10 batches if verbose=1
+            if verbose == 2 or verbose == 1 and batch_idx % 10 == 0:
                 logger.info(
-                    f"Epoch {epoch+1}, Batch {batch_idx+1}/{len(self.train_loader)}, Loss: {loss.item():.4f}"
+                    "Epoch %d, Batch %d/%d, Loss: %.4f",
+                    epoch + 1,
+                    batch_idx + 1,
+                    len(self.train_loader),
+                    loss.item(),
                 )
 
         # Calculate average loss for the epoch
@@ -524,15 +555,16 @@ class InceptionTimeTrainer:
         self.metrics["val_loss"].append(val_loss)
 
         # Update learning rate
-        # TODO: Lakmal will give feedback on whether to use val_loss or train_loss for learning rate update
         self.scheduler.step(val_loss)
 
         # Log progress
         logger.info(
-            f"Epoch {epoch+1}/{self.params['num_epochs']} - "
-            f"Train Loss: {avg_train_loss:.4f}, "
-            f"Val Loss: {val_loss:.4f}, "
-            f"LR: {self.optimizer.param_groups[0]['lr']:.6f}"
+            "Epoch %d/%d - Train Loss: %.4f, Val Loss: %.4f, LR: %.6f",
+            epoch + 1,
+            self.params["num_epochs"],
+            avg_train_loss,
+            val_loss,
+            self.optimizer.param_groups[0]["lr"],
         )
 
         # Log to WandB if enabled
@@ -612,7 +644,10 @@ class InceptionTimeTrainer:
                     self.params["verbose"] == 1 and batch_idx % 100 == 0
                 ):
                     logger.info(
-                        f"Evaluating batch {batch_idx+1}/{len(self.test_loader)}: Accuracy = {batch_accuracy:.4f}"
+                        "Evaluating batch %d/%d: Accuracy = %.4f",
+                        batch_idx + 1,
+                        len(self.test_loader),
+                        batch_accuracy,
                     )
 
         # Calculate and log metrics
@@ -620,10 +655,10 @@ class InceptionTimeTrainer:
         metrics_tracker.save_report()
 
         # Log results to console
-        logger.info(f"Test evaluation completed for {self.model.model_name}")
-        logger.info(f"Test metrics: {metrics_tracker.summary}")
+        logger.info("Test evaluation completed for %s", self.model.model_name)
+        logger.info("Test metrics: %s", metrics_tracker.summary)
         logger.info(
-            f"Average batch accuracy: {sum(batch_metrics)/len(batch_metrics):.4f}"
+            "Average batch accuracy: %.4f", sum(batch_metrics) / len(batch_metrics)
         )
 
         # Log all metrics to wandb if enabled
