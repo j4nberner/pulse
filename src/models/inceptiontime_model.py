@@ -12,6 +12,7 @@ import wandb
 from src.eval.metrics import MetricsTracker
 from src.models.pulsetemplate_model import PulseTemplateModel
 from src.util.model_util import (
+    EarlyStopping,
     prepare_data_for_model_convdl,
     save_torch_model,
     calculate_pos_weight,
@@ -20,7 +21,6 @@ from src.util.model_util import (
 # Set up logger
 logger = logging.getLogger("PULSE_logger")
 
-# TODO: implement EarlyStopping from src/util/model_util.py
 # TODO: implement load presaved model weights from path (specified in config)
 
 
@@ -90,41 +90,6 @@ class InceptionTimeModel(PulseTemplateModel, nn.Module):
         def forward(self, x):
             return self.f(x)
 
-    class EarlyStopping:
-        def __init__(self, patience=5, verbose=False, delta=0):
-            self.patience = patience
-            self.verbose = verbose
-            self.counter = 0
-            self.early_stop = False
-            self.best_val_loss = float("inf")
-            self.delta = delta
-            self.best_state_dict = None
-
-        def __call__(self, val_loss, model):
-            if val_loss > self.best_val_loss - self.delta:
-                self.counter += 1
-                if self.verbose:
-                    logger.info(
-                        "EarlyStopping counter: %d out of %d",
-                        self.counter,
-                        self.patience,
-                    )
-                if self.counter >= self.patience:
-                    self.early_stop = True
-            else:
-                self.save_checkpoint(val_loss, model)
-                self.counter = 0
-
-        def save_checkpoint(self, val_loss, model):
-            if self.verbose:
-                logger.info(
-                    "Validation loss decreased (%.6f --> %.6f). Saving model state...",
-                    self.best_val_loss,
-                    val_loss,
-                )
-            self.best_state_dict = model.state_dict().copy()
-            self.best_val_loss = val_loss
-
     def __init__(self, params: Dict[str, Any], **kwargs) -> None:
         """
         Initialize the InceptionTime model.
@@ -188,7 +153,7 @@ class InceptionTimeModel(PulseTemplateModel, nn.Module):
         # Network architecture parameters directly from params
         self.depth = self.params["depth"]
         self.kernel_sizes = self.params["kernel_sizes"]
-        logger.debug(f"Using kernel sizes: {self.kernel_sizes} for inception modules")
+        logger.debug("Using kernel sizes: %s for inception modules", self.kernel_sizes)
         self.dropout_rate = self.params["dropout_rate"]
 
         # These will be set in _init_model
@@ -197,7 +162,7 @@ class InceptionTimeModel(PulseTemplateModel, nn.Module):
         self.network = None
 
         # Initialize early stopping
-        self.early_stopping = self.EarlyStopping(
+        self.early_stopping = EarlyStopping(
             patience=self.params["earlystopping_patience"], verbose=True
         )
 
@@ -491,10 +456,7 @@ class InceptionTimeTrainer:
         logger.info("Training completed.")
 
         # After training loop, load best model weights and save final model
-        if self.model.early_stopping.best_state_dict:
-            self.model.load_state_dict(self.model.early_stopping.best_state_dict)
-        save_torch_model(f"{self.model.model_name}", self.model, self.model_save_dir)
-
+        self.model.early_stopping.load_best_model(self.model)
         model_save_name = f"{self.model.model_name}_{self.task_name}_{self.dataset_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pt"
         save_torch_model(model_save_name, self.model, self.model_save_dir)
 

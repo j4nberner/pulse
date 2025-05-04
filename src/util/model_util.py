@@ -15,8 +15,9 @@ logger = logging.getLogger("PULSE_logger")
 
 
 class EarlyStopping:
-    def __init__(self, patience=5, delta=0):
+    def __init__(self, patience=5, verbose=False, delta=0):
         self.patience = patience
+        self.verbose = verbose
         self.delta = delta
         self.best_score = None
         self.early_stop = False
@@ -31,15 +32,31 @@ class EarlyStopping:
             self.best_model_state = model.state_dict()
         elif score < self.best_score + self.delta:
             self.counter += 1
+            if self.verbose:
+                logger.info(
+                    "EarlyStopping counter: %d out of %d",
+                    self.counter,
+                    self.patience,
+                )
             if self.counter >= self.patience:
                 self.early_stop = True
         else:
+            if self.verbose:
+                logger.debug(
+                    "Score improved (%.6f --> %.6f). Saving model state...",
+                    self.best_score,
+                    score,
+                )
             self.best_score = score
             self.best_model_state = model.state_dict()
             self.counter = 0
 
     def load_best_model(self, model):
-        model.load_state_dict(self.best_model_state)
+        """Load the best model state into the provided model."""
+        if self.best_model_state is not None:
+            model.load_state_dict(self.best_model_state)
+            if self.verbose:
+                logger.info("Loaded best model state from early stopping")
 
 
 def save_torch_model(model_name: str, model: Any, save_dir: str) -> None:

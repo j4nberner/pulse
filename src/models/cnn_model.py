@@ -195,6 +195,7 @@ class CNNTrainer:
         self.dataset_name = self.model.dataset_name
         self.early_stopping = EarlyStopping(
             patience=self.params["early_stopping_rounds"],
+            verbose=True,
             delta=0.0,
         )
 

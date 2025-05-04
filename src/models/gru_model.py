@@ -11,6 +11,7 @@ import wandb
 from src.eval.metrics import MetricsTracker
 from src.models.pulsetemplate_model import PulseTemplateModel
 from src.util.model_util import (
+    EarlyStopping,
     prepare_data_for_model_convdl,
     save_torch_model,
     calculate_pos_weight,
@@ -27,41 +28,6 @@ class GRUModel(PulseTemplateModel, nn.Module):
     The model uses GRU layers to process sequential data followed by
     fully connected layers for classification.
     """
-
-    class EarlyStopping:
-        def __init__(self, patience=5, verbose=False, delta=0):
-            self.patience = patience
-            self.verbose = verbose
-            self.counter = 0
-            self.early_stop = False
-            self.best_val_loss = float("inf")
-            self.delta = delta
-            self.best_state_dict = None
-
-        def __call__(self, val_loss, model):
-            if val_loss > self.best_val_loss - self.delta:
-                self.counter += 1
-                if self.verbose:
-                    logger.info(
-                        "EarlyStopping counter: %d out of %d",
-                        self.counter,
-                        self.patience,
-                    )
-                if self.counter >= self.patience:
-                    self.early_stop = True
-            else:
-                self.save_checkpoint(val_loss, model)
-                self.counter = 0
-
-        def save_checkpoint(self, val_loss, model):
-            if self.verbose:
-                logger.info(
-                    "Validation loss decreased (%.6f --> %.6f). Saving model state...",
-                    self.best_val_loss,
-                    val_loss,
-                )
-            self.best_state_dict = model.state_dict().copy()
-            self.best_val_loss = val_loss
 
     def __init__(self, params: Dict[str, Any], **kwargs) -> None:
         """
@@ -134,7 +100,7 @@ class GRUModel(PulseTemplateModel, nn.Module):
         self.input_dim = None
 
         # Initialize early stopping
-        self.early_stopping = self.EarlyStopping(
+        self.early_stopping = EarlyStopping(
             patience=self.params["earlystopping_patience"], verbose=True
         )
 
@@ -392,9 +358,7 @@ class GRUTrainer:
         logger.info("Training completed.")
 
         # After training loop, load best model weights and save final model
-        if self.model.early_stopping.best_state_dict:
-            self.model.load_state_dict(self.model.early_stopping.best_state_dict)
-
+        self.model.early_stopping.load_best_model(self.model)
         model_save_name = f"{self.model.model_name}_{self.task_name}_{self.dataset_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pt"
         save_torch_model(model_save_name, self.model, self.model_save_dir)
         # Evaluate the model on the testing set
