@@ -327,6 +327,7 @@ class DatasetManager:
             "zhu_2024a_one_shot_cot_preprocessor",
             "zhu_2024b_one_shot_preprocessor",
             "zhu_2024c_categorized_summary_preprocessor",
+            "sarvari_aggregation_preprocessor",
         ]
 
         # Take only n rows if in debug
