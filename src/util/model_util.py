@@ -14,10 +14,10 @@ import torch.nn as nn
 logger = logging.getLogger("PULSE_logger")
 
 
-
 class EarlyStopping:
-    def __init__(self, patience=5, delta=0):
+    def __init__(self, patience=5, verbose=False, delta=0):
         self.patience = patience
+        self.verbose = verbose
         self.delta = delta
         self.best_score = None
         self.early_stop = False
@@ -32,15 +32,31 @@ class EarlyStopping:
             self.best_model_state = model.state_dict()
         elif score < self.best_score + self.delta:
             self.counter += 1
+            if self.verbose:
+                logger.info(
+                    "EarlyStopping counter: %d out of %d",
+                    self.counter,
+                    self.patience,
+                )
             if self.counter >= self.patience:
                 self.early_stop = True
         else:
+            if self.verbose:
+                logger.debug(
+                    "Score improved (%.6f --> %.6f). Saving model state...",
+                    self.best_score,
+                    score,
+                )
             self.best_score = score
             self.best_model_state = model.state_dict()
             self.counter = 0
 
     def load_best_model(self, model):
-        model.load_state_dict(self.best_model_state)
+        """Load the best model state into the provided model."""
+        if self.best_model_state is not None:
+            model.load_state_dict(self.best_model_state)
+            if self.verbose:
+                logger.info("Loaded best model state from early stopping")
 
 
 def save_torch_model(model_name: str, model: Any, save_dir: str) -> None:
@@ -138,13 +154,7 @@ def prepare_data_for_model_convml(
     logger.info(
         f"Prepared data shapes - X_train: {X_train.shape}, y_train: {y_train.shape}"
     )
-    logger.info(
-        f"Prepared data shapes - X_train: {X_train.shape}, y_train: {y_train.shape}"
-    )
     logger.info(f"Prepared data shapes - X_val: {X_val.shape}, y_val: {y_val.shape}")
-    logger.info(
-        f"Prepared data shapes - X_test: {X_test.shape}, y_test: {y_test.shape}"
-    )
     logger.info(
         f"Prepared data shapes - X_test: {X_test.shape}, y_test: {y_test.shape}"
     )
@@ -159,6 +169,7 @@ def prepare_data_for_model_convml(
         "y_test": y_test,
         "feature_names": feature_names,
     }
+
 
 def prepare_data_for_model_convdl(
     data_loader,
@@ -254,6 +265,7 @@ def calculate_pos_weight(train_loader):
     except Exception as e:
         logger.error(f"Error calculating class weights: {e}")
         return 1.0
+
 
 @DeprecationWarning
 def apply_model_prompt_format(model_id, prompt):

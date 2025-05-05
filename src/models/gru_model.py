@@ -1,19 +1,17 @@
 import logging
 import os
-from collections import OrderedDict
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-import numpy as np
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import torch.optim as optim
 
 import wandb
 from src.eval.metrics import MetricsTracker
 from src.models.pulsetemplate_model import PulseTemplateModel
 from src.util.model_util import (
+    EarlyStopping,
     prepare_data_for_model_convdl,
     save_torch_model,
     calculate_pos_weight,
@@ -30,37 +28,6 @@ class GRUModel(PulseTemplateModel, nn.Module):
     The model uses GRU layers to process sequential data followed by
     fully connected layers for classification.
     """
-
-    class EarlyStopping:
-        def __init__(self, patience=5, verbose=False, delta=0):
-            self.patience = patience
-            self.verbose = verbose
-            self.counter = 0
-            self.early_stop = False
-            self.best_val_loss = float("inf")
-            self.delta = delta
-            self.best_state_dict = None
-
-        def __call__(self, val_loss, model):
-            if val_loss > self.best_val_loss - self.delta:
-                self.counter += 1
-                if self.verbose:
-                    logger.info(
-                        f"EarlyStopping counter: {self.counter} out of {self.patience}"
-                    )
-                if self.counter >= self.patience:
-                    self.early_stop = True
-            else:
-                self.save_checkpoint(val_loss, model)
-                self.counter = 0
-
-        def save_checkpoint(self, val_loss, model):
-            if self.verbose:
-                logger.info(
-                    f"Validation loss decreased ({self.best_val_loss:.6f} --> {val_loss:.6f}). Saving model state..."
-                )
-            self.best_state_dict = model.state_dict().copy()
-            self.best_val_loss = val_loss
 
     def __init__(self, params: Dict[str, Any], **kwargs) -> None:
         """
@@ -94,6 +61,8 @@ class GRUModel(PulseTemplateModel, nn.Module):
             "hidden_dim",
             "layer_dim",
             "dropout_rate",
+            "fc_layers",
+            "activation",
             "optimizer_name",
             "learning_rate",
             "weight_decay",
@@ -113,7 +82,7 @@ class GRUModel(PulseTemplateModel, nn.Module):
 
         # Log configuration details
         logger.info(
-            f"Initializing {self.model_name} model with parameters: {self.params}"
+            "Initializing %s model with parameters: %s", self.model_name, self.params
         )
 
         # Set the model save directory
@@ -131,7 +100,7 @@ class GRUModel(PulseTemplateModel, nn.Module):
         self.input_dim = None
 
         # Initialize early stopping
-        self.early_stopping = self.EarlyStopping(
+        self.early_stopping = EarlyStopping(
             patience=self.params["earlystopping_patience"], verbose=True
         )
 
@@ -165,21 +134,47 @@ class GRUModel(PulseTemplateModel, nn.Module):
             dropout=self.dropout_rate if self.layer_dim > 1 else 0,
         )
 
-        # Fully connected layers for classification
-        self.fc = nn.Sequential(
-            nn.Dropout(self.dropout_rate),
-            nn.Linear(self.hidden_dim, 64),
-            nn.LeakyReLU(),
-            nn.Dropout(self.dropout_rate),
-            nn.Linear(64, 16),
-            nn.LeakyReLU(),
-            nn.Linear(16, 1),
-        )
+        # Get FC layer dimensions from config
+        fc_dims = self.params.get("fc_layers", [64, 16])
+        activation_type = self.params.get("activation", "leaky_relu").lower()
+
+        # Determine activation function based on config
+        if activation_type == "relu":
+            activation = nn.ReLU()
+        elif activation_type == "leaky_relu":
+            activation = nn.LeakyReLU()
+        elif activation_type == "gelu":
+            activation = nn.GELU()
+        else:
+            # Default to LeakyReLU
+            activation = nn.LeakyReLU()
+
+        # Build dynamic FC layers
+        layers = [nn.Dropout(self.dropout_rate)]
+        input_size = self.hidden_dim
+
+        # Add FC layers based on config
+        for dim in fc_dims:
+            layers.extend(
+                [nn.Linear(input_size, dim), activation, nn.Dropout(self.dropout_rate)]
+            )
+            input_size = dim
+
+        # Add final output layer
+        layers.append(nn.Linear(input_size, 1))
+
+        # Create sequential model with all layers
+        self.fc = nn.Sequential(*layers)
 
         logger.info(
-            f"GRU network initialized with input_dim {input_dim}, "
-            + f"hidden_dim {self.hidden_dim}, layer_dim {self.layer_dim}, "
-            + f"{sum(p.numel() for p in self.parameters())} parameters"
+            "GRU network initialized with input_dim %d, hidden_dim %d, layer_dim %d, "
+            "activation=%s, fc_layers=%s, %d parameters",
+            input_dim,
+            self.hidden_dim,
+            self.layer_dim,
+            activation_type,
+            fc_dims,
+            sum(p.numel() for p in self.parameters()),
         )
 
     def forward(self, x):
@@ -259,7 +254,7 @@ class GRUTrainer:
 
         # Log which task is being processed
         if self.task_name:
-            logger.info(f"Preparing GRU model for task: {self.task_name}")
+            logger.info("Preparing GRU model for task: %s", self.task_name)
 
         # Data preparation
         self._prepare_data()
@@ -270,7 +265,8 @@ class GRUTrainer:
             pos_weight=torch.tensor([self.pos_weight]).to(self.device)
         )
         logger.info(
-            f"Using criterion: {self.criterion.__class__.__name__} with class weight adjustment"
+            "Using criterion: %s with class weight adjustment",
+            self.criterion.__class__.__name__,
         )
 
         # Initialize optimizer based on config
@@ -288,7 +284,7 @@ class GRUTrainer:
             )
         elif self.optimizer_name == "sgd":
             self.optimizer = optim.SGD(self.model.parameters(), lr=lr, momentum=0.9)
-        logger.info(f"Using optimizer: {self.optimizer.__class__.__name__}")
+        logger.info("Using optimizer: %s", self.optimizer.__class__.__name__)
 
         # Initialize scheduler
         scheduler_factor = self.params["scheduler_factor"]
@@ -325,10 +321,11 @@ class GRUTrainer:
         self.model.create_network_with_input_shape(num_channels)
 
         logger.info(
-            f"Input shape to model (after transformation): {transformed_features.shape}"
+            "Input shape to model (after transformation): %s",
+            transformed_features.shape,
         )
         logger.info(
-            f"Model architecture initialized with {num_channels} input channels"
+            "Model architecture initialized with %d input channels", num_channels
         )
 
     def train(self):
@@ -340,14 +337,14 @@ class GRUTrainer:
         # Initialize metrics tracking dictionary
         self.metrics = {"train_loss": [], "val_loss": []}
 
-        logger.info(f"Starting training on device: {self.device}")
+        logger.info("Starting training on device: %s", self.device)
 
         for epoch in range(self.params["num_epochs"]):
             early_stopped = self.train_epoch(epoch, verbose=self.params["verbose"])
 
             # Check if early stopping was triggered
             if early_stopped:
-                logger.info(f"Early stopping triggered after {epoch+1} epochs")
+                logger.info("Early stopping triggered after %d epochs", epoch + 1)
                 break
 
             # Save checkpoint periodically
@@ -361,9 +358,7 @@ class GRUTrainer:
         logger.info("Training completed.")
 
         # After training loop, load best model weights and save final model
-        if self.model.early_stopping.best_state_dict:
-            self.model.load_state_dict(self.model.early_stopping.best_state_dict)
-
+        self.model.early_stopping.load_best_model(self.model)
         model_save_name = f"{self.model.model_name}_{self.task_name}_{self.dataset_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pt"
         save_torch_model(model_save_name, self.model, self.model_save_dir)
         # Evaluate the model on the testing set
@@ -399,15 +394,19 @@ class GRUTrainer:
                 self.model.parameters(), max_norm=max_norm
             )
             if total_norm > max_norm:
-                logger.info(f"Gradient norm {total_norm:.4f} clipped to {max_norm}")
+                logger.info("Gradient norm %.4f clipped to %f", total_norm, max_norm)
             self.optimizer.step()
 
             train_loss += loss.item()
 
-            # Log progress for each batch if verbose=2, or every 100 batches if verbose=1
-            if verbose == 2 or verbose == 1 and batch_idx % 100 == 0:
+            # Log progress for each batch if verbose=2, or every 10 batches if verbose=1
+            if verbose == 2 or verbose == 1 and batch_idx % 10 == 0:
                 logger.info(
-                    f"Epoch {epoch+1}, Batch {batch_idx+1}/{len(self.train_loader)}, Loss: {loss.item():.4f}"
+                    "Epoch %d, Batch %d/%d, Loss: %.4f",
+                    epoch + 1,
+                    batch_idx + 1,
+                    len(self.train_loader),
+                    loss.item(),
                 )
 
         # Calculate average loss for the epoch
@@ -423,10 +422,12 @@ class GRUTrainer:
 
         # Log epoch summary
         logger.info(
-            f"Epoch {epoch+1}/{self.params['num_epochs']} - "
-            f"Train Loss: {avg_train_loss:.4f}, "
-            f"Val Loss: {val_loss:.4f}, "
-            f"LR: {self.optimizer.param_groups[0]['lr']:.6f}"
+            "Epoch %d/%d - Train Loss: %.4f, Val Loss: %.4f, LR: %.6f",
+            epoch + 1,
+            self.params["num_epochs"],
+            avg_train_loss,
+            val_loss,
+            self.optimizer.param_groups[0]["lr"],
         )
 
         # Log to WandB if enabled
@@ -509,7 +510,10 @@ class GRUTrainer:
                     self.params["verbose"] == 1 and batch_idx % 100 == 0
                 ):
                     logger.info(
-                        f"Evaluating batch {batch_idx+1}/{len(self.test_loader)}: Accuracy = {batch_accuracy:.4f}"
+                        "Evaluating batch %d/%d: Accuracy = %.4f",
+                        batch_idx + 1,
+                        len(self.test_loader),
+                        batch_accuracy,
                     )
 
         # Calculate comprehensive metrics
@@ -517,10 +521,10 @@ class GRUTrainer:
         metrics_tracker.save_report()
 
         # Log results to console
-        logger.info(f"Test evaluation completed for {self.model.model_name}")
-        logger.info(f"Test metrics: {metrics_tracker.summary}")
+        logger.info("Test evaluation completed for %s", self.model.model_name)
+        logger.info("Test metrics: %s", metrics_tracker.summary)
         logger.info(
-            f"Average batch accuracy: {sum(batch_metrics)/len(batch_metrics):.4f}"
+            "Average batch accuracy: %.4f", sum(batch_metrics) / len(batch_metrics)
         )
 
         # Log all metrics to wandb if enabled

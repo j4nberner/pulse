@@ -36,7 +36,7 @@ class ModelTrainer:
             logger.info("Running on Slurm, preparing to copy data to scratch space...")
             scratch_dir = get_local_scratch_dir()
             if scratch_dir:
-                logger.info(f"Scratch directory available at: {scratch_dir}")
+                logger.info("Scratch directory available at: %s", scratch_dir)
                 # Update the config with scratch space paths
                 self.config, data_copied = copy_data_to_scratch(self.config)
             else:
@@ -59,7 +59,7 @@ class ModelTrainer:
         # Train and evaluate each model on each dataset
         for task_dataset_name, _ in self.dm.datasets.items():
             logger.info("#" * 60)
-            logger.info(f"Processing dataset: {task_dataset_name}")
+            logger.info("Processing dataset: %s", task_dataset_name)
             # Create a group name for wandb using task_dataset_name and timestamp
             wand_group_name = f"{task_dataset_name}_{timestamp}"
 
@@ -77,7 +77,7 @@ class ModelTrainer:
                 model.dataset_name = dataset_name
                 trainer_name = model.trainer_name
                 logger.info("--" * 30)
-                logger.info(f"Training model: {model_name} on {task_dataset_name}")
+                logger.info("Training model: %s on %s", model_name, task_dataset_name)
 
                 # Initialize wandb tracing for this model/dataset/task combination
                 if self.config.wandb.get("enabled", False):
@@ -148,8 +148,23 @@ class ModelTrainer:
                             self.config.benchmark_settings, "batch_size"
                         )
 
+                        # Adjust batch size if in debug mode to ensure we have at least one batch
+                        if self.config.general.debug_mode:
+                            sample_count = len(X_train)
+                            if batch_size > sample_count:
+                                logger.warning(
+                                    "Batch size (%s) is larger than sample count (%s). Reducing batch size to %s for debug mode.",
+                                    batch_size,
+                                    sample_count,
+                                    sample_count,
+                                )
+                                batch_size = max(1, sample_count)
+
                         logger.info(
-                            f"Using batch size: {batch_size} for {model_name} on {task_dataset_name}"
+                            "Using batch size: %s for %s on %s",
+                            batch_size,
+                            model_name,
+                            task_dataset_name,
                         )
 
                         train_loader = DataLoader(
@@ -184,7 +199,10 @@ class ModelTrainer:
 
                 except Exception as e:
                     logger.error(
-                        f"Error training {model_name} on {task_dataset_name}: {str(e)}",
+                        "Error training %s on %s: %s",
+                        model_name,
+                        task_dataset_name,
+                        str(e),
                         exc_info=True,
                     )
 

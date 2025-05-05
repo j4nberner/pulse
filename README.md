@@ -97,7 +97,7 @@ Task Definitions are in accordance with YAIB (https://arxiv.org/abs/2306.05109).
 | -------- | ------------------------------- |
 | **conventional ML**   | RandomForest, XGBoost, LightGBM |
 | **conventional DL**   | CNN, LSTM, GRU, InceptionTime   |
-| **LLM**  | Llama 3.1-8b                    |
+| **LLM**  | Llama 3.1-8b-Instruct                    |
 
 ## Results
 

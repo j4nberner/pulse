@@ -83,9 +83,7 @@ I will provide you with medical information from an Intensive Care Unit (ICU) vi
 
 Present multiple <span style="color:red;">hours</span> data of a patient in one batch. Represent each feature within this data as a string of values, separated by commas.
 
-Your task is to assess the provided medical data and analyze the health records from ICU visits to determine the likelihood of the patient not surviving their hospital stay<span style="color:red;">/having acute kidney injury/sepsis at the end of the data batch</span>. Please respond with only a floating-point number between 0 and 1, where a higher number suggests a greater likelihood of death<span style="color:red;">/acute kidney injury/sepsis</span>.
-
-In situations where the data does not allow for a reasonable conclusion, respond with the phrase “I do not know” without any additional explanation.
+Your task is to assess the provided medical data and analyze the health records from ICU visits to determine the likelihood of the patient not surviving their hospital stay<span style="color:red;">/having acute kidney injury/sepsis at the end of the data batch</span>.
 
 - Heart Rate: Unit: bpm. Reference range: 60 - 100.
 - Systolic Blood Pressure: Unit: mmHg. Reference range: <span style="color:red;">90 -</span> 120.
@@ -147,8 +145,8 @@ Details of the features for each visit are as follows:
 - Heart Rate: “73, 77, 86, 81, 95, 92”
 - …
 
-RESPONSE:
-0.3
+RESPONSE:  
+<span style="color:red;">{'diagnosis': 'not-aki', 'probability':</span> 0.0<span style="color:red;">, 'explanation': 'This is a known example explanation.'}</span>
 
 Input information of a patient:  
 The patient is a male, aged 50.0 years. 
@@ -205,5 +203,4 @@ Details of the features for each visit are as follows:
 - Height: "183.00, 183.00, 183.00, 183.00<span style="color:red;">, 183.00, 183.00</span>"
 - Weight: "78.50, 78.50, 78.50, 78.50<span style="color:red;">, 78.50, 78.50</span>"
 
-Please respond with only a floating-point number between 0 and 1, where a higher number suggests a greater likelihood of death. Do not include any additional explanation.
 RESPONSE:
