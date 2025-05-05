@@ -110,7 +110,7 @@ class ModelTrainer:
                         dm_kwargs.update(
                             {
                                 "prompting_id": model.prompting_id,
-                                "num_shots": model.params.get("shots", None),
+                                "num_shots": self.config.prompting.get("shots", 0),
                             }
                         )
                     # Preprocess data for corresponding model

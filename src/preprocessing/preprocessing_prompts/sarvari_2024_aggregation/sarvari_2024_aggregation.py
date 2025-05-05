@@ -30,7 +30,7 @@ def sarvari_aggregation_preprocessor(
     task = info_dict.get("task", "unknown_task")
     dataset = info_dict.get("dataset_name", "unknown_dataset")
     model_id = info_dict.get("model_name", "unknown_model")
-    num_shots = 1  # TODO: info_dict.get("num_shots", 0) rout from kwargs
+    num_shots = info_dict.get("num_shots", 0)
     mode = info_dict.get("mode", "train")
 
     if mode != "test":
@@ -58,9 +58,6 @@ def sarvari_aggregation_preprocessor(
     for col in X_input.columns:
         parts = col.split("_")
         base_features.append(get_feature(parts[0]))
-
-    prompts = []
-    few_show_examples = []
 
     # 1. Build the main query from test data
     # Aggregate features per data window
@@ -166,8 +163,8 @@ def build_sarvari_query(
                 lines.append(
                     "Then your answer may be: \n"
                     "{\n"
-                    f' "diagnosis": "{diagnosis}",\n'
-                    '  "probability": "0.8",\n'
+                    f' "diagnosis": "{diagnosis[0]}",\n'
+                    '  "probability": "<the probability of your estimation as a float>",\n'
                     '  "explanation": "<a brief explanation for the prediction>"\n'
                     "}\n\n"
                 )

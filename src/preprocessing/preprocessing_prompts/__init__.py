@@ -21,7 +21,7 @@ preprocessor_method_dict = {
     "zhu_2024a_one_shot_cot_preprocessor": zhu_2024a_one_shot_cot_preprocessor,
     "zhu_2024b_one_shot_preprocessor": zhu_2024b_one_shot_preprocessor,
     # "zhu_2024c_categorization_summary_preprocessor": zhu_2024c_categorization_summary_preprocessor,
-    "sarvari_aggregation_preprocessor": sarvari_aggregation_preprocessor,
+    "sarvari_2024_aggregation_preprocessor": sarvari_aggregation_preprocessor,
     # Add other preprocessor methods here as needed
 }
 

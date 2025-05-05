@@ -301,7 +301,7 @@ def prompt_template_hf(input_text: str) -> List[Dict[str, str]]:
         "Return the result strictly in this JSON format:\n\n"
         "{\n"
         '  "diagnosis": "<short diagnosis label>",\n'
-        '  "probability": "<a value between 0 and 1 representing disease probability. 0 means no disease, 1 means certain disease>",\n'
+        '  "probability": "<a value between 0 and 1 representing probability of your diagnosis>",\n'
         '  "explanation": "<a brief explanation for the prediction>"\n'
         "}\n\n"
         "Respond only with a valid JSON object. Do not include any additional commentary."
@@ -340,8 +340,6 @@ def extract_dict(output_text: str) -> Optional[Dict[str, str]]:
     if not json_text.endswith("}"):
         json_text += "}"
         logger.debug("Fixed unclosed JSON object by adding closing brace.")
-
-    logger.debug("Final JSON text to parse: %s", json_text)
 
     try:
         output_dict = ast.literal_eval(json_text)
