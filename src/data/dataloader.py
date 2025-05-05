@@ -327,6 +327,7 @@ class DatasetManager:
             "zhu_2024a_one_shot_cot_preprocessor",
             "zhu_2024b_one_shot_preprocessor",
             "zhu_2024c_categorized_summary_preprocessor",
+            "sarvari_2024_aggregation_preprocessor",
         ]
 
         # Take only n rows if in debug
@@ -381,6 +382,8 @@ class DatasetManager:
             X_original = X.copy()
             y_original = y.copy()
 
+            logger.debug("X_original length: %d", len(X_original))
+
             if self.test_limited is not None:
                 logger.info(
                     f"Limiting test set to first {self.test_limited} stay_ids for {dataset_id}"
@@ -425,6 +428,7 @@ class DatasetManager:
                 # Print statistics for all datasets
                 self.preprocessor.print_statistics(stats_to_print)
 
+        logger.debug(f"X before advanced preprocessing: {X.shape}")
         # Apply any model-specific preprocessing if needed.
         # For example, if you need to tokenize text data for LLMs
         if prompting_id is not None:
@@ -432,6 +436,7 @@ class DatasetManager:
                 prompting_id=prompting_id
             )
             num_shots = kwargs.get("num_shots", 0)
+            logger.debug(f"Number of shots: {num_shots}")
             data_window = self.config.preprocessing_advanced.windowing.data_window
 
             # Info dict needs to contain dataset name, task, and model name
@@ -440,7 +445,7 @@ class DatasetManager:
                 "task": dataset["task"],
                 "model_name": model_name,
                 "mode": mode,
-                "shots": num_shots,
+                "num_shots": num_shots,
                 "data_window": data_window,
             }
             if prompting_id in few_shot_list:
@@ -464,6 +469,7 @@ class DatasetManager:
                 )
                 if prompt_column and not X.empty:
                     sample_prompt = X[prompt_column].iloc[0]
+                    logger.debug(f"Test loader length: {len(X)}")
                     logger.debug(
                         f"Sample {prompting_id} prompt with {num_shots} shots for {dataset_id}:"
                     )

@@ -162,10 +162,8 @@ class Llama3Model(PulseTemplateModel):
             generated_text
         )  # Extract dict from the generated text.
 
-        logger.info(
-            "Generated Result: %s",
-            generated_text,
-        )
+
+        generated_text["probability"] = round(abs(generated_text["probability"] - 1.0) if "not-" in generated_text["diagnosis"] else abs(generated_text["probability"]), 3)
 
         logger.info(
             f"Tokenization time: {token_time:.4f}s | Inference time: {infer_time:.4f}s | Tokens: {num_tokens}"
@@ -211,7 +209,10 @@ class Llama3Model(PulseTemplateModel):
         # TODO: Implement a more robust parsing method
         try:
             # Extract the floating-point number from the output
-            probability = float(output.split(":")[-1].strip())
+            if "not-" in output:
+                probability = np.abs(float(output.split(":")[-1].strip()) - 1.0)
+            else:
+                probability = float(output.split(":")[-1].strip())
             return probability
         except (ValueError, IndexError) as e:
             logger.warning("Failed to parse output. Defaulting to 0.5: %s", e)
