@@ -162,8 +162,14 @@ class Llama3Model(PulseTemplateModel):
             generated_text
         )  # Extract dict from the generated text.
 
-
-        generated_text["probability"] = round(abs(generated_text["probability"] - 1.0) if "not-" in generated_text["diagnosis"] else abs(generated_text["probability"]), 3)
+        generated_text["probability"] = round(
+            (
+                abs(generated_text["probability"] - 1.0)
+                if "not-" in generated_text["diagnosis"]
+                else abs(generated_text["probability"])
+            ),
+            3,
+        )
 
         logger.info(
             f"Tokenization time: {token_time:.4f}s | Inference time: {infer_time:.4f}s | Tokens: {num_tokens}"
@@ -238,7 +244,7 @@ class Llama3Trainer:
             test_loader: The DataLoader object for the testing dataset.
         """
         # Load the model and tokenizer
-        model._load_model()  # Comment out to only test preprocessing
+        # model._load_model()  # Comment out to only test preprocessing
 
         self.model = model
         self.llama_model = model.llama_model
