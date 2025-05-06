@@ -17,7 +17,7 @@ def zhu_2024a_one_shot_cot_preprocessor(
 ) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """
     Preprocess ICU data into prompts using few-shot format and centralized JSON prompt template.
-    According to the paper "Prompting Large Language Models for Zero-Shot Clinical Prediction with Structured Longitudinal Electronic Health Record Data"
+    According to Zhu et al. 2024, "Prompting Large Language Models for Zero-Shot Clinical Prediction with Structured Longitudinal Electronic Health Record Data"
     Paper: https://arxiv.org/pdf/2402.01713"
     Implements the Chain of Thought prompt template used for mortality prediction on the MIMIC-IV dataset
 
@@ -35,7 +35,7 @@ def zhu_2024a_one_shot_cot_preprocessor(
     task = info_dict.get("task")
     dataset = info_dict.get("dataset_name")
     model_id = info_dict.get("model_name")
-    num_shots = 4  # Fixed value of num_shots=1 for this specific implementation
+    num_shots = 1  # Fixed value of num_shots=1 for this specific implementation
     mode = info_dict.get(
         "mode"
     )  # train/val/test, few-shot examples are only used in validation and test mode
@@ -271,7 +271,7 @@ def zhu_2024a_one_shot_cot_preprocessor(
     # Create dataframe with prompts
     X_processed = pd.DataFrame({"text": prompts})
 
-    logger.info(
+    logger.debug(
         "Converted %s samples to text prompt format for model '%s'.",
         len(prompts),
         model_id,

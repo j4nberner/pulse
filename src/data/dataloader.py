@@ -103,7 +103,9 @@ class DatasetManager:
                 windowing_enabled = getattr(windowing_config, "enabled", False)
                 save_windowed_data = getattr(windowing_config, "save_data", False)
 
-        logger.info(f"Windowing enabled: {windowing_enabled}, Debug mode: {debug_mode}")
+        logger.info(
+            "Windowing enabled: %s, Debug mode: %s", windowing_enabled, debug_mode
+        )
 
         # Initialize windower with attribute style access
         if windowing_enabled:
@@ -117,8 +119,9 @@ class DatasetManager:
                 preprocessor_config=preprocessing_config,
             )
 
-            logger.info(
-                f"Windower initialized for advanced preprocessing with debug mode: {debug_mode}"
+            logger.debug(
+                "Windower initialized for advanced preprocessing with debug mode: %s",
+                debug_mode,
             )
 
     def _init_datasets(self) -> None:
@@ -126,7 +129,7 @@ class DatasetManager:
 
         # Check if base_path exists
         if not os.path.exists(self.config.dataset_path):
-            logger.error(f"Base path {self.config.base_path} does not exist")
+            logger.error("Base path %s does not exist", self.config.base_path)
             sys.exit(1)
 
         # Process each task and dataset combination
@@ -140,7 +143,7 @@ class DatasetManager:
                     "loaded": False,
                     "data": None,
                 }
-                logger.info(f"Initialized dataset: {dataset_id}")
+                logger.info("Initialized dataset: %s", dataset_id)
 
     def load_dataset(self, dataset_id: str) -> bool:
         """
@@ -153,13 +156,13 @@ class DatasetManager:
             bool: True if loading was successful, False otherwise
         """
         if dataset_id not in self.datasets:
-            logger.error(f"Dataset {dataset_id} not found in configuration")
+            logger.error("Dataset %s not found in configuration", dataset_id)
             return False
 
         dataset = self.datasets[dataset_id]
 
         if dataset["loaded"]:
-            logger.info(f"Dataset {dataset_id} already loaded")
+            logger.debug("Dataset %s already loaded", dataset_id)
             return True
 
         try:
@@ -184,8 +187,8 @@ class DatasetManager:
 
             # If windowing is enabled and not a mortality task, try to load presaved windowed data first
             if windowing_enabled and task != "mortality" and self.windower is not None:
-                logger.info(
-                    f"Attempting to load presaved windowed data for {dataset_id}"
+                logger.debug(
+                    "Attempting to load presaved windowed data for %s", dataset_id
                 )
                 windowed_data = self.windower.window_data(
                     task=task, dataset=name, config=windowing_config
@@ -203,12 +206,13 @@ class DatasetManager:
                     }
                     dataset["loaded"] = True
                     logger.info(
-                        f"Successfully loaded presaved windowed data for {dataset_id}"
+                        "Successfully loaded presaved windowed data for %s", dataset_id
                     )
                     return True
 
                 logger.info(
-                    f"No presaved windowed data found for {dataset_id}, falling back to regular loading"
+                    "No presaved windowed data found for %s, falling back to regular loading",
+                    dataset_id,
                 )
 
             # If not using presaved windowed data, proceed with regular loading/preprocessing
@@ -220,12 +224,13 @@ class DatasetManager:
                     )
                 )
 
-                logger.info(f"Loaded preprocessed data for {dataset_id}")
+                logger.info("Loaded preprocessed data for %s", dataset_id)
 
             except FileNotFoundError:
                 # If not found, preprocess the data
                 logger.info(
-                    f"Preprocessed data not found for {dataset_id}, running preprocessing"
+                    "Preprocessed data not found for %s, running preprocessing",
+                    dataset_id,
                 )
 
                 X_train, X_val, X_test, y_train, y_val, y_test = (
@@ -238,7 +243,7 @@ class DatasetManager:
                     )
                 )
 
-                logger.info(f"Preprocessing Baseline completed for {dataset_id}")
+                logger.info("Preprocessing Baseline completed for %s", dataset_id)
 
             # Convert labels from boolean to int if necessary
             y_train["label"], y_val["label"], y_test["label"] = (
@@ -256,7 +261,7 @@ class DatasetManager:
 
             # Apply windowing if enabled and not already loaded from presaved files
             if windowing_enabled and task != "mortality" and self.windower is not None:
-                logger.info(f"Applying windowing to {dataset_id}")
+                logger.debug("Applying windowing to %s", dataset_id)
 
                 windowed_data = self.windower.window_data(
                     task=task,
@@ -267,7 +272,7 @@ class DatasetManager:
 
                 if windowed_data is not None:
                     data_dict = windowed_data
-                    logger.info(f"Windowing applied to {dataset_id}")
+                    logger.info("Windowing applied to %s", dataset_id)
 
             # Store the processed data
             dataset["data"] = {
@@ -283,7 +288,7 @@ class DatasetManager:
             return True
 
         except Exception as e:
-            logger.error(f"Error loading dataset {dataset_id}: {e}")
+            logger.error("Error loading dataset %s: %s", dataset_id, e)
             return False
 
     def get_preprocessed_data(
@@ -309,7 +314,7 @@ class DatasetManager:
             - If test_limited is None, the full test set is used
         """
         if dataset_id not in self.datasets:
-            logger.error(f"Dataset {dataset_id} not found")
+            logger.error("Dataset %s not found", dataset_id)
             return None, None
 
         dataset = self.datasets[dataset_id]
@@ -326,7 +331,7 @@ class DatasetManager:
             "few_shot_paper_preprocessor",
             "zhu_2024a_one_shot_cot_preprocessor",
             "zhu_2024b_one_shot_preprocessor",
-            "zhu_2024c_categorized_summary_preprocessor",
+            "zhu_2024c_categorization_summary_preprocessor",
             "sarvari_2024_aggregation_preprocessor",
         ]
 
@@ -334,7 +339,9 @@ class DatasetManager:
         debug = kwargs.get("debug", False)
         if debug:
             logger.info(
-                f"Debug mode: Taking only {self.debug_data_length} rows for {dataset_id}"
+                "Debug mode: Taking only %d rows for %s",
+                self.debug_data_length,
+                dataset_id,
             )
             data = {
                 "X_train": data["X_train"].iloc[: self.debug_data_length],
@@ -386,7 +393,9 @@ class DatasetManager:
 
             if self.test_limited is not None:
                 logger.info(
-                    f"Limiting test set to first {self.test_limited} stay_ids for {dataset_id}"
+                    "Limiting test set to first %s stay_ids for %s",
+                    self.test_limited,
+                    dataset_id,
                 )
                 # Get unique stay_ids in ascending order
                 unique_stay_ids = sorted(X["stay_id"].unique())
@@ -428,7 +437,7 @@ class DatasetManager:
                 # Print statistics for all datasets
                 self.preprocessor.print_statistics(stats_to_print)
 
-        logger.debug(f"X before advanced preprocessing: {X.shape}")
+        logger.debug("X before advanced preprocessing: %s", X.shape)
         # Apply any model-specific preprocessing if needed.
         # For example, if you need to tokenize text data for LLMs
         if prompting_id is not None:
@@ -436,7 +445,7 @@ class DatasetManager:
                 prompting_id=prompting_id
             )
             num_shots = kwargs.get("num_shots", 0)
-            logger.debug(f"Number of shots: {num_shots}")
+            logger.debug("Number of shots (if applicable for prompting_id): %s", num_shots)
             data_window = self.config.preprocessing_advanced.windowing.data_window
 
             # Info dict needs to contain dataset name, task, and model name
@@ -454,7 +463,7 @@ class DatasetManager:
                 y = [y, y_train]
 
             logger.info(
-                f"Applying prompting preprocessor for prompting_id: {prompting_id}"
+                "Applying prompting preprocessor for prompting_id: %s", prompting_id
             )
 
             # Apply advanced preprocessing
@@ -469,9 +478,12 @@ class DatasetManager:
                 )
                 if prompt_column and not X.empty:
                     sample_prompt = X[prompt_column].iloc[0]
-                    logger.debug(f"Test loader length: {len(X)}")
+                    logger.debug("Test loader length: %d", len(X))
                     logger.debug(
-                        f"Sample {prompting_id} prompt with {num_shots} shots for {dataset_id}:"
+                        "Sample %s prompt with %s shots for %s:",
+                        prompting_id,
+                        num_shots,
+                        dataset_id,
                     )
                     logger.debug("-" * 50)
                     logger.debug(sample_prompt)
@@ -496,7 +508,7 @@ class DatasetManager:
             dict: The modified data dictionary
         """
         # Log only once before processing all splits
-        logger.info(f"Dropping 'stay_id' column from all features and labels")
+        logger.debug("Dropping 'stay_id' column from all features and labels")
 
         for split in ["train", "val", "test"]:
             if split in data_dict:

@@ -17,7 +17,7 @@ def zhu_2024b_one_shot_preprocessor(
 ) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """
     Preprocess ICU data into prompts using few-shot format and centralized JSON prompt template.
-    According to the paper "Is larger always better? Evaluating and prompting large language models for non-generative medical tasks"
+    According to Zhu et al. 2024, "Is larger always better? Evaluating and prompting large language models for non-generative medical tasks"
     Paper: https://arxiv.org/abs/2407.18525
     Implements the best setting prompt template used for mortality prediction on the MIMIC-IV dataset
 
@@ -217,7 +217,7 @@ def zhu_2024b_one_shot_preprocessor(
     # Create dataframe with prompts
     X_processed = pd.DataFrame({"text": prompts})
 
-    logger.info(
+    logger.debug(
         "Converted %s samples to text prompt format for model '%s'.",
         len(prompts),
         model_id,
