@@ -279,6 +279,7 @@ class CNNTrainer:
                     "model_parameters": self.model.state_dict(),
                 }
             )
+
         save_torch_model(
             model_save_name, self.model, self.model.save_dir
         )  # Save the final model
@@ -381,5 +382,18 @@ class CNNTrainer:
         # Log results to console
         logger.info("Test evaluation completed for %s", self.model.model_name)
         logger.info("Test metrics: %s", metrics_tracker.summary)
+
+        if self.wandb:
+            wandb.log(
+                {
+                    "Test metrics": wandb.Table(
+                        data=[
+                            [metric, value]
+                            for metric, value in metrics_tracker.summary.items()
+                        ],
+                        columns=["Metric", "Value"],
+                    )
+                }
+            )
 
         return np.mean(val_loss)
