@@ -193,23 +193,28 @@ class PreprocessorAdvanced:
 
         return result_df
 
-    def categorize_features(self, df, base_features=None, X_cols=None):
+    def categorize_features(
+        self, df, base_features=None, X_cols=None, num_categories=3
+    ):
         """
-        Categorize features across an entire dataframe as too low, normal, or too high based on reference ranges.
-        
+        Categorize features across an entire dataframe based on reference ranges.
+
         Args:
             df: Input DataFrame with patient data rows
             base_features: Set of base feature names (optional, will be extracted if not provided)
             X_cols: DataFrame columns to use (optional, will use df.columns if not provided)
-            
+            num_categories: Number of categories to use (3 or 5)
+                - 3: -1 (too low), 0 (normal), 1 (too high)
+                - 5: -1 (very low), -0.5 (slightly low), 0 (normal), 0.5 (slightly high), 1 (very high)
+                  where "slightly" means within 50% of the reference range
+
         Returns:
-            DataFrame with the same index as input but with base features as columns and values:
-            -1 (too low), 0 (normal), 1 (too high)
+            DataFrame with the same index as input but with base features as columns and categorized values
         """
         # Use provided parameters or extract from dataframe
         if X_cols is None:
             X_cols = df.columns
-            
+
         if base_features is None:
             # Extract base feature names
             base_features = set()
@@ -217,54 +222,72 @@ class PreprocessorAdvanced:
                 if "_" in col and col.split("_")[-1].isdigit():
                     base_name = col.split("_")[0]
                     base_features.add(base_name)
-        
+
+        if num_categories not in [3, 5]:
+            raise ValueError("num_categories must be either 3 or 5")
+
         # Initialize result dataframe with the same index as input
         result_df = pd.DataFrame(index=df.index)
-        
+
         # Process each base feature
         for feature in sorted(base_features):
             # Get columns for this feature (e.g., hr_1, hr_2, etc.)
             feature_cols = [col for col in X_cols if col.startswith(f"{feature}_")]
-            
+
             # Filter to only include columns with numeric indices
             feature_cols = [col for col in feature_cols if col.split("_")[1].isdigit()]
-            
+
             # Skip if no valid columns for this feature
             if not feature_cols:
                 continue
-            
+
             # Get reference range
             reference_range = get_feature_reference_range(feature)
-            
+
             # Skip if no reference range available
             if not reference_range:
                 continue
-            
-            # Calculate mean values for each row and categorize
-            feature_values = []
-            for _, row in df.iterrows():
-                # Extract values for this feature
-                values = [float(row[col]) for col in feature_cols if not pd.isna(row[col])]
-                
-                # Skip if no valid values
-                if not values:
-                    feature_values.append(np.nan)  # Use NaN for rows with no valid data
-                    continue
-                
-                # Calculate mean value
-                mean_value = sum(values) / len(values)
-                
-                # Categorize based on reference range and convert to numeric
-                if mean_value < reference_range[0]:
-                    feature_values.append(-1)  # Too low
-                elif mean_value > reference_range[1]:
-                    feature_values.append(1)   # Too high
-                else:
-                    feature_values.append(0)   # Normal
-            
+
+            # Extract values for this feature
+            feature_matrix = df[feature_cols].apply(pd.to_numeric, errors="coerce")
+
+            # Calculate row-wise mean, ignoring NaN values
+            row_means = feature_matrix.mean(axis=1, skipna=True)
+
+            if num_categories == 3:
+                # Categorize based on reference range with 3 categories
+                feature_values = np.select(
+                    [row_means < reference_range[0], row_means > reference_range[1]],
+                    [-1, 1],  # Too low, Too high
+                    default=0,  # Normal
+                )
+            else:  # num_categories == 5
+                # Calculate range size for determining slightly low/high thresholds
+                range_size = reference_range[1] - reference_range[0]
+
+                # Calculate thresholds for 5-category classification
+                very_low_threshold = reference_range[0] - 0.5 * range_size
+                very_high_threshold = reference_range[1] + 0.5 * range_size
+
+                # Categorize based on reference range with 5 categories
+                feature_values = np.select(
+                    [
+                        row_means <= very_low_threshold,  # Very low
+                        (row_means > very_low_threshold)
+                        & (row_means < reference_range[0]),  # Slightly low
+                        (row_means >= reference_range[0])
+                        & (row_means <= reference_range[1]),  # Normal
+                        (row_means > reference_range[1])
+                        & (row_means < very_high_threshold),  # Slightly high
+                        row_means >= very_high_threshold,  # Very high
+                    ],
+                    [-1, -0.5, 0, 0.5, 1],
+                    default=0,  # Default to normal if there's any issue
+                )
+
             # Add the feature to the result dataframe
             result_df[feature] = feature_values
-            
+
         return result_df
 
     #######################################

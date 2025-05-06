@@ -13,6 +13,15 @@ logger = logging.getLogger("PULSE_logger")
 
 
 class EarlyStopping:
+    """
+    Implements early stopping to terminate training when validation loss stops improving.
+    Args:
+        patience (int): Number of epochs to wait after the last improvement in validation loss.
+        verbose (bool): If True, logs messages about early stopping progress.
+        delta (float): Minimum change in validation loss to qualify as an improvement. Default is 0.0001.
+            This value is chosen to prevent stopping due to minor fluctuations in validation loss.
+    """
+
     def __init__(self, patience=5, verbose=False, delta=0.0001):
         self.patience = patience
         self.verbose = verbose
@@ -258,7 +267,10 @@ def calculate_pos_weight(train_loader):
 
         weight = neg_count / pos_count
         logger.info(
-            "Class imbalance - Neg: %d, Pos: %d, Weight: %f", neg_count, pos_count, weight
+            "Class imbalance - Neg: %d, Pos: %d, Weight: %f",
+            neg_count,
+            pos_count,
+            weight,
         )
         return weight
 
