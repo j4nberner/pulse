@@ -4,25 +4,28 @@ params:
   # Basic configuration
   type: "convML" # Type of model (convML for conventional machine learning, convDL for conventional deep learning and LLM for large language models)
   trainer_name: "RandomForestTrainer" # Class that implements the training process
-  n_estimators: 200 # Number of trees in the forest
   random_state: 42 # Seed for reproducible results
   verbose: 0 # Controls verbosity of output (0: silent, 1: progress bar, >1: more details)
   tune_hyperparameters: false # Whether to tune hyperparameters (true/false)
-  # Tree structure parameters
+  n_jobs: -1 # Number of CPU cores to use (-1 for all available, None for 1 CPU)
+  
+  # Model Structure
+  n_estimators: 200 # Number of trees in the forest
   max_depth: null # Maximum depth of trees (null for unlimited)
+  max_features: "sqrt" # Number of features to consider (options: "sqrt", "log2", int, float)
+  max_leaf_nodes: null # Max leaf nodes (null for unlimited)
+  
+  # Split Criteria
   min_samples_split: 5 # Minimum samples required to split internal node
   min_samples_leaf: 2 # Minimum samples required at a leaf node
-  max_features: "sqrt" # Number of features to consider (options: "sqrt", "log2", int, float)
   criterion: "gini" # Function to measure split quality ("gini" or "entropy")
-  max_leaf_nodes: null # Max leaf nodes (null for unlimited)
   min_impurity_decrease: 0.0 # Minimum impurity decrease required for splitting
+  
   # Sampling parameters
   bootstrap: true # Whether to use bootstrap samples for building trees
   oob_score: false # Whether to use out-of-bag samples to estimate generalization accuracy
   max_samples: null # Number of samples to draw if bootstrap=True (null for same as input)
-  # Class handling parameters
-  class_weight: null # Weights for classes (null, "balanced", "balanced_subsample", or dict)
+  
   # Regularization parameters
+  class_weight: null # Weights for classes (null, "balanced", "balanced_subsample", or dict)
   ccp_alpha: 0.0 # Complexity parameter for Minimal Cost-Complexity Pruning
-  # Performance parameters
-  n_jobs: -1 # Number of CPU cores to use (-1 for all available, None for 1 CPU)
