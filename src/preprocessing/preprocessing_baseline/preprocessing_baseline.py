@@ -349,7 +349,6 @@ class PreprocessorBaseline:
         # Log the split information
         total_stays = X["stay_id"].nunique()
 
-        logger.info("Data split temporally based on stay_id order:")
         logger.info(
             "  Training set: %s stays (%s), %s rows (%s)",
             X_train["stay_id"].nunique(),
@@ -529,45 +528,42 @@ class PreprocessorBaseline:
         Returns:
             Tuple[pd.DataFrame, pd.DataFrame]: Reshaped X and y
         """
-        # Identify static features (not to be repeated)
+        # Handle static features first - take first value for each stay_id
         static_features = self.static_columns.copy()
 
-        # Add stay_id to static features (it will be our index)
-        static_features.append("stay_id")
+        if "stay_id" not in static_features:
+            static_features.append("stay_id")
 
-        # Identify all other features that need to be repeated
+        # Get static data using group by with first() - much faster
+        static_data = X[static_features].groupby("stay_id").first().reset_index()
+
+        # For dynamic features, use pivot_table
         dynamic_features = [col for col in X.columns if col not in static_features]
 
-        # Create dictionaries to store the reshaped data
-        X_reshaped_dict = {}
+        # Create row index within each stay_id
+        X = X.copy()
+        X["time_idx"] = X.groupby("stay_id").cumcount() + 1
 
-        # Process each stay_id
-        for stay_id, group in X.groupby("stay_id"):
-            # Initialize dictionary for this stay_id with static features
-            stay_data = {}
+        # Use pivot_table to reshape - vastly more efficient
+        dynamic_data_list = []
 
-            # Add static features (only once)
-            for feat in static_features:
-                if (
-                    feat != "stay_id" and feat in group.columns
-                ):  # We'll use stay_id as index
-                    stay_data[feat] = group[feat].iloc[0]  # Take the first value
+        for feature in dynamic_features:
+            pivot_df = X.pivot_table(
+                index="stay_id", columns="time_idx", values=feature, aggfunc="first"
+            )
+            # Rename columns to feature_1, feature_2, etc.
+            pivot_df.columns = [f"{feature}_{i}" for i in pivot_df.columns]
+            dynamic_data_list.append(pivot_df)
 
-            # Process dynamic features with suffixes - group by feature first
-            for feat in dynamic_features:
-                for i, value in enumerate(group[feat].values, 1):
-                    col_name = f"{feat}_{i}"
-                    stay_data[col_name] = value
-
-            # Store in the dictionary
-            X_reshaped_dict[stay_id] = stay_data
-
-        # Convert dictionaries to dataframes
-        X_reshaped = pd.DataFrame.from_dict(X_reshaped_dict, orient="index")
-
-        # Reset index to make stay_id a column
-        X_reshaped.reset_index(inplace=True)
-        X_reshaped.rename(columns={"index": "stay_id"}, inplace=True)
+        # Combine all dynamic feature pivots
+        if dynamic_data_list:
+            dynamic_data = pd.concat(dynamic_data_list, axis=1)
+            # Join with static data
+            X_reshaped = static_data.merge(
+                dynamic_data.reset_index(), on="stay_id", how="left"
+            )
+        else:
+            X_reshaped = static_data
 
         # For y, take the label of the last row for each stay_id
         y_reshaped = y.groupby("stay_id")["label"].last().reset_index()
@@ -863,7 +859,9 @@ class PreprocessorBaseline:
             gc.collect()
 
             # Split data with random seed
-            logger.info("Splitting data into train, validation, and test sets...")
+            logger.info(
+                "Splitting data temporally into train, validation, and test sets..."
+            )
             X_train, X_val, X_test, y_train, y_val, y_test = self.split_data(
                 X_flagged, y
             )
