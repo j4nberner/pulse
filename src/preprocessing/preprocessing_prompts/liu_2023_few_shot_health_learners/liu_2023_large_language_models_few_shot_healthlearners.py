@@ -36,12 +36,6 @@ def liu_2023_few_shot_preprocessor(
     num_shots = info_dict.get("num_shots", 0)
     mode = info_dict.get("mode", "train")
 
-    if mode != "test":
-        logger.info(
-            "Skipping preprocessing for non-test mode. LLMs are only supported for inference."
-        )
-        return pd.DataFrame(), pd.DataFrame()
-
     logger.info(
         "Preprocessing model '%s' on dataset '%s', task '%s'", model_id, dataset, task
     )
@@ -72,18 +66,20 @@ def liu_2023_few_shot_preprocessor(
         X_input, task=task, feature_basenames=base_features, example=False
     )
 
-    # 2. Build few-shot examples from training data
-    idx = np.random.choice(
-        len(X_train), size=min(num_shots, len(X_train)), replace=False
-    )
-    # X_train_raw = pp.raw_feature_windows(X_input)
-    few_shot_examples = build_liu_query(
-        X_train.iloc[idx],
-        y=y_train.iloc[idx],
-        example=True,
-        task=task,
-        feature_basenames=base_features,
-    )
+    # 2. Build few-shot examples from training data if available
+    few_shot_examples = []
+    if X_train is not None and y_train is not None:
+        idx = np.random.choice(
+            len(X_train), size=min(num_shots, len(X_train)), replace=False
+        )
+        # X_train_raw = pp.raw_feature_windows(X_input)
+        few_shot_examples = build_liu_query(
+            X_train.iloc[idx],
+            y=y_train.iloc[idx],
+            example=True,
+            task=task,
+            feature_basenames=base_features,
+        )
 
     # 3. Combine few-shot + query
     combined_prompt = _wrap_for_few_shot_template(few_shot_examples, prompts, task=task)

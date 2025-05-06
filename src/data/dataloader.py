@@ -382,8 +382,6 @@ class DatasetManager:
             X_original = X.copy()
             y_original = y.copy()
 
-            logger.debug("X_original length: %d", len(X_original))
-
             if self.test_limited is not None:
                 logger.info(
                     f"Limiting test set to first {self.test_limited} stay_ids for {dataset_id}"
@@ -428,7 +426,6 @@ class DatasetManager:
                 # Print statistics for all datasets
                 self.preprocessor.print_statistics(stats_to_print)
 
-        logger.debug(f"X before advanced preprocessing: {X.shape}")
         # Apply any model-specific preprocessing if needed.
         # For example, if you need to tokenize text data for LLMs
         if prompting_id is not None:
@@ -469,7 +466,6 @@ class DatasetManager:
                 )
                 if prompt_column and not X.empty:
                     sample_prompt = X[prompt_column].iloc[0]
-                    logger.debug(f"Test loader length: {len(X)}")
                     logger.debug(
                         f"Sample {prompting_id} prompt with {num_shots} shots for {dataset_id}:"
                     )

@@ -57,6 +57,7 @@ class ModelTrainer:
             logger.info("DEBUG MODE ACTIVE: Training will use only one batch")
 
         # Train and evaluate each model on each dataset
+        # TODO: Check if LLM and normalization is disabled. 
         for task_dataset_name, _ in self.dm.datasets.items():
             logger.info("#" * 60)
             logger.info("Processing dataset: %s", task_dataset_name)
@@ -128,6 +129,14 @@ class ModelTrainer:
                         print_stats=False,
                     )
 
+                    # Log the shapes of the datasets
+                    logger.info(
+                        "Shapes - Train: %s, Val: %s, Test: %s",
+                        X_train.shape,
+                        X_val.shape,
+                        X_test.shape,
+                    )
+
                     # Choose the appropriate DataLoader based on model type
                     if model.type == "convML":
                         train_loader = (X_train, y_train)
@@ -135,8 +144,8 @@ class ModelTrainer:
                         test_loader = (X_test, y_test)
                     elif model.type == "LLM":
                         # Passing the text and labels directly for LLMs
-                        train_loader = (pd.DataFrame(), pd.DataFrame())
-                        val_loader = (pd.DataFrame(), pd.DataFrame())
+                        train_loader = (X_train, y_train)
+                        val_loader = (X_val, y_val)
                         test_loader = (X_test, y_test)
                     elif model.type == "convDL":
                         # Wrap with TorchDatasetWrapper

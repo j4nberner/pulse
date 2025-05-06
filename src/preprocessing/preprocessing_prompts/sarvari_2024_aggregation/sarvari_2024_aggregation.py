@@ -33,11 +33,11 @@ def sarvari_aggregation_preprocessor(
     num_shots = info_dict.get("num_shots", 0)
     mode = info_dict.get("mode", "train")
 
-    if mode != "test":
-        logger.info(
-            "Skipping preprocessing for non-test mode. LLMs are only supported for inference."
-        )
-        return pd.DataFrame(), pd.DataFrame()
+    # if mode != "test":
+    #     logger.info(
+    #         "Skipping preprocessing for non-test mode. LLMs are only supported for inference."
+    #     )
+    #     return pd.DataFrame(), pd.DataFrame()
 
     logger.info(
         "Preprocessing model '%s' on dataset '%s', task '%s'", model_id, dataset, task

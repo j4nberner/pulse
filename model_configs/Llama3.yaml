@@ -4,7 +4,8 @@ params:
   trainer_name: "Llama3Trainer"
   type: "LLM" # Type of model (convML for conventional machine learning, convDL for conventional deep learning and LLM for large language models)
   verbose: 2
-  prefix_tuning: false # Whether to use prefix tuning
+  tuning: true # Whether to use prompt tuning
+  num_epochs: 10 # Number of epochs for training
   max_new_tokens: 100
   do_sample: false # Whether to sample new tokens
   temperature: 0.0 # Temperature for sampling (0.0 = greedy sampling)
