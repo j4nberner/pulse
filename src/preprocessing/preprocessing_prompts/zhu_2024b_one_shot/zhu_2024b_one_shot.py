@@ -1,5 +1,6 @@
 import logging
 from typing import Dict, Any, List, Tuple
+import json
 import numpy as np
 import pandas as pd
 import textwrap
@@ -35,7 +36,7 @@ def zhu_2024b_one_shot_preprocessor(
     task = info_dict.get("task")
     dataset = info_dict.get("dataset_name")
     model_id = info_dict.get("model_name")
-    num_shots = 1  # Fixed value of num_shots=1 for this specific implementation
+    num_shots = 20  # Fixed value of num_shots=1 for this specific implementation
     mode = info_dict.get("mode")  # train/val/test
 
     # Set the data window based on task
@@ -173,11 +174,14 @@ def zhu_2024b_one_shot_preprocessor(
 
             label_value = float(example_label.values[0])
             label_text = task if label_value == 1 else f"not-{task}"
-            result_json = {
-                "diagnosis": label_text,
-                "probability": label_value,
-                "explanation": "This is a known example.",
-            }
+            result_json = json.dumps(
+                {
+                    "diagnosis": label_text,
+                    "probability": "<the probability of your estimation as a float (1.0 is very sure)>",
+                    "explanation": "<a brief explanation for the prediction.>",
+                },
+                indent=2,
+            )
 
             # Format the example using the template
             example_text = few_shot_example_template.format(

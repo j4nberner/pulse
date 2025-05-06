@@ -1,8 +1,6 @@
 import ast
-import json
 import logging
 import os
-import re
 from typing import Any, Dict, List, Optional
 
 import joblib
@@ -15,7 +13,7 @@ logger = logging.getLogger("PULSE_logger")
 
 
 class EarlyStopping:
-    def __init__(self, patience=5, verbose=False, delta=0):
+    def __init__(self, patience=5, verbose=False, delta=0.0001):
         self.patience = patience
         self.verbose = verbose
         self.delta = delta
@@ -77,9 +75,9 @@ def save_torch_model(model_name: str, model: Any, save_dir: str) -> None:
         else:
             torch.save(model, model_path)
 
-        logger.info(f"Model '{model_name}' saved to {model_path}")
+        logger.info("Model '%s' saved to %s", model_name, model_path)
     except Exception as e:
-        logger.error(f"Failed to save model '{model_name}': {str(e)}")
+        logger.error("Failed to save model '%s': %s", model_name, str(e))
 
 
 def save_sklearn_model(model_name: str, model: Any, save_dir: str) -> None:
@@ -98,9 +96,9 @@ def save_sklearn_model(model_name: str, model: Any, save_dir: str) -> None:
 
         joblib.dump(model, model_path)
 
-        logger.info(f"Model '{model_name}' saved to {model_path}")
+        logger.info("Model '%s' saved to %s", model_name, model_path)
     except Exception as e:
-        logger.error(f"Failed to save model '{model_name}': {str(e)}")
+        logger.error("Failed to save model '%s': %s", model_name, str(e))
 
 
 def prepare_data_for_model_convml(
@@ -151,12 +149,14 @@ def prepare_data_for_model_convml(
         y_test = np.array(y_test)
 
     # Log shapes
-    logger.info(
-        f"Prepared data shapes - X_train: {X_train.shape}, y_train: {y_train.shape}"
+    logger.debug(
+        "Prepared data shapes - X_train: %s, y_train: %s", X_train.shape, y_train.shape
     )
-    logger.info(f"Prepared data shapes - X_val: {X_val.shape}, y_val: {y_val.shape}")
-    logger.info(
-        f"Prepared data shapes - X_test: {X_test.shape}, y_test: {y_test.shape}"
+    logger.debug(
+        "Prepared data shapes - X_val: %s, y_val: %s", X_val.shape, y_val.shape
+    )
+    logger.debug(
+        "Prepared data shapes - X_test: %s, y_test: %s", X_test.shape, y_test.shape
     )
 
     # Return all processed data
@@ -228,7 +228,7 @@ def prepare_data_for_model_convdl(
                 logger.info("Will use simple reshaping for batches")
 
     except Exception as e:
-        logger.error(f"Error preparing data converter: {e}")
+        logger.error("Error preparing data converter: %s", e)
 
     return converter
 
@@ -258,12 +258,12 @@ def calculate_pos_weight(train_loader):
 
         weight = neg_count / pos_count
         logger.info(
-            f"Class imbalance - Neg: {neg_count}, Pos: {pos_count}, Weight: {weight}"
+            "Class imbalance - Neg: %d, Pos: %d, Weight: %f", neg_count, pos_count, weight
         )
         return weight
 
     except Exception as e:
-        logger.error(f"Error calculating class weights: {e}")
+        logger.error("Error calculating class weights: %s", e)
         return 1.0
 
 
@@ -345,5 +345,5 @@ def extract_dict(output_text: str) -> Optional[Dict[str, str]]:
         output_dict = ast.literal_eval(json_text)
         return output_dict
     except (SyntaxError, ValueError) as e:
-        logger.error(f"Failed to parse model output as dict: {e}\nRaw: {json_text}")
+        logger.error("Failed to parse model output as dict: %s\nRaw: %s", e, json_text)
         return None

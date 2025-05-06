@@ -438,6 +438,31 @@ class DatasetManager:
                 self.preprocessor.print_statistics(stats_to_print)
 
         logger.debug("X before advanced preprocessing: %s", X.shape)
+
+        # Drop stay_id columns BEFORE creating lists for few-shot learning
+        if isinstance(X, pd.DataFrame) and "stay_id" in X.columns:
+            X = X.drop(columns=["stay_id"])
+        if isinstance(y, pd.DataFrame) and "stay_id" in y.columns:
+            y = y.drop(columns=["stay_id"])
+
+        # Also drop stay_id from training data used for few-shot examples
+        if (
+            X_train is not None
+            and isinstance(X_train, pd.DataFrame)
+            and "stay_id" in X_train.columns
+        ):
+            X_train = X_train.drop(columns=["stay_id"])
+        if (
+            y_train is not None
+            and isinstance(y_train, pd.DataFrame)
+            and "stay_id" in y_train.columns
+        ):
+            y_train = y_train.drop(columns=["stay_id"])
+
+        logger.debug(
+            "Dropped stay_id column from X and y (including for few-shot examples)"
+        )
+
         # Apply any model-specific preprocessing if needed.
         # For example, if you need to tokenize text data for LLMs
         if prompting_id is not None:
@@ -445,7 +470,9 @@ class DatasetManager:
                 prompting_id=prompting_id
             )
             num_shots = kwargs.get("num_shots", 0)
-            logger.debug("Number of shots (if applicable for prompting_id): %s", num_shots)
+            logger.debug(
+                "Number of shots (if applicable for prompting_id): %s", num_shots
+            )
             data_window = self.config.preprocessing_advanced.windowing.data_window
 
             # Info dict needs to contain dataset name, task, and model name
@@ -488,12 +515,6 @@ class DatasetManager:
                     logger.debug("-" * 50)
                     logger.debug(sample_prompt)
                     logger.debug("-" * 50)
-
-        # Check and drop stay_id columns if they exist
-        if isinstance(X, pd.DataFrame) and "stay_id" in X.columns:
-            X = X.drop(columns=["stay_id"])
-        if isinstance(y, pd.DataFrame) and "stay_id" in y.columns:
-            y = y.drop(columns=["stay_id"])
 
         return X, y
 
