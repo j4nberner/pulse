@@ -7,24 +7,21 @@ from .zhu_2024a_one_shot_cot.zhu_2024a_one_shot_cot import (
 from .zhu_2024b_one_shot.zhu_2024b_one_shot import (
     zhu_2024b_one_shot_preprocessor,
 )
-
-# from .zhu_2024c_categorization_summary.zhu_2024c_categorization_summary import (
-#     zhu_2024c_categorization_summary_preprocessor,
-# )
+from .zhu_2024c_categorization_summary.zhu_2024c_categorization_summary import (
+    zhu_2024c_categorization_summary_preprocessor,
+)
 from .sarvari_2024_aggregation.sarvari_2024_aggregation import (
     sarvari_aggregation_preprocessor,
 )
-
 
 preprocessor_method_dict = {
     "liu_2023_few_shot_preprocessor": liu_2023_few_shot_preprocessor,
     "zhu_2024a_one_shot_cot_preprocessor": zhu_2024a_one_shot_cot_preprocessor,
     "zhu_2024b_one_shot_preprocessor": zhu_2024b_one_shot_preprocessor,
-    # "zhu_2024c_categorization_summary_preprocessor": zhu_2024c_categorization_summary_preprocessor,
+    "zhu_2024c_categorization_summary_preprocessor": zhu_2024c_categorization_summary_preprocessor,
     "sarvari_2024_aggregation_preprocessor": sarvari_aggregation_preprocessor,
     # Add other preprocessor methods here as needed
 }
-
 
 def get_prompting_preprocessor(prompting_id: str):
     """

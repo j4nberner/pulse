@@ -58,8 +58,8 @@ class GRUModel(PulseTemplateModel, nn.Module):
             "verbose",
             "num_epochs",
             "earlystopping_patience",
-            "hidden_dim",
-            "layer_dim",
+            "hidden_size",
+            "num_layers",
             "dropout_rate",
             "fc_layers",
             "activation",
@@ -92,8 +92,8 @@ class GRUModel(PulseTemplateModel, nn.Module):
         self.wandb = kwargs.get("wandb", False)
 
         # Extracting architecture parameters
-        self.hidden_dim = self.params["hidden_dim"]
-        self.layer_dim = self.params["layer_dim"]
+        self.hidden_size = self.params["hidden_size"]
+        self.num_layers = self.params["num_layers"]
         self.dropout_rate = self.params["dropout_rate"]
 
         # These will be set when data shape is known
@@ -128,10 +128,10 @@ class GRUModel(PulseTemplateModel, nn.Module):
         # GRU layers
         self.gru = nn.GRU(
             input_size=input_dim,
-            hidden_size=self.hidden_dim,
-            num_layers=self.layer_dim,
+            hidden_size=self.hidden_size,
+            num_layers=self.num_layers,
             batch_first=True,
-            dropout=self.dropout_rate if self.layer_dim > 1 else 0,
+            dropout=self.dropout_rate if self.num_layers > 1 else 0,
         )
 
         # Get FC layer dimensions from config
@@ -151,7 +151,7 @@ class GRUModel(PulseTemplateModel, nn.Module):
 
         # Build dynamic FC layers
         layers = [nn.Dropout(self.dropout_rate)]
-        input_size = self.hidden_dim
+        input_size = self.hidden_size
 
         # Add FC layers based on config
         for dim in fc_dims:
@@ -167,11 +167,11 @@ class GRUModel(PulseTemplateModel, nn.Module):
         self.fc = nn.Sequential(*layers)
 
         logger.info(
-            "GRU network initialized with input_dim %d, hidden_dim %d, layer_dim %d, "
+            "GRU network initialized with input_dim %d, hidden_size %d, num_layers %d, "
             "activation=%s, fc_layers=%s, %d parameters",
             input_dim,
-            self.hidden_dim,
-            self.layer_dim,
+            self.hidden_size,
+            self.num_layers,
             activation_type,
             fc_dims,
             sum(p.numel() for p in self.parameters()),
@@ -188,7 +188,7 @@ class GRUModel(PulseTemplateModel, nn.Module):
             Output tensor after passing through the GRU network
         """
         batch_size = x.size(0)
-        h0 = torch.zeros(self.layer_dim, batch_size, self.hidden_dim).to(x.device)
+        h0 = torch.zeros(self.num_layers, batch_size, self.hidden_size).to(x.device)
 
         # Forward propagate the GRU
         out, _ = self.gru(x, h0)

@@ -193,54 +193,83 @@ class PreprocessorAdvanced:
 
         return result_df
 
-    @DeprecationWarning
-    @classmethod
-    def aggregate_data_window(
-        cls,
-        windowed_df: pd.DataFrame,
-        group_by_cols: List[str],
-        agg_functions: Dict[str, List[str]],
-    ) -> pd.DataFrame:
+    def categorize_features(self, df, base_features=None, X_cols=None):
         """
-        Aggregate data within windows using specified functions.
-
-        This method performs aggregation operations on windowed data, computing
-        statistics like mean, std, min, max, etc. for each window.
-
+        Categorize features across an entire dataframe as too low, normal, or too high based on reference ranges.
+        
         Args:
-            windowed_df: DataFrame containing windowed data
-            group_by_cols: Columns to group by (typically window_id or similar)
-            agg_functions: Dictionary mapping column names to lists of aggregation functions
-                          e.g., {'hr': ['min', 'max', 'mean']}
-
+            df: Input DataFrame with patient data rows
+            base_features: Set of base feature names (optional, will be extracted if not provided)
+            X_cols: DataFrame columns to use (optional, will use df.columns if not provided)
+            
         Returns:
-            DataFrame with aggregated features for each window
+            DataFrame with the same index as input but with base features as columns and values:
+            -1 (too low), 0 (normal), 1 (too high)
         """
-        logger.debug("Aggregating windowed data by %s", group_by_cols)
+        # Use provided parameters or extract from dataframe
+        if X_cols is None:
+            X_cols = df.columns
+            
+        if base_features is None:
+            # Extract base feature names
+            base_features = set()
+            for col in X_cols:
+                if "_" in col and col.split("_")[-1].isdigit():
+                    base_name = col.split("_")[0]
+                    base_features.add(base_name)
+        
+        # Initialize result dataframe with the same index as input
+        result_df = pd.DataFrame(index=df.index)
+        
+        # Process each base feature
+        for feature in sorted(base_features):
+            # Get columns for this feature (e.g., hr_1, hr_2, etc.)
+            feature_cols = [col for col in X_cols if col.startswith(f"{feature}_")]
+            
+            # Filter to only include columns with numeric indices
+            feature_cols = [col for col in feature_cols if col.split("_")[1].isdigit()]
+            
+            # Skip if no valid columns for this feature
+            if not feature_cols:
+                continue
+            
+            # Get reference range
+            reference_range = get_feature_reference_range(feature)
+            
+            # Skip if no reference range available
+            if not reference_range:
+                continue
+            
+            # Calculate mean values for each row and categorize
+            feature_values = []
+            for _, row in df.iterrows():
+                # Extract values for this feature
+                values = [float(row[col]) for col in feature_cols if not pd.isna(row[col])]
+                
+                # Skip if no valid values
+                if not values:
+                    feature_values.append(np.nan)  # Use NaN for rows with no valid data
+                    continue
+                
+                # Calculate mean value
+                mean_value = sum(values) / len(values)
+                
+                # Categorize based on reference range and convert to numeric
+                if mean_value < reference_range[0]:
+                    feature_values.append(-1)  # Too low
+                elif mean_value > reference_range[1]:
+                    feature_values.append(1)   # Too high
+                else:
+                    feature_values.append(0)   # Normal
+            
+            # Add the feature to the result dataframe
+            result_df[feature] = feature_values
+            
+        return result_df
 
-        try:
-            # Group by the specified columns and apply aggregation functions
-            aggregated_df = windowed_df.groupby(group_by_cols).agg(agg_functions)
-
-            # Flatten multi-level column names
-            if isinstance(aggregated_df.columns, pd.MultiIndex):
-                aggregated_df.columns = [
-                    "_".join(col).strip() for col in aggregated_df.columns.values
-                ]
-
-            # Reset index to make group_by_cols regular columns again
-            aggregated_df = aggregated_df.reset_index()
-
-            logger.debug(
-                "Successfully aggregated data: %d windows, %d features",
-                aggregated_df.shape[0],
-                aggregated_df.shape[1],
-            )
-            return aggregated_df
-
-        except Exception as e:
-            logger.error("Error during window aggregation: %s", str(e))
-            raise
+    #######################################
+    # PLACEHOLDER FOR FUTURE IMPLEMENTATION
+    #######################################
 
     def match_absolute_onset(
         self,

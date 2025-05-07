@@ -5,23 +5,29 @@ params:
   trainer_name: "XGBoostTrainer" # Class that implements the training process
   type: "convML" # Type of model (convML for conventional machine learning, convDL for conventional deep learning and LLM for large language models)
   tune_hyperparameters: false # Whether to tune hyperparameters
-  objective: "binary:logistic" # For binary classification tasks
-  n_estimators: 80 # Number of boosting rounds/trees to build
-  learning_rate: 0.05 # Controls how much each tree contributes to the final model (eta)
   random_state: 42 # Seed for reproducible results
   verbosity: 0 # Controls the level of logging output (0: silent, 1: warnings, 2: info)
-  # Tree structure parameters
+  n_jobs: 1 # Number of parallel threads (-1 to use all CPUs)
+  
+  # Model Structure
+  n_estimators: 80 # Number of boosting rounds/trees to build
   max_depth: 6 # Maximum depth of each tree (prevents overfitting)
-  gamma: 0 # Minimum loss reduction required for a split
+  tree_method: "hist" # Algorithm to build trees (hist = faster histogram-based approach)
+  
+  # Split Criteria
   min_child_weight: 1 # Minimum sum of instance weight needed in a child node
-  # Sampling parameters
+  gamma: 0 # Minimum loss reduction required for a split (min_split_loss)
+  
+  # Sampling
   subsample: 0.6 # Fraction of samples used for tree building (prevents overfitting)
   colsample_bytree: 1.0 # Fraction of features used for tree building
-  # Regularization parameters
+  
+  # Regularization
   reg_alpha: 0.1 # L1 regularization on weights (0 = no regularization)
   reg_lambda: 2 # L2 regularization on weights (higher = more regularization)
-  # Performance and evaluation parameters
-  n_jobs: 1 # Number of parallel threads (-1 to use all CPUs)
-  tree_method: "hist" # Algorithm to build trees (hist = faster histogram-based approach)
+  
+  # Optimization
+  learning_rate: 0.05 # Controls how much each tree contributes to the final model (eta)
+  objective: "binary:logistic" # For binary classification tasks
   eval_metric: "auc" # Metric used for validation data evaluation
   early_stopping_rounds: 10 # Stop training if performance doesn't improve for this many rounds

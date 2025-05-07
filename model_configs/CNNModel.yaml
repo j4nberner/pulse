@@ -1,14 +1,20 @@
 name: "CNNModel"
 pretrained_model_path: null # Path to pretrained model (if any)
 params:
+  # Basic configuration
   trainer_name: "CNNTrainer"
   type: "convDL" # Type of model (convML for conventional machine learning, convDL for conventional deep learning and LLM for large language models)
   save_checkpoint: 1 # Save checkpoint every n epochs. Set to 0 to disable.
+  verbose: 2 # Controls verbosity of output (0 = silent, 1 = log every 10 batches, 2 = log every batch)
+  
+  # Model Architecture
+  kernel_size: 1
   output_shape: 1
   kernel_size: [1, 3, 5] # Kernel sizes for convolutional layers
   pool_size: 2
+  
+  # Training
   learning_rate: 0.001
   num_epochs: 100
-  verbose: 2 # Controls verbosity of output (0 = silent, 1 = log every 10 batches, 2 = log every batch)
   early_stopping_rounds: 10 # Number of rounds for early stopping
   grad_clip_max_norm: 2.0 # max_norm = 1.0 (LSTM, GRU) or 2.0 (CNN, InceptionTime)
