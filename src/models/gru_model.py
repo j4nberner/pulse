@@ -319,6 +319,7 @@ class GRUTrainer:
 
         # Update model architecture with correct shape
         self.model.create_network_with_input_shape(num_channels)
+        logger.info(self.model)
 
         logger.info(
             "Input shape to model (after transformation): %s",

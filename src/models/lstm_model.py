@@ -221,6 +221,8 @@ class LSTMTrainer:
             self.model.parameters(), lr=self.params["learning_rate"]
         )
 
+        logger.info(self.model)
+
         logger.info(
             "Input shape to model (after transformation): %s",
             transformed_features.shape,
@@ -262,9 +264,9 @@ class LSTMTrainer:
         self.early_stopping.load_best_model(self.model)  # Load the best model
         self.evaluate(self.test_loader, save_report=True)
 
-        model_save_name = f"{self.model.model_name}_{self.task_name}_{self.dataset_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pt"
+        model_save_name = f"{self.model.model_name}_{self.task_name}_{self.dataset_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         save_torch_model(
-            model_save_name, self.model, self.model.save_dir
+            model_save_name, self.model, os.path.join(self.model.save_dir, "Models")
         )  # Save the final model
 
     def train_epoch(self, epoch: int, verbose: int = 1) -> None:

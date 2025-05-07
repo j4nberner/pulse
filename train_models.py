@@ -57,12 +57,10 @@ class ModelTrainer:
             logger.info("DEBUG MODE ACTIVE: Training will use only one batch")
 
         # Train and evaluate each model on each dataset
-        # TODO: Check if LLM and normalization is disabled. 
+        # TODO: Check if LLM and normalization is disabled.
         for task_dataset_name, _ in self.dm.datasets.items():
             logger.info("#" * 60)
             logger.info("Processing dataset: %s", task_dataset_name)
-            # Create a group name for wandb using task_dataset_name and timestamp
-            wand_group_name = f"{task_dataset_name}_{timestamp}"
 
             # Extract task from dataset_name (format: task_dataset)
             task_name = task_dataset_name.split("_")[0]
@@ -84,10 +82,11 @@ class ModelTrainer:
                 if self.config.wandb.get("enabled", False):
                     # Create a unique run name for this model-dataset combination
                     run_name = f"{model_name}_{task_dataset_name}"
+                    group_name = f"{model_name}_{timestamp}"
                     # Create wandb config as OmegaConf object
                     wandb_config = OmegaConf.create(
                         {
-                            "task_dataset_name": wand_group_name,
+                            "group_name": group_name,
                             "model_name": model_name,
                             "run_name": run_name,
                         }
