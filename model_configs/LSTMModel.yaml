@@ -8,14 +8,14 @@ params:
   verbose: 2 # Controls verbosity of output (0 = silent, 1 = log every 10 batches, 2 = log every batch)
   
   # Model Architecture
-  hidden_size: 256 # Number of hidden units in LSTM layers
-  num_layers: 3 # Number of LSTM layers
+  hidden_size: 150 # Number of hidden units in LSTM layers
+  num_layers: 2 # Number of LSTM layers
   dropout: 0.2 # Dropout rate for LSTM layers
   output_shape: 1
   
   # Training
   num_epochs: 100
-  early_stopping_rounds: 5
+  early_stopping_rounds: 10
   
   # Optimization
   learning_rate: 0.001

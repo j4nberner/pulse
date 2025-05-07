@@ -16,15 +16,15 @@ params:
   
   # Training
   num_epochs: 60
-  earlystopping_patience: 5
+  earlystopping_patience: 10
   
   # Optimization
   optimizer_name: "adam" # Options: adam, adamw, sgd
-  learning_rate: 0.00001
+  learning_rate: 0.001 # 1e-3
   weight_decay: 1e-6
   grad_clip_max_norm: 1.0 # max_norm = 1.0 (LSTM, GRU) or 2.0 (CNN, InceptionTime)
   
   # Scheduler
-  scheduler_factor: 0.5
-  scheduler_patience: 3
-  min_lr: 1e-6
+  scheduler_factor: 0.1
+  scheduler_patience: 5
+  min_lr: 0.000001 # 1e-6

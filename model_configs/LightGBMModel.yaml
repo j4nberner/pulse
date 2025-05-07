@@ -10,7 +10,7 @@ params:
   
   # Model Structure
   n_estimators: 100 # Number of boosting rounds/trees to build
-  max_depth: -1 # Maximum depth of each tree (-1 means no limit)
+  max_depth: 7 # Maximum depth of each tree (-1 means no limit)
   boosting_type: "gbdt" # Boosting type (gbdt, dart, goss, rf)
   num_leaves: 31 # Maximum number of leaves in each tree
   
@@ -18,8 +18,8 @@ params:
   min_child_samples: 20 # Minimum number of samples required in a leaf node
   
   # Sampling
-  subsample: 0.8 # Fraction of samples used for tree building
-  colsample_bytree: 0.8 # Fraction of features used for tree building
+  subsample: 1.0 # Fraction of samples used for tree building
+  colsample_bytree: 1.0 # Fraction of features used for tree building
   
   # Regularization
   reg_alpha: 0 # L1 regularization on weights
