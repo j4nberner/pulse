@@ -1,8 +1,8 @@
-name: "Llama3Model"
+name: "Llama4Model"
 pretrained_model_path: null # Path to pretrained model (if any)
 params:
-  trainer_name: "Llama3Trainer"
-  model_id: "meta-llama/Llama-3.1-8B-Instruct" # Model ID for Llama3, path to pretrained model (if any)
+  trainer_name: "Llama4Trainer"
+  model_id: "meta-llama/Llama-4-Scout-17B-16E-Instruct" # Model ID for Llama3, path to pretrained model (if any)
   type: "LLM" # Type of model (convML for conventional machine learning, convDL for conventional deep learning and LLM for large language models)
   verbose: 2
   tuning: false # Whether to use prompt tuning

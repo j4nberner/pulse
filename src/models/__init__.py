@@ -2,10 +2,13 @@ from .cnn_model import CNNModel
 from .gru_model import GRUModel
 from .inceptiontime_model import InceptionTimeModel
 from .lightgbm_model import LightGBMModel
-from .llama3_model import Llama3Model
 from .lstm_model import LSTMModel
 from .randomforest_model import RandomForestModel
 from .xgboost_model import XGBoostModel
+from .llama3_model import Llama3Model
+from .llama4_model import Llama4Model
+from .gemma3_model import Gemma3Model
+from .meditron_model import MeditronModel
 
 model_cls_name_dict = {
     "RandomForest": RandomForestModel,
@@ -13,9 +16,12 @@ model_cls_name_dict = {
     "XGBoost": XGBoostModel,
     "LightGBM": LightGBMModel,
     "LSTMModel": LSTMModel,
-    "Llama3Model": Llama3Model,
     "InceptionTimeModel": InceptionTimeModel,
     "GRUModel": GRUModel,
+    "Llama3Model": Llama3Model,
+    "Llama4Model": Llama4Model,
+    "Gemma3Model": Gemma3Model,
+    "MeditronModel": MeditronModel,
 }
 
 

@@ -288,12 +288,13 @@ def apply_model_prompt_format(model_id, prompt):
     return formatted_prompt
 
 
-def prompt_template_hf(input_text: str) -> List[Dict[str, str]]:
+def prompt_template_hf(input_text: str, model=None) -> List[Dict[str, str]]:
     """
     Create a chat-based prompt compatible with Hugging Face's apply_chat_template.
 
     Args:
         input_text: The text to analyze.
+        model: Optional model name for specific formatting.
 
     Returns:
         A list of chat messages (dicts) for the LLM.
@@ -301,19 +302,32 @@ def prompt_template_hf(input_text: str) -> List[Dict[str, str]]:
     system_message = (
         "You are a helpful assistant. Analyze the following patient information and determine "
         "the most likely diagnosis.\n\n"
+        "Be conservative: If diagnosis criteria are marginal or borderline, favor to not to diagnose unless clear trends support the diagnosis.\n"
+        "Be specific and check the values against reference values.\n"
+
         "Return the result strictly in this JSON format:\n\n"
         "{\n"
         '  "diagnosis": "<short diagnosis label>",\n'
         '  "probability": "<a value between 0 and 1 representing probability of your diagnosis>",\n'
-        '  "explanation": "<a brief explanation for the prediction>"\n'
+        '  "explanation": "<a brief explanation for the prediction. state reference values and check against provided features>"\n'
         "}\n\n"
         "Respond only with a valid JSON object. Do not include any additional commentary."
     )
 
-    return [
-        {"role": "system", "content": system_message},
-        {"role": "user", "content": f"Text:\n{input_text}"},
+    # Apply model-specific formatting if needed
+    if model == "Gemma3Model":
+        formated_prompt = [
+        {"role": "system", "content": [{"type": "text", "text": system_message}]},
+        {"role": "user", "content": [{"type": "text", "text": f"Text:\n{input_text}"}]},
     ]
+    else:
+        formated_prompt = [
+            {"role": "system", "content": system_message},
+            {"role": "user", "content": f"Text:\n{input_text}"},
+        ]
+    
+
+    return formated_prompt
 
 
 def extract_dict(output_text: str) -> Optional[Dict[str, str]]:

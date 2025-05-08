@@ -136,6 +136,7 @@ class ModelTrainer:
                         X_test.shape,
                     )
 
+
                     # Choose the appropriate DataLoader based on model type
                     if model.type == "convML":
                         train_loader = (X_train, y_train)
@@ -198,6 +199,11 @@ class ModelTrainer:
                             "Please specify a model type (convML, convDL, LLM) in the config"
                         )
                         sys.exit(1)
+
+                    # Save prompts in testloader for debugging
+                    if self.config.prompting.get("save_test_set", False) and model.type == "LLM":
+                        test_loader[0].to_csv(os.path.join(self.config.output_dir, "test_set.csv"), index=False)
+                        test_loader[1].to_csv(os.path.join(self.config.output_dir, "test_labels.csv"), index=False)
 
                     # Set trainer for the model and train
                     model.set_trainer(

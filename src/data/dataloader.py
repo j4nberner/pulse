@@ -435,8 +435,6 @@ class DatasetManager:
                 # Print statistics for all datasets
                 self.preprocessor.print_statistics(stats_to_print)
 
-        logger.debug("X before advanced preprocessing: %s", X.shape)
-
         # Drop stay_id columns BEFORE creating lists for few-shot learning
         if isinstance(X, pd.DataFrame) and "stay_id" in X.columns:
             X = X.drop(columns=["stay_id"])

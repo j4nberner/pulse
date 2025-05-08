@@ -10,7 +10,6 @@ import torch.optim as optim
 from langchain.prompts import PromptTemplate
 from langchain.schema.runnable import Runnable
 from peft import (
-    PrefixTuningConfig,
     PromptTuningInit,
     TaskType,
     PromptTuningConfig,
@@ -61,12 +60,12 @@ class Llama3Model(PulseTemplateModel):
             raise KeyError(f"Required parameters missing from config: {missing_params}")
 
         self.params: Dict[str, Any] = params
+        self.params["save_test_set"] = kwargs.get("save_test_set", False)
 
-        # self.quantization_config = BitsAndBytesConfig(load_in_4bit=True)
         self.model_id: str = self.params.get(
             "model_id", "meta-llama/Llama-3.1-8B-Instruct"
         )
-        self.max_length: int = self.params.get("max_length", 512 * 10)
+        self.max_length: int = self.params.get("max_length", 5120)
 
         self.tokenizer: Optional[Any] = None
         self.llama_model: Optional[Any] = None
@@ -134,12 +133,24 @@ class Llama3Model(PulseTemplateModel):
             input_text, tokenize=False, add_generation_prompt=True
         )
 
+        # logger.debug("-------------CHAT PROMPT-------------")
+        # logger.debug(chat_prompt)
+
         tokenized_inputs = self.tokenizer(
             chat_prompt,
             return_tensors="pt",
         )
         token_time = time.perf_counter() - token_start
         num_tokens = tokenized_inputs["input_ids"].numel()
+
+        # logger.debug("-------------DECODED CHAT PROMPT-------------")
+        # logger.debug(
+        #     self.tokenizer.decode(
+        #         tokenized_inputs["input_ids"][0],
+        #         skip_special_tokens=True,
+        #         clean_up_tokenization_spaces=True,
+        #     )
+        # )
 
         infer_start = time.perf_counter()
         self.llama_model.to(self.device)
@@ -154,7 +165,6 @@ class Llama3Model(PulseTemplateModel):
             )
 
         # 3) Slice off the prompt part:
-        #    outputs is shape (1, prompt_len + gen_len)
         gen_ids = outputs[0, num_tokens:]
 
         # 4) Decode just the generated tokens:
@@ -184,8 +194,6 @@ class Llama3Model(PulseTemplateModel):
         logger.info(
             f"Tokenization time: {token_time:.4f}s | Inference time: {infer_time:.4f}s | Tokens: {num_tokens}"
         )
-
-        # torch.cuda.empty_cache()
 
         return {
             "generated_text": generated_text,
@@ -263,6 +271,7 @@ class Llama3Trainer:
         self.train_loader = train_loader
         self.val_loader = val_loader
         self.test_loader = test_loader
+        self.save_test_set = self.params.get("save_test_set", False)
 
         self.criterion = nn.BCELoss()  # Binary Cross Entropy Loss
         self.wandb = self.model.wandb
@@ -279,7 +288,7 @@ class Llama3Trainer:
     def train(self):
         """Training loop."""
         verbose = self.params.get("verbose", 1)
-
+        logger.info("System message: %s", prompt_template_hf("")[0])
         logger.info("Starting training...")
 
         if self.tuning:
@@ -376,6 +385,17 @@ class Llama3Trainer:
         Returns:
             The average validation loss across the test dataset.
         """
+        if self.save_test_set:
+            # Save test set to CSV
+            test_loader[0].to_csv(
+                os.path.join(self.model.save_dir, "test_set.csv"), index=False
+            )
+            test_loader[1].to_csv(
+                os.path.join(self.model.save_dir, "test_labels.csv"), index=False
+            )
+            logger.info("Test set saved to %s", self.model.save_dir)
+        logger.info("Starting test evaluation...")
+
         metrics_tracker = MetricsTracker(
             self.model.model_name,
             self.model.task_name,
@@ -465,61 +485,6 @@ class Llama3Trainer:
         NotImplementedError(
             "Batch evaluation is not implemented for Llama3Model. Use evaluate_single instead."
         )
-        metrics_tracker = MetricsTracker(
-            self.model.model_name,
-            self.model.task_name,
-            self.model.dataset_name,
-            self.model.save_dir,
-        )
-        verbose: int = self.params.get("verbose", 1)
-        val_loss: list[float] = []
-
-        self.llama_model.eval()
-
-        df_X, df_y = test_loader  # X: prompts, y: true labels
-        prompts = df_X.iloc[:, 0].tolist()
-        true_labels = df_y.iloc[:, 0].tolist()
-
-        # Batch inference with Hugging Face pipeline
-        results = self.model.hf_pipeline(
-            prompts,
-        )
-
-        logger.debug(f"Results from hf_pipeline: {results}")
-
-        for i, result_dict in enumerate(results):
-            generated_text = result_dict["generated_text"]
-            y_true = true_labels[i]
-
-            predicted_probability = self.model.parse_output(generated_text)
-
-            logger.info(
-                "Predicted probability: %s | True label: %s",
-                predicted_probability,
-                y_true,
-            )
-
-            predicted_label = torch.tensor(
-                predicted_probability, dtype=torch.float32
-            ).unsqueeze(0)
-            target = torch.tensor(float(y_true), dtype=torch.float32).unsqueeze(0)
-
-            loss = self.criterion(predicted_label, target)
-            val_loss.append(loss.item())
-
-            if self.wandb:
-                wandb.log({"val_loss": loss.item()})
-
-            metrics_tracker.add_results(predicted_probability, y_true)
-
-        metrics_tracker.summary = metrics_tracker.compute_overall_metrics()
-        if save_report:
-            metrics_tracker.save_report()
-
-        logger.info("Test evaluation completed for %s", self.model.model_name)
-        logger.info("Test metrics: %s", metrics_tracker.summary)
-
-        return float(np.mean(val_loss))
 
     def encode_prompt_target(
         self,

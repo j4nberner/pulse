@@ -7,13 +7,15 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from langchain.prompts import PromptTemplate
+from langchain.schema.runnable import Runnable
 from peft import (
     PromptTuningInit,
     TaskType,
     PromptTuningConfig,
     get_peft_model,
 )
-from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, Llama4ForConditionalGeneration
+from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
 import wandb
 from src.eval.metrics import MetricsTracker
@@ -30,11 +32,11 @@ warnings.filterwarnings(
 logger = logging.getLogger("PULSE_logger")
 
 
-class Llama4Model(PulseTemplateModel):
-    """Llama 4 model wrapper using LangChain for prompt templating and inference."""
+class MeditronModel(PulseTemplateModel):
+    """Meditron model wrapper using LangChain for prompt templating and inference."""
 
     def __init__(self, params: Dict[str, Any], **kwargs) -> None:
-        """Initializes the Llama4Model with parameters and paths.
+        """Initializes the MeditronModel with parameters and paths.
 
         Args:
             params: Configuration dictionary with model parameters.
@@ -61,12 +63,15 @@ class Llama4Model(PulseTemplateModel):
         self.params["save_test_set"] = kwargs.get("save_test_set", False)
 
         self.model_id: str = self.params.get(
-            "model_id", "meta-llama/Llama-4-Scout-17B-16E-Instruct"
+            "model_id", "epfl-llm/meditron-7b"
         )
         self.max_length: int = self.params.get("max_length", 5120)
 
         self.tokenizer: Optional[Any] = None
-        self.llama_model: Optional[Any] = None
+        self.meditron_model: Optional[Any] = None
+        self.lc_llm: Optional[Any] = None
+        self.prompt_template: Optional[PromptTemplate] = None
+        self.lc_chain: Optional[Runnable] = None
 
         self.quantization_config = BitsAndBytesConfig(
             load_in_8bit=True, llm_int8_threshold=6.0, llm_int8_has_fp16_weight=True
@@ -79,16 +84,10 @@ class Llama4Model(PulseTemplateModel):
             self.tokenizer = AutoTokenizer.from_pretrained(
                 self.model_id, use_fast=False, padding_side="left"
             )
-            # self.llama_model = AutoModelForCausalLM.from_pretrained(
-            #     self.model_id,
-            #     device_map="auto",
-            #     torch_dtype=torch.float16,
-            # )
-            self.llama_model = Llama4ForConditionalGeneration.from_pretrained(
+            self.meditron_model = AutoModelForCausalLM.from_pretrained(
                 self.model_id,
-                attn_implementation="flex_attention",
                 device_map="auto",
-                torch_dtype=torch.bfloat16,
+                torch_dtype=torch.float16,
             )
 
             if self.params.get("tuning", False):
@@ -101,12 +100,12 @@ class Llama4Model(PulseTemplateModel):
                     prompt_tuning_init=PromptTuningInit.TEXT,
                     prompt_tuning_init_text="Classify the diagnosis of following ICU data:",
                 )
-                self.llama_model = get_peft_model(self.llama_model, tuning_config)
-                logger.debug(self.llama_model.print_trainable_parameters())
+                self.meditron_model = get_peft_model(self.meditron_model, tuning_config)
+                logger.debug(self.meditron_model.print_trainable_parameters())
 
-            logger.info("Successfully loaded Llama4 model: %s", self.model_id)
+            logger.info("Successfully loaded Meditron model: %s", self.model_id)
         except Exception as e:
-            logger.error("Failed to load Llama4 model: %s", e)
+            logger.error("Failed to load Meditron model: %s", e)
             raise
 
         logger.info(
@@ -154,10 +153,10 @@ class Llama4Model(PulseTemplateModel):
         # )
 
         infer_start = time.perf_counter()
-        self.llama_model.to(self.device)
+        self.meditron_model.to(self.device)
 
         with torch.no_grad():
-            outputs = self.llama_model.generate(
+            outputs = self.meditron_model.generate(
                 input_ids=tokenized_inputs["input_ids"].to(self.device),
                 attention_mask=tokenized_inputs["attention_mask"].to(self.device),
                 max_new_tokens=self.params.max_new_tokens,
@@ -218,7 +217,7 @@ class Llama4Model(PulseTemplateModel):
             val_dataloader: DataLoader for validation data.
             test_dataloader: DataLoader for test data.
         """
-        self.trainer = Llama4Trainer(
+        self.trainer = MeditronTrainer(
             self, train_dataloader, val_dataloader, test_dataloader
         )
 
@@ -246,18 +245,18 @@ class Llama4Model(PulseTemplateModel):
             return 0.5  # Default to 0.5 if parsing fails
 
 
-class Llama4Trainer:
-    """Trainer class for Llama4Model."""
+class MeditronTrainer:
+    """Trainer class for MeditronModel."""
 
     def __init__(
-        self, model: Llama4Model, train_loader, val_loader, test_loader
+        self, model: MeditronModel, train_loader, val_loader, test_loader
     ) -> None:
         """
-        Initialize the Llama4 trainer. Finetruning is not implemented yet.
+        Initialize the Meditron trainer. Finetruning is not implemented yet.
         This is a wrapper for inference only.
 
         Args:
-            model (Llama4Model): The Llama4 model to be trained.
+            model (MeditronModel): The Meditron model to be trained.
             train_loader: The DataLoader object for the training dataset.
             val_loader: The DataLoader object for the validation dataset.
             test_loader: The DataLoader object for the testing dataset.
@@ -266,7 +265,7 @@ class Llama4Trainer:
         model._load_model()  # Comment out to only test preprocessing
 
         self.model = model
-        self.llama_model = model.llama_model
+        self.meditron_model = model.meditron_model
         self.params = model.params
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.train_loader = train_loader
@@ -298,11 +297,11 @@ class Llama4Trainer:
                 self.model_save_dir,
             )
             optimizer = optim.AdamW(
-                self.llama_model.parameters(), lr=self.params.get("lr", 1e-4)
+                self.meditron_model.parameters(), lr=self.params.get("lr", 1e-4)
             )
             num_epochs = self.params.get("num_epochs", 1)
 
-            self.llama_model.train()
+            self.meditron_model.train()
             for epoch in range(num_epochs):
                 epoch_loss = 0.0
                 logger.info(f"Epoch {epoch + 1} started...")
@@ -337,7 +336,7 @@ class Llama4Trainer:
                     )
 
                     optimizer.zero_grad()
-                    outputs = self.llama_model(
+                    outputs = self.meditron_model(
                         input_ids=encoded["input_ids"].to(self.device),
                         attention_mask=encoded["attention_mask"].to(self.device),
                         labels=encoded["labels"].to(self.device),
@@ -370,7 +369,7 @@ class Llama4Trainer:
                 val_loss = self.evaluate_single(self.val_loader)
                 logger.info("Validation loss: %s", val_loss)
 
-                self.llama_model.save_pretrained(self.model_save_dir)
+                self.meditron_model.save_pretrained(self.model_save_dir)
                 self.model.tokenizer.save_pretrained(self.model_save_dir)
                 logger.info("Model saved to %s", self.model_save_dir)
 
@@ -406,7 +405,7 @@ class Llama4Trainer:
         verbose: int = self.params.get("verbose", 1)
         val_loss: list[float] = []
 
-        self.llama_model.eval()
+        self.meditron_model.eval()
 
         total_tokens = 0
         total_token_time = 0.0
@@ -484,7 +483,7 @@ class Llama4Trainer:
             The average validation loss across the test dataset.
         """
         NotImplementedError(
-            "Batch evaluation is not implemented for Llama4Model. Use evaluate_single instead."
+            "Batch evaluation is not implemented for MeditronModel. Use evaluate_single instead."
         )
 
     def encode_prompt_target(
