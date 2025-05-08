@@ -4,6 +4,7 @@ import os
 from typing import Any, Dict, List, Union
 
 import numpy as np
+import pandas as pd
 import torch
 from sklearn.metrics import (
     accuracy_score,
@@ -152,6 +153,20 @@ class MetricsTracker:
         with open(report_path, "w", encoding="utf-8") as f:
             json.dump(existing_data, f, indent=4)
 
+        # Save labels and predictions together as csv
+        predictions_path = os.path.join(
+            self.save_dir,
+            f"{self.model_id}_{self.task_id}_{self.dataset_name}_predictions.csv",
+        )
+        df_predictions = pd.DataFrame(
+            {
+                "predictions": self.results["predictions"],
+                "labels": self.results["labels"],
+            }
+        )
+        df_predictions.to_csv(predictions_path, index=False)
+
+        logger.info("Predictions and labels saved to %s", predictions_path)
         logger.info("Metrics report saved to %s", report_path)
         return report_path
 

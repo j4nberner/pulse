@@ -55,7 +55,6 @@ class PulseTemplateModel:
         """
         self.trainer_name = trainer_name
         self.trainer = None
-        # TODO: Implement dynamic loading of trainer class based on trainer_name
 
     def load_model_weights(self, model_path: str) -> None:
         """Load model weights from a specified path.

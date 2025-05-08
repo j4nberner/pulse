@@ -84,9 +84,10 @@ def init_wandb(config: OmegaConf) -> bool:
         wandb.init(
             entity=config.wandb["entity"],  # needed for wandb
             name=config.get("run_name", None),  # optional run name
-            group=config.get("task_dataset_name", None),  # optional group name
+            group=config.get("group_name", None),  # optional group name
             config={k: v for k, v in vars(config).items() if not k.startswith("_")},
             reinit=True,
+            settings=wandb.Settings(_disable_stats=True),
         )
         # Log model architecture if available
         # if hasattr(model, "get_config"):

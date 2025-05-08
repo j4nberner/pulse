@@ -10,6 +10,7 @@ params:
   # Model Architecture
   kernel_size: 1
   output_shape: 1
+  kernel_size: [1, 3, 5] # Kernel sizes for convolutional layers
   pool_size: 2
   
   # Training

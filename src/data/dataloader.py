@@ -328,7 +328,7 @@ class DatasetManager:
         data = dataset["data"]
 
         few_shot_list = [
-            "few_shot_paper_preprocessor",
+            "liu_2023_few_shot_preprocessor",
             "zhu_2024a_one_shot_cot_preprocessor",
             "zhu_2024b_one_shot_preprocessor",
             "zhu_2024c_categorization_summary_preprocessor",
@@ -388,8 +388,6 @@ class DatasetManager:
             # Handle limited test set if requested
             X_original = X.copy()
             y_original = y.copy()
-
-            logger.debug("X_original length: %d", len(X_original))
 
             if self.test_limited is not None:
                 logger.info(
