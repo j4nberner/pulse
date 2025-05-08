@@ -293,16 +293,16 @@ class LSTMTrainer:
                 self.model.parameters(), max_norm=max_norm
             )
             if total_norm > max_norm:
-                logger.info(f"Gradient norm {total_norm:.4f} clipped to {max_norm}")
+                logger.info("Gradient norm %.4f clipped to %s", total_norm, max_norm)
             self.optimizer.step()
 
             running_loss += loss.item()
 
             # Reporting based on verbosity
-            if verbose == 2 or (verbose == 1 and i % 10 == 9):
-                loss_value = running_loss / (10 if verbose == 1 else 1)
+            if verbose == 2 or (verbose == 1 and i % 100 == 99):
+                loss_value = running_loss / (100 if verbose == 1 else 1)
                 logger.info(
-                    f"Epoch {epoch + 1}, Batch {i + 1}: Loss = {loss_value:.4f}"
+                    "Epoch %d, Batch %d: Loss = %.4f", epoch + 1, i + 1, loss_value
                 )
 
                 if self.wandb:

@@ -227,7 +227,7 @@ class InceptionTimeModel(PulseTemplateModel, nn.Module):
 
         # Store inception and residual modules separately
         self.inception_modules = nn.ModuleList()
-        self.residual_connections = {}
+        self.residual_connections = nn.ModuleDict()
 
         # Build inception modules with residual connections
         for d in range(self.depth):
@@ -239,7 +239,7 @@ class InceptionTimeModel(PulseTemplateModel, nn.Module):
                 )
             )
             if d % 3 == 2 and d >= 2:  # Add residual connection every 3rd block
-                self.residual_connections[d] = self.Residual(
+                self.residual_connections[str(d)] = self.Residual(
                     in_channels=self.out_channels[d - 2] * num_paths_per_block,
                     out_channels=self.out_channels[d] * num_paths_per_block,
                 )
@@ -275,7 +275,7 @@ class InceptionTimeModel(PulseTemplateModel, nn.Module):
             if i in self.residual_connections and recent_outputs[0] is not None:
                 # Only use residual connection if we have a valid tensor
                 residual_input = recent_outputs[0]  # first element is oldest
-                residual_module = self.residual_connections[i]
+                residual_module = self.residual_connections[str(i)]
                 x = residual_module(residual_input, x)
 
             # Shift outputs window and store current output (circular buffer style)
@@ -476,6 +476,7 @@ class InceptionTimeTrainer:
         """
         self.model.train()
         train_loss = 0.0
+        running_loss = 0.0
 
         for batch_idx, (features, labels) in enumerate(self.train_loader):
             features = self.converter.convert_batch_to_3d(features)
@@ -497,16 +498,23 @@ class InceptionTimeTrainer:
             self.optimizer.step()
 
             train_loss += loss.item()
+            running_loss += loss.item()  # Add to running loss
 
-            # Log progress for each batch if verbose=2, or every 10 batches if verbose=1
-            if verbose == 2 or verbose == 1 and batch_idx % 10 == 0:
+            # Reporting based on verbosity
+            if verbose == 2 or (verbose == 1 and batch_idx % 100 == 99):
+                loss_value = running_loss / (100 if verbose == 1 else 1)
                 logger.info(
-                    "Epoch %d, Batch %d/%d, Loss: %.4f",
+                    "Epoch %d, Batch %d/%d: Loss = %.4f",
                     epoch + 1,
                     batch_idx + 1,
                     len(self.train_loader),
-                    loss.item(),
+                    loss_value,
                 )
+
+                if self.wandb:
+                    wandb.log({"train_loss": loss_value})
+
+                running_loss = 0.0  # Reset running loss after logging
 
         # Calculate average loss for the epoch
         avg_train_loss = train_loss / len(self.train_loader)

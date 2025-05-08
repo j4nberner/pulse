@@ -377,6 +377,7 @@ class GRUTrainer:
         """
         self.model.train()
         train_loss = 0.0
+        running_loss = 0.0
 
         for batch_idx, (features, labels) in enumerate(self.train_loader):
             features = self.converter.convert_batch_to_3d(features)
@@ -398,16 +399,23 @@ class GRUTrainer:
             self.optimizer.step()
 
             train_loss += loss.item()
+            running_loss += loss.item()  # Add to running loss
 
-            # Log progress for each batch if verbose=2, or every 10 batches if verbose=1
-            if verbose == 2 or verbose == 1 and batch_idx % 10 == 0:
+            # Reporting based on verbosity
+            if verbose == 2 or (verbose == 1 and batch_idx % 100 == 99):
+                loss_value = running_loss / (100 if verbose == 1 else 1)
                 logger.info(
-                    "Epoch %d, Batch %d/%d, Loss: %.4f",
+                    "Epoch %d, Batch %d/%d: Loss = %.4f",
                     epoch + 1,
                     batch_idx + 1,
                     len(self.train_loader),
-                    loss.item(),
+                    loss_value,
                 )
+
+                if self.wandb:
+                    wandb.log({"train_loss": loss_value})
+
+                running_loss = 0.0  # Reset running loss after logging
 
         # Calculate average loss for the epoch
         avg_train_loss = train_loss / len(self.train_loader)

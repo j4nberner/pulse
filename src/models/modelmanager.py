@@ -40,38 +40,40 @@ class ModelManager:
     def _prepare_models(self) -> List[Any]:
         """
         Checks model configurations and converts them to actual model objects.
-
         Returns:
             List[Any]: List of instantiated model objects.
         """
         logger.info("Preparing %d models...", len(self.model_configs))
         prepared_models = []
-
         for _, config in self.model_configs.items():
             model_name = config.get("name")
             if not model_name:
                 logger.error("Model name is required.")
                 continue
-
             try:
-                for prompting_id in self.prompt_configs.get(
-                    "prompting_ids", [None]
-                ):
-                    config.params["prompting_id"] = prompting_id
+                if self.prompt_configs.prompting_ids is not None:
+                    for prompting_id in self.prompt_configs.prompting_ids:
+                        config.params["prompting_id"] = prompting_id
+                        logger.info(
+                            "---------------Preparing model '%s'---------------",
+                            model_name,
+                        )
+                        logger.info("Prompting Preprocessing ID: %s", prompting_id)
+                        model = self._create_model_from_config(config)
+                        prepared_models.append(model)
+                        logger.info("Model '%s' prepared successfully", model_name)
+                else:
                     logger.info(
                         "---------------Preparing model '%s'---------------", model_name
                     )
-                    logger.info("Prompting Preprocessing ID: %s", prompting_id)
                     model = self._create_model_from_config(config)
                     prepared_models.append(model)
                     logger.info("Model '%s' prepared successfully", model_name)
             except Exception as e:
                 logger.error("Failed to prepare model '%s': %s", model_name, str(e))
-
         if not prepared_models:
             logger.error("No valid models could be prepared.")
             sys.exit(1)
-
         return prepared_models
 
     def _create_model_from_config(self, config: Dict) -> Any:

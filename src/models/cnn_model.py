@@ -313,30 +313,22 @@ class CNNTrainer:
                 self.model.parameters(), max_norm=max_norm
             )
             if total_norm > max_norm:
-                logger.info(f"Gradient norm {total_norm:.4f} clipped to {max_norm}")
+                logger.info("Gradient norm %.4f clipped to %s", total_norm, max_norm)
             self.optimizer.step()
 
             running_loss += loss.item()
-            if verbose == 2:  # Verbose level 2: log every batch
+
+            # Reporting based on verbosity
+            if verbose == 2 or (verbose == 1 and i % 100 == 99):
+                loss_value = running_loss / (100 if verbose == 1 else 1)
                 logger.info(
-                    "Training - Epoch %d, Batch %d: Loss = %.4f",
-                    epoch + 1,
-                    i + 1,
-                    loss.item(),
+                    "Epoch %d, Batch %d: Loss = %.4f", epoch + 1, i + 1, loss_value
                 )
+
                 if self.wandb:
-                    wandb.log({"train_loss": loss.item()})
-            elif verbose == 1:
-                if i % 10 == 9:
-                    logger.info(
-                        "Training - Epoch %d, Batch %d: Loss = %.4f",
-                        epoch + 1,
-                        i + 1,
-                        running_loss / 10,
-                    )
-                    if self.wandb:
-                        wandb.log({"train_loss": running_loss / 10})
-                    running_loss = 0.0
+                    wandb.log({"train_loss": loss_value})
+
+                running_loss = 0.0
 
     def evaluate(self, data_loader, save_report: bool = False) -> float:
         """Evaluates the model on the given dataset."""

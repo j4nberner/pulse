@@ -5,7 +5,7 @@ params:
   trainer_name: "InceptionTimeTrainer"
   type: "convDL" # Type of model (convML for conventional machine learning, convDL for conventional deep learning and LLM for large language models)
   save_checkpoint_freq: 5
-  verbose: 2 # Controls verbosity of output (0 = silent, 1 = log every 10 batches, 2 = log every batch)
+  verbose: 2 # Controls verbosity of output (0 = silent, 1 = log every 100 batches, 2 = log every batch)
   
   # Model Architecture
   depth: 12
