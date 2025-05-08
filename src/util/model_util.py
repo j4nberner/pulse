@@ -22,7 +22,7 @@ class EarlyStopping:
             This value is chosen to prevent stopping due to minor fluctuations in validation loss.
     """
 
-    def __init__(self, patience=5, verbose=False, delta=0.0001):
+    def __init__(self, patience=10, verbose=True, delta=0.0001):
         self.patience = patience
         self.verbose = verbose
         self.delta = delta
@@ -332,7 +332,7 @@ def extract_dict(output_text: str) -> Optional[Dict[str, str]]:
         output_text: The raw string returned by the language model.
 
     Returns:
-        A dictionary parsed from the JSON string, or default JSON opject of no JSON was found.
+        A dictionary parsed from the JSON string, or default JSON opject if no JSON was found.
     """
     default_json = {
         "diagnosis": "unknown",

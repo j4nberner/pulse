@@ -34,7 +34,7 @@ class PulseTemplateModel:
         self.dataset_name = None
         self.task_name = None
         self.prompting_id = params.get("prompting_id", None)
-        self.pretrained_model_path = params.get("pretrained_model_path", None)
+        self.pretrained_model_path = kwargs.get("pretrained_model_path")
         self.type = params.get("type", None)
 
     def set_trainer(
@@ -62,7 +62,6 @@ class PulseTemplateModel:
         Args:
             model_path: Path to the model weights file
         """
-        model_path = self.pretrained_model_path
         if self.type == "convML":
             # Load the sklearn model using joblib
             self.model = joblib.load(model_path)

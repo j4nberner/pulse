@@ -91,24 +91,40 @@ class ModelManager:
         model_cls = get_model_class(model_name)
         model = model_cls(
             config.get("params", {}),
+            pretrained_model_path=config.get("pretrained_model_path", None),
             wandb=self.wandb.get("enabled", False),
             output_dir=self.output_dir,
         )
 
         # Load model weights if path is specified
         if config.get("pretrained_model_path", None):
-            try:
-                model.load_model_weights(config["pretrained_model_path"])
-                logger.info(
-                    "Loaded pretrained model weights from %s",
-                    config["pretrained_model_path"],
+            # Only load during initialization for convML models
+            # Deep learning models will be loaded after proper architecture setup
+            model_type = config.get("params", {}).get("type")
+
+            if model_type == "convML":
+                try:
+                    model.load_model_weights(config["pretrained_model_path"])
+                    logger.info(
+                        "Loaded pretrained model weights from %s",
+                        config["pretrained_model_path"],
+                    )
+                except Exception as e:
+                    logger.warning(
+                        "Failed to load pretrained model weights from %s: %s. Defaulting to random initialization.",
+                        config["pretrained_model_path"],
+                        str(e),
+                    )
+            else:
+                logger.debug(
+                    "Deferring loading of pretrained model weights for %s model until after architecture setup",
+                    model_type,
                 )
-            except Exception as e:
-                logger.warning(
-                    "Failed to load pretrained model weights from %s: %s. Defaulting to random initialization.",
-                    config["pretrained_model_path"],
-                    str(e),
-                )
+        else:
+            logger.debug(
+                "No pretrained model path specified for %s. Using random initialization.",
+                model_name,
+            )
 
         return model
 

@@ -15,7 +15,7 @@ params:
   activation: "leaky_relu" # Activation function (relu, leaky_relu, gelu)
   
   # Training
-  num_epochs: 60
+  num_epochs: 100
   earlystopping_patience: 10
   
   # Optimization

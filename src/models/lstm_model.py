@@ -43,7 +43,7 @@ class LSTMModel(PulseTemplateModel, nn.Module):
             "model_name", self.__class__.__name__.replace("Model", "")
         )
         self.trainer_name = params["trainer_name"]
-        super().__init__(self.model_name, self.trainer_name, params=params)
+        super().__init__(self.model_name, self.trainer_name, params=params, **kwargs)
         nn.Module.__init__(self)
 
         # Set the model save directory
@@ -232,6 +232,10 @@ class LSTMTrainer:
         if self.model.pretrained_model_path:
             try:
                 self.model.load_model_weights(self.model.pretrained_model_path)
+                logger.info(
+                    "Pretrained model weights loaded successfully from %s",
+                    self.model.pretrained_model_path,
+                )
             except Exception as e:
                 logger.warning(
                     "Failed to load pretrained model weights: %s. Defaulting to random initialization.",
