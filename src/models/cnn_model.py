@@ -98,21 +98,21 @@ class CNNModel(PulseTemplateModel, nn.Module):
         self.conv1 = nn.Conv1d(
             in_channels=self.params["num_channels"],
             out_channels=self.params["num_channels"] * 4,
-            kernel_size=self.params["kernel_size"],
-            padding=self.params["kernel_size"] // 2,
+            kernel_size=self.params["kernel_size"][0],
+            padding="same",
             stride=1,
         )
         self.conv2 = nn.Conv1d(
             in_channels=self.params["num_channels"] * 4,
             out_channels=self.params["num_channels"] * 2,
-            kernel_size=self.params["kernel_size"],
-            padding=self.params["kernel_size"] // 2,
+            kernel_size=self.params["kernel_size"][1],
+            padding="same",
         )
         self.conv3 = nn.Conv1d(
             in_channels=self.params["num_channels"] * 2,
             out_channels=16,
-            kernel_size=self.params["kernel_size"],
-            padding=self.params["kernel_size"] // 2,
+            kernel_size=self.params["kernel_size"][2],
+            padding="same",
         )
 
         self.norm1 = nn.GroupNorm(
@@ -123,7 +123,7 @@ class CNNModel(PulseTemplateModel, nn.Module):
         )
         self.norm3 = nn.GroupNorm(num_groups=1, num_channels=16)
 
-        self.leaky_relu = nn.ReLU()
+        self.leaky_relu = nn.LeakyReLU()
 
         self.pool = nn.MaxPool1d(kernel_size=self.params["pool_size"])
         self.dropout = nn.Dropout(0.1)
@@ -224,7 +224,7 @@ class CNNTrainer:
         self.model.params["num_channels"] = transformed_features.shape[1]
         self.model.params["window_size"] = transformed_features.shape[2]
         self.model._init_model()
-
+        logger.info(self.model)
         logger.info(
             "Input shape to model (after transformation): %s",
             transformed_features.shape,
@@ -270,7 +270,7 @@ class CNNTrainer:
         self.evaluate(
             self.test_loader, save_report=True
         )  # Evaluate on test set and save metrics
-        model_save_name = f"{self.model.model_name}_{self.task_name}_{self.dataset_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pt"
+        model_save_name = f"{self.model.model_name}_{self.task_name}_{self.dataset_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         # Log the model architecture and parameters to wandb
         if self.wandb:
             wandb.log(
@@ -279,8 +279,9 @@ class CNNTrainer:
                     "model_parameters": self.model.state_dict(),
                 }
             )
+
         save_torch_model(
-            model_save_name, self.model, self.model.save_dir
+            model_save_name, self.model, os.path.join(self.model.save_dir, "Models")
         )  # Save the final model
 
     def train_epoch(self, epoch: int, verbose: int = 1) -> None:
@@ -373,5 +374,18 @@ class CNNTrainer:
         # Log results to console
         logger.info("Test evaluation completed for %s", self.model.model_name)
         logger.info("Test metrics: %s", metrics_tracker.summary)
+
+        if self.wandb:
+            wandb.log(
+                {
+                    "Test metrics": wandb.Table(
+                        data=[
+                            [metric, value]
+                            for metric, value in metrics_tracker.summary.items()
+                        ],
+                        columns=["Metric", "Value"],
+                    )
+                }
+            )
 
         return np.mean(val_loss)

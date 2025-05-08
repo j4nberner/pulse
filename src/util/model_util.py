@@ -332,12 +332,18 @@ def extract_dict(output_text: str) -> Optional[Dict[str, str]]:
         output_text: The raw string returned by the language model.
 
     Returns:
-        A dictionary parsed from the JSON string, or None if parsing fails.
+        A dictionary parsed from the JSON string, or default JSON opject of no JSON was found.
     """
+    default_json = {
+        "diagnosis": "unknown",
+        "probability": 0.5,
+        "explanation": "No explanation provided.",
+    }
     # 1) Find the JSON start
     json_start = output_text.find("{")
     if json_start == -1:
-        raise ValueError("No JSON object found in assistant output")
+        logger.warning("No JSON object found in assistant output. Returning default.")
+        return default_json
 
     json_text = output_text[json_start:].strip()
 
@@ -357,5 +363,5 @@ def extract_dict(output_text: str) -> Optional[Dict[str, str]]:
         output_dict = ast.literal_eval(json_text)
         return output_dict
     except (SyntaxError, ValueError) as e:
-        logger.error("Failed to parse model output as dict: %s\nRaw: %s", e, json_text)
-        return None
+        logger.warning(f"Failed to parse model output as dict: {e}\nRaw: {json_text}")
+        return default_json

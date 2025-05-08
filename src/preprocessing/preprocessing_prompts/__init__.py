@@ -1,5 +1,5 @@
-from .few_shot_health_learners.large_language_models_few_shot_healthlearners import (
-    few_shot_paper_preprocessor,
+from .liu_2023_few_shot_health_learners.liu_2023_large_language_models_few_shot_healthlearners import (
+    liu_2023_few_shot_preprocessor,
 )
 from .zhu_2024a_one_shot_cot.zhu_2024a_one_shot_cot import (
     zhu_2024a_one_shot_cot_preprocessor,
@@ -15,7 +15,7 @@ from .sarvari_2024_aggregation.sarvari_2024_aggregation import (
 )
 
 preprocessor_method_dict = {
-    "few_shot_paper_preprocessor": few_shot_paper_preprocessor,
+    "liu_2023_few_shot_preprocessor": liu_2023_few_shot_preprocessor,
     "zhu_2024a_one_shot_cot_preprocessor": zhu_2024a_one_shot_cot_preprocessor,
     "zhu_2024b_one_shot_preprocessor": zhu_2024b_one_shot_preprocessor,
     "zhu_2024c_categorization_summary_preprocessor": zhu_2024c_categorization_summary_preprocessor,

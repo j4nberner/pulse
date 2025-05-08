@@ -22,6 +22,10 @@ logger = logging.getLogger("PULSE_logger")
 
 
 class LSTMModel(PulseTemplateModel, nn.Module):
+    """
+    LSTM model for time series data.
+    """
+
     def __init__(self, params: Dict[str, Any], **kwargs) -> None:
         """
         Initialize the LSTM model.
@@ -43,7 +47,7 @@ class LSTMModel(PulseTemplateModel, nn.Module):
         nn.Module.__init__(self)
 
         # Set the model save directory
-        self.save_dir = kwargs.get(f"output_dir", f"{os.getcwd()}/output")
+        self.save_dir = kwargs.get("output_dir", f"{os.getcwd()}/output")
 
         # Define all required parameters
         required_params = [
@@ -70,7 +74,7 @@ class LSTMModel(PulseTemplateModel, nn.Module):
         self.params = params.copy()
 
         # Log the parameters being used
-        logger.info(f"Initializing LSTM with parameters: {self.params}")
+        logger.info("Initializing LSTM with parameters: %s", self.params)
 
         # Set the number of channels based on the input shape
         self.input_size = 1  # overwritten in trainer
@@ -185,9 +189,10 @@ class LSTMTrainer:
         )
 
         # Log optimizer and criterion
-        logger.info(f"Using optimizer: {self.optimizer.__class__.__name__}")
+        logger.info("Using optimizer: %s", self.optimizer.__class__.__name__)
         logger.info(
-            f"Using criterion: {self.criterion.__class__.__name__} with class weight adjustment"
+            "Using criterion: %s with class weight adjustment",
+            self.criterion.__class__.__name__,
         )
 
         # Create model save directory if it doesn't exist
@@ -216,8 +221,11 @@ class LSTMTrainer:
             self.model.parameters(), lr=self.params["learning_rate"]
         )
 
+        logger.info(self.model)
+
         logger.info(
-            f"Input shape to model (after transformation): {transformed_features.shape}"
+            "Input shape to model (after transformation): %s",
+            transformed_features.shape,
         )
 
         # Try to load the model weights if they exist
@@ -242,12 +250,13 @@ class LSTMTrainer:
         logger.info("Starting training...")
         for epoch in range(num_epochs):
             self.train_epoch(epoch, verbose)
-            logger.info(f"Epoch {epoch + 1} finished")
+            logger.info("Epoch %d finished", epoch + 1)
             val_loss = self.evaluate(self.val_loader)
             self.early_stopping(val_loss, self.model)
             if self.early_stopping.early_stop:
                 logger.info(
-                    f"Early stopping triggered at epoch {epoch + 1}. Stopping training."
+                    "Early stopping triggered at epoch %d. Stopping training.",
+                    epoch + 1,
                 )
                 break
 
@@ -255,9 +264,9 @@ class LSTMTrainer:
         self.early_stopping.load_best_model(self.model)  # Load the best model
         self.evaluate(self.test_loader, save_report=True)
 
-        model_save_name = f"{self.model.model_name}_{self.task_name}_{self.dataset_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pt"
+        model_save_name = f"{self.model.model_name}_{self.task_name}_{self.dataset_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         save_torch_model(
-            model_save_name, self.model, self.model.save_dir
+            model_save_name, self.model, os.path.join(self.model.save_dir, "Models")
         )  # Save the final model
 
     def train_epoch(self, epoch: int, verbose: int = 1) -> None:
@@ -340,7 +349,7 @@ class LSTMTrainer:
                 # Append results to metrics tracker
                 metrics_tracker.add_results(outputs.cpu().numpy(), labels.cpu().numpy())
                 if verbose == 2 or (verbose == 1 and batch % 10 == 9):
-                    logger.info(f"Evaluating batch {batch + 1}: " f"Loss = {loss}")
+                    logger.info("Evaluating batch %d: Loss = %.4f", batch + 1, loss)
 
                     if self.wandb:
                         wandb.log({"val_loss": loss})
@@ -351,7 +360,20 @@ class LSTMTrainer:
             metrics_tracker.save_report()
 
         # Log results to console
-        logger.info(f"Test evaluation completed for {self.model.model_name}")
-        logger.info(f"Test metrics: {metrics_tracker.summary}")
+        logger.info("Test evaluation completed for %s", self.model.model_name)
+        logger.info("Test metrics: %s", metrics_tracker.summary)
+
+        if self.wandb:
+            wandb.log(
+                {
+                    "Test metrics": wandb.Table(
+                        data=[
+                            [metric, value]
+                            for metric, value in metrics_tracker.summary.items()
+                        ],
+                        columns=["Metric", "Value"],
+                    )
+                }
+            )
 
         return np.mean(val_loss)

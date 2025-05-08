@@ -6,8 +6,6 @@
 
 PULSE (_<u>P</u>redictive <u>U</u>nderstanding of <u>L</u>ife-threatening <u>S</u>ituations using <u>E</u>mbeddings_) benchmarks the predictive capabilities of Large Language Models (LLMs) using ICU time-series data.
 
-
-
 ## Overview
 
 This repository contains the implementation for predicting mortality, acute kidney injury (AKI) and sepsis in intensive care unit (ICU) patients using Large Language Models (LLMs). Conventional machine learning and deep learning models serve as baseline comparisons to previously published LLM prompting and fine-tuning methods. Data preparation and model implementation is set up in a highly configurable manner to allow for flexible experimental design.
@@ -21,14 +19,17 @@ This repository contains the implementation for predicting mortality, acute kidn
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/yourusername/sepsis-prediction-llm.git
-   cd sepsis-prediction-llm
+   git clone https://github.com/j4nberner/pulse.git
+   cd pulse
    ```
 
 2. Install dependencies:
+
    ```bash
    pip install -r requirements.txt
    ```
+
+3. Adjust config_train and run train_models.py
 
 ## Project Structure
 
@@ -73,31 +74,33 @@ This repository contains the implementation for predicting mortality, acute kidn
 
 **Harmonization:**
 
-Variable mapping, artifact removal, unit harmonization, cohort and variable selection was conducted according to the YAIB workflow (https://github.com/rvandewater/YAIB). Resulting cohorts vary between tasks with overlapping stay_ids within a dataset. 
+Variable mapping, artifact removal, unit harmonization, cohort and variable selection was conducted according to the YAIB workflow (https://github.com/rvandewater/YAIB). Resulting cohorts vary between tasks with overlapping stay_ids within a dataset.
 
 ## Tasks
 
 Task Definitions are in accordance with YAIB (https://arxiv.org/abs/2306.05109).
 
-1) **Mortality** 
+1. **Mortality**
+
    - **Task Description**: Binary classification, one prediction per stay, patient status at the end of the hospital stay predicted at 25h after ICU admission
    - **Data Structure**: Hourly data of first 25h of ICU stay for cases and controls, one label per stay_id
 
-2) **Acute Kidney Injury (AKI)**
+2. **Acute Kidney Injury (AKI)**
+
    - **Task Description**: Binary classification, multiple predictions per stay possible and dependent on data/prediction window setup
    - **Data Structure**: Hourly data and hourly labels, whole ICU stay duration for controls, until 12h after defined AKI onset for cases
 
-3) **Sepsis**
+3. **Sepsis**
    - **Task Description**: Binary classification, multiple predictions per stay possible and dependent on data/prediction window setup
    - **Data Structure**: Hourly data and hourly labels, whole ICU stay duration for controls, until 12h after defined sepsis onset for cases
 
 ## Implemented Models
 
-| Type | Models                          |
-| -------- | ------------------------------- |
-| **conventional ML**   | RandomForest, XGBoost, LightGBM |
-| **conventional DL**   | CNN, LSTM, GRU, InceptionTime   |
-| **LLM**  | Llama 3.1-8b-Instruct                    |
+| Type                | Models                          |
+| ------------------- | ------------------------------- |
+| **conventional ML** | RandomForest, XGBoost, LightGBM |
+| **conventional DL** | CNN, LSTM, GRU, InceptionTime   |
+| **LLM**             | Llama 3.1-8b-Instruct           |
 
 ## Results
 
@@ -114,6 +117,8 @@ A Metric Tracker is running alongside each training / evaluation process. Predic
 2. run train_models.py
 
 ## Evaluate a model
+
+-> not implemented yet...Use train_model instead which calls eval methods.
 
 1. adjust config_benchmark.yaml
 2. run benchmark_models.py
