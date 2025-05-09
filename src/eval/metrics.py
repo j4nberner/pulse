@@ -539,7 +539,7 @@ def calculate_minpse(
 def calculate_all_metrics(
     y_true: Union[np.ndarray, torch.Tensor],
     y_pred: Union[np.ndarray, torch.Tensor],
-    threshold: Optional[float] = None,
+    threshold=0.5,
 ) -> Dict[str, float]:
     """
     Calculate all metrics at once
@@ -552,13 +552,16 @@ def calculate_all_metrics(
     Returns:
         Dictionary containing all metrics rounded to 3 decimal places
     """
+    # Handle tensors if passed
+    if isinstance(y_true, torch.Tensor):
+        y_true = y_true.detach().cpu().numpy()
+    if isinstance(y_pred, torch.Tensor):
+        y_pred = y_pred.detach().cpu().numpy()
+
     # Auto-detect if predictions are logits or probabilities
-    if threshold is None:
-        # If predictions contain values outside [0,1], they're likely logits
-        if np.any((y_pred < 0) | (y_pred > 1)):
-            threshold = 0.0  # For logits, threshold at 0
-        else:
-            threshold = 0.5  # For probabilities, threshold at 0.5
+    if np.any((y_pred < 0) | (y_pred > 1)):
+        # Convert logits to probabilities using sigmoid
+        y_pred = 1 / (1 + np.exp(-y_pred))
 
     # Get both AUPRC and normalized AUPRC in one call
     auprc_results = calculate_auprc(y_true, y_pred)
