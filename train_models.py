@@ -179,19 +179,19 @@ class ModelTrainer:
                             train_dataset,
                             batch_size=batch_size,
                             shuffle=True,
-                            drop_last=True,
+                            drop_last=False,
                         )
                         val_loader = DataLoader(
                             val_dataset,
                             batch_size=batch_size,
                             shuffle=False,
-                            drop_last=True,
+                            drop_last=False,
                         )
                         test_loader = DataLoader(
                             test_dataset,
                             batch_size=batch_size,
                             shuffle=False,
-                            drop_last=True,
+                            drop_last=False,
                         )
                     else:
                         logger.error(
