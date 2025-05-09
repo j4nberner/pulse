@@ -61,6 +61,8 @@ class MetricsTracker:
             "precision",
             "recall",
             "mcc",
+            "kappa",
+            "minpse",
         ]
         self.metrics = {metric: [] for metric in self.metrics_to_track}
         self.results = {
@@ -143,7 +145,8 @@ class MetricsTracker:
                         existing_data = [existing_data]
             except json.JSONDecodeError:
                 logger.warning(
-                    f"Could not decode existing JSON in {report_path}, creating new file"
+                    "Could not decode existing JSON in %s, creating new file",
+                    report_path,
                 )
                 existing_data = []
 
@@ -450,7 +453,8 @@ def calculate_mcc(
     threshold: float = 0.5,
 ) -> float:
     """
-    Calculate Matthews Correlation Coefficient (MCC)
+    Calculate Matthews Correlation Coefficient (MCC) (-1: total disagreement,
+    0: random prediction, 1: perfect prediction)
 
     Args:
         y_true: Ground truth labels (0 or 1)
