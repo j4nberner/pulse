@@ -331,7 +331,6 @@ class DatasetManager:
             "liu_2023_few_shot_preprocessor",
             "zhu_2024a_one_shot_cot_preprocessor",
             "zhu_2024b_one_shot_preprocessor",
-            "zhu_2024c_categorization_summary_preprocessor",
             "sarvari_2024_aggregation_preprocessor",
         ]
 
@@ -468,9 +467,6 @@ class DatasetManager:
                 prompting_id=prompting_id
             )
             num_shots = kwargs.get("num_shots", 0)
-            logger.debug(
-                "Number of shots (if applicable for prompting_id): %s", num_shots
-            )
             data_window = self.config.preprocessing_advanced.windowing.data_window
 
             # Info dict needs to contain dataset name, task, and model name
@@ -488,7 +484,9 @@ class DatasetManager:
                 y = [y, y_train]
 
             logger.info(
-                "Applying prompting preprocessor for prompting_id: %s", prompting_id
+                "Applying prompting preprocessor for prompting_id: %s, and number of shots: %s",
+                prompting_id,
+                num_shots,
             )
 
             # Apply advanced preprocessing

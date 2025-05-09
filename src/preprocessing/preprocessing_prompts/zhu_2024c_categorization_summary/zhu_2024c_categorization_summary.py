@@ -49,8 +49,8 @@ def zhu_2024c_categorization_summary_preprocessor(
     )
 
     prompts = []
-    X_in = X[0]  # input data
-    y_in = y[0]  # labels
+    X_in = X  # input data
+    y_in = y  # labels
 
     # TODO: add base_feature extraction to preprocessor_advanced
     # Extract base feature names
@@ -71,10 +71,8 @@ def zhu_2024c_categorization_summary_preprocessor(
         template=textwrap.dedent(
             """
 As an experienced clinical professor, you have been provided with the following information to assist in summarizing a patient's health status:
-
 - Potential abnormal features exhibited by the patient
 - Definition and description of a common ICU complication: {complication_name}
-
 Using this information, please create a concise and clear summary of the patient's health status. Your summary should be informative and beneficial for {prediction_description}. Please provide your summary directly without any additional explanations.
 
 Potential abnormal features:  

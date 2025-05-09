@@ -5,18 +5,24 @@ params:
   trainer_name: "LSTMTrainer"
   type: "convDL" # Type of model (convML for conventional machine learning, convDL for conventional deep learning and LLM for large language models)
   save_checkpoint: 0 # Save checkpoint every n epochs. Set to 0 to disable.
-  verbose: 2 # Controls verbosity of output (0 = silent, 1 = log every 10 batches, 2 = log every batch)
+  verbose: 2 # Controls verbosity of output (0 = silent, 1 = log every 100 batches, 2 = log every batch)
   
   # Model Architecture
-  hidden_size: 256 # Number of hidden units in LSTM layers
-  num_layers: 3 # Number of LSTM layers
+  hidden_size: 150 # Number of hidden units in LSTM layers
+  num_layers: 2 # Number of LSTM layers
   dropout: 0.2 # Dropout rate for LSTM layers
   output_shape: 1
   
   # Training
   num_epochs: 100
-  early_stopping_rounds: 5
+  early_stopping_rounds: 10
   
   # Optimization
   learning_rate: 0.001
   grad_clip_max_norm: 1.0 # max_norm = 1.0 (LSTM, GRU) or 2.0 (CNN, InceptionTime)
+
+  # Scheduler
+  scheduler_factor: 0.1
+  scheduler_patience: 5
+  scheduler_cooldown: 0
+  min_lr: 0.000001 # 1e-6

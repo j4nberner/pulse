@@ -4,8 +4,8 @@ params:
   # Basic configuration
   trainer_name: "GRUTrainer"
   type: "convDL" # Type of model (convML for conventional machine learning, convDL for conventional deep learning and LLM for large language models)
-  save_checkpoint_freq: 5
-  verbose: 2 # Controls verbosity of output (0 = silent, 1 = log every 10 batches, 2 = log every batch)
+  save_checkpoint_freq: 0
+  verbose: 2 # Controls verbosity of output (0 = silent, 1 = log every 100 batches, 2 = log every batch)
   
   # Model Architecture
   hidden_size: 64
@@ -15,16 +15,18 @@ params:
   activation: "leaky_relu" # Activation function (relu, leaky_relu, gelu)
   
   # Training
-  num_epochs: 60
-  earlystopping_patience: 5
+  num_epochs: 100
+  earlystopping_patience: 10
   
   # Optimization
   optimizer_name: "adam" # Options: adam, adamw, sgd
-  learning_rate: 0.00001
+  learning_rate: 0.001 # 1e-3
   weight_decay: 1e-6
   grad_clip_max_norm: 1.0 # max_norm = 1.0 (LSTM, GRU) or 2.0 (CNN, InceptionTime)
   
   # Scheduler
-  scheduler_factor: 0.5
-  scheduler_patience: 3
-  min_lr: 1e-6
+  scheduler_factor: 0.1
+  scheduler_patience: 5
+  scheduler_cooldown: 0
+  min_lr: 0.000001 # 1e-6
+

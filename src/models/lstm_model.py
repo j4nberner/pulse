@@ -43,7 +43,7 @@ class LSTMModel(PulseTemplateModel, nn.Module):
             "model_name", self.__class__.__name__.replace("Model", "")
         )
         self.trainer_name = params["trainer_name"]
-        super().__init__(self.model_name, self.trainer_name, params=params)
+        super().__init__(self.model_name, self.trainer_name, params=params, **kwargs)
         nn.Module.__init__(self)
 
         # Set the model save directory
@@ -60,6 +60,10 @@ class LSTMModel(PulseTemplateModel, nn.Module):
             "hidden_size",  # Number of features in hidden state
             "dropout",  # Dropout rate
             "grad_clip_max_norm",
+            "scheduler_factor",
+            "scheduler_patience",
+            "scheduler_cooldown",
+            "min_lr",
         ]
 
         # Check if wandb is enabled and set up
@@ -187,6 +191,14 @@ class LSTMTrainer:
             verbose=True,
             delta=0.0,
         )
+        self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(
+            self.optimizer,
+            mode="min",
+            factor=self.params["scheduler_factor"],
+            patience=self.params["scheduler_patience"],
+            cooldown=self.params["scheduler_cooldown"],
+            min_lr=self.params["min_lr"],
+        )
 
         # Log optimizer and criterion
         logger.info("Using optimizer: %s", self.optimizer.__class__.__name__)
@@ -232,6 +244,10 @@ class LSTMTrainer:
         if self.model.pretrained_model_path:
             try:
                 self.model.load_model_weights(self.model.pretrained_model_path)
+                logger.info(
+                    "Pretrained model weights loaded successfully from %s",
+                    self.model.pretrained_model_path,
+                )
             except Exception as e:
                 logger.warning(
                     "Failed to load pretrained model weights: %s. Defaulting to random initialization.",
@@ -251,7 +267,9 @@ class LSTMTrainer:
         for epoch in range(num_epochs):
             self.train_epoch(epoch, verbose)
             logger.info("Epoch %d finished", epoch + 1)
+
             val_loss = self.evaluate(self.val_loader)
+
             self.early_stopping(val_loss, self.model)
             if self.early_stopping.early_stop:
                 logger.info(
@@ -259,6 +277,14 @@ class LSTMTrainer:
                     epoch + 1,
                 )
                 break
+
+            # Update learning rate based on validation loss
+            self.scheduler.step(val_loss)
+            logger.debug(
+                "Learning rate after epoch %d: %f",
+                epoch + 1,
+                self.optimizer.param_groups[0]["lr"],
+            )
 
         logger.info("Training finished.")
         self.early_stopping.load_best_model(self.model)  # Load the best model
@@ -308,8 +334,8 @@ class LSTMTrainer:
             running_loss += loss.item()
 
             # Reporting based on verbosity
-            if verbose == 2 or (verbose == 1 and i % 10 == 9):
-                loss_value = running_loss / (10 if verbose == 1 else 1)
+            if verbose == 2 or (verbose == 1 and i % 100 == 99):
+                loss_value = running_loss / (100 if verbose == 1 else 1)
                 logger.info(
                     "Epoch %d, Batch %d: Loss = %.4f", epoch + 1, i + 1, loss_value
                 )

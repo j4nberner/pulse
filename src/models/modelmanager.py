@@ -40,19 +40,16 @@ class ModelManager:
     def _prepare_models(self) -> List[Any]:
         """
         Checks model configurations and converts them to actual model objects.
-
         Returns:
             List[Any]: List of instantiated model objects.
         """
         logger.info("Preparing %d models...", len(self.model_configs))
         prepared_models = []
-
         for _, config in self.model_configs.items():
             model_name = config.get("name")
             if not model_name:
                 logger.error("Model name is required.")
                 continue
-
             try:
                 if self.prompt_configs.prompting_ids is not None:
                     for prompting_id in self.prompt_configs.prompting_ids:
@@ -74,11 +71,9 @@ class ModelManager:
                     logger.info("Model '%s' prepared successfully", model_name)
             except Exception as e:
                 logger.error("Failed to prepare model '%s': %s", model_name, str(e))
-
         if not prepared_models:
             logger.error("No valid models could be prepared.")
             sys.exit(1)
-
         return prepared_models
 
     def _create_model_from_config(self, config: Dict) -> Any:
@@ -96,24 +91,40 @@ class ModelManager:
         model_cls = get_model_class(model_name)
         model = model_cls(
             config.get("params", {}),
+            pretrained_model_path=config.get("pretrained_model_path", None),
             wandb=self.wandb.get("enabled", False),
             output_dir=self.output_dir,
         )
 
         # Load model weights if path is specified
         if config.get("pretrained_model_path", None):
-            try:
-                model.load_model_weights(config["pretrained_model_path"])
-                logger.info(
-                    "Loaded pretrained model weights from %s",
-                    config["pretrained_model_path"],
+            # Only load during initialization for convML models
+            # Deep learning models will be loaded after proper architecture setup
+            model_type = config.get("params", {}).get("type")
+
+            if model_type == "convML":
+                try:
+                    model.load_model_weights(config["pretrained_model_path"])
+                    logger.info(
+                        "Loaded pretrained model weights from %s",
+                        config["pretrained_model_path"],
+                    )
+                except Exception as e:
+                    logger.warning(
+                        "Failed to load pretrained model weights from %s: %s. Defaulting to random initialization.",
+                        config["pretrained_model_path"],
+                        str(e),
+                    )
+            else:
+                logger.debug(
+                    "Deferring loading of pretrained model weights for %s model until after architecture setup",
+                    model_type,
                 )
-            except Exception as e:
-                logger.warning(
-                    "Failed to load pretrained model weights from %s: %s. Defaulting to random initialization.",
-                    config["pretrained_model_path"],
-                    str(e),
-                )
+        else:
+            logger.debug(
+                "No pretrained model path specified for %s. Using random initialization.",
+                model_name,
+            )
 
         return model
 

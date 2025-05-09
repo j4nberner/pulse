@@ -49,7 +49,7 @@ class GRUModel(PulseTemplateModel, nn.Module):
             "model_name", self.__class__.__name__.replace("Model", "")
         )
         self.trainer_name = params["trainer_name"]
-        super().__init__(self.model_name, self.trainer_name, params=params)
+        super().__init__(self.model_name, self.trainer_name, params=params, **kwargs)
         nn.Module.__init__(self)
 
         # Define required parameters based on GRUModel.yaml
@@ -69,6 +69,7 @@ class GRUModel(PulseTemplateModel, nn.Module):
             "grad_clip_max_norm",
             "scheduler_factor",
             "scheduler_patience",
+            "scheduler_cooldown",
             "min_lr",
         ]
 
@@ -287,16 +288,28 @@ class GRUTrainer:
         logger.info("Using optimizer: %s", self.optimizer.__class__.__name__)
 
         # Initialize scheduler
-        scheduler_factor = self.params["scheduler_factor"]
-        scheduler_patience = self.params["scheduler_patience"]
-        min_lr = self.params["min_lr"]
         self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(
             self.optimizer,
             mode="min",
-            factor=scheduler_factor,
-            patience=scheduler_patience,
-            min_lr=min_lr,
+            factor=self.params["scheduler_factor"],
+            patience=self.params["scheduler_patience"],
+            cooldown=self.params["scheduler_cooldown"],
+            min_lr=self.params["min_lr"],
         )
+
+        # Try to load the model weights if they exist
+        if self.model.pretrained_model_path:
+            try:
+                self.model.load_model_weights(self.model.pretrained_model_path)
+                logger.info(
+                    "Pretrained model weights loaded successfully from %s",
+                    self.model.pretrained_model_path,
+                )
+            except Exception as e:
+                logger.warning(
+                    "Failed to load pretrained model weights: %s. Defaulting to random initialization.",
+                    str(e),
+                )
 
     def _prepare_data(self):
         """Prepare data for GRU by getting a configured converter."""
@@ -360,7 +373,7 @@ class GRUTrainer:
 
         # After training loop, load best model weights and save final model
         self.model.early_stopping.load_best_model(self.model)
-        model_save_name = f"{self.model.model_name}_{self.task_name}_{self.dataset_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pt"
+        model_save_name = f"{self.model.model_name}_{self.task_name}_{self.dataset_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         save_torch_model(model_save_name, self.model, self.model_save_dir)
         # Evaluate the model on the testing set
         self.evaluate()
@@ -378,6 +391,7 @@ class GRUTrainer:
         """
         self.model.train()
         train_loss = 0.0
+        running_loss = 0.0
 
         for batch_idx, (features, labels) in enumerate(self.train_loader):
             features = self.converter.convert_batch_to_3d(features)
@@ -399,16 +413,23 @@ class GRUTrainer:
             self.optimizer.step()
 
             train_loss += loss.item()
+            running_loss += loss.item()  # Add to running loss
 
-            # Log progress for each batch if verbose=2, or every 10 batches if verbose=1
-            if verbose == 2 or verbose == 1 and batch_idx % 10 == 0:
+            # Reporting based on verbosity
+            if verbose == 2 or (verbose == 1 and batch_idx % 100 == 99):
+                loss_value = running_loss / (100 if verbose == 1 else 1)
                 logger.info(
-                    "Epoch %d, Batch %d/%d, Loss: %.4f",
+                    "Epoch %d, Batch %d/%d: Loss = %.4f",
                     epoch + 1,
                     batch_idx + 1,
                     len(self.train_loader),
-                    loss.item(),
+                    loss_value,
                 )
+
+                if self.wandb:
+                    wandb.log({"train_loss": loss_value})
+
+                running_loss = 0.0  # Reset running loss after logging
 
         # Calculate average loss for the epoch
         avg_train_loss = train_loss / len(self.train_loader)

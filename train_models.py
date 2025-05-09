@@ -99,6 +99,7 @@ class ModelTrainer:
                     "dataset": self.config.datasets[0],
                     "task": self.config.tasks[0],
                     "debug": self.config.general.debug_mode,
+                    "print_stats": self.config.preprocessing_baseline.split_ratios.print_stats,
                 }
 
                 try:
@@ -125,7 +126,6 @@ class ModelTrainer:
                         model_name,
                         mode="test",
                         **dm_kwargs,
-                        print_stats=False,
                     )
 
                     # Log the shapes of the datasets
@@ -242,7 +242,7 @@ def main():
 
     # Log if running on Slurm
     if is_on_slurm():
-        logger.info(f"Running on Slurm cluster (Job ID: {os.getenv('SLURM_JOB_ID')})")
+        logger.info("Running on Slurm cluster (Job ID: %s)", os.getenv("SLURM_JOB_ID"))
 
     # Run training
     trainer = ModelTrainer(config)

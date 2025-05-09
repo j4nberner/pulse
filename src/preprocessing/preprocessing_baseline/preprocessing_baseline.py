@@ -444,9 +444,9 @@ class PreprocessorBaseline:
                 X_train (pd.DataFrame): Training features with imputed static values
                 X_val (pd.DataFrame): Validation features with imputed static values
                 X_test (pd.DataFrame): Testing features with imputed static values
-                global_means_static_dict (Dict): Dictionary of global means used for imputation
+                global_means_static_dict (Dict): Dictionary of global medians used for imputation
         """
-        global_means_static_dict = {}
+        global_medians_static_dict = {}
 
         # Forward and backward fill within each stay_id for all sets
         for col in self.static_columns:
@@ -456,13 +456,19 @@ class PreprocessorBaseline:
                         lambda x: x.ffill().bfill()
                     )
 
-        # Calculate means from training data only for numeric columns
+        # Calculate medians from training data only for numeric columns
         for col in self.static_numeric_columns:
             if col in X_train.columns:
-                global_mean = X_train.groupby("stay_id")[col].mean().mean().round(2)
+                global_median = X_train.groupby("stay_id")[col].mean().mean().round(2)
                 for df in [X_train, X_val, X_test]:
-                    df[col] = df[col].fillna(global_mean)
-                global_means_static_dict[col] = global_mean
+                    df[col] = df[col].fillna(global_median)
+                global_medians_static_dict[col] = global_median
+
+        # Debug log for global medians
+        logger.debug(
+            "Global medians used as imputation fallback for static features: %s",
+            global_medians_static_dict,
+        )
 
         # Calculate mode from training data only for sex
         if "sex" in X_train.columns:
@@ -470,17 +476,17 @@ class PreprocessorBaseline:
             for df in [X_train, X_val, X_test]:
                 df["sex"] = df["sex"].fillna(mode_sex)
 
-        return X_train, X_val, X_test, global_means_static_dict
+        return X_train, X_val, X_test, global_medians_static_dict
 
-    def mean_before_imputation(self, X_train: pd.DataFrame) -> pd.Series:
+    def median_before_imputation(self, X_train: pd.DataFrame) -> pd.Series:
         """
-        Calculate global means for dynamic features before imputation.
+        Calculate global medians for dynamic features before imputation.
 
         Args:
             X_train (pd.DataFrame): Training features
 
         Returns:
-            pd.Series: Series of global means for dynamic features
+            pd.Series: Series of global median for dynamic features
         """
         exclude_columns = [col for col in X_train.columns if "_na" in col] + [
             "time",
@@ -490,27 +496,34 @@ class PreprocessorBaseline:
             "weight",
             "stay_id",
         ]
-        global_mean_train_series = (
-            X_train.drop(columns=exclude_columns, errors="ignore").mean().round(2)
+        global_median_train_series = (
+            X_train.drop(columns=exclude_columns, errors="ignore").median().round(2)
         )
-        return global_mean_train_series
+
+        # Debug log for global medians
+        logger.debug(
+            "Global medians used as imputation fallback for dynamic features: %s",
+            global_median_train_series.to_dict(),
+        )
+
+        return global_median_train_series
 
     def dynamic_imputation(
-        self, df: pd.DataFrame, global_mean_train_series: pd.Series
+        self, df: pd.DataFrame, global_median_train_series: pd.Series
     ) -> pd.DataFrame:
         """
-        Impute missing values in dynamic features using forward fill and global means.
+        Impute missing values in dynamic features using forward fill and global medians.
 
         Args:
             df (pd.DataFrame): DataFrame with missing values
-            global_mean_train_series (pd.Series): Series of global means for imputation
+            global_median_train_series (pd.Series): Series of global medians for imputation
 
         Returns:
             pd.DataFrame: DataFrame with imputed values
         """
         df = df.groupby("stay_id").apply(lambda group: group.ffill(axis=0))
         df = df.reset_index(drop=True)
-        df = df.fillna(global_mean_train_series)
+        df = df.fillna(global_median_train_series)
         return df
 
     def reshape_mortality_data(
@@ -908,14 +921,16 @@ class PreprocessorBaseline:
             # Dynamic imputation - conditional
             if self.config["dynamic_imputation"]:
                 logger.info("Performing dynamic imputation...")
-                X_train_mean = self.mean_before_imputation(X_train_sta_imputed)
+                X_train_median = self.median_before_imputation(X_train_sta_imputed)
 
                 X_train_imputed = self.dynamic_imputation(
-                    X_train_sta_imputed, X_train_mean
+                    X_train_sta_imputed, X_train_median
                 )
-                X_val_imputed = self.dynamic_imputation(X_val_sta_imputed, X_train_mean)
+                X_val_imputed = self.dynamic_imputation(
+                    X_val_sta_imputed, X_train_median
+                )
                 X_test_imputed = self.dynamic_imputation(
-                    X_test_sta_imputed, X_train_mean
+                    X_test_sta_imputed, X_train_median
                 )
             else:
                 logger.info("Skipping dynamic imputation (disabled in config)")

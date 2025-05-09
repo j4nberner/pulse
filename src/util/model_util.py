@@ -13,7 +13,16 @@ logger = logging.getLogger("PULSE_logger")
 
 
 class EarlyStopping:
-    def __init__(self, patience=5, verbose=False, delta=0.0001):
+    """
+    Implements early stopping to terminate training when validation loss stops improving.
+    Args:
+        patience (int): Number of epochs to wait after the last improvement in validation loss.
+        verbose (bool): If True, logs messages about early stopping progress.
+        delta (float): Minimum change in validation loss to qualify as an improvement. Default is 0.0001.
+            This value is chosen to prevent stopping due to minor fluctuations in validation loss.
+    """
+
+    def __init__(self, patience=10, verbose=True, delta=0.0001):
         self.patience = patience
         self.verbose = verbose
         self.delta = delta
@@ -323,7 +332,7 @@ def extract_dict(output_text: str) -> Optional[Dict[str, str]]:
         output_text: The raw string returned by the language model.
 
     Returns:
-        A dictionary parsed from the JSON string, or default JSON opject of no JSON was found.
+        A dictionary parsed from the JSON string, or default JSON opject if no JSON was found.
     """
     default_json = {
         "diagnosis": "unknown",
