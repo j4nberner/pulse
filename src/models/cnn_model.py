@@ -56,9 +56,14 @@ class CNNModel(PulseTemplateModel, nn.Module):
             "pool_size",
             "learning_rate",
             "num_epochs",
+            "early_stopping_rounds",
             "save_checkpoint",
             "verbose",
             "grad_clip_max_norm",
+            "scheduler_factor",
+            "scheduler_patience",
+            "scheduler_cooldown",
+            "min_lr",
         ]
 
         # Check if wandb is enabled and set up
@@ -115,13 +120,9 @@ class CNNModel(PulseTemplateModel, nn.Module):
             padding="same",
         )
 
-        self.norm1 = nn.GroupNorm(
-            num_groups=1, num_channels=self.params["num_channels"] * 4
-        )
-        self.norm2 = nn.GroupNorm(
-            num_groups=1, num_channels=self.params["num_channels"] * 2
-        )
-        self.norm3 = nn.GroupNorm(num_groups=1, num_channels=16)
+        self.norm1 = nn.BatchNorm1d(num_features=self.params["num_channels"] * 4)
+        self.norm2 = nn.BatchNorm1d(num_features=self.params["num_channels"] * 2)
+        self.norm3 = nn.BatchNorm1d(num_features=16)
 
         self.leaky_relu = nn.LeakyReLU()
 
@@ -138,6 +139,7 @@ class CNNModel(PulseTemplateModel, nn.Module):
             flattened_size = dummy_output.view(1, -1).size(1)
 
         self.fc1 = nn.Linear(flattened_size, flattened_size // 2)
+        self.fc1_bn = nn.BatchNorm1d(flattened_size // 2)
         self.fc2 = nn.Linear(flattened_size // 2, self.params["output_shape"])
 
         # -------------------------Define layers-------------------------
@@ -152,7 +154,9 @@ class CNNModel(PulseTemplateModel, nn.Module):
         x = self._forward_features(x)
         x = self.flatten(x)
         x = self.dropout(x)
-        x = self.leaky_relu(self.fc1(x))
+        x = self.fc1(x)
+        x = self.fc1_bn(x)
+        x = self.leaky_relu(x)
         return self.fc2(x)
 
     def set_trainer(
@@ -197,6 +201,14 @@ class CNNTrainer:
             patience=self.params["early_stopping_rounds"],
             verbose=True,
             delta=0.0,
+        )
+        self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(
+            self.optimizer,
+            mode="min",
+            factor=self.params["scheduler_factor"],
+            patience=self.params["scheduler_patience"],
+            cooldown=self.params["scheduler_cooldown"],
+            min_lr=self.params["min_lr"],
         )
 
         # Log optimizer and criterion
@@ -261,7 +273,9 @@ class CNNTrainer:
         for epoch in range(num_epochs):
             self.train_epoch(epoch, verbose)
             logger.info("Epoch %d finished", epoch + 1)
+
             val_loss = self.evaluate(self.val_loader)  # Evaluate on validation set
+
             self.early_stopping(val_loss, self.model)
             if self.early_stopping.early_stop:
                 logger.info(
@@ -270,6 +284,15 @@ class CNNTrainer:
                 )
                 break
 
+            # Update learning rate based on validation loss
+            self.scheduler.step(val_loss)
+            logger.debug(
+                "Learning rate after epoch %d: %f",
+                epoch + 1,
+                self.optimizer.param_groups[0]["lr"],
+            )
+
+        logger.info("Training finished.")
         self.early_stopping.load_best_model(self.model)  # Load the best model
         self.evaluate(
             self.test_loader, save_report=True

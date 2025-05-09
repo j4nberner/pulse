@@ -10,6 +10,7 @@ from sklearn.metrics import (
     accuracy_score,
     auc,
     balanced_accuracy_score,
+    cohen_kappa_score,
     confusion_matrix,
     f1_score,
     matthews_corrcoef,
@@ -169,13 +170,6 @@ class MetricsTracker:
         logger.info("Predictions and labels saved to %s", predictions_path)
         logger.info("Metrics report saved to %s", report_path)
         return report_path
-
-
-def rmse(y_true: np.ndarray, y_pred: np.ndarray) -> float:
-    """
-    Dummy function
-    """
-    return np.sqrt(np.mean((y_true - y_pred) ** 2))
 
 
 def calculate_auroc(
@@ -478,6 +472,70 @@ def calculate_mcc(
     return matthews_corrcoef(y_true, y_pred_binary)
 
 
+def calculate_kappa(
+    y_true: Union[np.ndarray, torch.Tensor],
+    y_pred: Union[np.ndarray, torch.Tensor],
+    threshold: float = 0.5,
+) -> float:
+    """
+    Calculate Cohen's Kappa score (Accounts for agreement due to chance).
+    Formula: kappa = (observed_agreement - expected_agreement) / (1 - expected_agreement)
+
+    Args:
+        y_true: Ground truth labels (0 or 1).
+        y_pred: Predicted probabilities.
+        threshold: Threshold to convert probabilities to binary predictions.
+            Defaults to 0.5.
+
+    Returns:
+        The Cohen's Kappa score, ranging from -1 to 1:
+    """
+    # Handle tensors if passed
+    if isinstance(y_true, torch.Tensor):
+        y_true = y_true.detach().cpu().numpy()
+    if isinstance(y_pred, torch.Tensor):
+        y_pred = y_pred.detach().cpu().numpy()
+
+    # Convert probabilities to binary predictions
+    y_pred_binary = (y_pred >= threshold).astype(int)
+
+    return cohen_kappa_score(y_true, y_pred_binary)
+
+
+def calculate_minpse(
+    y_true: Union[np.ndarray, torch.Tensor], y_pred: Union[np.ndarray, torch.Tensor]
+) -> float:
+    """
+    Calculate MinPSE (Minimum of Precision and Sensitivity Everywhere) score.
+    Adapted from Zhu et al. EMERGE (2024) and ColaCare (2025) papers.
+
+    MinPSE finds the threshold where the minimum of precision and recall is maximized,
+    providing a balanced operating point for imbalanced classification problems.
+
+    Args:
+        y_true: Ground truth labels (0 or 1).
+        y_pred: Predicted probabilities.
+
+    Returns:
+        The MinPSE score, ranging from 0 to 1, with higher values indicating better
+        balanced performance.
+    """
+    # Handle tensors if passed
+    if isinstance(y_true, torch.Tensor):
+        y_true = y_true.detach().cpu().numpy()
+    if isinstance(y_pred, torch.Tensor):
+        y_pred = y_pred.detach().cpu().numpy()
+
+    # Calculate precision-recall curve
+    precisions, recalls, _ = precision_recall_curve(y_true, y_pred)
+
+    # For each threshold point, take the minimum of precision and recall
+    # Then find the maximum of these minimums
+    minpse_score = np.max([min(p, r) for p, r in zip(precisions, recalls)])
+
+    return minpse_score
+
+
 def calculate_all_metrics(
     y_true: Union[np.ndarray, torch.Tensor],
     y_pred: Union[np.ndarray, torch.Tensor],
@@ -509,6 +567,8 @@ def calculate_all_metrics(
         "precision": calculate_precision(y_true, y_pred, threshold),
         "recall": calculate_recall(y_true, y_pred, threshold),
         "mcc": calculate_mcc(y_true, y_pred, threshold),
+        "kappa": calculate_kappa(y_true, y_pred, threshold),
+        "minpse": calculate_minpse(y_true, y_pred),
     }
 
     # Round all metrics to 3 decimal places

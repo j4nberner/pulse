@@ -128,6 +128,7 @@ class InceptionTimeModel(PulseTemplateModel, nn.Module):
             "grad_clip_max_norm",
             "scheduler_factor",
             "scheduler_patience",
+            "scheduler_cooldown",
             "min_lr",
         ]
 
@@ -383,15 +384,13 @@ class InceptionTimeTrainer:
         logger.info("Using optimizer: %s", self.optimizer.__class__.__name__)
 
         # Initialize scheduler
-        scheduler_factor = self.params["scheduler_factor"]
-        scheduler_patience = self.params["scheduler_patience"]
-        min_lr = self.params["min_lr"]
         self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(
             self.optimizer,
             mode="min",
-            factor=scheduler_factor,
-            patience=scheduler_patience,
-            min_lr=min_lr,
+            factor=self.params["scheduler_factor"],
+            patience=self.params["scheduler_patience"],
+            cooldown=self.params["scheduler_cooldown"],
+            min_lr=self.params["min_lr"],
         )
 
         # Try to load the model weights if they exist
@@ -471,7 +470,7 @@ class InceptionTimeTrainer:
 
         # After training loop, load best model weights and save final model
         self.model.early_stopping.load_best_model(self.model)
-        model_save_name = f"{self.model.model_name}_{self.task_name}_{self.dataset_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pt"
+        model_save_name = f"{self.model.model_name}_{self.task_name}_{self.dataset_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         save_torch_model(model_save_name, self.model, self.model_save_dir)
 
         # Evaluate the model on the testing set

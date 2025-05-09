@@ -20,3 +20,9 @@ params:
   # Optimization
   learning_rate: 0.001
   grad_clip_max_norm: 1.0 # max_norm = 1.0 (LSTM, GRU) or 2.0 (CNN, InceptionTime)
+
+  # Scheduler
+  scheduler_factor: 0.1
+  scheduler_patience: 5
+  scheduler_cooldown: 0
+  min_lr: 0.000001 # 1e-6
