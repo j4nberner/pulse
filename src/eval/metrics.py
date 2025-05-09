@@ -1,7 +1,7 @@
 import json
 import logging
 import os
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Union, Optional
 
 import numpy as np
 import pandas as pd
@@ -539,7 +539,7 @@ def calculate_minpse(
 def calculate_all_metrics(
     y_true: Union[np.ndarray, torch.Tensor],
     y_pred: Union[np.ndarray, torch.Tensor],
-    threshold: float = 0.5,
+    threshold: Optional[float] = None,
 ) -> Dict[str, float]:
     """
     Calculate all metrics at once
@@ -552,6 +552,14 @@ def calculate_all_metrics(
     Returns:
         Dictionary containing all metrics rounded to 3 decimal places
     """
+    # Auto-detect if predictions are logits or probabilities
+    if threshold is None:
+        # If predictions contain values outside [0,1], they're likely logits
+        if np.any((y_pred < 0) | (y_pred > 1)):
+            threshold = 0.0  # For logits, threshold at 0
+        else:
+            threshold = 0.5  # For probabilities, threshold at 0.5
+
     # Get both AUPRC and normalized AUPRC in one call
     auprc_results = calculate_auprc(y_true, y_pred)
 

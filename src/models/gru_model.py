@@ -525,7 +525,7 @@ class GRUTrainer:
                 batch_metrics.append(batch_accuracy)
 
                 # Add results to metrics tracker
-                metrics_tracker.add_results(preds.cpu().numpy(), labels.cpu().numpy())
+                metrics_tracker.add_results(outputs.cpu().numpy(), labels.cpu().numpy())
 
                 # Log batch progress if verbose
                 if self.params["verbose"] == 2 or (
