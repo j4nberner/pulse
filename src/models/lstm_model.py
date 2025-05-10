@@ -55,15 +55,19 @@ class LSTMModel(PulseTemplateModel, nn.Module):
             "num_epochs",
             "save_checkpoint",
             "verbose",
-            "num_layers",  # Number of LSTM layers
-            "output_shape",  # Size of output
-            "hidden_size",  # Number of features in hidden state
-            "dropout",  # Dropout rate
+            "num_layers",
+            "output_shape",
+            "hidden_size",
+            "lstm_units",
+            "dense_units",
+            "dropout",
             "grad_clip_max_norm",
             "scheduler_factor",
             "scheduler_patience",
             "scheduler_cooldown",
             "min_lr",
+            "early_stopping_rounds",
+            "num_epochs",
         ]
 
         # Check if wandb is enabled and set up
@@ -105,19 +109,43 @@ class LSTMModel(PulseTemplateModel, nn.Module):
         Initialize the LSTM model.
         """
 
-        # -------------------------Define layers-------------------------
-        # LSTM layer
-        self.lstm = nn.LSTM(
-            input_size=self.input_size,
-            hidden_size=self.hidden_size,
-            num_layers=self.num_layers,
-            batch_first=True,
-            dropout=self.dropout if self.num_layers > 1 else 0,
+        # Get parameters for the architecture
+        self.lstm_units = self.params.get(
+            "lstm_units", [self.hidden_size] * self.num_layers
         )
+        self.dense_units = self.params.get("dense_units", 64)
 
-        # Fully connected layer for output
-        self.fc = nn.Linear(self.hidden_size, self.output_size)
-        # -------------------------Define layers-------------------------
+        # Create ModuleLists for the layers
+        self.lstm_layers = nn.ModuleList()
+        self.dropout_layers = nn.ModuleList()
+        self.batch_norm_layers = nn.ModuleList()
+
+        # Create separate dropout rates for different layers or use the same rate
+        if isinstance(self.dropout, (list, tuple)):
+            dropout_rates = self.dropout
+        else:
+            # Create increasing dropout rates if single value provided
+            base_rate = self.dropout
+            dropout_rates = [
+                min(base_rate * (i + 1), 0.5) for i in range(len(self.lstm_units))
+            ]
+
+        # Create the LSTM layers with respective dropout and batch norm
+        input_size = self.input_size
+        for i, units in enumerate(self.lstm_units):
+            lstm_layer = nn.LSTM(input_size, units, batch_first=True)
+            self.lstm_layers.append(lstm_layer)
+            self.dropout_layers.append(nn.Dropout(dropout_rates[i]))
+            self.batch_norm_layers.append(nn.BatchNorm1d(units))
+            input_size = units
+
+        # Define the dense layers for output with LeakyReLU activations
+        self.dense1 = nn.Linear(self.lstm_units[-1], self.dense_units)
+        self.dense2 = nn.Linear(self.dense_units, 32)
+        self.dense3 = nn.Linear(32, self.output_size)
+        self.dropout_final = nn.Dropout(
+            dropout_rates[-1]
+        )  # Final dropout after first dense layer
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
@@ -129,22 +157,26 @@ class LSTMModel(PulseTemplateModel, nn.Module):
         Returns:
             torch.Tensor: Output tensor of shape [batch_size, output_size]
         """
-        # x shape: [batch_size, seq_length, input_size]
-
-        # Initialize hidden state and cell state
-        h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(x.device)
-        c0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(x.device)
-
-        # LSTM forward pass
-        out, _ = self.lstm(x, (h0, c0))
+        # Process through each LSTM layer with dropout and batch norm
+        for lstm, dropout, batch_norm in zip(
+            self.lstm_layers, self.dropout_layers, self.batch_norm_layers
+        ):
+            x, _ = lstm(x)
+            x = dropout(x)
+            # Apply batch normalization on the feature dimension
+            # Need to transpose as batch norm expects [batch, features, seq_len]
+            x = batch_norm(x.transpose(1, 2)).transpose(1, 2)
 
         # Get the output from the last time step
-        out = out[:, -1, :]
+        x = x[:, -1, :]
 
-        # Pass through fully connected layer
-        out = self.fc(out)
+        # Process through dense layers with activation functions
+        x = torch.nn.functional.leaky_relu(self.dense1(x))
+        x = self.dropout_final(x)
+        x = torch.nn.functional.leaky_relu(self.dense2(x))
+        x = self.dense3(x)
 
-        return out
+        return x
 
     def set_trainer(
         self, trainer_name: str, train_loader, val_loader, test_loader
