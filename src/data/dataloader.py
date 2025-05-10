@@ -460,6 +460,14 @@ class DatasetManager:
             "Dropped stay_id column from X and y (including for few-shot examples)"
         )
 
+        # Convert categorical columns to numerical values for convML models
+        convML_models = ["RandomForest", "XGBoost", "LightGBM"]
+        if any(mdl in model_name for mdl in convML_models):
+            # Process gender column in X if it exists
+            if isinstance(X, pd.DataFrame) and "sex" in X.columns:
+                X["sex"] = X["sex"].map({"Male": 1, "Female": 0}).fillna(-1)
+                logger.debug("Converted gender column to numerical values")
+
         # Apply any model-specific preprocessing if needed.
         # For example, if you need to tokenize text data for LLMs
         if prompting_id is not None:

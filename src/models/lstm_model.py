@@ -121,14 +121,15 @@ class LSTMModel(PulseTemplateModel, nn.Module):
         self.batch_norm_layers = nn.ModuleList()
 
         # Create separate dropout rates for different layers or use the same rate
-        if isinstance(self.dropout, (list, tuple)):
-            dropout_rates = self.dropout
+        if hasattr(self.dropout, "__len__"):  # Check if it's sequence-like
+            dropout_rates = list(self.dropout)
         else:
             # Create increasing dropout rates if single value provided
-            base_rate = self.dropout
+            base_rate = float(self.dropout)  # Convert to float
             dropout_rates = [
                 min(base_rate * (i + 1), 0.5) for i in range(len(self.lstm_units))
             ]
+        logger.info("Using dropout rates for LSTM layers: %s", dropout_rates)
 
         # Create the LSTM layers with respective dropout and batch norm
         input_size = self.input_size

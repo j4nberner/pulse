@@ -54,6 +54,7 @@ class CNNModel(PulseTemplateModel, nn.Module):
             "output_shape",
             "kernel_size",
             "pool_size",
+            "dropout_rate",
             "learning_rate",
             "num_epochs",
             "early_stopping_rounds",
@@ -127,7 +128,7 @@ class CNNModel(PulseTemplateModel, nn.Module):
         self.leaky_relu = nn.LeakyReLU()
 
         self.pool = nn.MaxPool1d(kernel_size=self.params["pool_size"])
-        self.dropout = nn.Dropout(0.1)
+        self.dropout = nn.Dropout(self.params["dropout_rate"])
         self.flatten = nn.Flatten()
 
         # Dummy forward to calculate fc1 input size
