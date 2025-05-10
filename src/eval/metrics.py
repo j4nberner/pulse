@@ -53,7 +53,6 @@ class MetricsTracker:
             "auroc",
             "auprc",
             "normalized_auprc",
-            "sensitivity",
             "specificity",
             "f1_score",
             "accuracy",
@@ -247,35 +246,6 @@ def calculate_auprc(
         normalized_auprc = auprc / positive_fraction
 
     return {"auprc": auprc, "normalized_auprc": normalized_auprc}
-
-
-def calculate_sensitivity(
-    y_true: Union[np.ndarray, torch.Tensor],
-    y_pred: Union[np.ndarray, torch.Tensor],
-    threshold: float = 0.5,
-) -> float:
-    """
-    Calculate Sensitivity (Recall or True Positive Rate)
-
-    Args:
-        y_true: Ground truth labels (0 or 1)
-        y_pred: Predicted probabilities
-        threshold: Threshold to convert probabilities to binary predictions
-
-    Returns:
-        Sensitivity score
-    """
-    # Handle tensors if passed
-    if isinstance(y_true, torch.Tensor):
-        y_true = y_true.detach().cpu().numpy()
-    if isinstance(y_pred, torch.Tensor):
-        y_pred = y_pred.detach().cpu().numpy()
-
-    # Convert probabilities to binary predictions
-    y_pred_binary = (y_pred >= threshold).astype(int)
-
-    tn, fp, fn, tp = confusion_matrix(y_true, y_pred_binary, labels=[0, 1]).ravel()
-    return tp / (tp + fn) if (tp + fn) > 0 else 0
 
 
 def calculate_specificity(
@@ -574,13 +544,14 @@ def calculate_all_metrics(
         "auroc": calculate_auroc(y_true, y_pred),
         "auprc": auprc_results["auprc"],
         "normalized_auprc": auprc_results["normalized_auprc"],
-        "sensitivity": calculate_sensitivity(y_true, y_pred, threshold),
         "specificity": calculate_specificity(y_true, y_pred, threshold),
         "f1_score": calculate_f1_score(y_true, y_pred, threshold),
         "accuracy": calculate_accuracy(y_true, y_pred, threshold),
         "balanced_accuracy": calculate_balanced_accuracy(y_true, y_pred, threshold),
         "precision": calculate_precision(y_true, y_pred, threshold),
-        "recall": calculate_recall(y_true, y_pred, threshold),
+        "recall": calculate_recall(
+            y_true, y_pred, threshold
+        ),  # is the same as sensitivity
         "mcc": calculate_mcc(y_true, y_pred, threshold),
         "kappa": calculate_kappa(y_true, y_pred, threshold),
         "minpse": calculate_minpse(y_true, y_pred),
