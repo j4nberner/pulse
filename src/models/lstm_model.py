@@ -222,7 +222,6 @@ class LSTMTrainer:
         self.early_stopping = EarlyStopping(
             patience=self.params["early_stopping_rounds"],
             verbose=True,
-            delta=0.0,
         )
         self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(
             self.optimizer,
