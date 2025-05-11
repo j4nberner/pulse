@@ -1,3 +1,4 @@
+import gc
 import logging
 import os
 import sys
@@ -550,6 +551,22 @@ class DatasetManager:
                         data_dict[split]["y"] = y_data.drop(columns=["stay_id"])
 
         return data_dict
+
+    def release_dataset_cache(self, dataset_id=None):
+        """Release cached data for a specific dataset or all datasets."""
+        if dataset_id:
+            if dataset_id in self.datasets and self.datasets[dataset_id]["loaded"]:
+                self.datasets[dataset_id]["data"] = None
+                self.datasets[dataset_id]["loaded"] = False
+                logger.debug("Released cached data for %s", dataset_id)
+                gc.collect()
+        else:
+            for ds_id, dataset in self.datasets.items():
+                if dataset["loaded"]:
+                    dataset["data"] = None
+                    dataset["loaded"] = False
+            logger.debug("Released all cached datasets")
+            gc.collect()
 
 
 class TorchDatasetWrapper(Dataset):

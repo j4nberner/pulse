@@ -238,8 +238,9 @@ class XGBoostTrainer:
 
         results = self.model.model.evals_result()
 
-        for i in range(len(results["validation_0"]["auc"])):
-            wandb.log({"val_loss": results["validation_0"]["auc"][i], "step": i})
+        if self.wandb:
+            for i in range(len(results["validation_0"]["auc"])):
+                wandb.log({"val_loss": results["validation_0"]["auc"][i], "step": i})
 
         # Load the best model if early stopping was used
         if hasattr(self.model.model, "best_iteration"):

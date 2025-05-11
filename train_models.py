@@ -1,9 +1,11 @@
 import argparse
+import gc
 import os
 import sys
 
 import pandas as pd
 from omegaconf import OmegaConf
+import torch
 from torch.utils.data import DataLoader
 
 from src.data.dataloader import DatasetManager, TorchDatasetWrapper
@@ -180,6 +182,10 @@ class ModelTrainer:
                             batch_size=batch_size,
                             shuffle=True,
                             drop_last=False,
+                            num_workers=4,  # Matches the number of requested CPU cores
+                            pin_memory=True,  # Speeds up CPU-to-GPU transfers
+                            prefetch_factor=2,  # Default value, can increase if GPU is idle
+                            persistent_workers=True,  # Keeps workers alive between epochs
                         )
                         val_loader = DataLoader(
                             val_dataset,
@@ -213,6 +219,30 @@ class ModelTrainer:
                         str(e),
                         exc_info=True,
                     )
+                finally:
+                    # Memory cleanup after training each model
+                    if hasattr(model, "trainer"):
+                        del model.trainer
+
+                    # Clear variables that might hold large data
+                    train_loader = val_loader = test_loader = None
+                    X_train = y_train = X_val = y_val = X_test = y_test = None
+
+                    # If using PyTorch with CUDA, empty the cache
+                    if torch.cuda.is_available():
+                        torch.cuda.empty_cache()
+
+                    # Force garbage collection
+                    gc.collect()
+                    logger.info("Memory cleaned up after training %s", model_name)
+
+            # Memory cleanup after processing each task-dataset combination
+            del fresh_models
+            self.dm.release_dataset_cache(
+                task_dataset_name
+            )  # Release dataset from cache
+            gc.collect()
+            logger.info("Memory cleaned up after processing %s", task_dataset_name)
 
         logger.info("Training process completed.")
 
