@@ -5,7 +5,6 @@ from typing import Any, Dict, Optional
 
 import numpy as np
 import pandas as pd
-import xgboost as xgb
 from sklearn.model_selection import RandomizedSearchCV
 from xgboost import XGBClassifier
 
@@ -64,7 +63,6 @@ class XGBoostModel(PulseTemplateModel):
             "objective",
             "n_estimators",
             "learning_rate",
-            "random_state",
             "verbosity",
             "max_depth",
             "gamma",
@@ -88,12 +86,13 @@ class XGBoostModel(PulseTemplateModel):
 
         # For XGBoost 2.0.3: include early_stopping_rounds in model initialization
         model_params = {param: params[param] for param in required_xgb_params}
+        model_params["random_state"] = params.get("random_seed")
 
         # Store early_stopping_rounds for training
         self.early_stopping_rounds = params["early_stopping_rounds"]
 
         # Log the parameters being used
-        logger.info(f"Initializing XGBoost with parameters: {model_params}")
+        logger.info("Initializing XGBoost with parameters: %s", model_params)
 
         # Initialize the XGBoost model with parameters from config
         self.model = XGBClassifier(

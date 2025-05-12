@@ -9,6 +9,7 @@ import pandas as pd
 import torch
 from torch.utils.data import Dataset
 
+from src.util.config_util import set_seeds
 from src.preprocessing.preprocessing_advanced.windowing import Windower
 from src.preprocessing.preprocessing_baseline.preprocessing_baseline import (
     PreprocessorBaseline,
@@ -65,7 +66,8 @@ class DatasetManager:
     def _init_preprocessing_tools(self):
         """Initialize preprocessing tools based on configuration."""
         base_path = self.config.base_path
-        random_seed = self.config.random_seed
+        random_seed = self.config.benchmark_settings.random_seed
+        set_seeds(random_seed)
 
         # Get debug_mode from config - using attribute style
         debug_mode = False

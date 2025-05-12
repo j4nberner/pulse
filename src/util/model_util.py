@@ -279,24 +279,6 @@ def calculate_pos_weight(train_loader):
         return 1.0
 
 
-@DeprecationWarning
-def apply_model_prompt_format(model_id, prompt):
-    """
-    Apply model-specific prompt formatting.
-
-    Args:
-        model_id (str): The ID of the model.
-        prompt (str): The prompt to format.
-    """
-    # Example formatting for Llama3
-    if model_id == "Llama3Model":
-        formatted_prompt = f"<|USER|>{prompt}<|ASSISTANT|>"
-    else:
-        formatted_prompt = prompt  # No formatting needed for other models
-
-    return formatted_prompt
-
-
 def prompt_template_hf(input_text: str) -> List[Dict[str, str]]:
     """
     Create a chat-based prompt compatible with Hugging Face's apply_chat_template.
@@ -363,5 +345,7 @@ def extract_dict(output_text: str) -> Optional[Dict[str, str]]:
         output_dict = ast.literal_eval(json_text)
         return output_dict
     except (SyntaxError, ValueError) as e:
-        logger.warning(f"Failed to parse model output as dict: {e}\nRaw: {json_text}")
+        logger.warning(
+            "Failed to parse model output as dict: %s\nRaw: %s", e, json_text
+        )
         return default_json

@@ -10,6 +10,7 @@ import torch.optim as optim
 import wandb
 from src.eval.metrics import MetricsTracker
 from src.models.pulsetemplate_model import PulseTemplateModel
+from src.util.config_util import set_seeds
 from src.util.model_util import (
     EarlyStopping,
     prepare_data_for_model_convdl,
@@ -380,6 +381,15 @@ class GRUTrainer:
 
     def train(self):
         """Train the GRU model using the provided data loaders."""
+        # Set random seed from params if available
+        if "random_seed" in self.params:
+            set_seeds(self.params["random_seed"])
+            logger.debug(
+                "Random seed set to %d before %s training",
+                self.params["random_seed"],
+                self.model.model_name,
+            )
+
         # Move to GPU if available
         self.model.to(self.device)
         self.criterion.to(self.device)

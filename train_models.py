@@ -13,6 +13,7 @@ from src.logger_setup import init_wandb, setup_logger
 from src.models.modelmanager import ModelManager
 from src.util.config_util import load_config_with_models, save_config_file
 from src.util.slurm_util import copy_data_to_scratch, get_local_scratch_dir, is_on_slurm
+from src.util.config_util import set_seeds
 
 logger, output_dir = setup_logger()
 
@@ -32,6 +33,11 @@ class ModelTrainer:
         # Log debug mode status
         if self.config.general.debug_mode:
             logger.debug("DEBUG MODE ACTIVE: Training will use limited dataset size")
+
+        # Set random seeds for reproducibility
+        random_seed = self.config.benchmark_settings.get("random_seed", 42)
+        set_seeds(random_seed)
+        logger.info("Setting random seed to %s for reproducibility", random_seed)
 
         # -------------------- Copy data to local scratch (Slurm) --------------------
         if is_on_slurm() and self.config.general.get("use_scratch", False):
