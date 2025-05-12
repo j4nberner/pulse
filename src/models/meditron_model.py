@@ -81,9 +81,7 @@ class MeditronModel(PulseTemplateModel):
     def _load_model(self) -> None:
         """Loads the tokenizer and model weights and initializes HF pipeline."""
         try:
-            self.tokenizer = AutoTokenizer.from_pretrained(
-                self.model_id, use_fast=False, padding_side="left"
-            )
+            self.tokenizer = AutoTokenizer.from_pretrained(self.model_id)
             self.meditron_model = AutoModelForCausalLM.from_pretrained(
                 self.model_id,
                 device_map="auto",
@@ -125,23 +123,24 @@ class MeditronModel(PulseTemplateModel):
             input_text = str(input_text)
 
         input_text = prompt_template_hf(
-            input_text
+            input_text, model="MeditronModel"
         )  # Apply prompt template to structure the input and guide output.
 
         token_start = time.perf_counter()
-        chat_prompt = self.tokenizer.apply_chat_template(
-            input_text, tokenize=False, add_generation_prompt=True
-        )
+        # chat_prompt = self.tokenizer.apply_chat_template(
+        #     input_text, tokenize=False, add_generation_prompt=True
+        # )
 
         # logger.debug("-------------CHAT PROMPT-------------")
-        # logger.debug(chat_prompt)
+        # logger.debug(input_text)
 
         tokenized_inputs = self.tokenizer(
-            chat_prompt,
+            input_text,
             return_tensors="pt",
         )
         token_time = time.perf_counter() - token_start
         num_tokens = tokenized_inputs["input_ids"].numel()
+        logger.debug(f"NR Tokens: {num_tokens}")
 
         # logger.debug("-------------DECODED CHAT PROMPT-------------")
         # logger.debug(
@@ -164,12 +163,22 @@ class MeditronModel(PulseTemplateModel):
                 pad_token_id=self.tokenizer.eos_token_id,
             )
 
+        # logger.debug("-------------GENERATED OUTPUTS-------------")
+        # logger.debug(
+        #     self.tokenizer.decode(
+        #         outputs[0],
+        #         skip_special_tokens=True,
+        #         clean_up_tokenization_spaces=True,
+        #     )
+        # )
+        # logger.debug("-------------GENERATED OUTPUTS END-------------")
+
         # 3) Slice off the prompt part:
         gen_ids = outputs[0, num_tokens:]
 
         # 4) Decode just the generated tokens:
         generated_text = self.tokenizer.decode(
-            gen_ids, skip_special_tokens=True, clean_up_tokenization_spaces=True
+            outputs[0], skip_special_tokens=True, clean_up_tokenization_spaces=True
         )
 
         infer_time = time.perf_counter() - infer_start

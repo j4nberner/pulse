@@ -1,0 +1,13 @@
+name: "DeepseekR1Model"
+pretrained_model_path: null # Path to pretrained model (if any)
+params:
+  trainer_name: "DeepseekR1Trainer"
+  model_id: "deepseek-ai/DeepSeek-R1-Distill-Llama-8B" # Model ID for Llama3, path to pretrained model (if any)
+  type: "LLM" # Type of model (convML for conventional machine learning, convDL for conventional deep learning and LLM for large language models)
+  verbose: 2
+  tuning: false # Whether to use prompt tuning
+  num_epochs: 10 # Number of epochs for training
+  max_new_tokens: 10000
+  max_length: 100000 # Maximum length of input sequences
+  do_sample: true # Whether to sample new tokens
+  temperature: 0.6 # Temperature for sampling (0.0 = greedy sampling)

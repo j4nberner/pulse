@@ -302,7 +302,6 @@ def prompt_template_hf(input_text: str, model=None) -> List[Dict[str, str]]:
     system_message = (
         "You are a helpful assistant. Analyze the following patient information and determine "
         "the most likely diagnosis.\n\n"
-        "Be conservative: If diagnosis criteria are marginal or borderline, favor to not to diagnose unless clear trends support the diagnosis.\n"
         "Be specific and check the values against reference values.\n"
 
         "Return the result strictly in this JSON format:\n\n"
@@ -320,6 +319,23 @@ def prompt_template_hf(input_text: str, model=None) -> List[Dict[str, str]]:
         {"role": "system", "content": [{"type": "text", "text": system_message}]},
         {"role": "user", "content": [{"type": "text", "text": f"Text:\n{input_text}"}]},
     ]
+    elif model == "MeditronModel":
+        #     return (
+        #     "<|im_start|>system\n"
+        #     "You are Meditron, a helpful and knowledgeable medical assistant.<|im_end|>\n"
+        #     f"<|im_start|>user\n{input_text}<|im_end|>\n"
+        #     "<|im_start|>assistant\n"
+        # )
+        formated_prompt = [
+            f"<|im_start|>system\n{system_message}<|im_end|>\n"
+            f"<|im_start|>user\n{input_text}<|im_end|>\n"
+            "<|im_start|>assistant\n"
+            ]
+    elif model == "DeepseekR1Model":
+        # avoid using a system prompt. including it all in the user prompt
+        formated_prompt = [
+            {"role": "user", "content": system_message + f"Text:\n{input_text}"},
+        ]
     else:
         formated_prompt = [
             {"role": "system", "content": system_message},
