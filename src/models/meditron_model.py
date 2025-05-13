@@ -32,11 +32,11 @@ warnings.filterwarnings(
 logger = logging.getLogger("PULSE_logger")
 
 
-class DeepseekR1Model(PulseTemplateModel):
-    """DeepseekR1 model wrapper using LangChain for prompt templating and inference."""
+class MeditronModel(PulseTemplateModel):
+    """Meditron model wrapper using LangChain for prompt templating and inference."""
 
     def __init__(self, params: Dict[str, Any], **kwargs) -> None:
-        """Initializes the DeepseekR1Model with parameters and paths.
+        """Initializes the MeditronModel with parameters and paths.
 
         Args:
             params: Configuration dictionary with model parameters.
@@ -63,12 +63,12 @@ class DeepseekR1Model(PulseTemplateModel):
         self.params["save_test_set"] = kwargs.get("save_test_set", False)
 
         self.model_id: str = self.params.get(
-            "model_id", "deepseek-ai/DeepSeek-R1-Distill-Llama-8B"
+            "model_id", "epfl-llm/meditron-7b"
         )
         self.max_length: int = self.params.get("max_length", 5120)
 
         self.tokenizer: Optional[Any] = None
-        self.deepseek_r1_model: Optional[Any] = None
+        self.meditron_model: Optional[Any] = None
         self.lc_llm: Optional[Any] = None
         self.prompt_template: Optional[PromptTemplate] = None
         self.lc_chain: Optional[Runnable] = None
@@ -81,10 +81,8 @@ class DeepseekR1Model(PulseTemplateModel):
     def _load_model(self) -> None:
         """Loads the tokenizer and model weights and initializes HF pipeline."""
         try:
-            self.tokenizer = AutoTokenizer.from_pretrained(
-                self.model_id, use_fast=False, padding_side="left"
-            )
-            self.deepseek_r1_model = AutoModelForCausalLM.from_pretrained(
+            self.tokenizer = AutoTokenizer.from_pretrained(self.model_id)
+            self.meditron_model = AutoModelForCausalLM.from_pretrained(
                 self.model_id,
                 device_map="auto",
                 torch_dtype=torch.float16,
@@ -100,12 +98,12 @@ class DeepseekR1Model(PulseTemplateModel):
                     prompt_tuning_init=PromptTuningInit.TEXT,
                     prompt_tuning_init_text="Classify the diagnosis of following ICU data:",
                 )
-                self.deepseek_r1_model = get_peft_model(self.deepseek_r1_model, tuning_config)
-                logger.debug(self.deepseek_r1_model.print_trainable_parameters())
+                self.meditron_model = get_peft_model(self.meditron_model, tuning_config)
+                logger.debug(self.meditron_model.print_trainable_parameters())
 
-            logger.info("Successfully loaded DeepseekR1 model: %s", self.model_id)
+            logger.info("Successfully loaded Meditron model: %s", self.model_id)
         except Exception as e:
-            logger.error("Failed to load DeepseekR1 model: %s", e)
+            logger.error("Failed to load Meditron model: %s", e)
             raise
 
         logger.info(
@@ -125,23 +123,24 @@ class DeepseekR1Model(PulseTemplateModel):
             input_text = str(input_text)
 
         input_text = prompt_template_hf(
-            input_text, model="DeepseekR1Model"
+            input_text, model="MeditronModel"
         )  # Apply prompt template to structure the input and guide output.
 
         token_start = time.perf_counter()
-        chat_prompt = self.tokenizer.apply_chat_template(
-            input_text, tokenize=False, add_generation_prompt=True
-        )
+        # chat_prompt = self.tokenizer.apply_chat_template(
+        #     input_text, tokenize=False, add_generation_prompt=True
+        # )
 
         # logger.debug("-------------CHAT PROMPT-------------")
-        # logger.debug(chat_prompt)
+        # logger.debug(input_text)
 
         tokenized_inputs = self.tokenizer(
-            chat_prompt,
+            input_text,
             return_tensors="pt",
         )
         token_time = time.perf_counter() - token_start
         num_tokens = tokenized_inputs["input_ids"].numel()
+        logger.debug(f"NR Tokens: {num_tokens}")
 
         # logger.debug("-------------DECODED CHAT PROMPT-------------")
         # logger.debug(
@@ -153,10 +152,10 @@ class DeepseekR1Model(PulseTemplateModel):
         # )
 
         infer_start = time.perf_counter()
-        self.deepseek_r1_model.to(self.device)
+        self.meditron_model.to(self.device)
 
         with torch.no_grad():
-            outputs = self.deepseek_r1_model.generate(
+            outputs = self.meditron_model.generate(
                 input_ids=tokenized_inputs["input_ids"].to(self.device),
                 attention_mask=tokenized_inputs["attention_mask"].to(self.device),
                 max_new_tokens=self.params.max_new_tokens,
@@ -164,12 +163,22 @@ class DeepseekR1Model(PulseTemplateModel):
                 pad_token_id=self.tokenizer.eos_token_id,
             )
 
+        # logger.debug("-------------GENERATED OUTPUTS-------------")
+        # logger.debug(
+        #     self.tokenizer.decode(
+        #         outputs[0],
+        #         skip_special_tokens=True,
+        #         clean_up_tokenization_spaces=True,
+        #     )
+        # )
+        # logger.debug("-------------GENERATED OUTPUTS END-------------")
+
         # 3) Slice off the prompt part:
         gen_ids = outputs[0, num_tokens:]
 
         # 4) Decode just the generated tokens:
         generated_text = self.tokenizer.decode(
-            gen_ids, skip_special_tokens=True, clean_up_tokenization_spaces=True
+            outputs[0], skip_special_tokens=True, clean_up_tokenization_spaces=True
         )
 
         infer_time = time.perf_counter() - infer_start
@@ -181,9 +190,6 @@ class DeepseekR1Model(PulseTemplateModel):
         generated_text = extract_dict(
             generated_text
         )  # Extract dict from the generated text.
-        logger.debug("Extracted dict: %s", generated_text)
-
-        generated_text["probability"] = float(generated_text["probability"])
 
         generated_text["probability"] = round(
             (
@@ -220,7 +226,7 @@ class DeepseekR1Model(PulseTemplateModel):
             val_dataloader: DataLoader for validation data.
             test_dataloader: DataLoader for test data.
         """
-        self.trainer = DeepseekR1Trainer(
+        self.trainer = MeditronTrainer(
             self, train_dataloader, val_dataloader, test_dataloader
         )
 
@@ -248,18 +254,18 @@ class DeepseekR1Model(PulseTemplateModel):
             return 0.5  # Default to 0.5 if parsing fails
 
 
-class DeepseekR1Trainer:
-    """Trainer class for DeepseekR1Model."""
+class MeditronTrainer:
+    """Trainer class for MeditronModel."""
 
     def __init__(
-        self, model: DeepseekR1Model, train_loader, val_loader, test_loader
+        self, model: MeditronModel, train_loader, val_loader, test_loader
     ) -> None:
         """
-        Initialize the DeepseekR1 trainer. Finetruning is not implemented yet.
+        Initialize the Meditron trainer. Finetruning is not implemented yet.
         This is a wrapper for inference only.
 
         Args:
-            model (DeepseekR1Model): The DeepseekR1 model to be trained.
+            model (MeditronModel): The Meditron model to be trained.
             train_loader: The DataLoader object for the training dataset.
             val_loader: The DataLoader object for the validation dataset.
             test_loader: The DataLoader object for the testing dataset.
@@ -268,7 +274,7 @@ class DeepseekR1Trainer:
         model._load_model()  # Comment out to only test preprocessing
 
         self.model = model
-        self.deepseek_r1_model = model.deepseek_r1_model
+        self.meditron_model = model.meditron_model
         self.params = model.params
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.train_loader = train_loader
@@ -300,11 +306,11 @@ class DeepseekR1Trainer:
                 self.model_save_dir,
             )
             optimizer = optim.AdamW(
-                self.deepseek_r1_model.parameters(), lr=self.params.get("lr", 1e-4)
+                self.meditron_model.parameters(), lr=self.params.get("lr", 1e-4)
             )
             num_epochs = self.params.get("num_epochs", 1)
 
-            self.deepseek_r1_model.train()
+            self.meditron_model.train()
             for epoch in range(num_epochs):
                 epoch_loss = 0.0
                 logger.info(f"Epoch {epoch + 1} started...")
@@ -339,7 +345,7 @@ class DeepseekR1Trainer:
                     )
 
                     optimizer.zero_grad()
-                    outputs = self.deepseek_r1_model(
+                    outputs = self.meditron_model(
                         input_ids=encoded["input_ids"].to(self.device),
                         attention_mask=encoded["attention_mask"].to(self.device),
                         labels=encoded["labels"].to(self.device),
@@ -372,7 +378,7 @@ class DeepseekR1Trainer:
                 val_loss = self.evaluate_single(self.val_loader)
                 logger.info("Validation loss: %s", val_loss)
 
-                self.deepseek_r1_model.save_pretrained(self.model_save_dir)
+                self.meditron_model.save_pretrained(self.model_save_dir)
                 self.model.tokenizer.save_pretrained(self.model_save_dir)
                 logger.info("Model saved to %s", self.model_save_dir)
 
@@ -408,7 +414,7 @@ class DeepseekR1Trainer:
         verbose: int = self.params.get("verbose", 1)
         val_loss: list[float] = []
 
-        self.deepseek_r1_model.eval()
+        self.meditron_model.eval()
 
         total_tokens = 0
         total_token_time = 0.0
@@ -486,7 +492,7 @@ class DeepseekR1Trainer:
             The average validation loss across the test dataset.
         """
         NotImplementedError(
-            "Batch evaluation is not implemented for DeepseekR1Model. Use evaluate_single instead."
+            "Batch evaluation is not implemented for MeditronModel. Use evaluate_single instead."
         )
 
     def encode_prompt_target(

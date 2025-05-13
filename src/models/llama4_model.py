@@ -7,20 +7,31 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from langchain.prompts import PromptTemplate
-from langchain.schema.runnable import Runnable
-from peft import PrefixTuningConfig, TaskType, get_peft_model
-from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
+from peft import (
+    PromptTuningInit,
+    TaskType,
+    PromptTuningConfig,
+    get_peft_model,
+)
+from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, Llama4ForConditionalGeneration
 
 import wandb
 from src.eval.metrics import MetricsTracker
 from src.models.pulsetemplate_model import PulseTemplateModel
+from src.util.model_util import extract_dict, prompt_template_hf
+
+import warnings
+
+warnings.filterwarnings(
+    "ignore",
+    message="Position ids are not supported for parameter efficient tuning. Ignoring position ids.",
+)
 
 logger = logging.getLogger("PULSE_logger")
 
 
 class Llama4Model(PulseTemplateModel):
-    """Llama 3 model wrapper using LangChain for prompt templating and inference."""
+    """Llama 4 model wrapper using LangChain for prompt templating and inference."""
 
     def __init__(self, params: Dict[str, Any], **kwargs) -> None:
         """Initializes the Llama4Model with parameters and paths.
@@ -29,8 +40,6 @@ class Llama4Model(PulseTemplateModel):
             params: Configuration dictionary with model parameters.
             **kwargs: Additional optional parameters such as `output_dir` and `wandb`.
         """
-        NotImplementedError("Llama4Model is not implemented or tested yet.")
-
         self.model_name = params.get(
             "model_name", self.__class__.__name__.replace("Model", "")
         )
@@ -39,35 +48,61 @@ class Llama4Model(PulseTemplateModel):
 
         self.save_dir: str = kwargs.get("output_dir", f"{os.getcwd()}/output")
         self.wandb: bool = kwargs.get("wandb", False)
+
+        required_params = [
+            "max_new_tokens",
+        ]
+        # Check if all required parameters exist in config
+        missing_params = [param for param in required_params if param not in params]
+        if missing_params:
+            raise KeyError(f"Required parameters missing from config: {missing_params}")
+
         self.params: Dict[str, Any] = params
+        self.params["save_test_set"] = kwargs.get("save_test_set", False)
+
         self.model_id: str = self.params.get(
             "model_id", "meta-llama/Llama-4-Scout-17B-16E-Instruct"
         )
-        self.max_length: int = self.params.get("max_length", 512)
+        self.max_length: int = self.params.get("max_length", 5120)
 
         self.tokenizer: Optional[Any] = None
         self.llama_model: Optional[Any] = None
-        self.lc_llm: Optional[Any] = None
-        self.prompt_template: Optional[PromptTemplate] = None
-        self.lc_chain: Optional[Runnable] = None
+
+        self.quantization_config = BitsAndBytesConfig(
+            load_in_8bit=True, llm_int8_threshold=6.0, llm_int8_has_fp16_weight=True
+        )
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     def _load_model(self) -> None:
         """Loads the tokenizer and model weights and initializes HF pipeline."""
         try:
-            self.tokenizer = AutoTokenizer.from_pretrained(self.model_id, use_fast=True)
-            self.llama_model = AutoModelForCausalLM.from_pretrained(
-                self.model_id, torch_dtype=torch.float16, device_map="auto"
+            self.tokenizer = AutoTokenizer.from_pretrained(
+                self.model_id, use_fast=False, padding_side="left"
+            )
+            # self.llama_model = AutoModelForCausalLM.from_pretrained(
+            #     self.model_id,
+            #     device_map="auto",
+            #     torch_dtype=torch.float16,
+            # )
+            self.llama_model = Llama4ForConditionalGeneration.from_pretrained(
+                self.model_id,
+                attn_implementation="flex_attention",
+                device_map="auto",
+                torch_dtype=torch.bfloat16,
             )
 
-            if self.params.get("prefix_tuning", False):
-                logger.info("Applying Prefix Tuning")
-                prefix_config = PrefixTuningConfig(
+            if self.params.get("tuning", False):
+                logger.info("Applying Prompt Tuning")
+                tuning_config = PromptTuningConfig(
                     task_type=TaskType.CAUSAL_LM,
                     inference_mode=False,
-                    num_virtual_tokens=self.params.get("num_virtual_tokens", 30),
-                    encoder_hidden_size=self.params.get("encoder_hidden_size", 4096),
+                    tokenizer_name_or_path=self.model_id,
+                    num_virtual_tokens=20,
+                    prompt_tuning_init=PromptTuningInit.TEXT,
+                    prompt_tuning_init_text="Classify the diagnosis of following ICU data:",
                 )
-                self.llama_model = get_peft_model(self.llama_model, prefix_config)
+                self.llama_model = get_peft_model(self.llama_model, tuning_config)
+                logger.debug(self.llama_model.print_trainable_parameters())
 
             logger.info("Successfully loaded Llama4 model: %s", self.model_id)
         except Exception as e:
@@ -76,18 +111,6 @@ class Llama4Model(PulseTemplateModel):
 
         logger.info(
             "Initializing Hugging Face pipeline with parameters: %s", self.params
-        )
-
-        self.hf_pipeline = pipeline(
-            "text-generation",
-            model=self.llama_model,
-            tokenizer=self.tokenizer,
-            device_map="auto",
-            max_new_tokens=5,
-            do_sample=False,
-            temperature=0.0,
-            eos_token_id=self.tokenizer.eos_token_id,
-            pad_token_id=self.tokenizer.eos_token_id,
         )
 
     def infer_llm(self, input_text: str) -> Dict[str, Any]:
@@ -102,19 +125,72 @@ class Llama4Model(PulseTemplateModel):
         if not isinstance(input_text, str):
             input_text = str(input_text)
 
+        input_text = prompt_template_hf(
+            input_text
+        )  # Apply prompt template to structure the input and guide output.
+
         token_start = time.perf_counter()
-        tokens = self.tokenizer(input_text, return_tensors="pt")
+        chat_prompt = self.tokenizer.apply_chat_template(
+            input_text, tokenize=False, add_generation_prompt=True
+        )
+
+        # logger.debug("-------------CHAT PROMPT-------------")
+        # logger.debug(chat_prompt)
+
+        tokenized_inputs = self.tokenizer(
+            chat_prompt,
+            return_tensors="pt",
+        )
         token_time = time.perf_counter() - token_start
-        num_tokens = len(tokens["input_ids"][0])
+        num_tokens = tokenized_inputs["input_ids"].numel()
+
+        # logger.debug("-------------DECODED CHAT PROMPT-------------")
+        # logger.debug(
+        #     self.tokenizer.decode(
+        #         tokenized_inputs["input_ids"][0],
+        #         skip_special_tokens=True,
+        #         clean_up_tokenization_spaces=True,
+        #     )
+        # )
 
         infer_start = time.perf_counter()
-        result = self.hf_pipeline(input_text)
+        self.llama_model.to(self.device)
+
+        with torch.no_grad():
+            outputs = self.llama_model.generate(
+                input_ids=tokenized_inputs["input_ids"].to(self.device),
+                attention_mask=tokenized_inputs["attention_mask"].to(self.device),
+                max_new_tokens=self.params.max_new_tokens,
+                eos_token_id=self.tokenizer.eos_token_id,
+                pad_token_id=self.tokenizer.eos_token_id,
+            )
+
+        # 3) Slice off the prompt part:
+        gen_ids = outputs[0, num_tokens:]
+
+        # 4) Decode just the generated tokens:
+        generated_text = self.tokenizer.decode(
+            gen_ids, skip_special_tokens=True, clean_up_tokenization_spaces=True
+        )
+
         infer_time = time.perf_counter() - infer_start
+        logger.debug(
+            "Decoded full outputs: %s",
+            generated_text,
+        )
 
-        # logger.info(f"Input text: {input_text}")
+        generated_text = extract_dict(
+            generated_text
+        )  # Extract dict from the generated text.
 
-        generated_text = result[0]["generated_text"].replace(input_text, "").strip()
-        logger.info(f"Generated text: {generated_text}")
+        generated_text["probability"] = round(
+            (
+                abs(generated_text["probability"] - 1.0)
+                if "not-" in generated_text["diagnosis"]
+                else abs(generated_text["probability"])
+            ),
+            3,
+        )
 
         logger.info(
             f"Tokenization time: {token_time:.4f}s | Inference time: {infer_time:.4f}s | Tokens: {num_tokens}"
@@ -158,7 +234,10 @@ class Llama4Model(PulseTemplateModel):
         # TODO: Implement a more robust parsing method
         try:
             # Extract the floating-point number from the output
-            probability = float(output.split(":")[-1].strip())
+            if "not-" in output:
+                probability = np.abs(float(output.split(":")[-1].strip()) - 1.0)
+            else:
+                probability = float(output.split(":")[-1].strip())
             return probability
         except (ValueError, IndexError) as e:
             logger.warning("Failed to parse output. Defaulting to 0.5: %s", e)
@@ -168,6 +247,8 @@ class Llama4Model(PulseTemplateModel):
 
 
 class Llama4Trainer:
+    """Trainer class for Llama4Model."""
+
     def __init__(
         self, model: Llama4Model, train_loader, val_loader, test_loader
     ) -> None:
@@ -191,85 +272,109 @@ class Llama4Trainer:
         self.train_loader = train_loader
         self.val_loader = val_loader
         self.test_loader = test_loader
+        self.save_test_set = self.params.get("save_test_set", False)
 
-        self.criterion = nn.BCEWithLogitsLoss()
+        self.criterion = nn.BCELoss()  # Binary Cross Entropy Loss
         self.wandb = self.model.wandb
         self.model_save_dir = os.path.join(model.save_dir, "Models")
         self.task_name = self.model.task_name
         self.dataset_name = self.model.dataset_name
-        self.prefix_tuning = self.params.get("prefix_tuning", False)
+        self.tuning = self.params.get("tuning", False)
 
         logger.info("Using criterion: %s", self.criterion.__class__.__name__)
 
         # Create model save directory if it doesn't exist
         os.makedirs(self.model_save_dir, exist_ok=True)
 
-        # Get the configured data converter
-        # TODO: implement this for LLMs?
-        # self.converter = prepare_data_for_model_convdl(
-        #     self.train_loader,
-        #     self.params,
-        #     model_name=self.model.model_name,
-        #     task_name=self.task_name,
-        # )
-
     def train(self):
         """Training loop."""
         verbose = self.params.get("verbose", 1)
-
+        logger.info("System message: %s", prompt_template_hf("")[0])
         logger.info("Starting training...")
 
-        if self.prefix_tuning:
+        if self.tuning:
             logger.info(
-                "Tuning model with prefix tuning. Model is saved in %s",
+                "Tuning model with prompt tuning. Model is saved in %s",
                 self.model_save_dir,
             )
             optimizer = optim.AdamW(
                 self.llama_model.parameters(), lr=self.params.get("lr", 1e-4)
             )
-            num_epochs = self.params.get("epochs", 3)
+            num_epochs = self.params.get("num_epochs", 1)
 
             self.llama_model.train()
             for epoch in range(num_epochs):
                 epoch_loss = 0.0
-                for X, y in zip(
-                    self.train_loader[0].iterrows(), self.train_loader[1].iterrows()
+                logger.info(f"Epoch {epoch + 1} started...")
+                for i, (X, y) in enumerate(
+                    zip(
+                        self.train_loader[0].iterrows(), self.train_loader[1].iterrows()
+                    )
                 ):
-                    X_input = X[1].iloc[0]
-                    y_true = (
-                        torch.tensor(float(y[1].iloc[0]), dtype=torch.float32)
-                        .unsqueeze(0)
-                        .to(self.device)
+                    # Input prompt
+                    X_input = prompt_template_hf(X[1].iloc[0])
+                    inputs = self.model.tokenizer.apply_chat_template(
+                        X_input, tokenize=False, add_generation_prompt=True
                     )
 
-                    inputs = self.model.tokenizer(
-                        X_input, return_tensors="pt", truncation=True, padding=True
-                    ).to(self.device)
-                    labels = y_true.unsqueeze(0).expand(
-                        inputs["input_ids"].shape[0], -1
+                    # Build target output label
+                    probability = y[1].iloc[0]  # float
+                    diagnosis = (
+                        "not-" if probability < 0.5 else ""
+                    ) + self.model.task_name
+                    target_output = (
+                        "{\n"
+                        f'  "diagnosis": "{diagnosis}",\n'
+                        f'  "probability": {round(probability, 3)},\n'
+                        '  "explanation": "N/A"\n'
+                        "}\n\n"
                     )
 
-                    outputs = self.llama_model(**inputs, labels=labels)
-                    loss = outputs.loss
+                    encoded = self.encode_prompt_target(
+                        inputs,
+                        target_output,
+                        max_len=self.model.tokenizer.model_max_length,
+                    )
 
                     optimizer.zero_grad()
-                    loss.backward()
-                    optimizer.step()
+                    outputs = self.llama_model(
+                        input_ids=encoded["input_ids"].to(self.device),
+                        attention_mask=encoded["attention_mask"].to(self.device),
+                        labels=encoded["labels"].to(self.device),
+                    )
 
+                    loss = outputs.loss
+                    loss.backward()
+
+                    optimizer.step()
                     epoch_loss += loss.item()
+
+                    logger.info(
+                        "Step %d/%d, Loss: %.4f",
+                        i + 1,
+                        len(self.train_loader[0]),
+                        loss.item(),
+                    )
+
                     if self.wandb:
                         wandb.log({"train_loss": loss.item()})
 
-                logger.info(f"Epoch {epoch + 1}/{num_epochs}, Loss: {epoch_loss:.4f}")
+                logger.info(
+                    f"Epoch {epoch + 1}/{num_epochs}, Avg Total Loss: {epoch_loss/len(self.train_loader[0]):.4f}"
+                )
+                if self.wandb:
+                    wandb.log(
+                        {f"avg_epoch_loss": epoch_loss / len(self.train_loader[0])}
+                    )
 
-                val_loss = self.evaluate_single(
-                    self.val_loader
-                )  # Evaluate on validation set
+                val_loss = self.evaluate_single(self.val_loader)
                 logger.info("Validation loss: %s", val_loss)
 
-        self.evaluate_single(
-            self.test_loader, save_report=True
-        )  # Evaluate on test set and save metrics
+                self.llama_model.save_pretrained(self.model_save_dir)
+                self.model.tokenizer.save_pretrained(self.model_save_dir)
+                logger.info("Model saved to %s", self.model_save_dir)
+
+        self.evaluate_single(self.test_loader, save_report=True)
 
     def evaluate_single(self, test_loader: Any, save_report: bool = False) -> float:
         """Evaluates the model on a given test set.
@@ -281,6 +386,17 @@ class Llama4Trainer:
         Returns:
             The average validation loss across the test dataset.
         """
+        if self.save_test_set:
+            # Save test set to CSV
+            test_loader[0].to_csv(
+                os.path.join(self.model.save_dir, "test_set.csv"), index=False
+            )
+            test_loader[1].to_csv(
+                os.path.join(self.model.save_dir, "test_labels.csv"), index=False
+            )
+            logger.info("Test set saved to %s", self.model.save_dir)
+        logger.info("Starting test evaluation...")
+
         metrics_tracker = MetricsTracker(
             self.model.model_name,
             self.model.task_name,
@@ -311,7 +427,7 @@ class Llama4Trainer:
             total_infer_time += infer_time
             total_tokens += num_tokens
 
-            predicted_probability = self.model.parse_output(generated_text)
+            predicted_probability = float(generated_text.get("probability", 0.5))
 
             logger.info(
                 "Predicted probability: %s | True label: %s",
@@ -340,12 +456,12 @@ class Llama4Trainer:
             metrics_tracker.add_results(predicted_probability, y_true)
 
         # After evaluation loop
-        logger.info(f"Total tokens: {total_tokens}")
+        logger.info("Total tokens: %s", total_tokens)
         logger.info(
-            f"Average tokenization time: {total_token_time / len(test_loader[0]):.4f}s"
+            "Average tokenization time: %.4fs", total_token_time / len(test_loader[0])
         )
         logger.info(
-            f"Average inference time: {total_infer_time / len(test_loader[0]):.4f}s"
+            "Average inference time: %.4fs", total_infer_time / len(test_loader[0])
         )
 
         metrics_tracker.summary = metrics_tracker.compute_overall_metrics()
@@ -370,58 +486,62 @@ class Llama4Trainer:
         NotImplementedError(
             "Batch evaluation is not implemented for Llama4Model. Use evaluate_single instead."
         )
-        metrics_tracker = MetricsTracker(
-            self.model.model_name,
-            self.model.task_name,
-            self.model.dataset_name,
-            self.model.save_dir,
+
+    def encode_prompt_target(
+        self,
+        prompt: str,
+        target: str,
+        max_len: int = 512,
+        add_special_tokens: bool = True,
+    ) -> dict:
+        """
+        Tokenize and encode prompt and target into input_ids and labels for causal LM training.
+
+        Args:
+            prompt (str): The input prompt string.
+            target (str): The target output string.
+            max_len (int): The maximum length of the final sequence.
+            add_special_tokens (bool): Whether to add special tokens during tokenization.
+
+        Returns:
+            dict: Dictionary containing input_ids, labels, and attention_mask.
+        """
+        # Tokenize prompt and target
+        prompt_ids = self.model.tokenizer.encode(
+            prompt, add_special_tokens=add_special_tokens
         )
-        verbose: int = self.params.get("verbose", 1)
-        val_loss: list[float] = []
-
-        self.llama_model.eval()
-
-        df_X, df_y = test_loader  # X: prompts, y: true labels
-        prompts = df_X.iloc[:, 0].tolist()
-        true_labels = df_y.iloc[:, 0].tolist()
-
-        # Batch inference with Hugging Face pipeline
-        results = self.model.hf_pipeline(
-            prompts,
+        target_ids = self.model.tokenizer.encode(
+            target, add_special_tokens=add_special_tokens
         )
 
-        logger.debug(f"Results from hf_pipeline: {results}")
+        # Truncate from the start if too long
+        input_ids = prompt_ids + target_ids
+        if len(input_ids) > max_len:
+            input_ids = input_ids[-max_len:]
 
-        for i, result_dict in enumerate(results):
-            generated_text = result_dict["generated_text"]
-            y_true = true_labels[i]
+        # Recompute where the target starts (after possible truncation of prompt)
+        prompt_len = len(prompt_ids)
+        total_len = len(input_ids)
+        target_start_idx = max(0, total_len - len(target_ids))
 
-            predicted_probability = self.model.parse_output(generated_text)
+        # Create labels: -100 for prompt, real target IDs for target
+        labels = [-100] * target_start_idx + input_ids[target_start_idx:]
 
-            logger.info(
-                "Predicted probability: %s | True label: %s",
-                predicted_probability,
-                y_true,
-            )
+        # Create attention mask (1 for real tokens, 0 for padding)
+        attention_mask = [1] * len(input_ids)
 
-            predicted_label = torch.tensor(
-                predicted_probability, dtype=torch.float32
-            ).unsqueeze(0)
-            target = torch.tensor(float(y_true), dtype=torch.float32).unsqueeze(0)
+        assert len(input_ids) == len(
+            labels
+        ), f"input_ids and labels length mismatch: {len(input_ids)} vs {len(labels)}"
 
-            loss = self.criterion(predicted_label, target)
-            val_loss.append(loss.item())
-
-            if self.wandb:
-                wandb.log({"val_loss": loss.item()})
-
-            metrics_tracker.add_results(predicted_probability, y_true)
-
-        metrics_tracker.summary = metrics_tracker.compute_overall_metrics()
-        if save_report:
-            metrics_tracker.save_report()
-
-        logger.info("Test evaluation completed for %s", self.model.model_name)
-        logger.info("Test metrics: %s", metrics_tracker.summary)
-
-        return float(np.mean(val_loss))
+        return {
+            "input_ids": torch.tensor(
+                input_ids, dtype=torch.long, device=self.device
+            ).unsqueeze(0),
+            "labels": torch.tensor(
+                labels, dtype=torch.long, device=self.device
+            ).unsqueeze(0),
+            "attention_mask": torch.tensor(
+                attention_mask, dtype=torch.long, device=self.device
+            ).unsqueeze(0),
+        }

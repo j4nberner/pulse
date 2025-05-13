@@ -15,8 +15,9 @@ from peft import (
     PromptTuningConfig,
     get_peft_model,
 )
-from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
-
+from transformers import AutoProcessor, Gemma3ForConditionalGeneration, BitsAndBytesConfig
+from PIL import Image
+import requests
 import wandb
 from src.eval.metrics import MetricsTracker
 from src.models.pulsetemplate_model import PulseTemplateModel
@@ -32,11 +33,11 @@ warnings.filterwarnings(
 logger = logging.getLogger("PULSE_logger")
 
 
-class DeepseekR1Model(PulseTemplateModel):
-    """DeepseekR1 model wrapper using LangChain for prompt templating and inference."""
+class Gemma3Model(PulseTemplateModel):
+    """Gemma 3 model wrapper using LangChain for prompt templating and inference."""
 
     def __init__(self, params: Dict[str, Any], **kwargs) -> None:
-        """Initializes the DeepseekR1Model with parameters and paths.
+        """Initializes the Gemma3Model with parameters and paths.
 
         Args:
             params: Configuration dictionary with model parameters.
@@ -60,15 +61,17 @@ class DeepseekR1Model(PulseTemplateModel):
             raise KeyError(f"Required parameters missing from config: {missing_params}")
 
         self.params: Dict[str, Any] = params
-        self.params["save_test_set"] = kwargs.get("save_test_set", False)
+        self.params["save_test_set"] = kwargs.get(
+            "save_test_set", self.params.get("save_test_set", False)
+        )
 
         self.model_id: str = self.params.get(
-            "model_id", "deepseek-ai/DeepSeek-R1-Distill-Llama-8B"
+            "model_id", "google/gemma-3-27b-it"
         )
         self.max_length: int = self.params.get("max_length", 5120)
 
         self.tokenizer: Optional[Any] = None
-        self.deepseek_r1_model: Optional[Any] = None
+        self.gemma_model: Optional[Any] = None
         self.lc_llm: Optional[Any] = None
         self.prompt_template: Optional[PromptTemplate] = None
         self.lc_chain: Optional[Runnable] = None
@@ -81,14 +84,20 @@ class DeepseekR1Model(PulseTemplateModel):
     def _load_model(self) -> None:
         """Loads the tokenizer and model weights and initializes HF pipeline."""
         try:
-            self.tokenizer = AutoTokenizer.from_pretrained(
-                self.model_id, use_fast=False, padding_side="left"
-            )
-            self.deepseek_r1_model = AutoModelForCausalLM.from_pretrained(
-                self.model_id,
+            # self.tokenizer = AutoTokenizer.from_pretrained(
+            #     self.model_id, use_fast=False, padding_side="left"
+            # )
+            self.tokenizer = AutoProcessor.from_pretrained(self.model_id)
+
+            # self.gemma_model = AutoModelForCausalLM.from_pretrained(
+            #     self.model_id,
+            #     device_map="auto",
+            #     torch_dtype=torch.bfloat16,
+            # )
+            self.gemma_model = Gemma3ForConditionalGeneration.from_pretrained(
+                self.model_id, 
                 device_map="auto",
-                torch_dtype=torch.float16,
-            )
+            ).eval()
 
             if self.params.get("tuning", False):
                 logger.info("Applying Prompt Tuning")
@@ -100,12 +109,12 @@ class DeepseekR1Model(PulseTemplateModel):
                     prompt_tuning_init=PromptTuningInit.TEXT,
                     prompt_tuning_init_text="Classify the diagnosis of following ICU data:",
                 )
-                self.deepseek_r1_model = get_peft_model(self.deepseek_r1_model, tuning_config)
-                logger.debug(self.deepseek_r1_model.print_trainable_parameters())
+                self.gemma_model = get_peft_model(self.gemma_model, tuning_config)
+                logger.debug(self.gemma_model.print_trainable_parameters())
 
-            logger.info("Successfully loaded DeepseekR1 model: %s", self.model_id)
+            logger.info("Successfully loaded Gemma3 model: %s", self.model_id)
         except Exception as e:
-            logger.error("Failed to load DeepseekR1 model: %s", e)
+            logger.error("Failed to load Gemma3 model: %s", e)
             raise
 
         logger.info(
@@ -125,23 +134,32 @@ class DeepseekR1Model(PulseTemplateModel):
             input_text = str(input_text)
 
         input_text = prompt_template_hf(
-            input_text, model="DeepseekR1Model"
+            input_text,
+            model="Gemma3Model",
         )  # Apply prompt template to structure the input and guide output.
 
-        token_start = time.perf_counter()
-        chat_prompt = self.tokenizer.apply_chat_template(
-            input_text, tokenize=False, add_generation_prompt=True
-        )
+        # token_start = time.perf_counter()
+        # chat_prompt = self.tokenizer.apply_chat_template(
+        #     input_text, tokenize=False, add_generation_prompt=True
+        # )
+        print(input_text)
+
+        inputs = self.tokenizer.apply_chat_template(
+            input_text, add_generation_prompt=True, tokenize=True,
+            return_dict=True, return_tensors="pt"
+        ).to(self.device, dtype=torch.bfloat16)
+
+        input_len = inputs["input_ids"].shape[-1]
 
         # logger.debug("-------------CHAT PROMPT-------------")
         # logger.debug(chat_prompt)
 
-        tokenized_inputs = self.tokenizer(
-            chat_prompt,
-            return_tensors="pt",
-        )
-        token_time = time.perf_counter() - token_start
-        num_tokens = tokenized_inputs["input_ids"].numel()
+        # tokenized_inputs = self.tokenizer(
+        #     chat_prompt,
+        #     return_tensors="pt",
+        # )
+        # token_time = time.perf_counter() - token_start
+        # num_tokens = tokenized_inputs["input_ids"].numel()
 
         # logger.debug("-------------DECODED CHAT PROMPT-------------")
         # logger.debug(
@@ -153,24 +171,30 @@ class DeepseekR1Model(PulseTemplateModel):
         # )
 
         infer_start = time.perf_counter()
-        self.deepseek_r1_model.to(self.device)
+        self.gemma_model.to(self.device)
 
-        with torch.no_grad():
-            outputs = self.deepseek_r1_model.generate(
-                input_ids=tokenized_inputs["input_ids"].to(self.device),
-                attention_mask=tokenized_inputs["attention_mask"].to(self.device),
-                max_new_tokens=self.params.max_new_tokens,
-                eos_token_id=self.tokenizer.eos_token_id,
-                pad_token_id=self.tokenizer.eos_token_id,
-            )
+        with torch.inference_mode():
+            generation = self.model.generate(**inputs, max_new_tokens=100, do_sample=False)
+            generation = generation[0][input_len:]
 
-        # 3) Slice off the prompt part:
-        gen_ids = outputs[0, num_tokens:]
+        decoded = self.tokenizer.decode(generation, skip_special_tokens=True)
 
-        # 4) Decode just the generated tokens:
-        generated_text = self.tokenizer.decode(
-            gen_ids, skip_special_tokens=True, clean_up_tokenization_spaces=True
-        )
+        # with torch.no_grad():
+        #     outputs = self.gemma_model.generate(
+        #         input_ids=tokenized_inputs["input_ids"].to(self.device),
+        #         attention_mask=tokenized_inputs["attention_mask"].to(self.device),
+        #         max_new_tokens=self.params.max_new_tokens,
+        #         eos_token_id=self.tokenizer.eos_token_id,
+        #         pad_token_id=self.tokenizer.eos_token_id,
+        #     )
+
+        # # 3) Slice off the prompt part:
+        # gen_ids = outputs[0, num_tokens:]
+
+        # # 4) Decode just the generated tokens:
+        # generated_text = self.tokenizer.decode(
+        #     gen_ids, skip_special_tokens=True, clean_up_tokenization_spaces=True
+        # )
 
         infer_time = time.perf_counter() - infer_start
         logger.debug(
@@ -181,9 +205,6 @@ class DeepseekR1Model(PulseTemplateModel):
         generated_text = extract_dict(
             generated_text
         )  # Extract dict from the generated text.
-        logger.debug("Extracted dict: %s", generated_text)
-
-        generated_text["probability"] = float(generated_text["probability"])
 
         generated_text["probability"] = round(
             (
@@ -220,7 +241,7 @@ class DeepseekR1Model(PulseTemplateModel):
             val_dataloader: DataLoader for validation data.
             test_dataloader: DataLoader for test data.
         """
-        self.trainer = DeepseekR1Trainer(
+        self.trainer = Gemma3Trainer(
             self, train_dataloader, val_dataloader, test_dataloader
         )
 
@@ -248,18 +269,18 @@ class DeepseekR1Model(PulseTemplateModel):
             return 0.5  # Default to 0.5 if parsing fails
 
 
-class DeepseekR1Trainer:
-    """Trainer class for DeepseekR1Model."""
+class Gemma3Trainer:
+    """Trainer class for Gemma3Model."""
 
     def __init__(
-        self, model: DeepseekR1Model, train_loader, val_loader, test_loader
+        self, model: Gemma3Model, train_loader, val_loader, test_loader
     ) -> None:
         """
-        Initialize the DeepseekR1 trainer. Finetruning is not implemented yet.
+        Initialize the Gemma3 trainer. Finetruning is not implemented yet.
         This is a wrapper for inference only.
 
         Args:
-            model (DeepseekR1Model): The DeepseekR1 model to be trained.
+            model (Gemma3Model): The Gemma3 model to be trained.
             train_loader: The DataLoader object for the training dataset.
             val_loader: The DataLoader object for the validation dataset.
             test_loader: The DataLoader object for the testing dataset.
@@ -268,7 +289,7 @@ class DeepseekR1Trainer:
         model._load_model()  # Comment out to only test preprocessing
 
         self.model = model
-        self.deepseek_r1_model = model.deepseek_r1_model
+        self.gemma_model = model.gemma_model
         self.params = model.params
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.train_loader = train_loader
@@ -291,6 +312,7 @@ class DeepseekR1Trainer:
     def train(self):
         """Training loop."""
         verbose = self.params.get("verbose", 1)
+
         logger.info("System message: %s", prompt_template_hf("")[0])
         logger.info("Starting training...")
 
@@ -300,11 +322,11 @@ class DeepseekR1Trainer:
                 self.model_save_dir,
             )
             optimizer = optim.AdamW(
-                self.deepseek_r1_model.parameters(), lr=self.params.get("lr", 1e-4)
+                self.gemma_model.parameters(), lr=self.params.get("lr", 1e-4)
             )
             num_epochs = self.params.get("num_epochs", 1)
 
-            self.deepseek_r1_model.train()
+            self.gemma_model.train()
             for epoch in range(num_epochs):
                 epoch_loss = 0.0
                 logger.info(f"Epoch {epoch + 1} started...")
@@ -339,7 +361,7 @@ class DeepseekR1Trainer:
                     )
 
                     optimizer.zero_grad()
-                    outputs = self.deepseek_r1_model(
+                    outputs = self.gemma_model(
                         input_ids=encoded["input_ids"].to(self.device),
                         attention_mask=encoded["attention_mask"].to(self.device),
                         labels=encoded["labels"].to(self.device),
@@ -372,7 +394,7 @@ class DeepseekR1Trainer:
                 val_loss = self.evaluate_single(self.val_loader)
                 logger.info("Validation loss: %s", val_loss)
 
-                self.deepseek_r1_model.save_pretrained(self.model_save_dir)
+                self.gemma_model.save_pretrained(self.model_save_dir)
                 self.model.tokenizer.save_pretrained(self.model_save_dir)
                 logger.info("Model saved to %s", self.model_save_dir)
 
@@ -397,7 +419,7 @@ class DeepseekR1Trainer:
                 os.path.join(self.model.save_dir, "test_labels.csv"), index=False
             )
             logger.info("Test set saved to %s", self.model.save_dir)
-        logger.info("Starting test evaluation...")
+            logger.info("Starting test evaluation...")
 
         metrics_tracker = MetricsTracker(
             self.model.model_name,
@@ -407,8 +429,6 @@ class DeepseekR1Trainer:
         )
         verbose: int = self.params.get("verbose", 1)
         val_loss: list[float] = []
-
-        self.deepseek_r1_model.eval()
 
         total_tokens = 0
         total_token_time = 0.0
@@ -486,7 +506,7 @@ class DeepseekR1Trainer:
             The average validation loss across the test dataset.
         """
         NotImplementedError(
-            "Batch evaluation is not implemented for DeepseekR1Model. Use evaluate_single instead."
+            "Batch evaluation is not implemented for Gemma3Model. Use evaluate_single instead."
         )
 
     def encode_prompt_target(
@@ -547,3 +567,4 @@ class DeepseekR1Trainer:
                 attention_mask, dtype=torch.long, device=self.device
             ).unsqueeze(0),
         }
+
