@@ -5,13 +5,16 @@ import warnings
 from typing import Any, Dict, Optional
 
 import numpy as np
+import requests
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from langchain.prompts import PromptTemplate
+from langchain.schema.runnable import Runnable
 from peft import PromptTuningConfig, PromptTuningInit, TaskType, get_peft_model
-from torch.nn import functional as F
-from transformers import (AutoModelForCausalLM, AutoTokenizer,
-                          BitsAndBytesConfig)
+from PIL import Image
+from transformers import (AutoProcessor, BitsAndBytesConfig,
+                          Gemma3ForConditionalGeneration)
 
 import wandb
 from src.eval.metrics import MetricsTracker
@@ -26,11 +29,11 @@ warnings.filterwarnings(
 logger = logging.getLogger("PULSE_logger")
 
 
-class Llama3Model(PulseTemplateModel):
-    """Llama 3 model wrapper using LangChain for prompt templating and inference."""
+class Gemma3Model(PulseTemplateModel):
+    """Gemma 3 model wrapper using LangChain for prompt templating and inference."""
 
     def __init__(self, params: Dict[str, Any], **kwargs) -> None:
-        """Initializes the Llama3Model with parameters and paths.
+        """Initializes the Gemma3Model with parameters and paths.
 
         Args:
             params: Configuration dictionary with model parameters.
@@ -54,15 +57,20 @@ class Llama3Model(PulseTemplateModel):
             raise KeyError(f"Required parameters missing from config: {missing_params}")
 
         self.params: Dict[str, Any] = params
-        self.params["save_test_set"] = kwargs.get("save_test_set", False)
+        self.params["save_test_set"] = kwargs.get(
+            "save_test_set", self.params.get("save_test_set", False)
+        )
 
         self.model_id: str = self.params.get(
-            "model_id", "meta-llama/Llama-3.1-8B-Instruct"
+            "model_id", "google/gemma-3-27b-it"
         )
         self.max_length: int = self.params.get("max_length", 5120)
 
         self.tokenizer: Optional[Any] = None
-        self.llama_model: Optional[Any] = None
+        self.gemma_model: Optional[Any] = None
+        self.lc_llm: Optional[Any] = None
+        self.prompt_template: Optional[PromptTemplate] = None
+        self.lc_chain: Optional[Runnable] = None
 
         self.quantization_config = BitsAndBytesConfig(
             load_in_8bit=True, llm_int8_threshold=6.0, llm_int8_has_fp16_weight=True
@@ -72,14 +80,20 @@ class Llama3Model(PulseTemplateModel):
     def _load_model(self) -> None:
         """Loads the tokenizer and model weights and initializes HF pipeline."""
         try:
-            self.tokenizer = AutoTokenizer.from_pretrained(
-                self.model_id, use_fast=False, padding_side="left"
-            )
-            self.llama_model = AutoModelForCausalLM.from_pretrained(
-                self.model_id,
+            # self.tokenizer = AutoTokenizer.from_pretrained(
+            #     self.model_id, use_fast=False, padding_side="left"
+            # )
+            self.tokenizer = AutoProcessor.from_pretrained(self.model_id)
+
+            # self.gemma_model = AutoModelForCausalLM.from_pretrained(
+            #     self.model_id,
+            #     device_map="auto",
+            #     torch_dtype=torch.bfloat16,
+            # )
+            self.gemma_model = Gemma3ForConditionalGeneration.from_pretrained(
+                self.model_id, 
                 device_map="auto",
-                torch_dtype=torch.bfloat16,
-            )
+            ).eval()
 
             if self.params.get("tuning", False):
                 logger.info("Applying Prompt Tuning")
@@ -91,12 +105,12 @@ class Llama3Model(PulseTemplateModel):
                     prompt_tuning_init=PromptTuningInit.TEXT,
                     prompt_tuning_init_text="Classify the diagnosis of following ICU data:",
                 )
-                self.llama_model = get_peft_model(self.llama_model, tuning_config)
-                logger.debug(self.llama_model.print_trainable_parameters())
+                self.gemma_model = get_peft_model(self.gemma_model, tuning_config)
+                logger.debug(self.gemma_model.print_trainable_parameters())
 
-            logger.info("Successfully loaded Llama3 model: %s", self.model_id)
+            logger.info("Successfully loaded Gemma3 model: %s", self.model_id)
         except Exception as e:
-            logger.error("Failed to load Llama3 model: %s", e)
+            logger.error("Failed to load Gemma3 model: %s", e)
             raise
 
         logger.info(
@@ -104,138 +118,109 @@ class Llama3Model(PulseTemplateModel):
         )
 
     def infer_llm(self, input_text: str) -> Dict[str, Any]:
-        """Runs the HF model on the input and extracts diagnosis, explanation, and probability."""
-        logger.info("---------------------------------------------")
+        """Runs the HF pipeline with the given input and logs timing/token info.
 
+        Args:
+            input_text: A string input to feed into the prompt.
+
+        Returns:
+            A dictionary with the generated text, timing information, and token count.
+        """
         if not isinstance(input_text, str):
             input_text = str(input_text)
 
-        # Format input using prompt template
-        input_text = prompt_template_hf(input_text)
+        input_text = prompt_template_hf(
+            input_text,
+            model="Gemma3Model",
+        )  # Apply prompt template to structure the input and guide output.
 
-        # Tokenize with chat template
-        chat_prompt = self.tokenizer.apply_chat_template(
-            input_text, tokenize=False, add_generation_prompt=True
-        )
+        # token_start = time.perf_counter()
+        # chat_prompt = self.tokenizer.apply_chat_template(
+        #     input_text, tokenize=False, add_generation_prompt=True
+        # )
+        print(input_text)
 
-        token_start = time.perf_counter()
-        tokenized_inputs = self.tokenizer(
-            chat_prompt,
-            return_tensors="pt",
-        )
-        token_time = time.perf_counter() - token_start
-        num_prompt_tokens = tokenized_inputs["input_ids"].size(1)
+        inputs = self.tokenizer.apply_chat_template(
+            input_text, add_generation_prompt=True, tokenize=True,
+            return_dict=True, return_tensors="pt"
+        ).to(self.device, dtype=torch.bfloat16)
 
-        yes_token_id = self.tokenizer("yes", add_special_tokens=False).input_ids[0]
-        no_token_id = self.tokenizer("no", add_special_tokens=False).input_ids[0]
-        
-        self.llama_model.to(self.device)
-        input_ids = tokenized_inputs["input_ids"].to(self.device)
-        attention_mask = tokenized_inputs["attention_mask"].to(self.device)
+        input_len = inputs["input_ids"].shape[-1]
 
-        # Generate output with scores
+        # logger.debug("-------------CHAT PROMPT-------------")
+        # logger.debug(chat_prompt)
+
+        # tokenized_inputs = self.tokenizer(
+        #     chat_prompt,
+        #     return_tensors="pt",
+        # )
+        # token_time = time.perf_counter() - token_start
+        # num_tokens = tokenized_inputs["input_ids"].numel()
+
+        # logger.debug("-------------DECODED CHAT PROMPT-------------")
+        # logger.debug(
+        #     self.tokenizer.decode(
+        #         tokenized_inputs["input_ids"][0],
+        #         skip_special_tokens=True,
+        #         clean_up_tokenization_spaces=True,
+        #     )
+        # )
+
         infer_start = time.perf_counter()
-        with torch.no_grad():
-            outputs = self.llama_model.generate(
-                input_ids=input_ids,
-                attention_mask=attention_mask,
-                max_new_tokens=self.params.max_new_tokens,
-                return_dict_in_generate=True,
-                output_scores=True,
-                output_hidden_states=False,
-                pad_token_id=self.tokenizer.pad_token_id,
-                eos_token_id=self.tokenizer.eos_token_id,
-            )
+        self.gemma_model.to(self.device)
+
+        with torch.inference_mode():
+            generation = self.model.generate(**inputs, max_new_tokens=100, do_sample=False)
+            generation = generation[0][input_len:]
+
+        decoded = self.tokenizer.decode(generation, skip_special_tokens=True)
+
+        # with torch.no_grad():
+        #     outputs = self.gemma_model.generate(
+        #         input_ids=tokenized_inputs["input_ids"].to(self.device),
+        #         attention_mask=tokenized_inputs["attention_mask"].to(self.device),
+        #         max_new_tokens=self.params.max_new_tokens,
+        #         eos_token_id=self.tokenizer.eos_token_id,
+        #         pad_token_id=self.tokenizer.eos_token_id,
+        #     )
+
+        # # 3) Slice off the prompt part:
+        # gen_ids = outputs[0, num_tokens:]
+
+        # # 4) Decode just the generated tokens:
+        # generated_text = self.tokenizer.decode(
+        #     gen_ids, skip_special_tokens=True, clean_up_tokenization_spaces=True
+        # )
 
         infer_time = time.perf_counter() - infer_start
-
-        # Get generated token ids (excluding prompt)
-        gen_ids = outputs.sequences[0][num_prompt_tokens:]
-
-        # Decode the full generated string
-        decoded_output = self.tokenizer.decode(
-            gen_ids, skip_special_tokens=True, clean_up_tokenization_spaces=True
-        )
-        logger.debug("Decoded output:\n %s", decoded_output)
-
-        # Calculate softmax over first generated token logits
-        first_token_logits = outputs.scores[0][0]  # shape: (vocab_size,)
-        # top_gen_ids = gen_ids[:5]  # First few generated tokens
-        # print("Generated token IDs:", top_gen_ids)
-        # print("Decoded tokens:", [self.tokenizer.decode([tid]) for tid in top_gen_ids])
-        # logger.debug(
-        #     "First token logits: %s", first_token_logits
-        # )
-        # Apply softmax to get probabilities
-        # Get top 10 probabilities and their corresponding token indices
-        probs = torch.topk(F.softmax(first_token_logits, dim=-1), 10) #(values, indices)
-        topk_values, topk_indices = probs
-
-        # Convert indices to list for easier matching
-        topk_indices_list = topk_indices.tolist()
-        topk_values_list = topk_values.tolist()
-
-        # Initialize with fallback values
-        yes_prob = 0.0
-        no_prob = 0.0
-
-        # Find index of yes_token_id and extract its probability
-        if yes_token_id in topk_indices_list:
-            yes_index = topk_indices_list.index(yes_token_id)
-            yes_prob = topk_values_list[yes_index]
-
-        if no_token_id in topk_indices_list:
-            no_index = topk_indices_list.index(no_token_id)
-            no_prob = topk_values_list[no_index]
-
-
-        # Fallback if yes and no tokens were not picked up. They are inlcuded in the vocab but
-        # have a value a -inf as logits
-        if yes_prob == 0.0 and no_prob == 0.0:
-            logger.warning(
-                "Yes or No token probabilities are zero. Defaulting to 0.5."
-            )
-            yes_prob = 0.5
-            no_prob = 0.5
-
-        if yes_prob > no_prob:
-            probability = yes_prob
-        else:
-            probability = 1 - no_prob
         logger.debug(
-            "Yes token ID: %s | No token ID: %s", yes_token_id, no_token_id
-        )
-        logger.debug(
-            "Top 10 token probs: %s", probs
-        )
-        logger.debug(
-            "Yes token probability: %.4f | No token probability: %.4f",
-            yes_prob,
-            no_prob,
+            "Decoded full outputs: %s",
+            generated_text,
         )
 
-        # Extract dict from the decoded output (e.g., via regex or JSON parsing)
-        try:
-            parsed = extract_dict(decoded_output)
-            # logger.debug("Parsed output: %s", parsed)
-        except Exception as e:
-            logger.warning(f"Failed to parse output: {decoded_output}")
-            parsed = {"diagnosis": None, "explanation": decoded_output}
+        generated_text = extract_dict(
+            generated_text
+        )  # Extract dict from the generated text.
 
-        # Add diagnosis probability based on first token
-        parsed["probability"] = round(probability, 4)
+        generated_text["probability"] = round(
+            (
+                abs(generated_text["probability"] - 1.0)
+                if "not-" in generated_text["diagnosis"]
+                else abs(generated_text["probability"])
+            ),
+            3,
+        )
 
         logger.info(
-            f"Tokenization time: {token_time:.4f}s | Inference time: {infer_time:.4f}s | Tokens: {num_prompt_tokens}"
+            f"Tokenization time: {token_time:.4f}s | Inference time: {infer_time:.4f}s | Tokens: {num_tokens}"
         )
 
         return {
-            "generated_text": parsed,
+            "generated_text": generated_text,
             "token_time": token_time,
             "infer_time": infer_time,
-            "num_tokens": num_prompt_tokens,
+            "num_tokens": num_tokens,
         }
-
 
     def set_trainer(
         self,
@@ -252,7 +237,7 @@ class Llama3Model(PulseTemplateModel):
             val_dataloader: DataLoader for validation data.
             test_dataloader: DataLoader for test data.
         """
-        self.trainer = Llama3Trainer(
+        self.trainer = Gemma3Trainer(
             self, train_dataloader, val_dataloader, test_dataloader
         )
 
@@ -280,18 +265,18 @@ class Llama3Model(PulseTemplateModel):
             return 0.5  # Default to 0.5 if parsing fails
 
 
-class Llama3Trainer:
-    """Trainer class for Llama3Model."""
+class Gemma3Trainer:
+    """Trainer class for Gemma3Model."""
 
     def __init__(
-        self, model: Llama3Model, train_loader, val_loader, test_loader
+        self, model: Gemma3Model, train_loader, val_loader, test_loader
     ) -> None:
         """
-        Initialize the Llama3 trainer. Finetruning is not implemented yet.
+        Initialize the Gemma3 trainer. Finetruning is not implemented yet.
         This is a wrapper for inference only.
 
         Args:
-            model (Llama3Model): The Llama3 model to be trained.
+            model (Gemma3Model): The Gemma3 model to be trained.
             train_loader: The DataLoader object for the training dataset.
             val_loader: The DataLoader object for the validation dataset.
             test_loader: The DataLoader object for the testing dataset.
@@ -300,7 +285,7 @@ class Llama3Trainer:
         model._load_model()  # Comment out to only test preprocessing
 
         self.model = model
-        self.llama_model = model.llama_model
+        self.gemma_model = model.gemma_model
         self.params = model.params
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.train_loader = train_loader
@@ -323,6 +308,7 @@ class Llama3Trainer:
     def train(self):
         """Training loop."""
         verbose = self.params.get("verbose", 1)
+
         logger.info("System message: %s", prompt_template_hf("")[0])
         logger.info("Starting training...")
 
@@ -332,11 +318,11 @@ class Llama3Trainer:
                 self.model_save_dir,
             )
             optimizer = optim.AdamW(
-                self.llama_model.parameters(), lr=self.params.get("lr", 1e-4)
+                self.gemma_model.parameters(), lr=self.params.get("lr", 1e-4)
             )
             num_epochs = self.params.get("num_epochs", 1)
 
-            self.llama_model.train()
+            self.gemma_model.train()
             for epoch in range(num_epochs):
                 epoch_loss = 0.0
                 logger.info(f"Epoch {epoch + 1} started...")
@@ -359,7 +345,7 @@ class Llama3Trainer:
                     target_output = (
                         "{\n"
                         f'  "diagnosis": "{diagnosis}",\n'
-                        f'  "probability": {round(probability, 4)},\n'
+                        f'  "probability": {round(probability, 3)},\n'
                         '  "explanation": "N/A"\n'
                         "}\n\n"
                     )
@@ -371,8 +357,7 @@ class Llama3Trainer:
                     )
 
                     optimizer.zero_grad()
-                    #TODO: Should be optimized for diagnosis or probability -> need to adapt
-                    outputs = self.llama_model(
+                    outputs = self.gemma_model(
                         input_ids=encoded["input_ids"].to(self.device),
                         attention_mask=encoded["attention_mask"].to(self.device),
                         labels=encoded["labels"].to(self.device),
@@ -405,7 +390,7 @@ class Llama3Trainer:
                 val_loss = self.evaluate_single(self.val_loader)
                 logger.info("Validation loss: %s", val_loss)
 
-                self.llama_model.save_pretrained(self.model_save_dir)
+                self.gemma_model.save_pretrained(self.model_save_dir)
                 self.model.tokenizer.save_pretrained(self.model_save_dir)
                 logger.info("Model saved to %s", self.model_save_dir)
 
@@ -430,7 +415,7 @@ class Llama3Trainer:
                 os.path.join(self.model.save_dir, "test_labels.csv"), index=False
             )
             logger.info("Test set saved to %s", self.model.save_dir)
-        logger.info("Starting test evaluation...")
+            logger.info("Starting test evaluation...")
 
         metrics_tracker = MetricsTracker(
             self.model.model_name,
@@ -440,8 +425,6 @@ class Llama3Trainer:
         )
         verbose: int = self.params.get("verbose", 1)
         val_loss: list[float] = []
-
-        self.llama_model.eval()
 
         total_tokens = 0
         total_token_time = 0.0
@@ -469,11 +452,6 @@ class Llama3Trainer:
                 predicted_probability,
                 y_true,
             )
-            if verbose > 1:
-                logger.info("Generated label: %s", generated_text["diagnosis"])
-                logger.info("Generated explanation: %s \n", generated_text["explanation"])
-            if verbose > 2:
-                logger.info("Input prompt: %s \n", X_input)
 
             predicted_label = torch.tensor(
                 predicted_probability, dtype=torch.float32
@@ -524,7 +502,7 @@ class Llama3Trainer:
             The average validation loss across the test dataset.
         """
         NotImplementedError(
-            "Batch evaluation is not implemented for Llama3Model. Use evaluate_single instead."
+            "Batch evaluation is not implemented for Gemma3Model. Use evaluate_single instead."
         )
 
     def encode_prompt_target(
@@ -585,3 +563,4 @@ class Llama3Trainer:
                 attention_mask, dtype=torch.long, device=self.device
             ).unsqueeze(0),
         }
+

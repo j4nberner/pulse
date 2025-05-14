@@ -3,6 +3,7 @@ results/
 secrets/
 output/
 visualizations/*/
+output_to_keep/
 wandb/
 .vscode/
 todo

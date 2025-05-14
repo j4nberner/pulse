@@ -10,7 +10,8 @@ from sklearn.metrics import confusion_matrix
 import wandb
 from src.eval.metrics import MetricsTracker
 from src.models.pulsetemplate_model import PulseTemplateModel
-from src.util.model_util import prepare_data_for_model_convml, save_sklearn_model
+from src.util.model_util import (prepare_data_for_model_convml,
+                                 save_sklearn_model)
 
 logger = logging.getLogger("PULSE_logger")
 

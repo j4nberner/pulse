@@ -1,10 +1,9 @@
 import logging
-import numpy as np
 import os
 import random
+
+import numpy as np
 import torch
-
-
 from omegaconf import OmegaConf
 
 logger = logging.getLogger("PULSE_logger")

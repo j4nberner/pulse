@@ -1,7 +1,6 @@
 import time
-from transformers import AutoTokenizer, AutoModelForCausalLM
 
-
+from transformers import AutoModelForCausalLM, AutoTokenizer
 
 # Sample input string for classification
 # input_text = ("Below are Question-Answer pair examples of ICU data classified as sepsis or not-sepsis:\n"

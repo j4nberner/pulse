@@ -5,14 +5,15 @@ from typing import Any, Dict, Optional
 
 import numpy as np
 import pandas as pd
+import wandb.sklearn
 from sklearn.model_selection import RandomizedSearchCV
 from xgboost import XGBClassifier
 
 import wandb
-import wandb.sklearn
 from src.eval.metrics import MetricsTracker
 from src.models.pulsetemplate_model import PulseTemplateModel
-from src.util.model_util import prepare_data_for_model_convml, save_sklearn_model
+from src.util.model_util import (prepare_data_for_model_convml,
+                                 save_sklearn_model)
 
 logger = logging.getLogger("PULSE_logger")
 

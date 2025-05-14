@@ -1,8 +1,8 @@
 import logging
 import os
-import yaml
 from datetime import datetime
 
+import yaml
 from omegaconf import OmegaConf
 
 import wandb

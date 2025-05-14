@@ -4,8 +4,8 @@ from typing import Any, Dict, List, Tuple
 import numpy as np
 import pandas as pd
 
-from src.util.data_util import get_feature
 from src.preprocessing.preprocessing_advanced import PreprocessorAdvanced
+from src.util.data_util import get_feature
 
 logger = logging.getLogger("PULSE_logger")
 
@@ -33,12 +33,6 @@ def sarvari_aggregation_preprocessor(
     num_shots = info_dict.get("num_shots", 0)
     mode = info_dict.get("mode", "train")
 
-    # if mode != "test":
-    #     logger.info(
-    #         "Skipping preprocessing for non-test mode. LLMs are only supported for inference."
-    #     )
-    #     return pd.DataFrame(), pd.DataFrame()
-
     logger.info(
         "Preprocessing model '%s' on dataset '%s', task '%s'", model_id, dataset, task
     )
@@ -63,20 +57,24 @@ def sarvari_aggregation_preprocessor(
     # Aggregate features per data window
     X_input_aggregated = pp.aggregate_feature_windows(X_input)
     prompts = build_sarvari_query(X_input_aggregated, y=None, example=False, task=task)
+    wrapped_prompts = _wrap_for_few_shot_template([""], prompts, task=task)
 
     # 2. Build few-shot examples from training data
-    idx = np.random.choice(
-        len(X_train), size=min(num_shots, len(X_train)), replace=False
-    )
-    X_train_aggregated = pp.aggregate_feature_windows(X_train.iloc[idx])
-    few_shot_examples = build_sarvari_query(
-        X_train_aggregated, y=y_train.iloc[idx], example=True, task=task
-    )
+    if num_shots > 0 and mode != "train":
+        idx = np.random.choice(
+            len(X_train), size=min(num_shots, len(X_train)), replace=False
+        )
+        X_train_aggregated = pp.aggregate_feature_windows(X_train.iloc[idx])
+        few_shot_examples = build_sarvari_query(
+            X_train_aggregated, y=y_train.iloc[idx], example=True, task=task
+        )
 
-    # 3. Combine few-shot + query
-    combined_prompt = _wrap_for_few_shot_template(few_shot_examples, prompts, task=task)
-
-    X_processed = pd.DataFrame({"text": combined_prompt})
+        # 3. Combine few-shot + query
+        combined_prompt = _wrap_for_few_shot_template(few_shot_examples, prompts, task=task)
+        X_processed = pd.DataFrame({"text": combined_prompt})
+    else:
+        # 3. No few-shot examples, just use the main query
+        X_processed = pd.DataFrame({"text": wrapped_prompts})
     return X_processed, y_input
 
 
@@ -158,16 +156,16 @@ def build_sarvari_query(
                 )
 
             label = y.iloc[idx].get("label", None)
-            diagnosis = [task] if label == 1 else [f"not-{task}"]
+            diagnosis = ["yes"] if label == 1 else ["no"]
             if label is not None:
                 lines.append(
                     "Then your answer may be: \n"
                     "{\n"
                     f' "diagnosis": "{diagnosis[0]}",\n'
-                    '  "probability": "<the probability of your estimation as a float>",\n'
                     '  "explanation": "<a brief explanation for the prediction>"\n'
                     "}\n\n"
                 )
+                # '  "probability": "1.0",\n'
 
         # Add suffix
         lines.append("")
@@ -193,7 +191,7 @@ def _wrap_for_few_shot_template(
     """
     combined_prompts = []
     prefix = (
-        f"Suggest a diagnoses of {task} or not-{task} for the following patient data.\n"
+        f"Suggest a diagnosis of {task} for the following patient data. Reply with yes or no.\n"
         "In addition, include information about patient's medical history (if any). \n"
         "Give exact numbers and/or text quotes from the data that made you think of each of the diagnoses and, if necessary, give further tests that could confirm the diagnosis.\n"
         "Use the International Classification of Disease (ICD) standard for reporting the diagnoses.\n"
