@@ -30,6 +30,7 @@ class ModelManager:
         if not self.models:
             logger.error("No models specified.")
             sys.exit()
+        self.benchmark_settings = config.get("benchmark_settings", {})
 
         self.wandb = config.get("wandb", {"enabled": False})
         self.output_dir = config.get("output_dir", "")
@@ -87,10 +88,16 @@ class ModelManager:
             A new model instance
         """
         model_name = config.get("name")
+
+        # Add random seed to params if not already present
+        params = config.get("params", {})
+        if "random_seed" not in params:
+            params["random_seed"] = self.benchmark_settings.get("random_seed", 42)
+
         # Create model instance from configuration
         model_cls = get_model_class(model_name)
         model = model_cls(
-            config.get("params", {}),
+            params,
             pretrained_model_path=config.get("pretrained_model_path", None),
             wandb=self.wandb.get("enabled", False),
             output_dir=self.output_dir,

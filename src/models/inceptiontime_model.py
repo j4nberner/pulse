@@ -11,6 +11,7 @@ import torch.optim as optim
 import wandb
 from src.eval.metrics import MetricsTracker
 from src.models.pulsetemplate_model import PulseTemplateModel
+from src.util.config_util import set_seeds
 from src.util.model_util import (
     EarlyStopping,
     prepare_data_for_model_convdl,
@@ -20,8 +21,6 @@ from src.util.model_util import (
 
 # Set up logger
 logger = logging.getLogger("PULSE_logger")
-
-# TODO: implement load presaved model weights from path (specified in config)
 
 
 class InceptionTimeModel(PulseTemplateModel, nn.Module):
@@ -440,6 +439,14 @@ class InceptionTimeTrainer:
 
     def train(self):
         """Training loop."""
+        # Set random seed from params if available
+        if "random_seed" in self.params:
+            set_seeds(self.params["random_seed"])
+            logger.debug(
+                "Random seed set to %d before %s training",
+                self.params["random_seed"],
+                self.model.model_name,
+            )
 
         # Move to GPU if available
         self.model.to(self.device)
@@ -494,6 +501,9 @@ class InceptionTimeTrainer:
         for batch_idx, (features, labels) in enumerate(self.train_loader):
             features = self.converter.convert_batch_to_3d(features)
             features, labels = features.to(self.device), labels.to(self.device).float()
+            # Log device information for the first batch
+            if batch_idx == 0:
+                logger.debug("Training batch on device: %s", features.device)
 
             # Forward pass
             self.optimizer.zero_grad()
@@ -620,7 +630,7 @@ class InceptionTimeTrainer:
                 batch_metrics.append(batch_accuracy)
 
                 # Add results to metrics tracker
-                metrics_tracker.add_results(preds.cpu().numpy(), labels.cpu().numpy())
+                metrics_tracker.add_results(outputs.cpu().numpy(), labels.cpu().numpy())
 
                 # Log batch progress if verbose
                 if self.params["verbose"] == 2 or (

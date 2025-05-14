@@ -584,7 +584,12 @@ class PreprocessorBaseline:
         return X_reshaped, y_reshaped
 
     def calculate_dataset_statistics(
-        self, X: pd.DataFrame, y: pd.DataFrame, set_type: str = "train"
+        self,
+        X: pd.DataFrame,
+        y: pd.DataFrame,
+        set_type: str,
+        task: str,
+        dataset_name: str,
     ) -> Dict[str, Any]:
         """
         Calculate statistics for the dataset.
@@ -593,13 +598,15 @@ class PreprocessorBaseline:
             X (pd.DataFrame): Features dataframe
             y (pd.DataFrame): Labels dataframe
             set_type (str, optional): Type of dataset ('train', 'validation', 'test'). Defaults to "train".
+            task (str): Task name (e.g., 'mortality', 'aki', 'sepsis')
+            dataset_name (str): Dataset name (e.g., 'hirid', 'miiv', 'eicu')
 
         Returns:
             Dict[str, Any]: Dictionary of dataset statistics
         """
         try:
             # For mortality task (after reshaping), use simplified statistics
-            if self.task == "mortality":
+            if task == "mortality":
                 # Count total stays (each row is now a stay)
                 total_stays = len(X)
 
@@ -609,8 +616,8 @@ class PreprocessorBaseline:
 
                 # Format the statistics in a dictionary
                 stats = {
-                    "Task": self.task,
-                    "Dataset": self.dataset_name,
+                    "Task": task,
+                    "Dataset": dataset_name,
                     "Set": set_type,
                     "Total Stays": total_stays,
                     "Cases": positive_stays,
@@ -675,8 +682,8 @@ class PreprocessorBaseline:
 
                 # Format the statistics in a dictionary for further use
                 stats = {
-                    "Task": self.task,
-                    "Dataset": self.dataset_name,
+                    "Task": task,
+                    "Dataset": dataset_name,
                     "Set": set_type,
                     "Total Stays": total_stays,
                     "Cases": positive_stays,

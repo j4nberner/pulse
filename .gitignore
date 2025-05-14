@@ -2,6 +2,7 @@ datasets/
 results/
 secrets/
 output/
+visualizations/*/
 wandb/
 .vscode/
 todo

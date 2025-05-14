@@ -11,6 +11,7 @@ import torch.optim as optim
 import wandb
 from src.eval.metrics import MetricsTracker
 from src.models.pulsetemplate_model import PulseTemplateModel
+from src.util.config_util import set_seeds
 from src.util.model_util import (
     EarlyStopping,
     prepare_data_for_model_convdl,
@@ -54,6 +55,7 @@ class CNNModel(PulseTemplateModel, nn.Module):
             "output_shape",
             "kernel_size",
             "pool_size",
+            "dropout_rate",
             "learning_rate",
             "num_epochs",
             "early_stopping_rounds",
@@ -127,7 +129,7 @@ class CNNModel(PulseTemplateModel, nn.Module):
         self.leaky_relu = nn.LeakyReLU()
 
         self.pool = nn.MaxPool1d(kernel_size=self.params["pool_size"])
-        self.dropout = nn.Dropout(0.1)
+        self.dropout = nn.Dropout(self.params["dropout_rate"])
         self.flatten = nn.Flatten()
 
         # Dummy forward to calculate fc1 input size
@@ -200,7 +202,6 @@ class CNNTrainer:
         self.early_stopping = EarlyStopping(
             patience=self.params["early_stopping_rounds"],
             verbose=True,
-            delta=0.0,
         )
         self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(
             self.optimizer,
@@ -258,6 +259,15 @@ class CNNTrainer:
 
     def train(self):
         """Training loop."""
+        # Set random seed from params if available
+        if "random_seed" in self.params:
+            set_seeds(self.params["random_seed"])
+            logger.debug(
+                "Random seed set to %d before %s training",
+                self.params["random_seed"],
+                self.model.model_name,
+            )
+
         num_epochs = self.params["num_epochs"]
         verbose = self.params.get("verbose", 1)
 

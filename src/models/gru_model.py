@@ -10,6 +10,7 @@ import torch.optim as optim
 import wandb
 from src.eval.metrics import MetricsTracker
 from src.models.pulsetemplate_model import PulseTemplateModel
+from src.util.config_util import set_seeds
 from src.util.model_util import (
     EarlyStopping,
     prepare_data_for_model_convdl,
@@ -126,14 +127,38 @@ class GRUModel(PulseTemplateModel, nn.Module):
         """
         self.input_dim = input_dim
 
-        # GRU layers
-        self.gru = nn.GRU(
-            input_size=input_dim,
-            hidden_size=self.hidden_size,
-            num_layers=self.num_layers,
-            batch_first=True,
-            dropout=self.dropout_rate if self.num_layers > 1 else 0,
-        )
+        # Create separate dropout rates for different layers or use the same rate
+        if hasattr(self.dropout_rate, "__len__"):  # Check if it's sequence-like
+            dropout_rates = list(self.dropout_rate)
+        else:
+            # Create increasing dropout rates if single value provided
+            base_rate = float(self.dropout_rate)  # Convert to float, not list
+            dropout_rates = [
+                min(base_rate * (i + 1), 0.5)
+                for i in range(
+                    self.num_layers + len(self.params.get("fc_layers", [64, 16]))
+                )
+            ]
+
+        # Create ModuleLists for GRU layers with separate dropout and batch normalization
+        self.gru_layers = nn.ModuleList()
+        self.dropout_layers = nn.ModuleList()
+        self.batch_norm_layers = nn.ModuleList()
+
+        # Create GRU layers
+        input_size = input_dim
+        for i in range(self.num_layers):
+            self.gru_layers.append(
+                nn.GRU(
+                    input_size=input_size,
+                    hidden_size=self.hidden_size,
+                    num_layers=1,  # Each layer is separate now
+                    batch_first=True,
+                )
+            )
+            self.dropout_layers.append(nn.Dropout(dropout_rates[i]))
+            self.batch_norm_layers.append(nn.BatchNorm1d(self.hidden_size))
+            input_size = self.hidden_size  # Output of previous layer is input to next
 
         # Get FC layer dimensions from config
         fc_dims = self.params.get("fc_layers", [64, 16])
@@ -150,15 +175,19 @@ class GRUModel(PulseTemplateModel, nn.Module):
             # Default to LeakyReLU
             activation = nn.LeakyReLU()
 
-        # Build dynamic FC layers
-        layers = [nn.Dropout(self.dropout_rate)]
+        # Build fully connected layers with dynamic dropout rates
+        layers = []
         input_size = self.hidden_size
 
-        # Add FC layers based on config
-        for dim in fc_dims:
-            layers.extend(
-                [nn.Linear(input_size, dim), activation, nn.Dropout(self.dropout_rate)]
-            )
+        # Add FC layers with separate dropout rates
+        for i, dim in enumerate(fc_dims):
+            dropout_idx = self.num_layers + i
+            if dropout_idx < len(dropout_rates):
+                dropout_layer = nn.Dropout(dropout_rates[dropout_idx])
+            else:
+                dropout_layer = nn.Dropout(dropout_rates[-1])
+
+            layers.extend([dropout_layer, nn.Linear(input_size, dim), activation])
             input_size = dim
 
         # Add final output layer
@@ -169,33 +198,41 @@ class GRUModel(PulseTemplateModel, nn.Module):
 
         logger.info(
             "GRU network initialized with input_dim %d, hidden_size %d, num_layers %d, "
-            "activation=%s, fc_layers=%s, %d parameters",
+            "activation=%s, fc_layers=%s, dropout_rates=%s, %d parameters",
             input_dim,
             self.hidden_size,
             self.num_layers,
             activation_type,
             fc_dims,
+            dropout_rates,
             sum(p.numel() for p in self.parameters()),
         )
 
     def forward(self, x):
         """
         Forward pass through the GRU network.
-
-        Args:
-            x: Input tensor of shape [batch_size, seq_length, input_dim]
-
-        Returns:
-            Output tensor after passing through the GRU network
         """
         batch_size = x.size(0)
-        h0 = torch.zeros(self.num_layers, batch_size, self.hidden_size).to(x.device)
 
-        # Forward propagate the GRU
-        out, _ = self.gru(x, h0)
+        # Process through GRU layers with dropout and batch norm
+        for gru, dropout, batch_norm in zip(
+            self.gru_layers, self.dropout_layers, self.batch_norm_layers
+        ):
+            # Initialize hidden state for this layer
+            h0 = torch.zeros(1, batch_size, self.hidden_size).to(x.device)
+
+            # Forward through GRU
+            x, _ = gru(x, h0)
+
+            # Apply dropout
+            x = dropout(x)
+
+            # Apply batch normalization on the feature dimension
+            # Batch norm expects [batch, features, seq_len]
+            x = batch_norm(x.transpose(1, 2)).transpose(1, 2)
 
         # Extract the output of the last time step
-        out = out[:, -1, :]
+        out = x[:, -1, :]
 
         # Feed to fully connected layers
         out = self.fc(out)
@@ -344,6 +381,15 @@ class GRUTrainer:
 
     def train(self):
         """Train the GRU model using the provided data loaders."""
+        # Set random seed from params if available
+        if "random_seed" in self.params:
+            set_seeds(self.params["random_seed"])
+            logger.debug(
+                "Random seed set to %d before %s training",
+                self.params["random_seed"],
+                self.model.model_name,
+            )
+
         # Move to GPU if available
         self.model.to(self.device)
         self.criterion.to(self.device)
@@ -396,6 +442,9 @@ class GRUTrainer:
         for batch_idx, (features, labels) in enumerate(self.train_loader):
             features = self.converter.convert_batch_to_3d(features)
             features, labels = features.to(self.device), labels.to(self.device).float()
+            # Log device information for the first batch
+            if batch_idx == 0:
+                logger.debug("Training batch on device: %s", features.device)
 
             # Forward pass
             self.optimizer.zero_grad()
@@ -525,7 +574,7 @@ class GRUTrainer:
                 batch_metrics.append(batch_accuracy)
 
                 # Add results to metrics tracker
-                metrics_tracker.add_results(preds.cpu().numpy(), labels.cpu().numpy())
+                metrics_tracker.add_results(outputs.cpu().numpy(), labels.cpu().numpy())
 
                 # Log batch progress if verbose
                 if self.params["verbose"] == 2 or (

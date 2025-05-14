@@ -79,7 +79,6 @@ class RandomForestModel(PulseTemplateModel):
             "max_features",
             "bootstrap",
             "oob_score",
-            "random_state",
             "verbose",
             "criterion",
             "max_leaf_nodes",
@@ -98,6 +97,7 @@ class RandomForestModel(PulseTemplateModel):
 
         # Extract RandomForest parameters from config
         rf_params = {param: params[param] for param in required_rf_params}
+        rf_params["random_state"] = params.get("random_seed")
 
         # Log the parameters being used
         logger.info("Initializing RandomForest with parameters: %s", rf_params)
