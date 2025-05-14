@@ -35,6 +35,7 @@ class ModelTrainer:
             logger.debug("DEBUG MODE ACTIVE: Training will use limited dataset size")
 
         # Set random seeds for reproducibility
+        # TODO: add random seed to LLM trainers (see convDL train() methods as reference)
         random_seed = self.config.benchmark_settings.get("random_seed", 42)
         set_seeds(random_seed)
         logger.info("Setting random seed to %s for reproducibility", random_seed)
@@ -183,28 +184,36 @@ class ModelTrainer:
                             task_dataset_name,
                         )
 
+                        # Ensure that the Dataloaders use deterministic shuffling (even with multiple workers)
+                        g = torch.Generator()
+                        g.manual_seed(self.config.benchmark_settings.get("random_seed"))
+
                         train_loader = DataLoader(
                             train_dataset,
                             batch_size=batch_size,
                             shuffle=True,
                             drop_last=False,
                             num_workers=4,  # Matches the number of requested CPU cores
-                            pin_memory=True,  # Speeds up CPU-to-GPU transfers
+                            pin_memory=False,  # Speeds up CPU-to-GPU transfers
                             prefetch_factor=2,  # Default value, can increase if GPU is idle
                             persistent_workers=True,  # Keeps workers alive between epochs
+                            generator=g,
                         )
                         val_loader = DataLoader(
                             val_dataset,
                             batch_size=batch_size,
                             shuffle=False,
                             drop_last=False,
+                            generator=g,
                         )
                         test_loader = DataLoader(
                             test_dataset,
                             batch_size=batch_size,
                             shuffle=False,
                             drop_last=False,
+                            generator=g,
                         )
+
                     else:
                         logger.error(
                             "Please specify a model type (convML, convDL, LLM) in the config"

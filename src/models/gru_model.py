@@ -442,6 +442,9 @@ class GRUTrainer:
         for batch_idx, (features, labels) in enumerate(self.train_loader):
             features = self.converter.convert_batch_to_3d(features)
             features, labels = features.to(self.device), labels.to(self.device).float()
+            # Log device information for the first batch
+            if batch_idx == 0:
+                logger.debug("Training batch on device: %s", features.device)
 
             # Forward pass
             self.optimizer.zero_grad()

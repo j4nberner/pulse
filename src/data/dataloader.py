@@ -413,17 +413,33 @@ class DatasetManager:
             print_stats = kwargs.get("print_stats", False)  # set in train_models.py
             if print_stats:
                 train_stats = self.preprocessor.calculate_dataset_statistics(
-                    data["X_train"], data["y_train"], "train"
+                    data["X_train"],
+                    data["y_train"],
+                    "train",
+                    task=dataset["task"],
+                    dataset_name=dataset["name"],
                 )
                 val_stats = self.preprocessor.calculate_dataset_statistics(
-                    data["X_val"], data["y_val"], "val"
+                    data["X_val"],
+                    data["y_val"],
+                    "val",
+                    task=dataset["task"],
+                    dataset_name=dataset["name"],
                 )
                 test_stats = self.preprocessor.calculate_dataset_statistics(
-                    X_original, y_original, "test"
+                    X_original,
+                    y_original,
+                    "test",
+                    task=dataset["task"],
+                    dataset_name=dataset["name"],
                 )
                 if self.test_limited is not None:
                     test_limited_stats = self.preprocessor.calculate_dataset_statistics(
-                        X_limited, y_limited, f"test_limited{self.test_limited}"
+                        X_limited,
+                        y_limited,
+                        f"test_limited{self.test_limited}",
+                        task=dataset["task"],
+                        dataset_name=dataset["name"],
                     )
                 else:
                     test_limited_stats = None
