@@ -1,10 +1,13 @@
 import logging
 import os
-import shutil
+import random
 
+import numpy as np
+import torch
 from omegaconf import OmegaConf
 
 logger = logging.getLogger("PULSE_logger")
+
 
 def load_config_with_models(base_config_path: str) -> OmegaConf:
     # Load the base YAML configuration file
@@ -27,8 +30,10 @@ def load_config_with_models(base_config_path: str) -> OmegaConf:
 
         # Add global preprocessing configuration to each model config
         if "preprocessing_advanced" in base_config:
-            model_config.params["preprocessing_advanced"] = base_config.preprocessing_advanced
-        
+            model_config.params["preprocessing_advanced"] = (
+                base_config.preprocessing_advanced
+            )
+
         # Add ALL tasks to model config - this lets the training code select the current task
         if "tasks" in base_config:
             model_config.params["tasks"] = base_config.tasks
@@ -57,6 +62,22 @@ def save_config_file(config: OmegaConf, output_dir: str) -> None:
     # Save the configuration to the output file
     OmegaConf.save(config, config_copy_path)
     logger.info("Configuration file copied to %s", config_copy_path)
+
+
+def set_seeds(seed: int) -> None:
+    """
+    Set all random seeds for reproducibility.
+
+    Args:
+        seed (int): The seed value to use
+    """
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    # For some operations in CUDA, you might also want to set:
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
 
 
 # Example usage:

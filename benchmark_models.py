@@ -11,7 +11,8 @@ from src.data.dataloader import DatasetManager, TorchDatasetWrapper
 from src.logger_setup import init_wandb, setup_logger
 from src.models.modelmanager import ModelManager
 from src.util.config_util import load_config_with_models, save_config_file
-from src.util.slurm_util import copy_data_to_scratch, get_local_scratch_dir, is_on_slurm
+from src.util.slurm_util import (copy_data_to_scratch, get_local_scratch_dir,
+                                 is_on_slurm)
 
 logger, output_dir = setup_logger()
 

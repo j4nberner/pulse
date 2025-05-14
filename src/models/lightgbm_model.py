@@ -3,7 +3,6 @@ import os
 from datetime import datetime
 from typing import Any, Dict, Optional
 
-import numpy as np
 import pandas as pd
 from lightgbm import LGBMClassifier, early_stopping
 from sklearn.metrics import confusion_matrix
@@ -11,7 +10,8 @@ from sklearn.metrics import confusion_matrix
 import wandb
 from src.eval.metrics import MetricsTracker
 from src.models.pulsetemplate_model import PulseTemplateModel
-from src.util.model_util import prepare_data_for_model_convml, save_sklearn_model
+from src.util.model_util import (prepare_data_for_model_convml,
+                                 save_sklearn_model)
 
 logger = logging.getLogger("PULSE_logger")
 
@@ -60,7 +60,6 @@ class LightGBMModel(PulseTemplateModel):
             "objective",
             "n_estimators",
             "learning_rate",
-            "random_state",
             "verbose",
             "max_depth",
             "num_leaves",
@@ -91,9 +90,10 @@ class LightGBMModel(PulseTemplateModel):
             for param in required_lgb_params
             if param != "early_stopping_rounds"
         }
+        model_params["random_state"] = params.get("random_seed")
 
         # Log the parameters being used
-        logger.info(f"Initializing LightGBM with parameters: {model_params}")
+        logger.info("Initializing LightGBM with parameters: %s", model_params)
 
         # Initialize the LightGBM model with parameters from config
         self.model = LGBMClassifier(**model_params)
@@ -208,8 +208,8 @@ class LightGBMTrainer:
         metrics_tracker.save_report()
 
         # Log results to console
-        logger.info(f"Test evaluation completed for {self.model.model_name}")
-        logger.info(f"Test metrics: {metrics_tracker.summary}")
+        logger.info("Test evaluation completed for %s", self.model.model_name)
+        logger.info("Test metrics: %s", metrics_tracker.summary)
 
         # Save the model
         model_save_name = f"{self.model.model_name}_{self.task_name}_{self.dataset_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pt"
@@ -226,7 +226,6 @@ class LightGBMTrainer:
 
             # Create and log confusion matrix
             y_pred_binary = (y_pred >= 0.5).astype(int)
-            cm = confusion_matrix(y_test, y_pred_binary)
             wandb.log(
                 {
                     "confusion_matrix": wandb.plot.confusion_matrix(

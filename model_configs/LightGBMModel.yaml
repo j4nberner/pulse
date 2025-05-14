@@ -4,7 +4,6 @@ params:
   # Basic configuration
   trainer_name: "LightGBMTrainer" # Class that implements the training process
   type: "convML" # Type of model (convML for conventional machine learning, convDL for conventional deep learning and LLM for large language models)
-  random_state: 42 # Seed for reproducible results
   verbose: -1 # Controls the level of logging output (-1: silent, >=0: logging)
   n_jobs: -1 # Number of parallel threads (-1 to use all CPUs)
   

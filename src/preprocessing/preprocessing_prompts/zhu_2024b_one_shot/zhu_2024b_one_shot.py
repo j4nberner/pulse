@@ -1,14 +1,14 @@
-import logging
-from typing import Dict, Any, List, Tuple
 import json
+import logging
+import textwrap
+from typing import Any, Dict, List, Tuple
+
 import numpy as np
 import pandas as pd
-import textwrap
 from langchain.prompts import PromptTemplate
 
-from src.preprocessing.preprocessing_advanced.preprocessing_advanced import (
-    PreprocessorAdvanced,
-)
+from src.preprocessing.preprocessing_advanced.preprocessing_advanced import \
+    PreprocessorAdvanced
 
 logger = logging.getLogger("PULSE_logger")
 

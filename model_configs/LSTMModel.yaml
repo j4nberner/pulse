@@ -8,9 +8,11 @@ params:
   verbose: 2 # Controls verbosity of output (0 = silent, 1 = log every 100 batches, 2 = log every batch)
   
   # Model Architecture
-  hidden_size: 150 # Number of hidden units in LSTM layers
-  num_layers: 2 # Number of LSTM layers
-  dropout: 0.2 # Dropout rate for LSTM layers
+  hidden_size: 64 # Number of hidden units in LSTM layers
+  num_layers: 3 # Number of LSTM layers (should match length of lstm_units)
+  lstm_units: [256, 128, 64] # Number of units in each LSTM layer
+  dense_units: 64 # Number of units in the first dense layer
+  dropout: [0.2, 0.3, 0.4] # Dropout rate for LSTM layers, can be single value or list
   output_shape: 1
   
   # Training

@@ -5,8 +5,8 @@ general:
   app_name: "Pulse"
   version: "1.0.0"
   debug_mode: true
-  debug_data_length: 100 # Number of rows used if debug_mode is true
-  debug_logging: true # false: logging level DEBUG, true: logging level INFO
+  debug_data_length: 500 # Number of rows used if debug_mode is true
+  debug_logging: true # true: logging level DEBUG, false: logging level INFO
   use_scratch: true
 
 # Weight and Biases (wandb) logging configuration
@@ -32,14 +32,10 @@ datasets:
 
 # _______ Preprocessing Baseline _______
 
-# Random seed for reproducibility
-random_seed: 42
-
-# Options for preprocessing
 preprocessing_baseline:
   replace_outliers: true # Whether to replace outliers with NaNs
   flag_na: true # Whether to flag NA values with binary indicators
-  standardize: false # Whether to standardize features (yes: convDL, not required: convML, LLM)
+  standardize: true # Whether to standardize features (yes: convDL, not required: convML, LLM)
   static_imputation: true # Whether to perform static feature imputation
   dynamic_imputation: true # Whether to perform dynamic feature imputation
   save_data: true # Whether to save preprocessed data
@@ -47,8 +43,8 @@ preprocessing_baseline:
     train: 0.8
     val: 0.1
     test: 0.1
-    test_limited: 50 # Number of stay_ids for limited test set, null = test set is not limited
-    print_stats: false # Whether to print statistics of the dataset
+    test_limited: 100 # Number of stay_ids for limited test set, null = test set is not limited
+    print_stats: false # Whether to print set statistics
 
 # _______ Preprocessing Advanced _______
 
@@ -60,20 +56,23 @@ preprocessing_advanced:
     step_size: 1 # Step size for sliding windows
     save_data: true # Whether to save windowed data
 
+# _______ Preprocessing Prompting _______
+
 prompting:
   prompting_ids:
     - "liu_2023_few_shot_preprocessor" # Preprocessing ID for the model
-    # - "zhu_2024_is_larger_always_better_preprocessor"
-    # - "sarvari_2024_aggregation_preprocessor"
+    # - "zhu_2024a_one_shot_cot_preprocessor"
+    # - "zhu_2024b_one_shot_preprocessor"
+    # - "zhu_2024c_categorization_summary_preprocessor"
+    # # - "sarvari_2024_aggregation_preprocessor"
+    # - "agentic_prompt_test_preprocessor"
   shots: 3
-  save_test_set: true # Whether to save the test set
-
-  # TODO: change shots from model config to here
 
 # _______ Model Training _______
 
 benchmark_settings:
-  batch_size: 100
+  batch_size: 64
+  random_seed: 42
 
 load_models:
   # - model_configs/RandomForestModel.yaml

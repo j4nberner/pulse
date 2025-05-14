@@ -1,3 +1,4 @@
+import gc
 import logging
 import os
 import sys
@@ -8,6 +9,7 @@ import pandas as pd
 import torch
 from torch.utils.data import Dataset
 
+from src.util.config_util import set_seeds
 from src.preprocessing.preprocessing_advanced.windowing import Windower
 from src.preprocessing.preprocessing_baseline.preprocessing_baseline import (
     PreprocessorBaseline,
@@ -64,7 +66,8 @@ class DatasetManager:
     def _init_preprocessing_tools(self):
         """Initialize preprocessing tools based on configuration."""
         base_path = self.config.base_path
-        random_seed = self.config.random_seed
+        random_seed = self.config.benchmark_settings.random_seed
+        set_seeds(random_seed)
 
         # Get debug_mode from config - using attribute style
         debug_mode = False
@@ -410,17 +413,33 @@ class DatasetManager:
             print_stats = kwargs.get("print_stats", False)  # set in train_models.py
             if print_stats:
                 train_stats = self.preprocessor.calculate_dataset_statistics(
-                    data["X_train"], data["y_train"], "train"
+                    data["X_train"],
+                    data["y_train"],
+                    "train",
+                    task=dataset["task"],
+                    dataset_name=dataset["name"],
                 )
                 val_stats = self.preprocessor.calculate_dataset_statistics(
-                    data["X_val"], data["y_val"], "val"
+                    data["X_val"],
+                    data["y_val"],
+                    "val",
+                    task=dataset["task"],
+                    dataset_name=dataset["name"],
                 )
                 test_stats = self.preprocessor.calculate_dataset_statistics(
-                    X_original, y_original, "test"
+                    X_original,
+                    y_original,
+                    "test",
+                    task=dataset["task"],
+                    dataset_name=dataset["name"],
                 )
                 if self.test_limited is not None:
                     test_limited_stats = self.preprocessor.calculate_dataset_statistics(
-                        X_limited, y_limited, f"test_limited{self.test_limited}"
+                        X_limited,
+                        y_limited,
+                        f"test_limited{self.test_limited}",
+                        task=dataset["task"],
+                        dataset_name=dataset["name"],
                     )
                 else:
                     test_limited_stats = None
@@ -457,6 +476,14 @@ class DatasetManager:
         logger.debug(
             "Dropped stay_id column from X and y (including for few-shot examples)"
         )
+
+        # Convert categorical columns to numerical values for convML models
+        convML_models = ["RandomForest", "XGBoost", "LightGBM"]
+        if any(mdl in model_name for mdl in convML_models):
+            # Process gender column in X if it exists
+            if isinstance(X, pd.DataFrame) and "sex" in X.columns:
+                X["sex"] = X["sex"].map({"Male": 1, "Female": 0}).fillna(-1)
+                logger.debug("Converted gender column to numerical values")
 
         # Apply any model-specific preprocessing if needed.
         # For example, if you need to tokenize text data for LLMs
@@ -540,6 +567,22 @@ class DatasetManager:
                         data_dict[split]["y"] = y_data.drop(columns=["stay_id"])
 
         return data_dict
+
+    def release_dataset_cache(self, dataset_id=None):
+        """Release cached data for a specific dataset or all datasets."""
+        if dataset_id:
+            if dataset_id in self.datasets and self.datasets[dataset_id]["loaded"]:
+                self.datasets[dataset_id]["data"] = None
+                self.datasets[dataset_id]["loaded"] = False
+                logger.debug("Released cached data for %s", dataset_id)
+                gc.collect()
+        else:
+            for ds_id, dataset in self.datasets.items():
+                if dataset["loaded"]:
+                    dataset["data"] = None
+                    dataset["loaded"] = False
+            logger.debug("Released all cached datasets")
+            gc.collect()
 
 
 class TorchDatasetWrapper(Dataset):

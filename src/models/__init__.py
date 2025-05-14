@@ -1,16 +1,16 @@
+from .biomistral_model import BioMistralModel
 from .cnn_model import CNNModel
+from .deepseekr1_model import DeepseekR1Model
+from .gemma3_model import Gemma3Model
 from .gru_model import GRUModel
 from .inceptiontime_model import InceptionTimeModel
 from .lightgbm_model import LightGBMModel
-from .lstm_model import LSTMModel
-from .randomforest_model import RandomForestModel
-from .xgboost_model import XGBoostModel
 from .llama3_model import Llama3Model
 from .llama4_model import Llama4Model
-from .gemma3_model import Gemma3Model
+from .lstm_model import LSTMModel
 from .meditron_model import MeditronModel
-from .deepseekr1_model import DeepseekR1Model
-from .biomistral_model import BioMistralModel
+from .randomforest_model import RandomForestModel
+from .xgboost_model import XGBoostModel
 
 model_cls_name_dict = {
     "RandomForest": RandomForestModel,

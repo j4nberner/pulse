@@ -6,15 +6,16 @@ from typing import Any, Dict, Optional
 
 import numpy as np
 import pandas as pd
+import wandb.sklearn
 from sklearn.base import BaseEstimator
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import GridSearchCV
 
 import wandb
-import wandb.sklearn
 from src.eval.metrics import MetricsTracker
 from src.models.pulsetemplate_model import PulseTemplateModel
-from src.util.model_util import prepare_data_for_model_convml, save_sklearn_model
+from src.util.model_util import (prepare_data_for_model_convml,
+                                 save_sklearn_model)
 
 # Filter the specific warning about feature names
 # (This is because training is done with np arrays and prediction with pd dataframe to preserve feature names for feature importance etc.)
@@ -79,7 +80,6 @@ class RandomForestModel(PulseTemplateModel):
             "max_features",
             "bootstrap",
             "oob_score",
-            "random_state",
             "verbose",
             "criterion",
             "max_leaf_nodes",
@@ -98,6 +98,7 @@ class RandomForestModel(PulseTemplateModel):
 
         # Extract RandomForest parameters from config
         rf_params = {param: params[param] for param in required_rf_params}
+        rf_params["random_state"] = params.get("random_seed")
 
         # Log the parameters being used
         logger.info("Initializing RandomForest with parameters: %s", rf_params)

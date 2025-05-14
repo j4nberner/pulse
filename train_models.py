@@ -1,16 +1,20 @@
 import argparse
+import gc
 import os
 import sys
 
 import pandas as pd
+import torch
 from omegaconf import OmegaConf
 from torch.utils.data import DataLoader
 
 from src.data.dataloader import DatasetManager, TorchDatasetWrapper
 from src.logger_setup import init_wandb, setup_logger
 from src.models.modelmanager import ModelManager
-from src.util.config_util import load_config_with_models, save_config_file
-from src.util.slurm_util import copy_data_to_scratch, get_local_scratch_dir, is_on_slurm
+from src.util.config_util import (load_config_with_models, save_config_file,
+                                  set_seeds)
+from src.util.slurm_util import (copy_data_to_scratch, get_local_scratch_dir,
+                                 is_on_slurm)
 
 logger, output_dir = setup_logger()
 
@@ -30,6 +34,12 @@ class ModelTrainer:
         # Log debug mode status
         if self.config.general.debug_mode:
             logger.debug("DEBUG MODE ACTIVE: Training will use limited dataset size")
+
+        # Set random seeds for reproducibility
+        # TODO: add random seed to LLM trainers (see convDL train() methods as reference)
+        random_seed = self.config.benchmark_settings.get("random_seed", 42)
+        set_seeds(random_seed)
+        logger.info("Setting random seed to %s for reproducibility", random_seed)
 
         # -------------------- Copy data to local scratch (Slurm) --------------------
         if is_on_slurm() and self.config.general.get("use_scratch", False):
@@ -176,24 +186,36 @@ class ModelTrainer:
                             task_dataset_name,
                         )
 
+                        # Ensure that the Dataloaders use deterministic shuffling (even with multiple workers)
+                        g = torch.Generator()
+                        g.manual_seed(self.config.benchmark_settings.get("random_seed"))
+
                         train_loader = DataLoader(
                             train_dataset,
                             batch_size=batch_size,
                             shuffle=True,
-                            drop_last=True,
+                            drop_last=False,
+                            num_workers=4,  # Matches the number of requested CPU cores
+                            pin_memory=False,  # Speeds up CPU-to-GPU transfers
+                            prefetch_factor=2,  # Default value, can increase if GPU is idle
+                            persistent_workers=True,  # Keeps workers alive between epochs
+                            generator=g,
                         )
                         val_loader = DataLoader(
                             val_dataset,
                             batch_size=batch_size,
                             shuffle=False,
-                            drop_last=True,
+                            drop_last=False,
+                            generator=g,
                         )
                         test_loader = DataLoader(
                             test_dataset,
                             batch_size=batch_size,
                             shuffle=False,
-                            drop_last=True,
+                            drop_last=False,
+                            generator=g,
                         )
+
                     else:
                         logger.error(
                             "Please specify a model type (convML, convDL, LLM) in the config"
@@ -219,6 +241,30 @@ class ModelTrainer:
                         str(e),
                         exc_info=True,
                     )
+                finally:
+                    # Memory cleanup after training each model
+                    if hasattr(model, "trainer"):
+                        del model.trainer
+
+                    # Clear variables that might hold large data
+                    train_loader = val_loader = test_loader = None
+                    X_train = y_train = X_val = y_val = X_test = y_test = None
+
+                    # If using PyTorch with CUDA, empty the cache
+                    if torch.cuda.is_available():
+                        torch.cuda.empty_cache()
+
+                    # Force garbage collection
+                    gc.collect()
+                    logger.info("Memory cleaned up after training %s", model_name)
+
+            # Memory cleanup after processing each task-dataset combination
+            del fresh_models
+            self.dm.release_dataset_cache(
+                task_dataset_name
+            )  # Release dataset from cache
+            gc.collect()
+            logger.info("Memory cleaned up after processing %s", task_dataset_name)
 
         logger.info("Training process completed.")
 

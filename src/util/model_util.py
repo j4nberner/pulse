@@ -202,7 +202,8 @@ def prepare_data_for_model_convdl(
     """
 
     # Import the converter
-    from src.preprocessing.preprocessing_advanced.windowing import WindowedDataTo3D
+    from src.preprocessing.preprocessing_advanced.windowing import \
+        WindowedDataTo3D
 
     # Create converter with model name and config
     converter = WindowedDataTo3D(
@@ -310,19 +311,6 @@ def prompt_template_hf(input_text: str, model=None) -> List[Dict[str, str]]:
     Returns:
         A list of chat messages (dicts) for the LLM.
     """
-    # system_message = (
-    #     "You are a helpful assistant and medical professional that analyzes ICU time-series "
-    #     "data and determines the most likely diagnosis.\n\n"
-    #     "Be specific and check the values against reference values.\n"
-
-    #     "Return the result strictly in this JSON format:\n\n"
-    #     "{\n"
-    #     '  "diagnosis": "<yes or no>",\n'
-    #     '  "probability": "<a value between 0 and 1 representing probability of your diagnosis>",\n'
-    #     '  "explanation": "<a brief explanation for the prediction. state reference values and check against provided features>"\n'
-    #     "}\n\n"
-    #     "Respond only with a valid JSON object. Do not include any additional commentary. Do not use line breaks or escape characters for the JSON object."
-    # )
     system_message = (
         "You are a helpful assistant and medical professional that analyzes ICU time-series "
         "data and determines the most likely diagnosis.\n\n"
@@ -343,15 +331,18 @@ def prompt_template_hf(input_text: str, model=None) -> List[Dict[str, str]]:
     # Apply model-specific formatting if needed
     if model == "Gemma3Model":
         formated_prompt = [
-        {"role": "system", "content": [{"type": "text", "text": system_message}]},
-        {"role": "user", "content": [{"type": "text", "text": f"Text:\n{input_text}"}]},
-    ]
+            {"role": "system", "content": [{"type": "text", "text": system_message}]},
+            {
+                "role": "user",
+                "content": [{"type": "text", "text": f"Text:\n{input_text}"}],
+            },
+        ]
     elif model == "MeditronModel":
         formated_prompt = [
             f"<|im_start|>system\n{system_message}<|im_end|>\n"
             f"<|im_start|>user\n{input_text}<|im_end|>\n"
             "<|im_start|>assistant\n"
-            ]
+        ]
     elif model == "DeepseekR1Model":
         # avoid using a system prompt. including it all in the user prompt
         formated_prompt = [
@@ -362,7 +353,6 @@ def prompt_template_hf(input_text: str, model=None) -> List[Dict[str, str]]:
             {"role": "system", "content": system_message},
             {"role": "user", "content": f"Text:\n{input_text}"},
         ]
-    
 
     return formated_prompt
 
@@ -374,16 +364,17 @@ def extract_last_json_block(text: str) -> Optional[str]:
 
     for i, c in enumerate(reversed(text)):
         idx = len(text) - 1 - i
-        if c == '}':
+        if c == "}":
             if not stack:
                 start_idx = idx
-            stack.append('}')
-        elif c == '{':
+            stack.append("}")
+        elif c == "{":
             if stack:
                 stack.pop()
                 if not stack and start_idx is not None:
-                    return text[idx:start_idx+1]
+                    return text[idx : start_idx + 1]
     return None
+
 
 def extract_dict(output_text: str) -> Optional[Dict[str, str]]:
     """Extract and parse the last JSON-like object from the model's output text and return it as a dictionary."""
@@ -401,8 +392,10 @@ def extract_dict(output_text: str) -> Optional[Dict[str, str]]:
     # Fix unescaped newlines inside quoted strings
     def escape_newlines_in_strings(s):
         import re
+
         def repl(m):
-            return m.group(0).replace('\n', '\\n').replace('\r', '\\r')
+            return m.group(0).replace("\n", "\\n").replace("\r", "\\r")
+
         return re.sub(r'"(.*?)"', repl, s, flags=re.DOTALL)
 
     json_text_clean = escape_newlines_in_strings(json_text)

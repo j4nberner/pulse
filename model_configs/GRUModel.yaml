@@ -9,8 +9,8 @@ params:
   
   # Model Architecture
   hidden_size: 64
-  num_layers: 2
-  dropout_rate: 0.3
+  num_layers: 3
+  dropout_rate: [0.2, 0.3, 0.3, 0.4, 0.5]  # First 3 for GRU layers, last 2 for FC layers
   fc_layers: [64, 16]
   activation: "leaky_relu" # Activation function (relu, leaky_relu, gelu)
   
