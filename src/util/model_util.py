@@ -1,6 +1,8 @@
 import ast
+import json
 import logging
 import os
+import re
 from typing import Any, Dict, List, Optional
 
 import joblib
@@ -308,18 +310,34 @@ def prompt_template_hf(input_text: str, model=None) -> List[Dict[str, str]]:
     Returns:
         A list of chat messages (dicts) for the LLM.
     """
-    system_message = (
-        "You are a helpful assistant. Analyze the following patient information and determine "
-        "the most likely diagnosis.\n\n"
-        "Be specific and check the values against reference values.\n"
+    # system_message = (
+    #     "You are a helpful assistant and medical professional that analyzes ICU time-series "
+    #     "data and determines the most likely diagnosis.\n\n"
+    #     "Be specific and check the values against reference values.\n"
 
-        "Return the result strictly in this JSON format:\n\n"
+    #     "Return the result strictly in this JSON format:\n\n"
+    #     "{\n"
+    #     '  "diagnosis": "<yes or no>",\n'
+    #     '  "probability": "<a value between 0 and 1 representing probability of your diagnosis>",\n'
+    #     '  "explanation": "<a brief explanation for the prediction. state reference values and check against provided features>"\n'
+    #     "}\n\n"
+    #     "Respond only with a valid JSON object. Do not include any additional commentary. Do not use line breaks or escape characters for the JSON object."
+    # )
+    system_message = (
+        "You are a helpful assistant and medical professional that analyzes ICU time-series "
+        "data and determines the most likely diagnosis.\n\n"
+        "Be specific and check the values against reference values.\n"
+        "Start your answer with 'yes' or 'no' to indicate whether the patient is diagnosed or not.\n"
+        "Make sure to not use capital letters or spaces for the yes or no answer.\n"
+        "Then, make a line break and return the result strictly in this JSON format.\n"
+        "Make sure that the binary answer is consistent with the JSON object.\n\n"
+        "Example:\n"
+        "yes\n"
         "{\n"
-        '  "diagnosis": "<short diagnosis label>",\n'
+        '  "diagnosis": "<diagnosis or not-diagnosis>",\n'
         '  "probability": "<a value between 0 and 1 representing probability of your diagnosis>",\n'
         '  "explanation": "<a brief explanation for the prediction. state reference values and check against provided features>"\n'
         "}\n\n"
-        "Respond only with a valid JSON object. Do not include any additional commentary."
     )
 
     # Apply model-specific formatting if needed
@@ -329,12 +347,6 @@ def prompt_template_hf(input_text: str, model=None) -> List[Dict[str, str]]:
         {"role": "user", "content": [{"type": "text", "text": f"Text:\n{input_text}"}]},
     ]
     elif model == "MeditronModel":
-        #     return (
-        #     "<|im_start|>system\n"
-        #     "You are Meditron, a helpful and knowledgeable medical assistant.<|im_end|>\n"
-        #     f"<|im_start|>user\n{input_text}<|im_end|>\n"
-        #     "<|im_start|>assistant\n"
-        # )
         formated_prompt = [
             f"<|im_start|>system\n{system_message}<|im_end|>\n"
             f"<|im_start|>user\n{input_text}<|im_end|>\n"
@@ -355,43 +367,48 @@ def prompt_template_hf(input_text: str, model=None) -> List[Dict[str, str]]:
     return formated_prompt
 
 
+def extract_last_json_block(text: str) -> Optional[str]:
+    """Extract the last balanced JSON object from the input string."""
+    stack = []
+    start_idx = None
+
+    for i, c in enumerate(reversed(text)):
+        idx = len(text) - 1 - i
+        if c == '}':
+            if not stack:
+                start_idx = idx
+            stack.append('}')
+        elif c == '{':
+            if stack:
+                stack.pop()
+                if not stack and start_idx is not None:
+                    return text[idx:start_idx+1]
+    return None
+
 def extract_dict(output_text: str) -> Optional[Dict[str, str]]:
-    """Extract and parse the last JSON-like object from the model's output text and return it as a dictionary.
-
-    Args:
-        output_text: The raw string returned by the language model.
-
-    Returns:
-        A dictionary parsed from the JSON string, or default JSON opject if no JSON was found.
-    """
+    """Extract and parse the last JSON-like object from the model's output text and return it as a dictionary."""
     default_json = {
         "diagnosis": "unknown",
         "probability": 0.5,
         "explanation": "No explanation provided.",
     }
-    # 1) Find the JSON start
-    json_start = output_text.find("{")
-    if json_start == -1:
+
+    json_text = extract_last_json_block(output_text)
+    if not json_text:
         logger.warning("No JSON object found in assistant output. Returning default.")
         return default_json
 
-    json_text = output_text[json_start:].strip()
+    # Fix unescaped newlines inside quoted strings
+    def escape_newlines_in_strings(s):
+        import re
+        def repl(m):
+            return m.group(0).replace('\n', '\\n').replace('\r', '\\r')
+        return re.sub(r'"(.*?)"', repl, s, flags=re.DOTALL)
 
-    # 2) Heuristic fix for unterminated string (most common case)
-    open_quotes = json_text.count('"')
-    if open_quotes % 2 != 0:
-        # Add a closing quote
-        json_text += '"'
-        logger.debug("Fixed unterminated string by adding closing quote.")
-
-    # 3) Heuristic fix for missing final brace
-    if not json_text.endswith("}"):
-        json_text += "}"
-        logger.debug("Fixed unclosed JSON object by adding closing brace.")
+    json_text_clean = escape_newlines_in_strings(json_text)
 
     try:
-        output_dict = ast.literal_eval(json_text)
-        return output_dict
-    except (SyntaxError, ValueError) as e:
-        logger.warning(f"Failed to parse model output as dict: {e}\nRaw: {json_text}")
+        return json.loads(json_text_clean)
+    except json.JSONDecodeError as e:
+        logger.warning(f"Failed to parse JSON: {e}\nRaw: {json_text_clean}")
         return default_json

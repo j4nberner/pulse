@@ -10,6 +10,7 @@ from .llama4_model import Llama4Model
 from .gemma3_model import Gemma3Model
 from .meditron_model import MeditronModel
 from .deepseekr1_model import DeepseekR1Model
+from .biomistral_model import BioMistralModel
 
 model_cls_name_dict = {
     "RandomForest": RandomForestModel,
@@ -24,6 +25,7 @@ model_cls_name_dict = {
     "Gemma3Model": Gemma3Model,
     "MeditronModel": MeditronModel,
     "DeepseekR1Model": DeepseekR1Model,
+    "BioMistralModel": BioMistralModel,
 }
 
 
