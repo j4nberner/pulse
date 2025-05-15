@@ -64,9 +64,10 @@ prompting:
     # - "zhu_2024a_one_shot_cot_preprocessor"
     # - "zhu_2024b_one_shot_preprocessor"
     # - "zhu_2024c_categorization_summary_preprocessor"
-    # # - "sarvari_2024_aggregation_preprocessor"
+    # - "sarvari_2024_aggregation_preprocessor"
     # - "agentic_prompt_test_preprocessor"
   shots: 3
+  save_test_set: false # Whether to save the test set
 
 # _______ Model Training _______
 
@@ -82,8 +83,8 @@ load_models:
   # - model_configs/LSTMModel.yaml
   # - model_configs/InceptionTimeModel.yaml
   # - model_configs/GRUModel.yaml
-  - model_configs/Llama3.yaml
-  # - model_configs/DeepseekR1Model.yaml # Needs proabability update
+  # - model_configs/Llama3.yaml
+  - model_configs/DeepseekR1Model.yaml # Needs proabability update
   # - model_configs/Llama4.yaml # To big for inference and finetuning
   # - model_configs/Gemma.yaml # Not tested...
   # - model_configs/Meditron.yaml # Not working...

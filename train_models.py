@@ -231,6 +231,7 @@ class ModelTrainer:
                     model.set_trainer(
                         trainer_name, train_loader, val_loader, test_loader
                     )
+                    # model.trainer.estimate_nr_tokens()
                     model.trainer.train()
 
                 except Exception as e:
