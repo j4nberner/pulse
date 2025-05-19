@@ -5,6 +5,7 @@ import sys
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
+from omegaconf import OmegaConf
 import pandas as pd
 import torch
 from torch.utils.data import Dataset
@@ -18,6 +19,13 @@ from src.preprocessing.preprocessing_prompts import get_prompting_preprocessor
 
 # Set up logger
 logger = logging.getLogger("PULSE_logger")
+
+few_shot_list = [
+    "liu_2023_few_shot_preprocessor",
+    "zhu_2024a_one_shot_cot_preprocessor",
+    "zhu_2024b_one_shot_preprocessor",
+    "sarvari_2024_aggregation_preprocessor",
+]
 
 
 class DatasetManager:
@@ -35,7 +43,7 @@ class DatasetManager:
         preprocessor (PreprocessorBaseline): Preprocessor instance
     """
 
-    def __init__(self, config: dict):
+    def __init__(self, config: OmegaConf):
         """
         Initialize the DatasetManager.
 
@@ -47,10 +55,30 @@ class DatasetManager:
         self.preprocessor = None
         self.windower = None
 
-        # self.llm_model_list = ["Llama3Model"]
-
-        self.debug_mode = getattr(self.config.general, "debug_mode", False)
-        self.debug_data_length = getattr(self.config.general, "debug_data_length", 100)
+        self.app_mode = config.general.app_mode
+        self.debug_data_length = None
+        match self.app_mode:
+            case "debug":
+                logger.info(
+                    "Running in debug mode. Limited data will be used for faster inference."
+                )
+                self.debug_data_length = 500
+            case "count_tokens":
+                logger.info(
+                    "Running in count_tokens mode. Full test data and a small subset of train and val data will be used for token counting"
+                )
+            case "benchmark":
+                logger.info(
+                    "Running in benchmark mode. Full data will be used for training and evaluation."
+                )
+            case _:
+                logger.error(
+                    "Invalid app_mode: %s. Must be one of ['debug', 'count_tokens', 'benchmark']",
+                    self.app_mode,
+                )
+                raise ValueError(
+                    f"Invalid app_mode: {self.app_mode}. Must be one of ['debug', 'count_tokens', 'benchmark']"
+                )
 
         # Initialize preprocessing tools
         self._init_preprocessing_tools()
@@ -69,10 +97,8 @@ class DatasetManager:
         random_seed = self.config.benchmark_settings.random_seed
         set_seeds(random_seed)
 
-        # Get debug_mode from config - using attribute style
-        debug_mode = False
-        if hasattr(self.config, "general"):
-            debug_mode = getattr(self.config.general, "debug_mode", False)
+        # Get app_mode from config - using attribute style
+        app_mode = self.config.general.app_mode
 
         # Get preprocessing_baseline configuration - using attribute style
         preprocessing_config = None
@@ -106,9 +132,7 @@ class DatasetManager:
                 windowing_enabled = getattr(windowing_config, "enabled", False)
                 save_windowed_data = getattr(windowing_config, "save_data", False)
 
-        logger.info(
-            "Windowing enabled: %s, Debug mode: %s", windowing_enabled, debug_mode
-        )
+        logger.info("Windowing enabled: %s, App mode: %s", windowing_enabled, app_mode)
 
         # Initialize windower with attribute style access
         if windowing_enabled:
@@ -116,15 +140,15 @@ class DatasetManager:
             self.windower = Windower(
                 base_path=base_path,
                 save_data=save_windowed_data,
-                debug_mode=debug_mode,
+                app_mode=app_mode,
                 debug_data_length=self.debug_data_length,
                 original_base_path=original_base_path,
                 preprocessor_config=preprocessing_config,
             )
 
             logger.debug(
-                "Windower initialized for advanced preprocessing with debug mode: %s",
-                debug_mode,
+                "Windower initialized for advanced preprocessing with app mode: %s",
+                app_mode,
             )
 
     def _init_datasets(self) -> None:
@@ -142,21 +166,28 @@ class DatasetManager:
                 self.datasets[dataset_id] = {
                     "task": task,
                     "name": dataset_name,
-                    "config": {"name": dataset_name, "task": task},
+                    "preprocessing_baseline": self.config.preprocessing_baseline,
+                    "preprocessing_advanced": self.config.preprocessing_advanced,
                     "loaded": False,
                     "data": None,
                 }
                 logger.info("Initialized dataset: %s", dataset_id)
 
-    def load_dataset(self, dataset_id: str) -> bool:
+    def load_dataset(self, dataset_id: str) -> tuple[bool, Optional[Dict]]:
         """
         Load a specific dataset.
+        Reversed loading logic.
+        1. Loading saved preprocessing_advanced data if available
+        2. Loading saved preprocessing_baseline data if available
+        3. Loading raw data if no saved data is available
 
         Args:
             dataset_id (str): ID of the dataset to load
 
         Returns:
-            bool: True if loading was successful, False otherwise
+            tuple: (success: bool, dataset: Optional[Dict])
+                - success (bool): True if the dataset was loaded successfully, False otherwise
+                - dataset (Optional[Dict]): The loaded dataset or None if loading failed
         """
         if dataset_id not in self.datasets:
             logger.error("Dataset %s not found in configuration", dataset_id)
@@ -168,86 +199,63 @@ class DatasetManager:
             logger.debug("Dataset %s already loaded", dataset_id)
             return True
 
-        try:
-            # Extract task and dataset name
-            task = dataset["task"]
-            name = dataset["name"]
+        # Extract task and dataset name
+        task = dataset["task"]
+        name = dataset["name"]
 
-            # Check if windowing is enabled and should be applied
+        # 1. Load saved preprocessing_advanced data if available
+        # Check if windowing is enabled and should be applied
+        windowing_enabled = dataset["preprocessing_advanced"]["windowing"]["enabled"]
+        windowing_config = dataset["preprocessing_advanced"]["windowing"]
+
+        # Check if windowing is applicable for this task
+        if task == "mortality":
+            logger.warning(
+                "Windowing is not applicable for the mortality task. Skipping windowing for task = 'mortality'."
+            )
             windowing_enabled = False
             windowing_config = None
 
-            if hasattr(self.config, "preprocessing_advanced"):
-                if hasattr(self.config.preprocessing_advanced, "windowing"):
-                    windowing_config = self.config.preprocessing_advanced.windowing
-                    windowing_enabled = getattr(windowing_config, "enabled", False)
+        # If windowing is enabled and applicable, try to load presaved windowed data
+        if windowing_enabled:
+            logger.debug("Attempting to load presaved windowed data for %s", dataset_id)
+            windowed_data = self.windower.load_windowed_data(
+                task=task,
+                dataset=name,
+                data_window=windowing_config.data_window,
+                prediction_window=windowing_config.prediction_window,
+                step_size=windowing_config.step_size,
+            )
 
-            # Check if windowing is applicable for this task
-            if task == "mortality":
-                logger.warning(
-                    "Windowing is not applicable for the mortality task. Skipping windowing for task = 'mortality'."
-                )
-
-            # If windowing is enabled and not a mortality task, try to load presaved windowed data first
-            if windowing_enabled and task != "mortality" and self.windower is not None:
-                logger.debug(
-                    "Attempting to load presaved windowed data for %s", dataset_id
-                )
-                windowed_data = self.windower.window_data(
-                    task=task, dataset=name, config=windowing_config
-                )
-
-                if windowed_data is not None:
-                    # load presaved windowed data
-                    dataset["data"] = {
-                        "X_train": windowed_data["train"]["X"],
-                        "X_val": windowed_data["val"]["X"],
-                        "X_test": windowed_data["test"]["X"],
-                        "y_train": windowed_data["train"]["y"],
-                        "y_val": windowed_data["val"]["y"],
-                        "y_test": windowed_data["test"]["y"],
-                    }
-                    dataset["loaded"] = True
-                    logger.info(
-                        "Successfully loaded presaved windowed data for %s", dataset_id
-                    )
-                    return True
-
+            if windowed_data is not None:
+                # load presaved windowed data
+                dataset["data"] = {
+                    "X_train": windowed_data["train"]["X"],
+                    "X_val": windowed_data["val"]["X"],
+                    "X_test": windowed_data["test"]["X"],
+                    "y_train": windowed_data["train"]["y"],
+                    "y_val": windowed_data["val"]["y"],
+                    "y_test": windowed_data["test"]["y"],
+                }
+                dataset["loaded"] = True
+                dataset["preprocessing_advanced"]["windowing"]["loaded"] = True
                 logger.info(
-                    "No presaved windowed data found for %s, falling back to regular loading",
-                    dataset_id,
+                    "Successfully loaded presaved windowed data for %s", dataset_id
                 )
+                return True, dataset
 
-            # If not using presaved windowed data, proceed with regular loading/preprocessing
-            try:
-                # Try to load from preprocessed files
-                X_train, X_val, X_test, y_train, y_val, y_test = (
-                    self.preprocessor.load_preprocessed_data(
-                        task=task, dataset_name=name
-                    )
-                )
+            logger.debug(
+                "No presaved windowed data found for %s. Checking for baseline preprocessed data.",
+                dataset_id,
+            )
 
-                logger.info("Loaded preprocessed data for %s", dataset_id)
-
-            except FileNotFoundError:
-                # If not found, preprocess the data
-                logger.info(
-                    "Preprocessed data not found for %s, running preprocessing",
-                    dataset_id,
-                )
-
-                X_train, X_val, X_test, y_train, y_val, y_test = (
-                    self.preprocessor.preprocess(
-                        task=task,
-                        dataset_name=name,
-                        save_data=getattr(
-                            self.config.preprocessing_baseline, "save_data", True
-                        ),
-                    )
-                )
-
-                logger.info("Preprocessing Baseline completed for %s", dataset_id)
-
+        # 2. Load saved preprocessing_baseline data if available
+        data_sets = self.preprocessor.load_preprocessed_data(
+            task=task, dataset_name=name
+        )
+        if data_sets is not None:
+            X_train, X_val, X_test, y_train, y_val, y_test = data_sets
+            logger.info("Loaded preprocessed data for %s", dataset_id)
             # Convert labels from boolean to int if necessary
             y_train["label"], y_val["label"], y_test["label"] = (
                 y_train["label"].astype(int),
@@ -262,21 +270,6 @@ class DatasetManager:
                 "test": {"X": X_test, "y": y_test},
             }
 
-            # Apply windowing if enabled and not already loaded from presaved files
-            if windowing_enabled and task != "mortality" and self.windower is not None:
-                logger.debug("Applying windowing to %s", dataset_id)
-
-                windowed_data = self.windower.window_data(
-                    task=task,
-                    dataset=name,
-                    config=windowing_config,
-                    data_dict=data_dict,
-                )
-
-                if windowed_data is not None:
-                    data_dict = windowed_data
-                    logger.info("Windowing applied to %s", dataset_id)
-
             # Store the processed data
             dataset["data"] = {
                 "X_train": data_dict["train"]["X"],
@@ -288,15 +281,58 @@ class DatasetManager:
             }
 
             dataset["loaded"] = True
-            return True
+            dataset["preprocessing_advanced"]["windowing"]["loaded"] = False
+            return True, dataset
 
-        except Exception as e:
-            logger.error("Error loading dataset %s: %s", dataset_id, e)
-            return False
+        # 3. Baseline preprocessing and saving for future use
+        logger.info(
+            "Loading raw data for %s, applying baseline preprocessing and saving for future use.",
+            dataset_id,
+        )
+        X_train, X_val, X_test, y_train, y_val, y_test = self.preprocessor.preprocess(
+            task=task,
+            dataset_name=name,
+            save_data=True,
+        )
+        logger.info("Loaded preprocessed data for %s", dataset_id)
+        # Convert labels from boolean to int if necessary
+        y_train["label"], y_val["label"], y_test["label"] = (
+            y_train["label"].astype(int),
+            y_val["label"].astype(int),
+            y_test["label"].astype(int),
+        )
+
+        # Store the loaded data
+        data_dict = {
+            "train": {"X": X_train, "y": y_train},
+            "val": {"X": X_val, "y": y_val},
+            "test": {"X": X_test, "y": y_test},
+        }
+
+        # Store the processed data
+        dataset["data"] = {
+            "X_train": data_dict["train"]["X"],
+            "X_val": data_dict["val"]["X"],
+            "X_test": data_dict["test"]["X"],
+            "y_train": data_dict["train"]["y"],
+            "y_val": data_dict["val"]["y"],
+            "y_test": data_dict["test"]["y"],
+        }
+
+        dataset["loaded"] = True
+        dataset["preprocessing_advanced"]["windowing"]["loaded"] = False
+        return True, dataset
 
     def get_preprocessed_data(
         self, dataset_id: str, model_name: str, mode: str = "train", **kwargs: Any
-    ) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    ) -> Tuple[
+        pd.DataFrame,
+        pd.DataFrame,
+        pd.DataFrame,
+        pd.DataFrame,
+        pd.DataFrame,
+        pd.DataFrame,
+    ]:
         """
         Get preprocessed data for a specific model.
 
@@ -310,7 +346,7 @@ class DatasetManager:
             - prompting_id (str): ID of prompt preprocessing to apply
 
         Returns:
-            Tuple[pd.DataFrame, pd.DataFrame]: Features and labels
+            Tuple[pd.DataFrame]: Features and labels
 
         Notes:
             - When mode is "test", if test_limited is set in config, only the first X stay_ids will be used
@@ -318,29 +354,25 @@ class DatasetManager:
         """
         if dataset_id not in self.datasets:
             logger.error("Dataset %s not found", dataset_id)
-            return None, None
+            return None, None, None, None, None, None
 
         dataset = self.datasets[dataset_id]
         prompting_id = kwargs.get("prompting_id", None)
+        model_type = kwargs.get("model_type", None)
+        fine_tuning = kwargs.get("fine_tuning", False)
+        print_stats = kwargs.get("print_stats", False)
+        save_test_set = kwargs.get("save_test_set", False)
 
         if not dataset["loaded"]:
-            success = self.load_dataset(dataset_id)
+            success, dataset = self.load_dataset(dataset_id)
             if not success:
-                return None, None
+                return None, None, None, None, None, None
 
         data = dataset["data"]
 
-        few_shot_list = [
-            "liu_2023_few_shot_preprocessor",
-            "zhu_2024a_one_shot_cot_preprocessor",
-            "zhu_2024b_one_shot_preprocessor",
-            "sarvari_2024_aggregation_preprocessor",
-        ]
-        logger.debug(kwargs)
-
+        # Limit the loaded data to only load the necessary parts before processing
         # Take only n rows if in debug
-        debug = kwargs.get("debug", False)
-        if debug:
+        if self.app_mode == "debug":
             logger.info(
                 "Debug mode: Taking only %d rows for %s",
                 self.debug_data_length,
@@ -355,7 +387,7 @@ class DatasetManager:
                 "y_test": data["y_test"].iloc[: self.debug_data_length],
             }
 
-        if kwargs.get("count_tokens", False):
+        elif self.app_mode == "count_tokens":
             logger.debug(
                 "Count tokens mode: Taking only %d rows for %s for train and val loader.",
                 self.debug_data_length,
@@ -370,147 +402,116 @@ class DatasetManager:
                 "y_test": data["y_test"].iloc[:],
             }
 
-        # Initialize X_train and y_train to None for all modes
-        X_train = None
-        y_train = None
+        else:
+            logger.debug("Running in benchmark mode.")
 
-        # Get the appropriate split
-        if mode == "train":
-            X = data["X_train"]
-            y = data["y_train"]
+        if self.test_limited is not None:
+            X = data["X_test"]
+            y = data["y_test"]
 
-        elif mode == "val":
-            if prompting_id in few_shot_list:
-                # Some LLMs might need training data in validation set for few-shot learning
-                X_train = data["X_train"]
-                y_train = data["y_train"]
-                X = data["X_val"]
-                y = data["y_val"]
-            else:
-                # Normal case
-                X = data["X_val"]
-                y = data["y_val"]
+            # Get unique stay_ids in ascending order
+            unique_stay_ids = sorted(X["stay_id"].unique())
+            # Take only the first x = test_limited stay_ids (or all if less than x = test_limited)
+            selected_stay_ids = unique_stay_ids[: self.test_limited]
+            # Filter X and y to include only the selected stay_ids
+            X_limited = X[X["stay_id"].isin(selected_stay_ids)]
+            y_limited = y[y["stay_id"].isin(selected_stay_ids)]
 
-        else:  # mode == "test"
-            if prompting_id in few_shot_list:
-                # Some LLMs might need training data in validation set for few-shot learning
-                X_train = data["X_train"]
-                y_train = data["y_train"]
-                X = data["X_test"]
-                y = data["y_test"]
-            else:
-                # Normal case
-                X = data["X_test"]
-                y = data["y_test"]
+            # Replace X and y with the limited versions
+            data["X_test"] = X_limited
+            data["y_test"] = y_limited
+            logger.info(
+                "Limited test set to first %s stay_ids for %s",
+                self.test_limited,
+                dataset_id,
+            )
 
-            # Handle limited test set if requested
-            X_original = X.copy()
-            y_original = y.copy()
-
-            if self.test_limited is not None:
-                logger.info(
-                    "Limiting test set to first %s stay_ids for %s",
-                    self.test_limited,
-                    dataset_id,
-                )
-                # Get unique stay_ids in ascending order
-                unique_stay_ids = sorted(X["stay_id"].unique())
-                # Take only the first x = test_limited stay_ids (or all if less than x = test_limited)
-                selected_stay_ids = unique_stay_ids[: self.test_limited]
-                # Filter X and y to include only the selected stay_ids
-                X_limited = X[X["stay_id"].isin(selected_stay_ids)]
-                y_limited = y[y["stay_id"].isin(selected_stay_ids)]
-
-                # Replace X and y with the limited versions
-                X = X_limited
-                y = y_limited
-
-            # Print statistics if requested (Print train, val and both original and limited test set statistics to compare distributions)
-            print_stats = kwargs.get("print_stats", False)  # set in train_models.py
-            if print_stats:
-                train_stats = self.preprocessor.calculate_dataset_statistics(
-                    data["X_train"],
-                    data["y_train"],
-                    "train",
-                    task=dataset["task"],
-                    dataset_name=dataset["name"],
-                )
-                val_stats = self.preprocessor.calculate_dataset_statistics(
-                    data["X_val"],
-                    data["y_val"],
-                    "val",
-                    task=dataset["task"],
-                    dataset_name=dataset["name"],
-                )
-                test_stats = self.preprocessor.calculate_dataset_statistics(
-                    X_original,
-                    y_original,
-                    "test",
-                    task=dataset["task"],
-                    dataset_name=dataset["name"],
-                )
-                if self.test_limited is not None:
-                    test_limited_stats = self.preprocessor.calculate_dataset_statistics(
-                        X_limited,
-                        y_limited,
-                        f"test_limited{self.test_limited}",
-                        task=dataset["task"],
-                        dataset_name=dataset["name"],
-                    )
-                else:
-                    test_limited_stats = None
-
-                # Filter out None values before passing to print_statistics
-                stats_to_print = [
-                    stat
-                    for stat in [train_stats, val_stats, test_stats, test_limited_stats]
-                    if stat is not None
-                ]
-                # Print statistics for all datasets
-                self.preprocessor.print_statistics(stats_to_print)
-
-        # Drop stay_id columns BEFORE creating lists for few-shot learning
-        if isinstance(X, pd.DataFrame) and "stay_id" in X.columns:
-            X = X.drop(columns=["stay_id"])
-        if isinstance(y, pd.DataFrame) and "stay_id" in y.columns:
-            y = y.drop(columns=["stay_id"])
-
-        # Also drop stay_id from training data used for few-shot examples
-        if (
-            X_train is not None
-            and isinstance(X_train, pd.DataFrame)
-            and "stay_id" in X_train.columns
-        ):
-            X_train = X_train.drop(columns=["stay_id"])
-        if (
-            y_train is not None
-            and isinstance(y_train, pd.DataFrame)
-            and "stay_id" in y_train.columns
-        ):
-            y_train = y_train.drop(columns=["stay_id"])
-
+        # Applying advanced preprocessing if and not already loaded from presaved files
         logger.debug(
-            "Dropped stay_id column from X and y (including for few-shot examples)"
+            "Applying advanced preprocessing for %s.",
+            dataset_id,
         )
 
+        # Apply windowing if enabled and not already loaded from presaved files
+        if (
+            dataset["preprocessing_advanced"]["windowing"]["enabled"]
+            and dataset["preprocessing_advanced"]["windowing"]["loaded"] is False
+            and dataset["task"] != "mortality"
+            and self.windower is not None
+        ):
+            logger.debug("Applying windowing to %s", dataset_id)
+
+            data = self.windower.window_data(
+                task=dataset["task"],
+                dataset=dataset["name"],
+                config=dataset["preprocessing_advanced"]["windowing"],
+                data_dict=data,
+            )
+            dataset["data"] = {
+                "X_train": data["train"]["X"],
+                "X_val": data["val"]["X"],
+                "X_test": data["test"]["X"],
+                "y_train": data["train"]["y"],
+                "y_val": data["val"]["y"],
+                "y_test": data["test"]["y"],
+            }
+            del data  # Clear the data variable to free up memory
+            dataset["loaded"] = True
+            dataset["preprocessing_advanced"]["windowing"]["loaded"] = True
+            logger.info("Successfully windowed data for %s", dataset_id)
+
         # Convert categorical columns to numerical values for convML models
-        convML_models = ["RandomForest", "XGBoost", "LightGBM"]
-        if any(mdl in model_name for mdl in convML_models):
+        if model_type in ["RandomForest", "XGBoost", "LightGBM"]:
             # Process gender column in X if it exists
             if isinstance(X, pd.DataFrame) and "sex" in X.columns:
                 X["sex"] = X["sex"].map({"Male": 1, "Female": 0}).fillna(-1)
                 logger.debug("Converted gender column to numerical values")
 
-        # Apply any model-specific preprocessing if needed.
-        # For example, if you need to tokenize text data for LLMs
-        if prompting_id is not None:
+        # Print statistics if requested (Print train, val and both original and limited test set statistics to compare distributions)
+        if print_stats:
+            train_stats = self.preprocessor.calculate_dataset_statistics(
+                dataset["data"]["X_train"],
+                dataset["data"]["y_train"],
+                "train",
+                task=dataset["task"],
+                dataset_name=dataset["name"],
+            )
+            val_stats = self.preprocessor.calculate_dataset_statistics(
+                dataset["data"]["X_val"],
+                dataset["data"]["y_val"],
+                "val",
+                task=dataset["task"],
+                dataset_name=dataset["name"],
+            )
+            test_stats = self.preprocessor.calculate_dataset_statistics(
+                dataset["data"]["X_test"],
+                dataset["data"]["y_test"],
+                "test",
+                task=dataset["task"],
+                dataset_name=dataset["name"],
+            )
+
+            # Filter out None values before passing to print_statistics
+            stats_to_print = [
+                stat
+                for stat in [train_stats, val_stats, test_stats]
+                if stat is not None
+            ]
+            # Print statistics for all datasets
+            self.preprocessor.print_statistics(stats_to_print)
+
+        # Apply advanced preprocessing if needed -> generate prompts
+        if prompting_id is not None and model_type == "LLM":
+            # Drop stay_id columns BEFORE creating lists for few-shot learning
+            dataset["data"] = self._drop_stay_id_if_present(dataset["data"])
+            logger.debug("Dropped stay_id column before generating prompts.")
+
             prompting_preprocessor = get_prompting_preprocessor(
                 prompting_id=prompting_id
             )
             num_shots = kwargs.get("num_shots", 0)
             data_window = self.config.preprocessing_advanced.windowing.data_window
 
-            # Info dict needs to contain dataset name, task, and model name
             info_dict = {
                 "dataset_name": dataset["name"],
                 "task": dataset["task"],
@@ -519,11 +520,7 @@ class DatasetManager:
                 "num_shots": num_shots,
                 "data_window": data_window,
             }
-            if prompting_id in few_shot_list:
-                # Add few-shot examples to info_dict if needed
-                X = [X, X_train]
-                y = [y, y_train]
-            
+
             logger.info(
                 "Applying prompting preprocessor for prompting_id: %s, and number of shots: %s",
                 prompting_id,
@@ -531,29 +528,57 @@ class DatasetManager:
             )
 
             # Apply advanced preprocessing
-            X, y = prompting_preprocessor(X, y, info_dict)
-
-            # Log a sample prompt for debugging/verification
-            if isinstance(X, pd.DataFrame) and mode == "test":
-                prompt_column = (
-                    "prompt"
-                    if "prompt" in X.columns
-                    else "text" if "text" in X.columns else None
+            if fine_tuning is True:
+                # Training data
+                X = [dataset["data"]["X_train"]]
+                y = [dataset["data"]["y_train"]]
+                info_dict["mode"] = "train"
+                dataset["data"]["X_train"], dataset["data"]["y_train"] = (
+                    prompting_preprocessor(X, y, info_dict)
                 )
-                if prompt_column and not X.empty:
-                    sample_prompt = X[prompt_column].iloc[0]
-                    logger.debug("Test loader length: %d", len(X))
-                    logger.debug(
-                        "Sample %s prompt with %s shots for %s:",
-                        prompting_id,
-                        num_shots,
-                        dataset_id,
-                    )
-                    logger.debug("-" * 50)
-                    logger.debug(sample_prompt)
-                    logger.debug("-" * 50)
 
-        return X, y
+                # Validation data - Uses training data for few-shot learning
+                X = [dataset["data"]["X_val"], dataset["data"]["X_train"]]
+                y = [dataset["data"]["y_val"], dataset["data"]["y_train"]]
+                info_dict["mode"] = "val"
+                dataset["data"]["X_val"], dataset["data"]["y_val"] = (
+                    prompting_preprocessor(X, y, info_dict)
+                )
+
+            # Test data
+            X = [dataset["data"]["X_test"], dataset["data"]["X_train"]]
+            y = [dataset["data"]["y_test"], dataset["data"]["y_train"]]
+            info_dict["mode"] = "test"
+            dataset["data"]["X_test"], dataset["data"]["y_test"] = (
+                prompting_preprocessor(X, y, info_dict)
+            )
+
+            if fine_tuning is False:
+                # Used only for few shot examples if no fine-tuning. Set to none.
+                dataset["data"]["X_train"] = pd.DataFrame()
+                dataset["data"]["y_train"] = pd.DataFrame()
+                dataset["data"]["X_val"] = pd.DataFrame()
+                dataset["data"]["y_val"] = pd.DataFrame()
+
+            # Save prompts in testloader for debugging
+            if save_test_set:
+                dataset["data"]["X_test"].to_csv(
+                    os.path.join(self.config.output_dir, "test_set.csv"),
+                    index=False,
+                )
+                dataset["data"]["y_test"].to_csv(
+                    os.path.join(self.config.output_dir, "test_labels.csv"),
+                    index=False,
+                )
+
+        return (
+            dataset["data"]["X_train"],
+            dataset["data"]["y_train"],
+            dataset["data"]["X_val"],
+            dataset["data"]["y_val"],
+            dataset["data"]["X_test"],
+            dataset["data"]["y_test"],
+        )
 
     def _drop_stay_id_if_present(self, data_dict: dict) -> dict:
         """

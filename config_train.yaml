@@ -3,10 +3,9 @@
 # General settings
 general:
   app_name: "Pulse"
-  version: "1.0.0"
-  debug_mode: false
-  debug_data_length: 500 # Number of rows used if debug_mode is true
-  debug_logging: true # true: logging level DEBUG, false: logging level INFO
+  app_version: "1.0.0"
+  app_mode: "benchmark" # "debug", "count_tokens", "benchmark"
+  logging_level: "DEBUG" # "DEBUG", "INFO", "WARNING", "ERROR"
   use_scratch: true
 
 # Weight and Biases (wandb) logging configuration
@@ -21,13 +20,13 @@ base_path: "" #"/cluster/project/bmds_lab/sepsis_sophia/pulse", "/cluster/projec
 tasks:
   # - "mortality"
   - "aki"
-  - "sepsis"
+  # - "sepsis"
 
 # Datasets to process
 dataset_path: datasets/original_harmonized #"/path/to/datasets"
 datasets:
-  # - "hirid"
-  - "miiv"
+  - "hirid"
+  # - "miiv"
   # - "eicu"
 
 # _______ Preprocessing Baseline _______
@@ -38,7 +37,6 @@ preprocessing_baseline:
   standardize: false # Whether to standardize features (yes: convDL, not required: convML, LLM)
   static_imputation: true # Whether to perform static feature imputation
   dynamic_imputation: true # Whether to perform dynamic feature imputation
-  save_data: true # Whether to save preprocessed data
   split_ratios: # Train/Val/Test split ratios
     train: 0.8
     val: 0.1
@@ -76,14 +74,14 @@ benchmark_settings:
   random_seed: 42
 
 load_models:
-  # - model_configs/RandomForestModel.yaml
+  - model_configs/RandomForestModel.yaml
   # - model_configs/XGBoost.yaml
   # - model_configs/LightGBMModel.yaml
   # - model_configs/CNNModel.yaml
   # - model_configs/LSTMModel.yaml
   # - model_configs/InceptionTimeModel.yaml
   # - model_configs/GRUModel.yaml
-  - model_configs/Llama3.yaml
+  # - model_configs/Llama3.yaml
   # - model_configs/DeepseekR1Model.yaml # Needs proabability update
   # - model_configs/Llama4.yaml # To big for inference and finetuning
   # - model_configs/Gemma.yaml # Not tested...
