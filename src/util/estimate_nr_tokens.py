@@ -2,7 +2,7 @@ import argparse
 import gc
 import os
 import sys
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
 import pandas as pd
 import torch
@@ -12,10 +12,8 @@ from torch.utils.data import DataLoader
 from src.data.dataloader import DatasetManager, TorchDatasetWrapper
 from src.logger_setup import init_wandb, setup_logger
 from src.models.modelmanager import ModelManager
-from src.util.config_util import (load_config_with_models, save_config_file,
-                                  set_seeds)
-from src.util.slurm_util import (copy_data_to_scratch, get_local_scratch_dir,
-                                 is_on_slurm)
+from src.util.config_util import load_config_with_models, save_config_file, set_seeds
+from src.util.slurm_util import copy_data_to_scratch, get_local_scratch_dir, is_on_slurm
 
 logger, output_dir = setup_logger()
 
@@ -32,11 +30,15 @@ class ModelTrainer:
         """
         self.config = config
 
-        # Log debug mode status
-        if self.config.general.debug_mode:
-            logger.debug("DEBUG MODE ACTIVE: Training will use limited dataset size")
+        # Log general information
+        logger.info("Initializing ModelTrainer with configuration:")
+        logger.info("App Name: %s", config.general.app_name)
+        logger.info("App Version: %s", config.general.app_version)
+        logger.info("App Mode: %s", config.general.app_mode)
+        logger.info("Logging Level: %s", config.general.logging_level)
 
         # Set random seeds for reproducibility
+        # TODO: add random seed to LLM trainers (see convDL train() methods as reference)
         random_seed = self.config.benchmark_settings.get("random_seed", 42)
         set_seeds(random_seed)
         logger.info("Setting random seed to %s for reproducibility", random_seed)
@@ -62,12 +64,7 @@ class ModelTrainer:
         logger.info("Starting training process...")
         timestamp = pd.Timestamp.now().strftime("%Y%m%d_%H%M%S")
 
-        # Check if debug mode is enabled
-        if self.config.general.debug_mode:
-            logger.info("DEBUG MODE ACTIVE: Training will use only one batch")
-
         # Train and evaluate each model on each dataset
-        # TODO: Check if LLM and normalization is disabled.
         for task_dataset_name, _ in self.dm.datasets.items():
             logger.info("#" * 60)
             logger.info("Processing dataset: %s", task_dataset_name)
@@ -77,10 +74,10 @@ class ModelTrainer:
             dataset_name = task_dataset_name.split("_")[-1]
 
             # Get fresh models for this dataset/task combination
-            fresh_models = self.mm.get_models_for_task(task_dataset_name)
+            updated_models = self.mm.get_models_for_task(task_dataset_name)
 
             # Each fresh model is used only for this dataset
-            for model in fresh_models:
+            for model in updated_models:
                 model_name = model.__class__.__name__
                 model.task_name = task_name
                 model.dataset_name = dataset_name
@@ -108,8 +105,9 @@ class ModelTrainer:
                 dm_kwargs = {
                     "dataset": self.config.datasets[0],
                     "task": self.config.tasks[0],
-                    "debug": self.config.general.debug_mode,
                     "print_stats": self.config.preprocessing_baseline.split_ratios.print_stats,
+                    "save_test_set": self.config.prompting.save_test_set,
+                    "model_type": model.type,
                 }
 
                 try:
@@ -118,26 +116,23 @@ class ModelTrainer:
                     X_val, y_val = None, None
 
                     if model.type == "LLM":
+                        # Sanity check if data normalization was disabled
+                        if self.config.preprocessing_baseline.get("standardize", False):
+                            logger.error(
+                                "Data standardization is enabled for LLM models. Please disable it in the config."
+                            )
                         dm_kwargs.update(
                             {
                                 "prompting_id": model.prompting_id,
                                 "num_shots": self.config.prompting.get("shots", 0),
-                                "count_tokens": True,
+                                "fine_tuning": model.params.tuning,
                             }
                         )
                     # Preprocess data for corresponding model
-                    # Taking only small subset for train and val for token estimation
-                    X_train, y_train = self.dm.get_preprocessed_data(
-                        task_dataset_name, model_name, mode="train", **dm_kwargs
-                    )
-                    X_val, y_val = self.dm.get_preprocessed_data(
-                        task_dataset_name, model_name, mode="val", **dm_kwargs
-                    )
-                    X_test, y_test = self.dm.get_preprocessed_data(
-                        task_dataset_name,
-                        model_name,
-                        mode="test",
-                        **dm_kwargs,
+                    X_train, y_train, X_val, y_val, X_test, y_test = (
+                        self.dm.get_preprocessed_data(
+                            task_dataset_name, model_name, **dm_kwargs
+                        )
                     )
 
                     # Log the shapes of the datasets
@@ -147,7 +142,6 @@ class ModelTrainer:
                         X_val.shape,
                         X_test.shape,
                     )
-
 
                     # Choose the appropriate DataLoader based on model type
                     if model.type == "convML":
@@ -224,11 +218,6 @@ class ModelTrainer:
                         )
                         sys.exit(1)
 
-                    # Save prompts in testloader for debugging
-                    if self.config.prompting.get("save_test_set", False) and model.type == "LLM":
-                        test_loader[0].to_csv(os.path.join(self.config.output_dir, "test_set.csv"), index=False)
-                        test_loader[1].to_csv(os.path.join(self.config.output_dir, "test_labels.csv"), index=False)
-
                     # Set trainer for the model and train
                     model.set_trainer(
                         trainer_name, train_loader, val_loader, test_loader, disable_model_load=True
@@ -261,7 +250,7 @@ class ModelTrainer:
                     logger.info("Memory cleaned up after training %s", model_name)
 
             # Memory cleanup after processing each task-dataset combination
-            del fresh_models
+            del updated_models
             self.dm.release_dataset_cache(
                 task_dataset_name
             )  # Release dataset from cache
@@ -278,7 +267,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--config",
         type=str,
-        default="/cluster/project/bmds_lab/sepsis_jan/pulse/config_train.yaml",
+        default="config_train.yaml",
         help="Path to configuration file",
     )
     return parser.parse_args()
@@ -289,9 +278,7 @@ def main():
     args = parse_args()
     config = load_config_with_models(args.config)
     config.output_dir = output_dir
-    config.experiment_name = (
-        f"experiment_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}"
-    )
+    config.experiment_name = f"PULSE_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}"
     save_config_file(config, output_dir)  # Save the configuration file
 
     # Log if running on Slurm
@@ -301,6 +288,7 @@ def main():
     # Run training
     trainer = ModelTrainer(config)
     trainer.run()
+    
 
 
 if __name__ == "__main__":

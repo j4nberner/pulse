@@ -64,6 +64,7 @@ class DatasetManager:
                 )
                 self.debug_data_length = 500
             case "count_tokens":
+                self.debug_data_length = 50
                 logger.info(
                     "Running in count_tokens mode. Full test data and a small subset of train and val data will be used for token counting"
                 )
@@ -393,7 +394,7 @@ class DatasetManager:
                 self.debug_data_length,
                 dataset_id,
             )
-            data = {
+            dataset["data"] = {
                 "X_train": data["X_train"].iloc[: self.debug_data_length],
                 "y_train": data["y_train"].iloc[: self.debug_data_length],
                 "X_val": data["X_val"].iloc[: self.debug_data_length],
@@ -418,8 +419,8 @@ class DatasetManager:
             y_limited = y[y["stay_id"].isin(selected_stay_ids)]
 
             # Replace X and y with the limited versions
-            data["X_test"] = X_limited
-            data["y_test"] = y_limited
+            dataset["data"]["X_test"] = X_limited
+            dataset["data"]["y_test"] = y_limited
             logger.info(
                 "Limited test set to first %s stay_ids for %s",
                 self.test_limited,
@@ -445,7 +446,7 @@ class DatasetManager:
                 task=dataset["task"],
                 dataset=dataset["name"],
                 config=dataset["preprocessing_advanced"]["windowing"],
-                data_dict=data,
+                data_dict=dataset["data"],
             )
             dataset["data"] = {
                 "X_train": data["train"]["X"],
@@ -455,17 +456,21 @@ class DatasetManager:
                 "y_val": data["val"]["y"],
                 "y_test": data["test"]["y"],
             }
-            del data  # Clear the data variable to free up memory
             dataset["loaded"] = True
             dataset["preprocessing_advanced"]["windowing"]["loaded"] = True
             logger.info("Successfully windowed data for %s", dataset_id)
 
+        del data  # Clear the data variable to free up memory
+
         # Convert categorical columns to numerical values for convML models
-        if model_type in ["RandomForest", "XGBoost", "LightGBM"]:
+        if model_type == "convML":
             # Process gender column in X if it exists
-            if isinstance(X, pd.DataFrame) and "sex" in X.columns:
+            for data_set in ["X_train", "X_val", "X_test"]:
+                X = dataset["data"][data_set]
                 X["sex"] = X["sex"].map({"Male": 1, "Female": 0}).fillna(-1)
-                logger.debug("Converted gender column to numerical values")
+                dataset["data"][data_set] = X
+
+            logger.debug("Converted gender column to numerical values")
 
         # Print statistics if requested (Print train, val and both original and limited test set statistics to compare distributions)
         if print_stats:

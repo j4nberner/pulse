@@ -487,7 +487,7 @@ class Llama3Trainer:
         if kwargs.get("disable_model_load", False):
             logger.info("Skipping model loading for debugging purposes.")
         else:
-            model._load_model()  # Comment out to only test preprocessing
+            model._load_model()  #
 
         self.model = model
         self.llama_model = model.llama_model
@@ -740,6 +740,8 @@ class Llama3Trainer:
         logger.info(f"Total tokens for the task {self.model.task_name} dataset {self.model.dataset_name}: {total_tokens}")
         logger.info("Total input tokens: %s", total_input_tokens)
         logger.info("Total output tokens: %s", total_output_tokens)
+        logger.info("Average input tokens: %s", total_input_tokens / len(test_loader[0]))
+        logger.info("Average output tokens: %s", total_output_tokens / len(test_loader[0]))
         return total_tokens
 
 

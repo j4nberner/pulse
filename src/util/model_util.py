@@ -351,12 +351,6 @@ def prompt_template_hf(input_text: str, model=None) -> List[Dict[str, str]]:
                 "content": [{"type": "text", "text": f"Text:\n{input_text}"}],
             },
         ]
-    elif model == "MeditronModel":
-        formated_prompt = [
-            f"<|im_start|>system\n{system_message}<|im_end|>\n"
-            f"<|im_start|>user\n{input_text}<|im_end|>\n"
-            "<|im_start|>assistant\n"
-        ]
     elif model == "DeepseekR1Model":
         # avoid using a system prompt. including it all in the user prompt
         formated_prompt = [
