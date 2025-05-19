@@ -2,6 +2,7 @@ import argparse
 import gc
 import os
 import sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 import pandas as pd
 import torch
@@ -36,7 +37,6 @@ class ModelTrainer:
             logger.debug("DEBUG MODE ACTIVE: Training will use limited dataset size")
 
         # Set random seeds for reproducibility
-        # TODO: add random seed to LLM trainers (see convDL train() methods as reference)
         random_seed = self.config.benchmark_settings.get("random_seed", 42)
         set_seeds(random_seed)
         logger.info("Setting random seed to %s for reproducibility", random_seed)
@@ -67,6 +67,7 @@ class ModelTrainer:
             logger.info("DEBUG MODE ACTIVE: Training will use only one batch")
 
         # Train and evaluate each model on each dataset
+        # TODO: Check if LLM and normalization is disabled.
         for task_dataset_name, _ in self.dm.datasets.items():
             logger.info("#" * 60)
             logger.info("Processing dataset: %s", task_dataset_name)
@@ -117,18 +118,15 @@ class ModelTrainer:
                     X_val, y_val = None, None
 
                     if model.type == "LLM":
-                        # Sanity check if data normalization was disabled
-                        if self.config.preprocessing_baseline.get("standardize", False):
-                            logger.error(
-                                "Data standardization is enabled for LLM models. Please disable it in the config."
-                            )
                         dm_kwargs.update(
                             {
                                 "prompting_id": model.prompting_id,
                                 "num_shots": self.config.prompting.get("shots", 0),
+                                "count_tokens": True,
                             }
                         )
                     # Preprocess data for corresponding model
+                    # Taking only small subset for train and val for token estimation
                     X_train, y_train = self.dm.get_preprocessed_data(
                         task_dataset_name, model_name, mode="train", **dm_kwargs
                     )
@@ -157,7 +155,6 @@ class ModelTrainer:
                         val_loader = (X_val, y_val)
                         test_loader = (X_test, y_test)
                     elif model.type == "LLM":
-                        # TODO: sanity-check if standardization was disabled!!
                         # Passing the text and labels directly for LLMs
                         train_loader = (X_train, y_train)
                         val_loader = (X_val, y_val)
@@ -234,9 +231,9 @@ class ModelTrainer:
 
                     # Set trainer for the model and train
                     model.set_trainer(
-                        trainer_name, train_loader, val_loader, test_loader
+                        trainer_name, train_loader, val_loader, test_loader, disable_model_load=True
                     )
-                    model.trainer.train()
+                    model.trainer.estimate_nr_tokens()
 
                 except Exception as e:
                     logger.error(
@@ -281,7 +278,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--config",
         type=str,
-        default="config_train.yaml",
+        default="/cluster/project/bmds_lab/sepsis_jan/pulse/config_train.yaml",
         help="Path to configuration file",
     )
     return parser.parse_args()

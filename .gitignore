@@ -6,6 +6,7 @@ visualizations/*/
 output_to_keep/
 wandb/
 .vscode/
+*.out
 todo
 utils/__pycache__/
 .venv/

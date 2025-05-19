@@ -336,6 +336,7 @@ class DatasetManager:
             "zhu_2024b_one_shot_preprocessor",
             "sarvari_2024_aggregation_preprocessor",
         ]
+        logger.debug(kwargs)
 
         # Take only n rows if in debug
         debug = kwargs.get("debug", False)
@@ -352,6 +353,21 @@ class DatasetManager:
                 "y_val": data["y_val"].iloc[: self.debug_data_length],
                 "X_test": data["X_test"].iloc[: self.debug_data_length],
                 "y_test": data["y_test"].iloc[: self.debug_data_length],
+            }
+
+        if kwargs.get("count_tokens", False):
+            logger.debug(
+                "Count tokens mode: Taking only %d rows for %s for train and val loader.",
+                self.debug_data_length,
+                dataset_id,
+            )
+            data = {
+                "X_train": data["X_train"].iloc[: self.debug_data_length],
+                "y_train": data["y_train"].iloc[: self.debug_data_length],
+                "X_val": data["X_val"].iloc[: self.debug_data_length],
+                "y_val": data["y_val"].iloc[: self.debug_data_length],
+                "X_test": data["X_test"].iloc[:],
+                "y_test": data["y_test"].iloc[:],
             }
 
         # Initialize X_train and y_train to None for all modes

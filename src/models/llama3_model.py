@@ -79,13 +79,8 @@ class Llama3Model(PulseTemplateModel):
             self.llama_model = AutoModelForCausalLM.from_pretrained(
                 self.model_id,
                 device_map="auto",
-                max_memory={
-                    0: "10GiB",  # GPU 0
-                    1: "10GiB",  # GPU 1
-                },
                 torch_dtype=torch.bfloat16,
             )
-                            # tp_plan="auto",  # Enables tensor parallelism
 
             if self.params.get("tuning", False):
                 logger.info("Applying Prompt Tuning")
@@ -130,12 +125,16 @@ class Llama3Model(PulseTemplateModel):
             return_tensors="pt",
         )
         token_time = time.perf_counter() - token_start
+
         num_prompt_tokens = tokenized_inputs["input_ids"].size(1)
 
-        yes_token_id = self.tokenizer("yes", add_special_tokens=False).input_ids[0]
-        no_token_id = self.tokenizer("no", add_special_tokens=False).input_ids[0]
-        
-        # self.llama_model.to(self.device)
+        # Convert "yes" and "no" tokens to ids
+        yes_token_id = self.tokenizer.convert_tokens_to_ids(self.tokenizer.tokenize("yes"))[0]
+        no_token_id = self.tokenizer.convert_tokens_to_ids(self.tokenizer.tokenize("no"))[0]
+
+        logger.debug("Yes token ID: %s", yes_token_id)
+        logger.debug("No token ID: %s", no_token_id)
+
         input_ids = tokenized_inputs["input_ids"].to(self.device)
         attention_mask = tokenized_inputs["attention_mask"].to(self.device)
 
@@ -152,84 +151,45 @@ class Llama3Model(PulseTemplateModel):
                 pad_token_id=self.tokenizer.pad_token_id,
                 eos_token_id=self.tokenizer.eos_token_id,
             )
-
         infer_time = time.perf_counter() - infer_start
 
-        # Get generated token ids (excluding prompt)
-        gen_ids = outputs.sequences[0][num_prompt_tokens:]
+        # Get generated token ids (excluding prompt) and convert to a Python list
+        generated_token_ids_list = outputs.sequences[0][num_prompt_tokens:].tolist()
+        generated_tokens = self.tokenizer.convert_ids_to_tokens(generated_token_ids_list)
 
-        # Decode the full generated string
         decoded_output = self.tokenizer.decode(
-            gen_ids, skip_special_tokens=True, clean_up_tokenization_spaces=True
+            generated_token_ids_list, skip_special_tokens=True, clean_up_tokenization_spaces=True
         )
         logger.debug("Decoded output:\n %s", decoded_output)
 
-        # Calculate sigmoid over first generated token logits
-        first_token_logits = outputs.scores[0][0]  # shape: (vocab_size,)
-        # top_gen_ids = gen_ids[:5]  # First few generated tokens
-        # print("Generated token IDs:", top_gen_ids)
-        # print("Decoded tokens:", [self.tokenizer.decode([tid]) for tid in top_gen_ids])
-        # logger.debug(
-        #     "First token logits: %s", first_token_logits
-        # )
-        # Apply sigmoid to get probabilities
-        # Get top 10 probabilities and their corresponding token indices
-        probs = torch.topk(F.sigmoid(first_token_logits, dim=-1), 10) #(values, indices)
-        topk_values, topk_indices = probs
+        parsed = extract_dict(decoded_output)
+        classification = parsed.get("classification", "unknown")
+        probability = 0.5  # Default probability
 
-        # Convert indices to list for easier matching
-        topk_indices_list = topk_indices.tolist()
-        topk_values_list = topk_values.tolist()
-
-        # Initialize with fallback values
-        yes_prob = 0.0
-        no_prob = 0.0
-
-        # Find index of yes_token_id and extract its probability
-        if yes_token_id in topk_indices_list:
-            yes_index = topk_indices_list.index(yes_token_id)
-            yes_prob = topk_values_list[yes_index]
-
-        if no_token_id in topk_indices_list:
-            no_index = topk_indices_list.index(no_token_id)
-            no_prob = topk_values_list[no_index]
-
-
-        # Fallback if yes and no tokens were not picked up. They are inlcuded in the vocab but
-        # have a value a -inf as logits
-        if yes_prob == 0.0 and no_prob == 0.0:
-            logger.warning(
-                "Yes or No token probabilities are zero. Defaulting to 0.5."
-            )
-            yes_prob = 0.5
-            no_prob = 0.5
-
-        if yes_prob > no_prob:
-            probability = yes_prob
+        if classification == "yes":
+            try:
+                yes_index = generated_token_ids_list.index(yes_token_id)
+                if yes_index < len(outputs.scores):
+                    logits = outputs.scores[yes_index][0]
+                    probs = torch.nn.functional.softmax(logits, dim=-1)
+                    probability = round(probs[yes_token_id].item(), 4)
+                    logger.debug(f"'yes' token found at index {yes_index} with probability {probability:.4f}")
+            except ValueError:
+                logger.warning("'yes' token not found in generated sequence.")
+        elif classification == "no":
+            try:
+                no_index = generated_token_ids_list.index(no_token_id)
+                if no_index < len(outputs.scores):
+                    logits = outputs.scores[no_index][0]
+                    probs = torch.nn.functional.softmax(logits, dim=-1)
+                    probability = round(probs[no_token_id].item(), 4)
+                    logger.debug(f"'no' token found at index {no_index} with probability {probability:.4f}")
+            except ValueError:
+                logger.warning("'no' token not found in generated sequence.")
         else:
-            probability = 1 - no_prob
-        logger.debug(
-            "Yes token ID: %s | No token ID: %s", yes_token_id, no_token_id
-        )
-        logger.debug(
-            "Top 10 token probs: %s", probs
-        )
-        logger.debug(
-            "Yes token probability: %.4f | No token probability: %.4f",
-            yes_prob,
-            no_prob,
-        )
+            logger.warning(f"Classification is '{classification}', cannot determine probability.")
 
-        # Extract dict from the decoded output (e.g., via regex or JSON parsing)
-        try:
-            parsed = extract_dict(decoded_output)
-            # logger.debug("Parsed output: %s", parsed)
-        except Exception as e:
-            logger.warning(f"Failed to parse output: {decoded_output}")
-            parsed = {"diagnosis": None, "explanation": decoded_output}
-
-        # Add diagnosis probability based on first token
-        parsed["probability"] = round(probability, 4)
+        parsed["probability"] = probability
 
         logger.info(
             f"Tokenization time: {token_time:.4f}s | Inference time: {infer_time:.4f}s | Tokens: {num_prompt_tokens}"
@@ -241,6 +201,197 @@ class Llama3Model(PulseTemplateModel):
             "infer_time": infer_time,
             "num_tokens": num_prompt_tokens,
         }
+
+
+
+    # def infer_llm(self, input_text: str) -> Dict[str, Any]:
+    #     """Runs the HF model on the input and extracts diagnosis, explanation, and probability."""
+    #     logger.info("---------------------------------------------")
+
+    #     if not isinstance(input_text, str):
+    #         input_text = str(input_text)
+
+    #     # Format input using prompt template
+    #     input_text = prompt_template_hf(input_text)
+
+    #     # Tokenize with chat template
+    #     chat_prompt = self.tokenizer.apply_chat_template(
+    #         input_text, tokenize=False, add_generation_prompt=True
+    #     )
+
+    #     token_start = time.perf_counter()
+    #     tokenized_inputs = self.tokenizer(
+    #         chat_prompt,
+    #         return_tensors="pt",
+    #     )
+    #     token_time = time.perf_counter() - token_start
+        
+    #     num_prompt_tokens = tokenized_inputs["input_ids"].size(1)
+
+    #     # yes_token_id = self.tokenizer.convert_tokens_to_ids("yes")
+    #     # no_token_id = self.tokenizer.convert_tokens_to_ids("no")
+    #     yes_token = self.tokenizer.tokenize("yes")[0]
+    #     no_token = self.tokenizer.tokenize("no")[0]
+    #     logger.debug("Yes token ID: %s", yes_token)
+    #     logger.debug("No token ID: %s", no_token)
+        
+    #     input_ids = tokenized_inputs["input_ids"].to(self.device)
+    #     attention_mask = tokenized_inputs["attention_mask"].to(self.device)
+
+    #     # Generate output with scores
+    #     infer_start = time.perf_counter()
+    #     with torch.no_grad():
+    #         outputs = self.llama_model.generate(
+    #             input_ids=input_ids,
+    #             attention_mask=attention_mask,
+    #             max_new_tokens=self.params.max_new_tokens,
+    #             return_dict_in_generate=True,
+    #             output_scores=True,
+    #             output_hidden_states=False,
+    #             pad_token_id=self.tokenizer.pad_token_id,
+    #             eos_token_id=self.tokenizer.eos_token_id,
+    #         )
+
+    #     infer_time = time.perf_counter() - infer_start
+
+    #     # Get generated token ids (excluding prompt)
+    #     # gen_ids = outputs.sequences[0][num_prompt_tokens:]
+    #     generated_token_ids = outputs.sequences[0][num_prompt_tokens:]  # only new tokens
+    #     generated_tokens = self.tokenizer.convert_ids_to_tokens(generated_token_ids)
+
+    #     yes_index = None
+    #     no_index = None
+
+    #     for i, tok in enumerate(generated_tokens):
+    #         if tok == yes_token and yes_index is None:
+    #             yes_index = i
+    #         elif tok == no_token and no_index is None:
+    #             no_index = i
+
+    #     if yes_index is not None:
+    #         logits = outputs.scores[yes_index][0]  # logits for the token at that index
+    #         probs = F.softmax(logits, dim=-1)
+    #         yes_prob = probs[self.tokenizer.convert_tokens_to_ids(yes_token)].item()
+    #     else:
+    #         yes_prob = None
+
+    #     if no_index is not None:
+    #         logits = outputs.scores[no_index][0]
+    #         probs = F.softmax(logits, dim=-1)
+    #         no_prob = probs[self.tokenizer.convert_tokens_to_ids(no_token)].item()
+    #     else:
+    #         no_prob = None
+
+    #     logger.debug("Yes probability: %s", yes_prob)
+    #     logger.debug("No probability: %s", no_prob)
+
+    #     # answer_token_index = None
+    #     # for i, token_id in enumerate(gen_ids):
+    #     #     if token_id == yes_token_id or token_id == no_token_id:
+    #     #         # Find the index of the first token that matches yes_token_id or no_token_id
+    #     #         # This is the token we will use to calculate the probability
+    #     #         answer_token_index = i
+    #     #         break
+    #     # if answer_token_index is None:
+    #     #     logger.warning(
+    #     #         "No yes_token_id or no_token_id found in generated tokens. Defaulting to 0.5."
+    #     #     )
+    #     #     answer_token_index = 0
+
+    #     # Decode the full generated string
+    #     decoded_output = self.tokenizer.decode(
+    #         generated_token_ids, skip_special_tokens=True, clean_up_tokenization_spaces=True
+    #     )
+    #     # logger.debug("Decoded output:\n %s", decoded_output)
+
+    #     # # Calculate sigmoid over first generated token logits
+    #     # # first_token_logits = outputs.scores[answer_token_index][0]  # shape: (vocab_size,)
+    #     # first_token_logits = outputs.scores[0][0]  # First generated token
+    #     # print(first_token_logits[yes_token_id], first_token_logits[no_token_id])
+
+    #     # yes_logit = first_token_logits[yes_token_id]
+    #     # no_logit = first_token_logits[no_token_id]
+
+    #     # logits = torch.tensor([yes_logit, no_logit])
+    #     # probs = F.softmax(logits, dim=-1)
+    #     # yes_prob = probs[0].item()
+    #     # no_prob = probs[1].item()
+
+        
+    #     # # Apply sigmoid to get probabilities
+    #     # # Get top 10 probabilities and their corresponding token indices
+    #     # token_probs = F.softmax(first_token_logits, dim=-1)
+    #     # topk_values, topk_indices = torch.topk(token_probs, 10)
+        
+    #     # logger.debug("Top k probs: %s", token_probs)
+
+    #     # # Convert indices to list for easier matching
+    #     # topk_indices_list = topk_indices.tolist()
+    #     # topk_values_list = topk_values.tolist()
+
+    #     # # Initialize with fallback values
+    #     # yes_prob = 0.0
+    #     # no_prob = 0.0
+
+    #     # # # Find index of yes_token_id and extract its probability
+    #     # # if yes_token_id in topk_indices_list:
+    #     # #     yes_index = topk_indices_list.index(yes_token_id)
+    #     # #     yes_prob = topk_values_list[yes_index]
+
+    #     # # if no_token_id in topk_indices_list:
+    #     # #     no_index = topk_indices_list.index(no_token_id)
+    #     # #     no_prob = topk_values_list[no_index]
+
+    #     # yes_prob = token_probs[yes_token_id].item()
+    #     # no_prob = token_probs[no_token_id].item()
+
+
+    #     # Fallback if yes and no tokens were not picked up. They are inlcuded in the vocab but
+    #     # have a value a -inf as logits
+    #     # if yes_prob == 0.0 and no_prob == 0.0:
+    #     #     logger.warning(
+    #     #         "Yes or No token probabilities are zero. Defaulting to 0.5."
+    #     #     )
+    #     #     yes_prob = 0.5
+    #     #     no_prob = 0.5
+
+    #     if yes_prob > no_prob:
+    #         probability = yes_prob
+    #     else:
+    #         probability = 1 - no_prob
+    #     logger.debug(
+    #         "Yes token ID: %s | No token ID: %s", yes_token, no_token
+    #     )
+    #     # logger.debug(
+    #     #     "Top 10 token probs: %s", (topk_values, topk_indices)
+    #     # )
+    #     logger.debug(
+    #         "Yes token probability: %.4f | No token probability: %.4f",
+    #         yes_prob,
+    #         no_prob,
+    #     )
+
+    #     # Extract dict from the decoded output (e.g., via regex or JSON parsing)
+    #     try:
+    #         parsed = extract_dict(decoded_output)
+    #         # logger.debug("Parsed output: %s", parsed)
+    #     except Exception as e:
+    #         logger.warning(f"Failed to parse output: {decoded_output}")
+    #         parsed = {"diagnosing": None, "classification": "na", "explanation": decoded_output}
+
+    #     # Add diagnosis probability based on first token
+    #     parsed["probability"] = round(probability, 4)
+
+    #     logger.info(
+    #         f"Tokenization time: {token_time:.4f}s | Inference time: {infer_time:.4f}s | Tokens: {num_prompt_tokens}"
+    #     )
+
+    #     return {
+    #         "generated_text": parsed,
+    #         "token_time": token_time,
+    #         "infer_time": infer_time,
+    #         "num_tokens": num_prompt_tokens,
+    #     }
     
     def calculate_tokens(self, input_text: str) -> Dict[str, Any]:
         """
@@ -278,6 +429,7 @@ class Llama3Model(PulseTemplateModel):
         train_dataloader: Any,
         val_dataloader: Any,
         test_dataloader: Any,
+        **kwargs: Any,
     ) -> None:
         """Sets the associated trainer instance.
 
@@ -288,7 +440,7 @@ class Llama3Model(PulseTemplateModel):
             test_dataloader: DataLoader for test data.
         """
         self.trainer = Llama3Trainer(
-            self, train_dataloader, val_dataloader, test_dataloader
+            self, train_dataloader, val_dataloader, test_dataloader, **kwargs
         )
 
     def parse_output(self, output: str) -> float:
@@ -319,7 +471,7 @@ class Llama3Trainer:
     """Trainer class for Llama3Model."""
 
     def __init__(
-        self, model: Llama3Model, train_loader, val_loader, test_loader
+        self, model: Llama3Model, train_loader, val_loader, test_loader, **kwargs
     ) -> None:
         """
         Initialize the Llama3 trainer. Finetruning is not implemented yet.
@@ -332,7 +484,10 @@ class Llama3Trainer:
             test_loader: The DataLoader object for the testing dataset.
         """
         # Load the model and tokenizer
-        # model._load_model()  # Comment out to only test preprocessing
+        if kwargs.get("disable_model_load", False):
+            logger.info("Skipping model loading for debugging purposes.")
+        else:
+            model._load_model()  # Comment out to only test preprocessing
 
         self.model = model
         self.llama_model = model.llama_model
@@ -505,7 +660,7 @@ class Llama3Trainer:
                 y_true,
             )
             if verbose > 1:
-                logger.info("Generated label: %s", generated_text["diagnosis"])
+                logger.info("Diagnosis for: %s", generated_text["diagnosing"])
                 logger.info("Generated explanation: %s \n", generated_text["explanation"])
             if verbose > 2:
                 logger.info("Input prompt: %s \n", X_input)

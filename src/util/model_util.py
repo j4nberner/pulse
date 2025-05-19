@@ -312,21 +312,35 @@ def prompt_template_hf(input_text: str, model=None) -> List[Dict[str, str]]:
         A list of chat messages (dicts) for the LLM.
     """
     system_message = (
-        "You are a helpful assistant and medical professional that analyzes ICU time-series "
-        "data and determines the most likely diagnosis.\n\n"
-        "Be specific and check the values against reference values.\n"
-        "Start your answer with 'yes' or 'no' to indicate whether the patient is diagnosed or not.\n"
-        "Make sure to not use capital letters or spaces for the yes or no answer.\n"
-        "Then, make a line break and return the result strictly in this JSON format.\n"
-        "Make sure that the binary answer is consistent with the JSON object.\n\n"
-        "Example:\n"
-        "yes\n"
+        "You are a helpful assistant and experienced medical professional analyzing ICU time-series data "
+        "to determine the presence of a critical condition.\n\n"
+        "Your response must strictly follow this format:\n"
+        "Output a valid JSON object with three keys: 'diagnosing', 'classification' and 'explanation'.\n\n"
+        "1. 'diagnosing' should be a string indicating the condition you are diagnosing.\n"
+        "2. 'classification' should be a string indicating whether the condition is present ('yes') or absent ('no').\n"
+        "3. 'explanation' should be a string providing a brief explanation of your diagnosis.\n\n"
+        "The JSON object should be formatted as follows:\n"
         "{\n"
-        '  "diagnosis": "<diagnosis or not-diagnosis>",\n'
-        '  "probability": "<a value between 0 and 1 representing probability of your diagnosis>",\n'
-        '  "explanation": "<a brief explanation for the prediction. state reference values and check against provided features>"\n'
+        '  "diagnosing": "<condition>",\n'
+        '  "classification": "<yes/no>",\n'
+        '  "explanation": "<explanation>"\n'
+        "}\n\n"
+        "Do not include any other text or explanations outside of the JSON object.\n"
+        "If you cannot determine the condition, respond with:\n"
+        "{\n"
+        '  "diagnosing": "unknown",\n'
+        '  "classification": "unknown",\n'
+        '  "explanation": "No explanation provided."\n'
         "}\n\n"
     )
+
+    # "Example:\n"
+    #     "{\n"
+    #     '  "diagnosing": "sepsis",\n'
+    #     '  "classification": "yes",\n'
+    #     '  "explanation": "lactate is 4.2 mmol/L (above normal <2.0); blood pressure is low (MAP 62 mmHg), which are signs of sepsis."\n'
+    #     "}\n\n"
+
 
     # Apply model-specific formatting if needed
     if model == "Gemma3Model":
@@ -346,12 +360,12 @@ def prompt_template_hf(input_text: str, model=None) -> List[Dict[str, str]]:
     elif model == "DeepseekR1Model":
         # avoid using a system prompt. including it all in the user prompt
         formated_prompt = [
-            {"role": "user", "content": system_message + f"Text:\n{input_text}"},
+            {"role": "user", "content": f"{system_message} Text:\n{input_text} <think>\n"},
         ]
     else:
         formated_prompt = [
             {"role": "system", "content": system_message},
-            {"role": "user", "content": f"Text:\n{input_text}"},
+            {"role": "user", "content": input_text},
         ]
 
     return formated_prompt
@@ -379,8 +393,8 @@ def extract_last_json_block(text: str) -> Optional[str]:
 def extract_dict(output_text: str) -> Optional[Dict[str, str]]:
     """Extract and parse the last JSON-like object from the model's output text and return it as a dictionary."""
     default_json = {
-        "diagnosis": "unknown",
-        "probability": 0.5,
+        "diagnosing": "unknown",
+        "classification": "unknown",
         "explanation": "No explanation provided.",
     }
 
