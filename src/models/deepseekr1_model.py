@@ -8,6 +8,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import torch.nn.functional as F
 from langchain.prompts import PromptTemplate
 from langchain.schema.runnable import Runnable
 from peft import PromptTuningConfig, PromptTuningInit, TaskType, get_peft_model
@@ -77,13 +78,20 @@ class DeepseekR1Model(PulseTemplateModel):
         """Loads the tokenizer and model weights and initializes HF pipeline."""
         try:
             self.tokenizer = AutoTokenizer.from_pretrained(
-                self.model_id, use_fast=False, padding_side="left"
+                self.model_id, padding_side="left"
             )
             self.deepseek_r1_model = AutoModelForCausalLM.from_pretrained(
                 self.model_id,
                 device_map="auto",
-                torch_dtype=torch.float16,
+                torch_dtype=torch.bfloat16,
             )
+            # Add special tokens
+            special_tokens = {"additional_special_tokens": ["<yes>", "<no>"]}
+            added = self.tokenizer.add_special_tokens(special_tokens)
+            print(f"Special tokens added: {added}")  # should be 2
+            print("Yes token ID:", self.tokenizer.convert_tokens_to_ids("<yes>"))
+            print("No token ID:", self.tokenizer.convert_tokens_to_ids("<no>"))
+            self.deepseek_r1_model.resize_token_embeddings(len(self.tokenizer))
 
             if self.params.get("tuning", False):
                 logger.info("Applying Prompt Tuning")
@@ -116,6 +124,8 @@ class DeepseekR1Model(PulseTemplateModel):
         Returns:
             A dictionary with the generated text, timing information, and token count.
         """
+        logger.info("---------------------------------------------")
+
         if not isinstance(input_text, str):
             input_text = str(input_text)
 
@@ -123,81 +133,68 @@ class DeepseekR1Model(PulseTemplateModel):
             input_text, model="DeepseekR1Model"
         )  # Apply prompt template to structure the input and guide output.
 
-        token_start = time.perf_counter()
         chat_prompt = self.tokenizer.apply_chat_template(
             input_text, tokenize=False, add_generation_prompt=True
         )
-
-        # logger.debug("-------------CHAT PROMPT-------------")
-        # logger.debug(chat_prompt)
-
+        token_start = time.perf_counter()
         tokenized_inputs = self.tokenizer(
             chat_prompt,
             return_tensors="pt",
         )
         token_time = time.perf_counter() - token_start
-        num_tokens = tokenized_inputs["input_ids"].numel()
-
-        # logger.debug("-------------DECODED CHAT PROMPT-------------")
-        # logger.debug(
-        #     self.tokenizer.decode(
-        #         tokenized_inputs["input_ids"][0],
-        #         skip_special_tokens=True,
-        #         clean_up_tokenization_spaces=True,
-        #     )
-        # )
+        num_prompt_tokens = tokenized_inputs["input_ids"].size(1)
+        
+        input_ids = tokenized_inputs["input_ids"].to(self.device)
+        attention_mask = tokenized_inputs["attention_mask"].to(self.device)
 
         infer_start = time.perf_counter()
-        self.deepseek_r1_model.to(self.device)
-
         with torch.no_grad():
             outputs = self.deepseek_r1_model.generate(
-                input_ids=tokenized_inputs["input_ids"].to(self.device),
-                attention_mask=tokenized_inputs["attention_mask"].to(self.device),
+                input_ids=input_ids,
+                attention_mask=attention_mask,
                 max_new_tokens=self.params.max_new_tokens,
+                return_dict_in_generate=True,
+                output_scores=True,
+                output_hidden_states=False,
+                pad_token_id=self.tokenizer.pad_token_id,
                 eos_token_id=self.tokenizer.eos_token_id,
-                pad_token_id=self.tokenizer.eos_token_id,
             )
 
-        # 3) Slice off the prompt part:
-        gen_ids = outputs[0, num_tokens:]
+        infer_time = time.perf_counter() - infer_start
 
-        # 4) Decode just the generated tokens:
-        generated_text = self.tokenizer.decode(
+        # Get generated token ids (excluding prompt)
+        gen_ids = outputs.sequences[0][num_prompt_tokens:]
+        answer_token_index = None
+
+        # Decode the full generated string
+        decoded_output = self.tokenizer.decode(
             gen_ids, skip_special_tokens=True, clean_up_tokenization_spaces=True
         )
 
-        infer_time = time.perf_counter() - infer_start
-        logger.debug(
-            "Decoded full outputs: %s",
-            generated_text,
-        )
+        # Extract the thinking part
+        thinking_output = decoded_output.split("</think>")[0]
+        answer_output = decoded_output.split("</think>")[1]
 
-        generated_text = extract_dict(
-            generated_text
-        )  # Extract dict from the generated text.
-        logger.debug("Extracted dict: %s", generated_text)
+        logger.debug("Thinking output:\n %s", thinking_output)
+        logger.debug("Answer output:\n %s", answer_output)
 
-        generated_text["probability"] = float(generated_text["probability"])
-
-        generated_text["probability"] = round(
-            (
-                abs(generated_text["probability"] - 1.0)
-                if "not-" in generated_text["diagnosis"]
-                else abs(generated_text["probability"])
-            ),
-            3,
-        )
+        # Extract dict from the decoded output
+        try:
+            parsed = extract_dict(answer_output)
+            # logger.debug("Parsed output: %s", parsed)
+        except Exception as e:
+            logger.warning(f"Failed to parse output: {decoded_output}")
+            parsed = {"diagnosis": None, "probability": 0.5, "explanation": decoded_output}
 
         logger.info(
-            f"Tokenization time: {token_time:.4f}s | Inference time: {infer_time:.4f}s | Tokens: {num_tokens}"
+            f"Tokenization time: {token_time:.4f}s | Inference time: {infer_time:.4f}s | Tokens: {num_prompt_tokens}"
         )
 
         return {
-            "generated_text": generated_text,
+            "generated_text": parsed,
             "token_time": token_time,
             "infer_time": infer_time,
-            "num_tokens": num_tokens,
+            "num_tokens": num_prompt_tokens,
         }
 
     def set_trainer(
@@ -218,29 +215,6 @@ class DeepseekR1Model(PulseTemplateModel):
         self.trainer = DeepseekR1Trainer(
             self, train_dataloader, val_dataloader, test_dataloader
         )
-
-    def parse_output(self, output: str) -> float:
-        """Parses the output string to extract the predicted probability.
-
-        Args:
-            output: The generated text from the model.
-
-        Returns:
-            A float representing the predicted probability.
-        """
-        # TODO: Implement a more robust parsing method
-        try:
-            # Extract the floating-point number from the output
-            if "not-" in output:
-                probability = np.abs(float(output.split(":")[-1].strip()) - 1.0)
-            else:
-                probability = float(output.split(":")[-1].strip())
-            return probability
-        except (ValueError, IndexError) as e:
-            logger.warning("Failed to parse output. Defaulting to 0.5: %s", e)
-            # Log the error and return a default value
-            logger.info("Output: %s", output)
-            return 0.5  # Default to 0.5 if parsing fails
 
 
 class DeepseekR1Trainer:
@@ -469,20 +443,6 @@ class DeepseekR1Trainer:
         logger.info("Test metrics: %s", metrics_tracker.summary)
 
         return float(np.mean(val_loss))
-
-    def evaluate_batched(self, test_loader: Any, save_report: bool = False) -> float:
-        """Evaluates the model on a given test set in batches.
-
-        Args:
-            test_loader: Tuple of (X, y) test data in DataFrame form.
-            save_report: Whether to save the evaluation report.
-
-        Returns:
-            The average validation loss across the test dataset.
-        """
-        NotImplementedError(
-            "Batch evaluation is not implemented for DeepseekR1Model. Use evaluate_single instead."
-        )
 
     def encode_prompt_target(
         self,

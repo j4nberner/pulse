@@ -67,7 +67,7 @@ class PreprocessorBaseline:
             "static_imputation": True,
             "dynamic_imputation": True,
             "save_data": True,
-            "split_ratios": {"train": 0.7, "val": 0.1, "test": 0.2},
+            "split_ratios": {"train": 0.8, "val": 0.1, "test": 0.1},
         }
 
         # Update with user config if provided
@@ -1021,14 +1021,7 @@ class PreprocessorBaseline:
             logger.error("Error in preprocessing pipeline: %s", e)
             raise
 
-    def load_preprocessed_data(self, task: str, dataset_name: str) -> Tuple[
-        pd.DataFrame,
-        pd.DataFrame,
-        pd.DataFrame,
-        pd.DataFrame,
-        pd.DataFrame,
-        pd.DataFrame,
-    ]:
+    def load_preprocessed_data(self, task: str, dataset_name: str) -> Optional[Tuple]:
         """
         Load preprocessed data for a specific task and dataset.
 
@@ -1037,16 +1030,13 @@ class PreprocessorBaseline:
             dataset_name (str): Dataset name ('hirid', 'miiv', 'eicu')
 
         Returns:
-            Tuple containing:
+            Optional[Tuple]: Tuple containing:
                 X_train (pd.DataFrame): Training features
                 X_val (pd.DataFrame): Validation features
                 X_test (pd.DataFrame): Testing features
                 y_train (pd.DataFrame): Training labels
                 y_val (pd.DataFrame): Validation labels
                 y_test (pd.DataFrame): Testing labels
-
-        Raises:
-            FileNotFoundError: If preprocessed data files don't exist
         """
         # Store task and dataset name as instance variables
         self.task = task
@@ -1063,11 +1053,8 @@ class PreprocessorBaseline:
 
         # Check if directory exists with current configuration
         if not os.path.exists(directory):
-            raise FileNotFoundError(
-                f"Preprocessed data directory does not exist: {directory}"
-            )
-
-        try:
+            return None
+        else:
             # Load files
             X_train = pd.read_parquet(os.path.join(directory, "X_train.parquet"))
             y_train = pd.read_parquet(os.path.join(directory, "y_train.parquet"))
@@ -1079,9 +1066,6 @@ class PreprocessorBaseline:
             logger.info("Loaded preprocessed data from %s", directory)
 
             return X_train, X_val, X_test, y_train, y_val, y_test
-
-        except Exception as e:
-            raise
 
     def print_statistics(self, statistics_list: List[Dict[str, Any]]) -> None:
         """

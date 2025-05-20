@@ -1,4 +1,3 @@
-from .biomistral_model import BioMistralModel
 from .cnn_model import CNNModel
 from .deepseekr1_model import DeepseekR1Model
 from .gemma3_model import Gemma3Model
@@ -8,7 +7,6 @@ from .lightgbm_model import LightGBMModel
 from .llama3_model import Llama3Model
 from .llama4_model import Llama4Model
 from .lstm_model import LSTMModel
-from .meditron_model import MeditronModel
 from .randomforest_model import RandomForestModel
 from .xgboost_model import XGBoostModel
 
@@ -23,9 +21,7 @@ model_cls_name_dict = {
     "Llama3Model": Llama3Model,
     "Llama4Model": Llama4Model,
     "Gemma3Model": Gemma3Model,
-    "MeditronModel": MeditronModel,
     "DeepseekR1Model": DeepseekR1Model,
-    "BioMistralModel": BioMistralModel,
 }
 
 

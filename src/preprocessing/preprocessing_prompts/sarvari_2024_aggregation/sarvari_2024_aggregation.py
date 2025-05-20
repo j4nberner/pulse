@@ -162,6 +162,7 @@ def build_sarvari_query(
                     "Then your answer may be: \n"
                     "{\n"
                     f' "diagnosis": "{diagnosis[0]}",\n'
+                    ' "probability": "0.5"\n'
                     '  "explanation": "<a brief explanation for the prediction>"\n'
                     "}\n\n"
                 )
@@ -191,10 +192,9 @@ def _wrap_for_few_shot_template(
     """
     combined_prompts = []
     prefix = (
-        f"Suggest a diagnosis of {task} for the following patient data. Reply with yes or no.\n"
+        f"Suggest a diagnosis of {task} for the following patient data. Reply with {task} or not-{task}.\n"
         "In addition, include information about patient's medical history (if any). \n"
-        "Give exact numbers and/or text quotes from the data that made you think of each of the diagnoses and, if necessary, give further tests that could confirm the diagnosis.\n"
-        "Use the International Classification of Disease (ICD) standard for reporting the diagnoses.\n"
+        "Give exact numbers and/or text quotes from the data that made you think of each of the diagnoses.\n"
         "Before finalizing your answer check if you haven't missed any abnormal data points. \n"
     )
 

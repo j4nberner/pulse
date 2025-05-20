@@ -68,6 +68,7 @@ class Llama3Model(PulseTemplateModel):
             load_in_8bit=True, llm_int8_threshold=6.0, llm_int8_has_fp16_weight=True
         )
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        logger.debug("Number of GPUs: %d", torch.cuda.device_count())
 
     def _load_model(self) -> None:
         """Loads the tokenizer and model weights and initializes HF pipeline."""
@@ -124,12 +125,9 @@ class Llama3Model(PulseTemplateModel):
             return_tensors="pt",
         )
         token_time = time.perf_counter() - token_start
+
         num_prompt_tokens = tokenized_inputs["input_ids"].size(1)
 
-        yes_token_id = self.tokenizer("yes", add_special_tokens=False).input_ids[0]
-        no_token_id = self.tokenizer("no", add_special_tokens=False).input_ids[0]
-        
-        self.llama_model.to(self.device)
         input_ids = tokenized_inputs["input_ids"].to(self.device)
         attention_mask = tokenized_inputs["attention_mask"].to(self.device)
 
@@ -141,89 +139,33 @@ class Llama3Model(PulseTemplateModel):
                 attention_mask=attention_mask,
                 max_new_tokens=self.params.max_new_tokens,
                 return_dict_in_generate=True,
-                output_scores=True,
+                output_scores=False,
                 output_hidden_states=False,
                 pad_token_id=self.tokenizer.pad_token_id,
                 eos_token_id=self.tokenizer.eos_token_id,
             )
-
         infer_time = time.perf_counter() - infer_start
 
-        # Get generated token ids (excluding prompt)
-        gen_ids = outputs.sequences[0][num_prompt_tokens:]
+        # Get generated token ids (excluding prompt) and convert to a Python list
+        generated_token_ids_list = outputs.sequences[0][num_prompt_tokens:].tolist()
+        generated_tokens = self.tokenizer.convert_ids_to_tokens(generated_token_ids_list)
 
-        # Decode the full generated string
         decoded_output = self.tokenizer.decode(
-            gen_ids, skip_special_tokens=True, clean_up_tokenization_spaces=True
+            generated_token_ids_list, skip_special_tokens=True, clean_up_tokenization_spaces=True
         )
         logger.debug("Decoded output:\n %s", decoded_output)
 
-        # Calculate softmax over first generated token logits
-        first_token_logits = outputs.scores[0][0]  # shape: (vocab_size,)
-        # top_gen_ids = gen_ids[:5]  # First few generated tokens
-        # print("Generated token IDs:", top_gen_ids)
-        # print("Decoded tokens:", [self.tokenizer.decode([tid]) for tid in top_gen_ids])
-        # logger.debug(
-        #     "First token logits: %s", first_token_logits
-        # )
-        # Apply softmax to get probabilities
-        # Get top 10 probabilities and their corresponding token indices
-        probs = torch.topk(F.softmax(first_token_logits, dim=-1), 10) #(values, indices)
-        topk_values, topk_indices = probs
-
-        # Convert indices to list for easier matching
-        topk_indices_list = topk_indices.tolist()
-        topk_values_list = topk_values.tolist()
-
-        # Initialize with fallback values
-        yes_prob = 0.0
-        no_prob = 0.0
-
-        # Find index of yes_token_id and extract its probability
-        if yes_token_id in topk_indices_list:
-            yes_index = topk_indices_list.index(yes_token_id)
-            yes_prob = topk_values_list[yes_index]
-
-        if no_token_id in topk_indices_list:
-            no_index = topk_indices_list.index(no_token_id)
-            no_prob = topk_values_list[no_index]
-
-
-        # Fallback if yes and no tokens were not picked up. They are inlcuded in the vocab but
-        # have a value a -inf as logits
-        if yes_prob == 0.0 and no_prob == 0.0:
-            logger.warning(
-                "Yes or No token probabilities are zero. Defaulting to 0.5."
-            )
-            yes_prob = 0.5
-            no_prob = 0.5
-
-        if yes_prob > no_prob:
-            probability = yes_prob
-        else:
-            probability = 1 - no_prob
-        logger.debug(
-            "Yes token ID: %s | No token ID: %s", yes_token_id, no_token_id
-        )
-        logger.debug(
-            "Top 10 token probs: %s", probs
-        )
-        logger.debug(
-            "Yes token probability: %.4f | No token probability: %.4f",
-            yes_prob,
-            no_prob,
-        )
-
         # Extract dict from the decoded output (e.g., via regex or JSON parsing)
-        try:
-            parsed = extract_dict(decoded_output)
-            # logger.debug("Parsed output: %s", parsed)
-        except Exception as e:
-            logger.warning(f"Failed to parse output: {decoded_output}")
-            parsed = {"diagnosis": None, "explanation": decoded_output}
+        parsed = extract_dict(decoded_output)
 
-        # Add diagnosis probability based on first token
-        parsed["probability"] = round(probability, 4)
+        # Check if probability is a number or string, try to convert, else default to 0.5
+        prob = parsed.get("probability", 0.5)
+        try:
+            prob = float(prob)
+        except (ValueError, TypeError):
+            logger.warning("Failed to convert probability to float. Defaulting to 0.5")
+            prob = 0.5
+        parsed["probability"] = prob
 
         logger.info(
             f"Tokenization time: {token_time:.4f}s | Inference time: {infer_time:.4f}s | Tokens: {num_prompt_tokens}"
@@ -235,6 +177,35 @@ class Llama3Model(PulseTemplateModel):
             "infer_time": infer_time,
             "num_tokens": num_prompt_tokens,
         }
+    
+    def calculate_tokens(self, input_text: str) -> Dict[str, Any]:
+        """
+        Runs the full inference without loading the model and calculates the number of input and output tokens.
+        Assuming num_output_tokens = max_new_tokens.
+
+        Args:
+            input_text: The input text to be tokenized.
+        Returns:
+            A dictionary containing the number of input and output tokens.
+        """
+
+        # Format input using prompt template
+        input_text = prompt_template_hf(input_text)
+
+        # Tokenize with chat template
+        chat_prompt = self.tokenizer.apply_chat_template(
+            input_text, tokenize=False, add_generation_prompt=True
+        )
+        tokenized_inputs = self.tokenizer(
+            chat_prompt,
+            return_tensors="pt",
+        )
+        num_input_tokens = tokenized_inputs["input_ids"].size(1)
+
+        return {
+            "num_input_tokens": num_input_tokens,
+            "num_output_tokens": self.params.max_new_tokens,
+        }
 
 
     def set_trainer(
@@ -243,6 +214,7 @@ class Llama3Model(PulseTemplateModel):
         train_dataloader: Any,
         val_dataloader: Any,
         test_dataloader: Any,
+        **kwargs: Any,
     ) -> None:
         """Sets the associated trainer instance.
 
@@ -253,7 +225,7 @@ class Llama3Model(PulseTemplateModel):
             test_dataloader: DataLoader for test data.
         """
         self.trainer = Llama3Trainer(
-            self, train_dataloader, val_dataloader, test_dataloader
+            self, train_dataloader, val_dataloader, test_dataloader, **kwargs
         )
 
     def parse_output(self, output: str) -> float:
@@ -284,7 +256,7 @@ class Llama3Trainer:
     """Trainer class for Llama3Model."""
 
     def __init__(
-        self, model: Llama3Model, train_loader, val_loader, test_loader
+        self, model: Llama3Model, train_loader, val_loader, test_loader, **kwargs
     ) -> None:
         """
         Initialize the Llama3 trainer. Finetruning is not implemented yet.
@@ -297,7 +269,10 @@ class Llama3Trainer:
             test_loader: The DataLoader object for the testing dataset.
         """
         # Load the model and tokenizer
-        model._load_model()  # Comment out to only test preprocessing
+        if kwargs.get("disable_model_load", False):
+            logger.info("Skipping model loading for debugging purposes.")
+        else:
+            model._load_model()  #
 
         self.model = model
         self.llama_model = model.llama_model
@@ -470,7 +445,7 @@ class Llama3Trainer:
                 y_true,
             )
             if verbose > 1:
-                logger.info("Generated label: %s", generated_text["diagnosis"])
+                logger.info("Diagnosis for: %s", generated_text["diagnosis"])
                 logger.info("Generated explanation: %s \n", generated_text["explanation"])
             if verbose > 2:
                 logger.info("Input prompt: %s \n", X_input)
@@ -512,6 +487,48 @@ class Llama3Trainer:
         logger.info("Test metrics: %s", metrics_tracker.summary)
 
         return float(np.mean(val_loss))
+    
+
+    def estimate_nr_tokens(self) -> int:
+        """Estimates the number of tokens for a task-dataset combination.
+
+        Returns:
+            The estimated number of tokens.
+        """
+        logger.info("Estimating number of tokens for the dataset...")
+        # Load the tokenizer
+        self.model.tokenizer = AutoTokenizer.from_pretrained(
+                self.model.model_id, use_fast=False, padding_side="left"
+        )
+
+        test_loader = self.test_loader
+        total_tokens = 0
+        total_input_tokens = 0
+        total_output_tokens = 0
+        num_input_tokens = 0
+        num_output_tokens = 0
+
+        for X, y in zip(test_loader[0].iterrows(), test_loader[1].iterrows()):
+            X_input = X[1].iloc[0]
+            token_dict = self.model.calculate_tokens(X_input)
+            num_input_tokens = token_dict["num_input_tokens"]
+            num_output_tokens = token_dict["num_output_tokens"]
+            total_input_tokens += num_input_tokens
+            total_output_tokens += num_output_tokens
+            total_tokens += num_input_tokens + num_output_tokens
+            logger.debug(
+                "Input tokens: %s | Output tokens: %s",
+                num_input_tokens,
+                num_output_tokens,
+            )
+
+        logger.info(f"Total tokens for the task {self.model.task_name} dataset {self.model.dataset_name}: {total_tokens}")
+        logger.info("Total input tokens: %s", total_input_tokens)
+        logger.info("Total output tokens: %s", total_output_tokens)
+        logger.info("Average input tokens: %s", total_input_tokens / len(test_loader[0]))
+        logger.info("Average output tokens: %s", total_output_tokens / len(test_loader[0]))
+        return total_tokens
+
 
     def evaluate_batched(self, test_loader: Any, save_report: bool = False) -> float:
         """Evaluates the model on a given test set in batches.
@@ -531,7 +548,7 @@ class Llama3Trainer:
         self,
         prompt: str,
         target: str,
-        max_len: int = 512,
+        max_len: int = 5000,
         add_special_tokens: bool = True,
     ) -> dict:
         """

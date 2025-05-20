@@ -34,17 +34,9 @@ def setup_logger():
     logger = logging.getLogger("PULSE_logger")
 
     # Set log level based on debug_logging config
-    try:
-        debug_logging = config.general.debug_logging if "general" in config else False
-    except AttributeError:
-        debug_logging = False
-
-    if debug_logging:
-        logger.setLevel(logging.DEBUG)
-        log_level_msg = "Logging level DEBUG enabled"
-    else:
-        logger.setLevel(logging.INFO)
-        log_level_msg = "Logging level INFO enabled (no DEBUG logging)"
+    levelnamesmapping = logging.getLevelNamesMapping()
+    logger_level = config.general.logging_level if "general" in config else "INFO"
+    logger.setLevel(levelnamesmapping.get(logger_level, logging.INFO))
 
     # **Check if handlers already exist to prevent duplication**
     if not logger.hasHandlers():
@@ -64,7 +56,6 @@ def setup_logger():
         logger.addHandler(file_handler)
         logger.addHandler(console_handler)
 
-        logger.info(log_level_msg)
         logger.info("Logging to file: %s", log_file)
 
     return logger, log_dir
