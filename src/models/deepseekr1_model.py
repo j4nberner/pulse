@@ -143,9 +143,6 @@ class DeepseekR1Model(PulseTemplateModel):
         )
         token_time = time.perf_counter() - token_start
         num_prompt_tokens = tokenized_inputs["input_ids"].size(1)
-
-        yes_token_id = self.tokenizer("<yes>").input_ids[0]
-        no_token_id = self.tokenizer("<no>").input_ids[0]
         
         input_ids = tokenized_inputs["input_ids"].to(self.device)
         attention_mask = tokenized_inputs["attention_mask"].to(self.device)
@@ -165,27 +162,13 @@ class DeepseekR1Model(PulseTemplateModel):
 
         infer_time = time.perf_counter() - infer_start
 
-        logger.debug("Full output: %s", outputs.sequences[0])
-        logger.debug("Full decoded output: %s", self.tokenizer.decode(outputs.sequences[0]))
-
         # Get generated token ids (excluding prompt)
         gen_ids = outputs.sequences[0][num_prompt_tokens:]
         answer_token_index = None
-        for i, token_id in enumerate(gen_ids):
-            if token_id == yes_token_id or token_id == no_token_id:
-                # Find the index of the first token that matches yes_token_id or no_token_id
-                # This is the token we will use to calculate the probability
-                answer_token_index = i
-                break
-        if answer_token_index is None:
-            logger.warning(
-                "No yes_token_id or no_token_id found in generated tokens. Defaulting to 0.5."
-            )
-            answer_token_index = 0
 
         # Decode the full generated string
         decoded_output = self.tokenizer.decode(
-            gen_ids, skip_special_tokens=False, clean_up_tokenization_spaces=True
+            gen_ids, skip_special_tokens=True, clean_up_tokenization_spaces=True
         )
 
         # Extract the thinking part
@@ -195,68 +178,13 @@ class DeepseekR1Model(PulseTemplateModel):
         logger.debug("Thinking output:\n %s", thinking_output)
         logger.debug("Answer output:\n %s", answer_output)
 
-        # Calculate sigmoid over first generated token logits
-        first_token_logits = outputs.scores[answer_token_index][0]  # shape: (vocab_size,)
-        logger.debug("First token logits: %s", first_token_logits)
-
-        # Apply sigmoid to get probabilities
-        # Get top 10 probabilities and their corresponding token indices
-        probs = torch.topk(F.sigmoid(first_token_logits), 10) #(values, indices)
-        topk_values, topk_indices = probs
-
-        # Convert indices to list for easier matching
-        topk_indices_list = topk_indices.tolist()
-        topk_values_list = topk_values.tolist()
-
-        # Initialize with fallback values
-        yes_prob = 0.0
-        no_prob = 0.0
-
-        # Find index of yes_token_id and extract its probability
-        if yes_token_id in topk_indices_list:
-            yes_index = topk_indices_list.index(yes_token_id)
-            yes_prob = topk_values_list[yes_index]
-
-        if no_token_id in topk_indices_list:
-            no_index = topk_indices_list.index(no_token_id)
-            no_prob = topk_values_list[no_index]
-
-
-        # Fallback if yes and no tokens were not picked up. They are inlcuded in the vocab but
-        # have a value a -inf as logits
-        if yes_prob == 0.0 and no_prob == 0.0:
-            logger.warning(
-                "Yes or No token probabilities are zero. Defaulting to 0.5."
-            )
-            yes_prob = 0.5
-            no_prob = 0.5
-
-        if yes_prob > no_prob:
-            probability = yes_prob
-        else:
-            probability = 1 - no_prob
-        logger.debug(
-            "Yes token ID: %s | No token ID: %s", yes_token_id, no_token_id
-        )
-        logger.debug(
-            "Top 10 token probs: %s", probs
-        )
-        logger.debug(
-            "Yes token probability: %.4f | No token probability: %.4f",
-            yes_prob,
-            no_prob,
-        )
-
-        # Extract dict from the decoded output (e.g., via regex or JSON parsing)
+        # Extract dict from the decoded output
         try:
-            parsed = extract_dict(decoded_output)
+            parsed = extract_dict(answer_output)
             # logger.debug("Parsed output: %s", parsed)
         except Exception as e:
             logger.warning(f"Failed to parse output: {decoded_output}")
-            parsed = {"diagnosis": None, "explanation": decoded_output}
-
-        # Add diagnosis probability based on first token
-        parsed["probability"] = round(probability, 4)
+            parsed = {"diagnosis": None, "probability": 0.5, "explanation": decoded_output}
 
         logger.info(
             f"Tokenization time: {token_time:.4f}s | Inference time: {infer_time:.4f}s | Tokens: {num_prompt_tokens}"
@@ -287,29 +215,6 @@ class DeepseekR1Model(PulseTemplateModel):
         self.trainer = DeepseekR1Trainer(
             self, train_dataloader, val_dataloader, test_dataloader
         )
-
-    def parse_output(self, output: str) -> float:
-        """Parses the output string to extract the predicted probability.
-
-        Args:
-            output: The generated text from the model.
-
-        Returns:
-            A float representing the predicted probability.
-        """
-        # TODO: Implement a more robust parsing method
-        try:
-            # Extract the floating-point number from the output
-            if "not-" in output:
-                probability = np.abs(float(output.split(":")[-1].strip()) - 1.0)
-            else:
-                probability = float(output.split(":")[-1].strip())
-            return probability
-        except (ValueError, IndexError) as e:
-            logger.warning("Failed to parse output. Defaulting to 0.5: %s", e)
-            # Log the error and return a default value
-            logger.info("Output: %s", output)
-            return 0.5  # Default to 0.5 if parsing fails
 
 
 class DeepseekR1Trainer:
@@ -538,20 +443,6 @@ class DeepseekR1Trainer:
         logger.info("Test metrics: %s", metrics_tracker.summary)
 
         return float(np.mean(val_loss))
-
-    def evaluate_batched(self, test_loader: Any, save_report: bool = False) -> float:
-        """Evaluates the model on a given test set in batches.
-
-        Args:
-            test_loader: Tuple of (X, y) test data in DataFrame form.
-            save_report: Whether to save the evaluation report.
-
-        Returns:
-            The average validation loss across the test dataset.
-        """
-        NotImplementedError(
-            "Batch evaluation is not implemented for DeepseekR1Model. Use evaluate_single instead."
-        )
 
     def encode_prompt_target(
         self,

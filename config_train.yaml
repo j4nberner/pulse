@@ -4,7 +4,7 @@
 general:
   app_name: "Pulse"
   app_version: "1.0.0"
-  app_mode: "benchmark" # "debug", "count_tokens", "benchmark"
+  app_mode: "debug" # "debug", "count_tokens", "benchmark"
   logging_level: "DEBUG" # "DEBUG", "INFO", "WARNING", "ERROR"
   use_scratch: true
 
@@ -25,8 +25,8 @@ tasks:
 # Datasets to process
 dataset_path: datasets/original_harmonized #"/path/to/datasets"
 datasets:
-  - "hirid"
-  # - "miiv"
+  # - "hirid"
+  - "miiv"
   # - "eicu"
 
 # _______ Preprocessing Baseline _______
@@ -41,7 +41,7 @@ preprocessing_baseline:
     train: 0.8
     val: 0.1
     test: 0.1
-    test_limited: 100 # Number of stay_ids for limited test set, null = test set is not limited
+    test_limited: 5 # Number of stay_ids for limited test set, null = test set is not limited
     print_stats: false # Whether to print set statistics
 
 # _______ Preprocessing Advanced _______
@@ -58,14 +58,15 @@ preprocessing_advanced:
 
 prompting:
   prompting_ids:
-    - "liu_2023_few_shot_preprocessor" # Preprocessing ID for the model
+    # - "liu_2023_few_shot_preprocessor" # Preprocessing ID for the model
+    - "sarvari_2024_aggregation_preprocessor"
     # - "zhu_2024a_one_shot_cot_preprocessor"
     # - "zhu_2024b_one_shot_preprocessor"
     # - "zhu_2024c_categorization_summary_preprocessor"
-    # - "sarvari_2024_aggregation_preprocessor"
+    
     # - "agentic_prompt_test_preprocessor"
-  shots: 3
-  save_test_set: false # Whether to save the test set
+  shots: 0
+  save_test_set: true # Whether to save the test set
 
 # _______ Model Training _______
 
@@ -74,7 +75,7 @@ benchmark_settings:
   random_seed: 42
 
 load_models:
-  - model_configs/RandomForestModel.yaml
+  # - model_configs/RandomForestModel.yaml
   # - model_configs/XGBoost.yaml
   # - model_configs/LightGBMModel.yaml
   # - model_configs/CNNModel.yaml
@@ -82,6 +83,6 @@ load_models:
   # - model_configs/InceptionTimeModel.yaml
   # - model_configs/GRUModel.yaml
   # - model_configs/Llama3.yaml
-  # - model_configs/DeepseekR1Model.yaml # Needs proabability update
+  - model_configs/DeepseekR1Model.yaml
   # - model_configs/Llama4.yaml # To big for inference and finetuning
   # - model_configs/Gemma.yaml # Not tested...

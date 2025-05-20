@@ -379,7 +379,7 @@ class DatasetManager:
                 self.debug_data_length,
                 dataset_id,
             )
-            data = {
+            dataset["data"] = {
                 "X_train": data["X_train"].iloc[: self.debug_data_length],
                 "y_train": data["y_train"].iloc[: self.debug_data_length],
                 "X_val": data["X_val"].iloc[: self.debug_data_length],
@@ -407,8 +407,8 @@ class DatasetManager:
             logger.debug("Running in benchmark mode.")
 
         if self.test_limited is not None:
-            X = data["X_test"]
-            y = data["y_test"]
+            X = dataset["data"]["X_test"]
+            y = dataset["data"]["y_test"]
 
             # Get unique stay_ids in ascending order
             unique_stay_ids = sorted(X["stay_id"].unique())
