@@ -1324,6 +1324,94 @@
                     "minpse": 0.522
                 }
             }
+        },
+        {
+            "model_id": "InceptionTime",
+            "task_id": "aki",
+            "dataset": "eicu",
+            "run_id": "20250514_005715",
+            "metrics_summary": {
+                "overall": {
+                    "auroc": 0.764,
+                    "auprc": 0.45,
+                    "normalized_auprc": 3.084,
+                    "specificity": 0.846,
+                    "f1_score": 0.455,
+                    "accuracy": 0.804,
+                    "balanced_accuracy": 0.703,
+                    "precision": 0.383,
+                    "recall": 0.56,
+                    "mcc": 0.349,
+                    "kappa": 0.34,
+                    "minpse": 0.46
+                }
+            }
+        },
+        {
+            "model_id": "InceptionTime",
+            "task_id": "sepsis",
+            "dataset": "hirid",
+            "run_id": "20250515_153350",
+            "metrics_summary": {
+                "overall": {
+                    "auroc": 0.5,
+                    "auprc": 0.52,
+                    "normalized_auprc": 12.963,
+                    "specificity": 1.0,
+                    "f1_score": 0.0,
+                    "accuracy": 0.96,
+                    "balanced_accuracy": 0.5,
+                    "precision": 0.0,
+                    "recall": 0.0,
+                    "mcc": 0.0,
+                    "kappa": 0.0,
+                    "minpse": 0.04
+                }
+            }
+        },
+        {
+            "model_id": "InceptionTime",
+            "task_id": "sepsis",
+            "dataset": "miiv",
+            "run_id": "20250515_153350",
+            "metrics_summary": {
+                "overall": {
+                    "auroc": 0.5,
+                    "auprc": 0.506,
+                    "normalized_auprc": 45.621,
+                    "specificity": 1.0,
+                    "f1_score": 0.0,
+                    "accuracy": 0.989,
+                    "balanced_accuracy": 0.5,
+                    "precision": 0.0,
+                    "recall": 0.0,
+                    "mcc": 0.0,
+                    "kappa": 0.0,
+                    "minpse": 0.011
+                }
+            }
+        },
+        {
+            "model_id": "InceptionTime",
+            "task_id": "sepsis",
+            "dataset": "eicu",
+            "run_id": "20250515_153350",
+            "metrics_summary": {
+                "overall": {
+                    "auroc": 0.5,
+                    "auprc": 0.509,
+                    "normalized_auprc": 29.911,
+                    "specificity": 1.0,
+                    "f1_score": 0.0,
+                    "accuracy": 0.983,
+                    "balanced_accuracy": 0.5,
+                    "precision": 0.0,
+                    "recall": 0.0,
+                    "mcc": 0.0,
+                    "kappa": 0.0,
+                    "minpse": 0.017
+                }
+            }
         }
     ]
 }
