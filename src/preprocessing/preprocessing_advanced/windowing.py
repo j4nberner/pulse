@@ -7,8 +7,9 @@ import pandas as pd
 import torch
 from tqdm import tqdm
 
-from src.preprocessing.preprocessing_baseline.preprocessing_baseline import \
-    PreprocessorBaseline
+from src.preprocessing.preprocessing_baseline.preprocessing_baseline import (
+    PreprocessorBaseline,
+)
 
 # Set up logger
 logger = logging.getLogger("PULSE_logger")
@@ -30,7 +31,7 @@ class Windower:
         self,
         base_path,
         save_data=False,
-        debug_mode=False,
+        app_mode="benchmark",
         debug_data_length=100,
         original_base_path=None,
         preprocessor_config=None,
@@ -41,12 +42,12 @@ class Windower:
         Args:
             base_path (str): Base path for data directories
             save_data (bool): Whether to save windowed data
-            debug_mode (bool): Whether to run in debug mode (limited data)
+            app_mode (str): Identifier for the application mode (e.g., benchmark, debug, )
             original_base_path (str): Original base path for permanent storage (for Slurm jobs)
         """
         self.base_path = base_path
         self.save_data = save_data
-        self.debug_mode = debug_mode
+        self.app_mode = app_mode
         self.debug_data_length = debug_data_length
         self.original_base_path = original_base_path
         self.preprocessor_config = preprocessor_config
@@ -67,18 +68,8 @@ class Windower:
         results = {}
 
         for set_type in ["train", "val", "test"]:
-            X = data_dict[set_type]["X"]
-            y = data_dict[set_type]["y"]
-
-            # If in debug mode, limit number of rows first
-            if self.debug_mode and len(X) > self.debug_data_length:
-                logger.info(
-                    "DEBUG MODE windowing: Limiting %s set to first %s rows before windowing",
-                    set_type,
-                    self.debug_data_length,
-                )
-                X = X.iloc[: self.debug_data_length]
-                y = y.iloc[: self.debug_data_length]
+            X = data_dict[f"X_{set_type}"]
+            y = data_dict[f"y_{set_type}"]
 
             X_np = X.values
             y_np = y["label"].values
@@ -100,8 +91,6 @@ class Windower:
             logger.info(
                 "Processing %s set with %s stay_ids", set_type, len(unique_stay_ids)
             )
-            # Update progress bar every 5000 stay_ids (or fewer in debug mode)
-            miniters = 5000 if not self.debug_mode else 10
 
             # Initialize variables for batch processing
             batch_size = 10000  # Adjust based on memory constraints
@@ -112,7 +101,6 @@ class Windower:
             for stay_id in tqdm(
                 unique_stay_ids,
                 mininterval=1.0,
-                miniters=miniters,
                 desc=f"{set_type} stay_ids",
             ):
                 mask = stay_id_np == stay_id
@@ -269,8 +257,7 @@ class Windower:
         config_dirname = preprocessor.generate_preprocessing_dirname()
 
         # Directory naming adjusted based on debug mode
-        debug_suffix = "_debug" if self.debug_mode else ""
-        save_directory = f"datasets/preprocessed_splits/{task}/{dataset}/{config_dirname}/{data_window}_dw_{prediction_window}_pw_{step_size}_sz{debug_suffix}"
+        save_directory = f"datasets/preprocessed_splits/{task}/{dataset}/{config_dirname}/{data_window}_dw_{prediction_window}_pw_{step_size}_sz"
         os.makedirs(os.path.join(self.base_path, save_directory), exist_ok=True)
 
         # Save to current base_path (might be scratch)
@@ -328,16 +315,8 @@ class Windower:
         config_dirname = preprocessor.generate_preprocessing_dirname()
 
         # Check for debug mode directory first
-        debug_suffix = "_debug" if self.debug_mode else ""
-        load_directory = f"datasets/preprocessed_splits/{task}/{dataset}/{config_dirname}/{data_window}_dw_{prediction_window}_pw_{step_size}_sz{debug_suffix}"
+        load_directory = f"datasets/preprocessed_splits/{task}/{dataset}/{config_dirname}/{data_window}_dw_{prediction_window}_pw_{step_size}_sz"
         full_path = os.path.join(self.base_path, load_directory)
-
-        # If in debug mode but debug files don't exist, we don't want to fall back to regular files
-        if self.debug_mode and not os.path.exists(full_path):
-            logger.info(
-                "Debug-mode windowed data directory %s does not exist", full_path
-            )
-            return None
 
         # If not in debug mode and regular files don't exist
         if not os.path.exists(full_path):
@@ -450,33 +429,6 @@ class Windower:
         prediction_window = config.get("prediction_window", 0)
         step_size = config.get("step_size", 1)
 
-        # ALWAYS try to load presaved windowed data first
-        logger.info(
-            "Checking for presaved windowed data for %s_%s with data_window=%s, "
-            "prediction_window=%s, step_size=%s",
-            task,
-            dataset,
-            data_window,
-            prediction_window,
-            step_size,
-        )
-        windowed_data = self.load_windowed_data(
-            task, dataset, data_window, prediction_window, step_size
-        )
-
-        if windowed_data is not None:
-            logger.info("Using presaved windowed data for %s_%s", task, dataset)
-            return windowed_data
-
-        logger.info("No presaved windowed data found, will create new windows")
-
-        # If data_dict is not provided, load preprocessed data
-        if data_dict is None:
-            logger.info("Loading preprocessed data for %s_%s", task, dataset)
-            data_dict = self.read_preprocessed_data(task, dataset)
-            if data_dict is None:
-                return None
-
         logger.info(
             "Applying windowing to %s_%s with data_window=%s, "
             "prediction_window=%s, step_size=%s",
@@ -492,8 +444,8 @@ class Windower:
             data_dict, data_window, prediction_window, step_size
         )
 
-        # Save windowed data if specified
-        if self.save_data:
+        # Save windowed data only for full datasets
+        if self.save_data and self.app_mode == "benchmark":
             logger.info("Saving windowed data for %s_%s", task, dataset)
             self.save_windowed_data(
                 windowed_data, task, dataset, data_window, prediction_window, step_size

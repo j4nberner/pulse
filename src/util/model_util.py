@@ -282,24 +282,6 @@ def calculate_pos_weight(train_loader):
         return 1.0
 
 
-@DeprecationWarning
-def apply_model_prompt_format(model_id, prompt):
-    """
-    Apply model-specific prompt formatting.
-
-    Args:
-        model_id (str): The ID of the model.
-        prompt (str): The prompt to format.
-    """
-    # Example formatting for Llama3
-    if model_id == "Llama3Model":
-        formatted_prompt = f"<|USER|>{prompt}<|ASSISTANT|>"
-    else:
-        formatted_prompt = prompt  # No formatting needed for other models
-
-    return formatted_prompt
-
-
 def prompt_template_hf(input_text: str, model=None) -> List[Dict[str, str]]:
     """
     Create a chat-based prompt compatible with Hugging Face's apply_chat_template.
@@ -312,20 +294,27 @@ def prompt_template_hf(input_text: str, model=None) -> List[Dict[str, str]]:
         A list of chat messages (dicts) for the LLM.
     """
     system_message = (
-        "You are a helpful assistant and medical professional that analyzes ICU time-series "
-        "data and determines the most likely diagnosis.\n\n"
-        "Be specific and check the values against reference values.\n"
-        "Start your answer with 'yes' or 'no' to indicate whether the patient is diagnosed or not.\n"
-        "Make sure to not use capital letters or spaces for the yes or no answer.\n"
-        "Then, make a line break and return the result strictly in this JSON format.\n"
-        "Make sure that the binary answer is consistent with the JSON object.\n\n"
-        "Example:\n"
-        "yes\n"
+        "You are a helpful assistant and experienced medical professional analyzing ICU time-series data "
+        "to determine the presence of a critical condition.\n\n"
+        "Your response must strictly follow this format:\n"
+        "Output a valid JSON object with three keys: 'diagnosis', 'probability' and 'explanation'.\n\n"
+        "1. 'diagnosis' a string with .\n"
+        "2. 'probability' a value between 0 and 1. where 0 means not-diagnosis and 1 means diagnosis.\n"
+        "3. 'explanation' should be a string providing a brief explanation of your diagnosis.\n\n"
+        "Here is an example:\n"
         "{\n"
-        '  "diagnosis": "<diagnosis or not-diagnosis>",\n'
-        '  "probability": "<a value between 0 and 1 representing probability of your diagnosis>",\n'
-        '  "explanation": "<a brief explanation for the prediction. state reference values and check against provided features>"\n'
+        '  "diagnosis": "sepsis",\n'
+        '  "probability": "0.76",\n'
+        '  "explanation": "lactate is 4.2 mmol/L (above normal <2.0); blood pressure is low (MAP 62 mmHg), which are signs of sepsis."\n'
         "}\n\n"
+        "Do not include any other text or explanations outside of the JSON object.\n"
+        "If you cannot determine the condition, respond with:\n"
+        "{\n"
+        '  "diagnosis": "unknown",\n'
+        '  "probability": "unknown",\n'
+        '  "explanation": "No explanation provided."\n'
+        "}\n\n"
+        " Think about the probability carefully before answering.\n"
     )
 
     # Apply model-specific formatting if needed
@@ -337,21 +326,15 @@ def prompt_template_hf(input_text: str, model=None) -> List[Dict[str, str]]:
                 "content": [{"type": "text", "text": f"Text:\n{input_text}"}],
             },
         ]
-    elif model == "MeditronModel":
-        formated_prompt = [
-            f"<|im_start|>system\n{system_message}<|im_end|>\n"
-            f"<|im_start|>user\n{input_text}<|im_end|>\n"
-            "<|im_start|>assistant\n"
-        ]
     elif model == "DeepseekR1Model":
         # avoid using a system prompt. including it all in the user prompt
         formated_prompt = [
-            {"role": "user", "content": system_message + f"Text:\n{input_text}"},
+            {"role": "user", "content": f"{system_message} Text:\n{input_text} <think>\n"},
         ]
     else:
         formated_prompt = [
             {"role": "system", "content": system_message},
-            {"role": "user", "content": f"Text:\n{input_text}"},
+            {"role": "user", "content": input_text},
         ]
 
     return formated_prompt
@@ -377,7 +360,14 @@ def extract_last_json_block(text: str) -> Optional[str]:
 
 
 def extract_dict(output_text: str) -> Optional[Dict[str, str]]:
-    """Extract and parse the last JSON-like object from the model's output text and return it as a dictionary."""
+    """Extract and parse the last JSON-like object from the model's output text and return it as a dictionary.
+
+    Args:
+        output_text: The raw string returned by the language model.
+
+    Returns:
+        A dictionary parsed from the JSON string, or a default JSON object if no JSON was found.
+    """
     default_json = {
         "diagnosis": "unknown",
         "probability": 0.5,
@@ -389,13 +379,20 @@ def extract_dict(output_text: str) -> Optional[Dict[str, str]]:
         logger.warning("No JSON object found in assistant output. Returning default.")
         return default_json
 
-    # Fix unescaped newlines inside quoted strings
-    def escape_newlines_in_strings(s):
-        import re
+    # Heuristic fix: unterminated string
+    if json_text.count('"') % 2 != 0:
+        json_text += '"'
+        logger.debug("Fixed unterminated string by adding closing quote.")
 
+    # Heuristic fix: missing final brace
+    if not json_text.endswith("}"):
+        json_text += "}"
+        logger.debug("Fixed unclosed JSON object by adding closing brace.")
+
+    # Escape newlines in quoted strings
+    def escape_newlines_in_strings(s: str) -> str:
         def repl(m):
             return m.group(0).replace("\n", "\\n").replace("\r", "\\r")
-
         return re.sub(r'"(.*?)"', repl, s, flags=re.DOTALL)
 
     json_text_clean = escape_newlines_in_strings(json_text)

@@ -2,6 +2,7 @@ import argparse
 import gc
 import os
 import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
 import pandas as pd
 import torch
@@ -219,9 +220,9 @@ class ModelTrainer:
 
                     # Set trainer for the model and train
                     model.set_trainer(
-                        trainer_name, train_loader, val_loader, test_loader
+                        trainer_name, train_loader, val_loader, test_loader, disable_model_load=True
                     )
-                    model.trainer.train()
+                    model.trainer.estimate_nr_tokens()
 
                 except Exception as e:
                     logger.error(
@@ -287,6 +288,7 @@ def main():
     # Run training
     trainer = ModelTrainer(config)
     trainer.run()
+    
 
 
 if __name__ == "__main__":
