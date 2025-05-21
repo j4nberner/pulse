@@ -8,10 +8,12 @@ logger = logging.getLogger("PULSE_logger")
 
 
 class FileLogCallback:
-    """Simple file logger for agent steps"""
+    """Buffered file logger for agent steps"""
 
-    def __init__(self, log_file_path):
+    def __init__(self, log_file_path, flush_interval=10):
         self.log_file_path = log_file_path
+        self.buffer = []
+        self.flush_interval = flush_interval
         # Create directory if it doesn't exist
         os.makedirs(os.path.dirname(log_file_path), exist_ok=True)
         # Initialize file
@@ -30,14 +32,40 @@ class FileLogCallback:
                 "output": memory_step.get("output", ""),
             }
 
-            with open(self.log_file_path, "r+") as f:
-                data = json.load(f)
-                data["entries"].append(entry)
-                f.seek(0)
-                f.truncate()
-                json.dump(data, f, indent=2)
+            # Add to buffer
+            self.buffer.append(entry)
+
+            # Flush to disk when buffer reaches threshold
+            if len(self.buffer) >= self.flush_interval:
+                self._flush_buffer()
         except Exception as e:
             logger.error(f"Error in FileLogCallback: {e}")
+
+    def _flush_buffer(self):
+        """Write buffered entries to file"""
+        if not self.buffer:
+            return
+
+        try:
+            # Read current data
+            with open(self.log_file_path, "r") as f:
+                data = json.load(f)
+
+            # Add buffered entries
+            data["entries"].extend(self.buffer)
+
+            # Write updated data
+            with open(self.log_file_path, "w") as f:
+                json.dump(data, f, indent=2)
+
+            # Clear buffer
+            self.buffer = []
+        except Exception as e:
+            logger.error(f"Error flushing buffer: {e}")
+
+    def __del__(self):
+        """Ensure remaining entries are written when object is destroyed"""
+        self._flush_buffer()
 
 
 def format_as_standard_prompt(

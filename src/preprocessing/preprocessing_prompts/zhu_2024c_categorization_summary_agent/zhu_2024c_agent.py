@@ -74,7 +74,7 @@ class Zhu2024cAgent(PulseTemplateAgent):
                 "prediction_description": "prediction of the onset of acute kidney injury",
                 "task_info": "Acute kidney injury (AKI) is a subset of acute kidney diseases and disorders (AKD), characterized by a rapid decline in kidney function occurring within 7 days, with health implications. According to KDIGO criteria, AKI is diagnosed when there is an increase in serum creatinine to ≥1.5 times baseline within the prior 7 days, or an increase in serum creatinine by ≥0.3 mg/dL (≥26.5 µmol/L) within 48 hours, or urine output <0.5 mL/kg/h for 6–12 hours. The most common causes of AKI include sepsis, ischemia from hypotension or shock, and nephrotoxic exposures such as certain medications or contrast agents.",
             }
-        else:  # task == "sepsis"
+        elif task == "sepsis":
             return {
                 "complication_name": "sepsis",
                 "prediction_description": "prediction of the onset of sepsis",
