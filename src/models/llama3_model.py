@@ -10,8 +10,7 @@ import torch.nn as nn
 import torch.optim as optim
 from peft import PromptTuningConfig, PromptTuningInit, TaskType, get_peft_model
 from torch.nn import functional as F
-from transformers import (AutoModelForCausalLM, AutoTokenizer,
-                          BitsAndBytesConfig)
+from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
 import wandb
 from src.eval.metrics import MetricsTracker
@@ -104,15 +103,26 @@ class Llama3Model(PulseTemplateModel):
             "Initializing Hugging Face pipeline with parameters: %s", self.params
         )
 
-    def infer_llm(self, input_text: str) -> Dict[str, Any]:
-        """Runs the HF model on the input and extracts diagnosis, explanation, and probability."""
+    def infer_llm(
+        self,
+        input_text: str,
+        custom_system_message: str = None,
+        force_raw_text: bool = False,
+    ) -> Dict[str, Any]:
+        """Runs the HF model on the input and extracts diagnosis, explanation, and probability.
+
+        Args:
+            input_text: The text to analyze
+            custom_system_message: Optional custom system message
+            force_raw_text: If True, returns raw text output without JSON parsing
+        """
         logger.info("---------------------------------------------")
 
         if not isinstance(input_text, str):
             input_text = str(input_text)
 
         # Format input using prompt template
-        input_text = prompt_template_hf(input_text)
+        input_text = prompt_template_hf(input_text, custom_system_message)
 
         # Tokenize with chat template
         chat_prompt = self.tokenizer.apply_chat_template(
@@ -148,10 +158,14 @@ class Llama3Model(PulseTemplateModel):
 
         # Get generated token ids (excluding prompt) and convert to a Python list
         generated_token_ids_list = outputs.sequences[0][num_prompt_tokens:].tolist()
-        generated_tokens = self.tokenizer.convert_ids_to_tokens(generated_token_ids_list)
+        generated_tokens = self.tokenizer.convert_ids_to_tokens(
+            generated_token_ids_list
+        )
 
         decoded_output = self.tokenizer.decode(
-            generated_token_ids_list, skip_special_tokens=True, clean_up_tokenization_spaces=True
+            generated_token_ids_list,
+            skip_special_tokens=True,
+            clean_up_tokenization_spaces=True,
         )
         logger.debug("Decoded output:\n %s", decoded_output)
 
@@ -177,7 +191,7 @@ class Llama3Model(PulseTemplateModel):
             "infer_time": infer_time,
             "num_tokens": num_prompt_tokens,
         }
-    
+
     def calculate_tokens(self, input_text: str) -> Dict[str, Any]:
         """
         Runs the full inference without loading the model and calculates the number of input and output tokens.
@@ -206,7 +220,6 @@ class Llama3Model(PulseTemplateModel):
             "num_input_tokens": num_input_tokens,
             "num_output_tokens": self.params.max_new_tokens,
         }
-
 
     def set_trainer(
         self,
@@ -346,7 +359,7 @@ class Llama3Trainer:
                     )
 
                     optimizer.zero_grad()
-                    #TODO: Should be optimized for diagnosis or probability -> need to adapt
+                    # TODO: Should be optimized for diagnosis or probability -> need to adapt
                     outputs = self.llama_model(
                         input_ids=encoded["input_ids"].to(self.device),
                         attention_mask=encoded["attention_mask"].to(self.device),
@@ -370,7 +383,10 @@ class Llama3Trainer:
                         wandb.log({"train_loss": loss.item()})
 
                 logger.info(
-                    f"Epoch {epoch + 1}/{num_epochs}, Avg Total Loss: {epoch_loss/len(self.train_loader[0]):.4f}"
+                    "Epoch %d/%d, Avg Total Loss: %.4f",
+                    epoch + 1,
+                    num_epochs,
+                    epoch_loss / len(self.train_loader[0]),
                 )
                 if self.wandb:
                     wandb.log(
@@ -446,7 +462,9 @@ class Llama3Trainer:
             )
             if verbose > 1:
                 logger.info("Diagnosis for: %s", generated_text["diagnosis"])
-                logger.info("Generated explanation: %s \n", generated_text["explanation"])
+                logger.info(
+                    "Generated explanation: %s \n", generated_text["explanation"]
+                )
             if verbose > 2:
                 logger.info("Input prompt: %s \n", X_input)
 
@@ -487,7 +505,6 @@ class Llama3Trainer:
         logger.info("Test metrics: %s", metrics_tracker.summary)
 
         return float(np.mean(val_loss))
-    
 
     def estimate_nr_tokens(self) -> int:
         """Estimates the number of tokens for a task-dataset combination.
@@ -498,7 +515,7 @@ class Llama3Trainer:
         logger.info("Estimating number of tokens for the dataset...")
         # Load the tokenizer
         self.model.tokenizer = AutoTokenizer.from_pretrained(
-                self.model.model_id, use_fast=False, padding_side="left"
+            self.model.model_id, use_fast=False, padding_side="left"
         )
 
         test_loader = self.test_loader
@@ -522,13 +539,18 @@ class Llama3Trainer:
                 num_output_tokens,
             )
 
-        logger.info(f"Total tokens for the task {self.model.task_name} dataset {self.model.dataset_name}: {total_tokens}")
+        logger.info(
+            f"Total tokens for the task {self.model.task_name} dataset {self.model.dataset_name}: {total_tokens}"
+        )
         logger.info("Total input tokens: %s", total_input_tokens)
         logger.info("Total output tokens: %s", total_output_tokens)
-        logger.info("Average input tokens: %s", total_input_tokens / len(test_loader[0]))
-        logger.info("Average output tokens: %s", total_output_tokens / len(test_loader[0]))
+        logger.info(
+            "Average input tokens: %s", total_input_tokens / len(test_loader[0])
+        )
+        logger.info(
+            "Average output tokens: %s", total_output_tokens / len(test_loader[0])
+        )
         return total_tokens
-
 
     def evaluate_batched(self, test_loader: Any, save_report: bool = False) -> float:
         """Evaluates the model on a given test set in batches.

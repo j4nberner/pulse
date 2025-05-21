@@ -202,8 +202,8 @@ def prepare_data_for_model_convdl(
     """
 
     # Import the converter
-    from src.preprocessing.preprocessing_advanced.windowing import \
-        WindowedDataTo3D
+    from src.preprocessing.preprocessing_advanced.windowing import WindowedDataTo3D
+    from src.preprocessing.preprocessing_advanced.windowing import WindowedDataTo3D
 
     # Create converter with model name and config
     converter = WindowedDataTo3D(
@@ -281,63 +281,71 @@ def calculate_pos_weight(train_loader):
         logger.error("Error calculating class weights: %s", e)
         return 1.0
 
-
-def prompt_template_hf(input_text: str, model=None) -> List[Dict[str, str]]:
+def prompt_template_hf(
+    input_text: str, custom_system_message=None, model=None
+) -> List[Dict[str, str]]:
     """
     Create a chat-based prompt compatible with Hugging Face's apply_chat_template.
 
     Args:
         input_text: The text to analyze.
         model: Optional model name for specific formatting.
+        custom_system_message: Optional custom system message to override the default.
 
     Returns:
         A list of chat messages (dicts) for the LLM.
     """
-    system_message = (
+    system_message = custom_system_message or (
         "You are a helpful assistant and experienced medical professional analyzing ICU time-series data "
         "to determine the presence of a critical condition.\n\n"
         "Your response must strictly follow this format:\n"
         "Output a valid JSON object with three keys: 'diagnosis', 'probability' and 'explanation'.\n\n"
-        "1. 'diagnosis' a string with .\n"
+        "1. 'diagnosis' a string with either diganosis or not-diagnosis\n"
         "2. 'probability' a value between 0 and 1. where 0 means not-diagnosis and 1 means diagnosis.\n"
         "3. 'explanation' should be a string providing a brief explanation of your diagnosis.\n\n"
-        "Here is an example:\n"
+        "Here is a positive example:\n"
         "{\n"
         '  "diagnosis": "sepsis",\n'
         '  "probability": "0.76",\n'
         '  "explanation": "lactate is 4.2 mmol/L (above normal <2.0); blood pressure is low (MAP 62 mmHg), which are signs of sepsis."\n'
         "}\n\n"
-        "Do not include any other text or explanations outside of the JSON object.\n"
-        "If you cannot determine the condition, respond with:\n"
+        "Here is a negative example:\n"
         "{\n"
-        '  "diagnosis": "unknown",\n'
-        '  "probability": "unknown",\n'
-        '  "explanation": "No explanation provided."\n'
+        '  "diagnosis": "not-sepsis",\n'
+        '  "probability": "0.01",\n'
+        '  "explanation": "lactate is 1.2 mmol/L (normal <2.0); blood pressure is normal (MAP 80 mmHg), which are not signs of sepsis."\n'
         "}\n\n"
-        " Think about the probability carefully before answering.\n"
+        "Do not include any other text or explanations outside of the JSON object.\n"
+        "Think about the probability of your prediction carefully before answering.\n"
     )
 
     # Apply model-specific formatting if needed
     if model == "Gemma3Model":
-        formated_prompt = [
+        formatted_prompt = [
             {"role": "system", "content": [{"type": "text", "text": system_message}]},
             {
                 "role": "user",
                 "content": [{"type": "text", "text": f"Text:\n{input_text}"}],
             },
         ]
+    elif model == "MeditronModel":
+        formatted_prompt = [
+            f"<|im_start|>system\n{system_message}<|im_end|>\n"
+            f"<|im_start|>user\n{input_text}<|im_end|>\n"
+            "<|im_start|>assistant\n"
+        ]
     elif model == "DeepseekR1Model":
         # avoid using a system prompt. including it all in the user prompt
-        formated_prompt = [
-            {"role": "user", "content": f"{system_message} Text:\n{input_text} <think>\n"},
+        formatted_prompt = [
+            {"role": "user", "content": system_message + f"Text:\n{input_text}"},
         ]
     else:
-        formated_prompt = [
+        formatted_prompt = [
             {"role": "system", "content": system_message},
             {"role": "user", "content": input_text},
         ]
 
-    return formated_prompt
+    return formatted_prompt
 
 
 def extract_last_json_block(text: str) -> Optional[str]:
@@ -393,6 +401,7 @@ def extract_dict(output_text: str) -> Optional[Dict[str, str]]:
     def escape_newlines_in_strings(s: str) -> str:
         def repl(m):
             return m.group(0).replace("\n", "\\n").replace("\r", "\\r")
+
         return re.sub(r'"(.*?)"', repl, s, flags=re.DOTALL)
 
     json_text_clean = escape_newlines_in_strings(json_text)

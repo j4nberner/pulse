@@ -20,14 +20,6 @@ from src.preprocessing.preprocessing_prompts import get_prompting_preprocessor
 # Set up logger
 logger = logging.getLogger("PULSE_logger")
 
-few_shot_list = [
-    "liu_2023_few_shot_preprocessor",
-    "zhu_2024a_one_shot_cot_preprocessor",
-    "zhu_2024b_one_shot_preprocessor",
-    "sarvari_2024_aggregation_preprocessor",
-]
-
-
 class DatasetManager:
     """
     Manager class for handling datasets in the training framework.
@@ -57,16 +49,20 @@ class DatasetManager:
 
         self.app_mode = config.general.app_mode
         self.debug_data_length = None
+
         match self.app_mode:
             case "debug":
+                self.debug_data_length = config.general.debug_data_length
                 logger.info(
-                    "Running in debug mode. Limited data will be used for faster inference."
+                    "Running in debug mode. Limited data will be used for faster inference. (# of rows: %d)",
+                    self.debug_data_length,
                 )
-                self.debug_data_length = 500
+
             case "count_tokens":
-                self.debug_data_length = 50
+                self.debug_data_length = config.general.debug_data_length
                 logger.info(
-                    "Running in count_tokens mode. Full test data and a small subset of train and val data will be used for token counting"
+                    "Running in count_tokens mode. Full test data and a small subset of train and val data will be used for token counting. (# of rows train/val: %d)",
+                    self.debug_data_length,
                 )
             case "benchmark":
                 logger.info(
@@ -434,6 +430,7 @@ class DatasetManager:
         )
 
         # Apply windowing if enabled and not already loaded from presaved files
+        # newly windowed data will be saved only for app_mode = benchmark
         if (
             dataset["preprocessing_advanced"]["windowing"]["enabled"]
             and dataset["preprocessing_advanced"]["windowing"]["loaded"] is False
@@ -505,11 +502,12 @@ class DatasetManager:
             # Print statistics for all datasets
             self.preprocessor.print_statistics(stats_to_print)
 
+        # Drop stay_id column after calculating statistics
+        dataset["data"] = self._drop_stay_id_if_present(dataset["data"])
+        logger.debug("Dropped stay_id column from all features and labels")
+
         # Apply advanced preprocessing if needed -> generate prompts
         if prompting_id is not None and model_type == "LLM":
-            # Drop stay_id columns BEFORE creating lists for few-shot learning
-            dataset["data"] = self._drop_stay_id_if_present(dataset["data"])
-            logger.debug("Dropped stay_id column before generating prompts.")
 
             prompting_preprocessor = get_prompting_preprocessor(
                 prompting_id=prompting_id
@@ -525,6 +523,9 @@ class DatasetManager:
                 "num_shots": num_shots,
                 "data_window": data_window,
             }
+
+            # Add output directory to info_dict
+            info_dict["output_dir"] = getattr(self.config, "output_dir", None)
 
             logger.info(
                 "Applying prompting preprocessor for prompting_id: %s, and number of shots: %s",
@@ -595,22 +596,19 @@ class DatasetManager:
         Returns:
             dict: The modified data dictionary
         """
-        # Log only once before processing all splits
-        logger.debug("Dropping 'stay_id' column from all features and labels")
+        # Loop through all dataframes in the data_dict
+        for key, df in data_dict.items():
+            if isinstance(df, pd.DataFrame) and "stay_id" in df.columns:
+                # Remove the stay_id column
+                data_dict[key] = df.drop(columns=["stay_id"])
+                logger.debug(f"Dropped 'stay_id' column from {key}")
 
-        for split in ["train", "val", "test"]:
-            if split in data_dict:
-                # Drop stay_id from X if present
-                if "X" in data_dict[split]:
-                    X_data = data_dict[split]["X"]
-                    if isinstance(X_data, pd.DataFrame) and "stay_id" in X_data.columns:
-                        data_dict[split]["X"] = X_data.drop(columns=["stay_id"])
-
-                # Drop stay_id from y if present
-                if "y" in data_dict[split]:
-                    y_data = data_dict[split]["y"]
-                    if isinstance(y_data, pd.DataFrame) and "stay_id" in y_data.columns:
-                        data_dict[split]["y"] = y_data.drop(columns=["stay_id"])
+                # Debug info for labels
+                if key.startswith("y_"):
+                    logger.debug(
+                        f"{key} shape after dropping stay_id: {data_dict[key].shape}"
+                    )
+                    logger.debug(f"{key} columns: {data_dict[key].columns.tolist()}")
 
         return data_dict
 
