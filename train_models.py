@@ -28,6 +28,7 @@ class ModelTrainer:
             config (TrainConfig): Configuration object containing training settings.
         """
         self.config = config
+        self.config.output_dir = output_dir
 
         # Log general information
         logger.info("Initializing ModelTrainer with configuration:")

@@ -31,7 +31,7 @@ class PreprocessorAdvanced:
             config (Dict[str, Any], optional): Configuration options. Defaults to None.
         """
         self.config = config or {}
-        logger.info("Initialized PreprocessorAdvanced")
+        logger.debug("Initialized PreprocessorAdvanced")
 
     def prepare_feature_descriptions(self, base_features, X_cols):
         """Prepare feature descriptions with name, unit of measurement, and reference range.

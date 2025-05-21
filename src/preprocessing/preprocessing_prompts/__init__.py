@@ -1,22 +1,26 @@
-from .liu_2023_few_shot_health_learners.liu_2023_large_language_models_few_shot_healthlearners import \
-    liu_2023_few_shot_preprocessor
-from .sarvari_2024_aggregation.sarvari_2024_aggregation import \
-    sarvari_aggregation_preprocessor
-from .zhu_2024a_one_shot_cot.zhu_2024a_one_shot_cot import \
-    zhu_2024a_one_shot_cot_preprocessor
-from .zhu_2024b_one_shot.zhu_2024b_one_shot import \
-    zhu_2024b_one_shot_preprocessor
-from .zhu_2024c_categorization_summary.zhu_2024c_categorization_summary import \
-    zhu_2024c_categorization_summary_preprocessor
+from .liu_2023_few_shot_health_learners.liu_2023_large_language_models_few_shot_healthlearners import (
+    liu_2023_few_shot_preprocessor,
+)
+from .sarvari_2024_aggregation.sarvari_2024_aggregation import (
+    sarvari_aggregation_preprocessor,
+)
+from .zhu_2024a_one_shot_cot.zhu_2024a_one_shot_cot import (
+    zhu_2024a_one_shot_cot_preprocessor,
+)
+from .zhu_2024b_one_shot.zhu_2024b_one_shot import zhu_2024b_one_shot_preprocessor
+from .zhu_2024c_categorization_summary_agent.zhu_2024c_categorization_summary_agent import (
+    zhu_2024c_categorization_summary_agent_preprocessor,
+)
 
 preprocessor_method_dict = {
     "liu_2023_few_shot_preprocessor": liu_2023_few_shot_preprocessor,
     "zhu_2024a_one_shot_cot_preprocessor": zhu_2024a_one_shot_cot_preprocessor,
     "zhu_2024b_one_shot_preprocessor": zhu_2024b_one_shot_preprocessor,
-    "zhu_2024c_categorization_summary_preprocessor": zhu_2024c_categorization_summary_preprocessor,
+    "zhu_2024c_categorization_summary_agent_preprocessor": zhu_2024c_categorization_summary_agent_preprocessor,
     "sarvari_2024_aggregation_preprocessor": sarvari_aggregation_preprocessor,
     # Add other preprocessor methods here as needed
 }
+
 
 def get_prompting_preprocessor(prompting_id: str):
     """
@@ -27,5 +31,5 @@ def get_prompting_preprocessor(prompting_id: str):
     """
     if prompting_id in preprocessor_method_dict:
         return preprocessor_method_dict[prompting_id]
-    else:
-        raise ValueError(f"Preprocessor {prompting_id} not found.")
+
+    raise ValueError(f"Preprocessor {prompting_id} not found.")

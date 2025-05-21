@@ -524,6 +524,9 @@ class DatasetManager:
                 "data_window": data_window,
             }
 
+            # Add output directory to info_dict
+            info_dict["output_dir"] = getattr(self.config, "output_dir", None)
+
             logger.info(
                 "Applying prompting preprocessor for prompting_id: %s, and number of shots: %s",
                 prompting_id,

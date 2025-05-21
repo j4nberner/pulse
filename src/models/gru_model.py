@@ -559,6 +559,7 @@ class GRUTrainer:
                     labels.to(self.device).float(),
                 )
 
+
                 # Forward pass
                 outputs = self.model(features)
 

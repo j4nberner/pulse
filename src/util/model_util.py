@@ -203,6 +203,7 @@ def prepare_data_for_model_convdl(
 
     # Import the converter
     from src.preprocessing.preprocessing_advanced.windowing import WindowedDataTo3D
+    from src.preprocessing.preprocessing_advanced.windowing import WindowedDataTo3D
 
     # Create converter with model name and config
     converter = WindowedDataTo3D(
@@ -280,19 +281,21 @@ def calculate_pos_weight(train_loader):
         logger.error("Error calculating class weights: %s", e)
         return 1.0
 
-
-def prompt_template_hf(input_text: str, model=None) -> List[Dict[str, str]]:
+def prompt_template_hf(
+    input_text: str, custom_system_message=None, model=None
+) -> List[Dict[str, str]]:
     """
     Create a chat-based prompt compatible with Hugging Face's apply_chat_template.
 
     Args:
         input_text: The text to analyze.
         model: Optional model name for specific formatting.
+        custom_system_message: Optional custom system message to override the default.
 
     Returns:
         A list of chat messages (dicts) for the LLM.
     """
-    system_message = (
+    system_message = custom_system_message or (
         "You are a helpful assistant and experienced medical professional analyzing ICU time-series data "
         "to determine the presence of a critical condition.\n\n"
         "Your response must strictly follow this format:\n"
@@ -318,28 +321,31 @@ def prompt_template_hf(input_text: str, model=None) -> List[Dict[str, str]]:
 
     # Apply model-specific formatting if needed
     if model == "Gemma3Model":
-        formated_prompt = [
+        formatted_prompt = [
             {"role": "system", "content": [{"type": "text", "text": system_message}]},
             {
                 "role": "user",
                 "content": [{"type": "text", "text": f"Text:\n{input_text}"}],
             },
         ]
+    elif model == "MeditronModel":
+        formatted_prompt = [
+            f"<|im_start|>system\n{system_message}<|im_end|>\n"
+            f"<|im_start|>user\n{input_text}<|im_end|>\n"
+            "<|im_start|>assistant\n"
+        ]
     elif model == "DeepseekR1Model":
         # avoid using a system prompt. including it all in the user prompt
-        formated_prompt = [
-            {
-                "role": "user",
-                "content": f"{system_message} Text:\n{input_text} <think>\n",
-            },
+        formatted_prompt = [
+            {"role": "user", "content": system_message + f"Text:\n{input_text}"},
         ]
     else:
-        formated_prompt = [
+        formatted_prompt = [
             {"role": "system", "content": system_message},
             {"role": "user", "content": input_text},
         ]
 
-    return formated_prompt
+    return formatted_prompt
 
 
 def extract_last_json_block(text: str) -> Optional[str]:
