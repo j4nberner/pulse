@@ -202,8 +202,7 @@ def prepare_data_for_model_convdl(
     """
 
     # Import the converter
-    from src.preprocessing.preprocessing_advanced.windowing import \
-        WindowedDataTo3D
+    from src.preprocessing.preprocessing_advanced.windowing import WindowedDataTo3D
 
     # Create converter with model name and config
     converter = WindowedDataTo3D(
@@ -298,23 +297,23 @@ def prompt_template_hf(input_text: str, model=None) -> List[Dict[str, str]]:
         "to determine the presence of a critical condition.\n\n"
         "Your response must strictly follow this format:\n"
         "Output a valid JSON object with three keys: 'diagnosis', 'probability' and 'explanation'.\n\n"
-        "1. 'diagnosis' a string with .\n"
+        "1. 'diagnosis' a string with either diganosis or not-diagnosis\n"
         "2. 'probability' a value between 0 and 1. where 0 means not-diagnosis and 1 means diagnosis.\n"
         "3. 'explanation' should be a string providing a brief explanation of your diagnosis.\n\n"
-        "Here is an example:\n"
+        "Here is a positive example:\n"
         "{\n"
         '  "diagnosis": "sepsis",\n'
         '  "probability": "0.76",\n'
         '  "explanation": "lactate is 4.2 mmol/L (above normal <2.0); blood pressure is low (MAP 62 mmHg), which are signs of sepsis."\n'
         "}\n\n"
-        "Do not include any other text or explanations outside of the JSON object.\n"
-        "If you cannot determine the condition, respond with:\n"
+        "Here is a negative example:\n"
         "{\n"
-        '  "diagnosis": "unknown",\n'
-        '  "probability": "unknown",\n'
-        '  "explanation": "No explanation provided."\n'
+        '  "diagnosis": "not-sepsis",\n'
+        '  "probability": "0.01",\n'
+        '  "explanation": "lactate is 1.2 mmol/L (normal <2.0); blood pressure is normal (MAP 80 mmHg), which are not signs of sepsis."\n'
         "}\n\n"
-        " Think about the probability carefully before answering.\n"
+        "Do not include any other text or explanations outside of the JSON object.\n"
+        "Think about the probability of your prediction carefully before answering.\n"
     )
 
     # Apply model-specific formatting if needed
@@ -329,7 +328,10 @@ def prompt_template_hf(input_text: str, model=None) -> List[Dict[str, str]]:
     elif model == "DeepseekR1Model":
         # avoid using a system prompt. including it all in the user prompt
         formated_prompt = [
-            {"role": "user", "content": f"{system_message} Text:\n{input_text} <think>\n"},
+            {
+                "role": "user",
+                "content": f"{system_message} Text:\n{input_text} <think>\n",
+            },
         ]
     else:
         formated_prompt = [
@@ -393,6 +395,7 @@ def extract_dict(output_text: str) -> Optional[Dict[str, str]]:
     def escape_newlines_in_strings(s: str) -> str:
         def repl(m):
             return m.group(0).replace("\n", "\\n").replace("\r", "\\r")
+
         return re.sub(r'"(.*?)"', repl, s, flags=re.DOTALL)
 
     json_text_clean = escape_newlines_in_strings(json_text)

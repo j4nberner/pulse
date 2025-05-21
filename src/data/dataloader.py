@@ -20,14 +20,6 @@ from src.preprocessing.preprocessing_prompts import get_prompting_preprocessor
 # Set up logger
 logger = logging.getLogger("PULSE_logger")
 
-few_shot_list = [
-    "liu_2023_few_shot_preprocessor",
-    "zhu_2024a_one_shot_cot_preprocessor",
-    "zhu_2024b_one_shot_preprocessor",
-    "sarvari_2024_aggregation_preprocessor",
-]
-
-
 class DatasetManager:
     """
     Manager class for handling datasets in the training framework.
