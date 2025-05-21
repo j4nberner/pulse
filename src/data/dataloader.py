@@ -57,16 +57,20 @@ class DatasetManager:
 
         self.app_mode = config.general.app_mode
         self.debug_data_length = None
+
         match self.app_mode:
             case "debug":
+                self.debug_data_length = config.general.debug_data_length
                 logger.info(
-                    "Running in debug mode. Limited data will be used for faster inference."
+                    "Running in debug mode. Limited data will be used for faster inference. (# of rows: %d)",
+                    self.debug_data_length,
                 )
-                self.debug_data_length = 500
+
             case "count_tokens":
-                self.debug_data_length = 50
+                self.debug_data_length = config.general.debug_data_length
                 logger.info(
-                    "Running in count_tokens mode. Full test data and a small subset of train and val data will be used for token counting"
+                    "Running in count_tokens mode. Full test data and a small subset of train and val data will be used for token counting. (# of rows train/val: %d)",
+                    self.debug_data_length,
                 )
             case "benchmark":
                 logger.info(

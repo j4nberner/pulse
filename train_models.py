@@ -162,18 +162,6 @@ class ModelTrainer:
                             self.config.benchmark_settings, "batch_size"
                         )
 
-                        # Adjust batch size if in debug mode to ensure we have at least one batch
-                        if self.config.general.debug_mode:
-                            sample_count = len(X_train)
-                            if batch_size > sample_count:
-                                logger.warning(
-                                    "Batch size (%s) is larger than sample count (%s). Reducing batch size to %s for debug mode.",
-                                    batch_size,
-                                    sample_count,
-                                    sample_count,
-                                )
-                                batch_size = max(1, sample_count)
-
                         logger.info(
                             "Using batch size: %s for %s on %s",
                             batch_size,
