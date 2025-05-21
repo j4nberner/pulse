@@ -434,6 +434,7 @@ class DatasetManager:
         )
 
         # Apply windowing if enabled and not already loaded from presaved files
+        # newly windowed data will be saved only for app_mode = benchmark
         if (
             dataset["preprocessing_advanced"]["windowing"]["enabled"]
             and dataset["preprocessing_advanced"]["windowing"]["loaded"] is False
@@ -505,11 +506,12 @@ class DatasetManager:
             # Print statistics for all datasets
             self.preprocessor.print_statistics(stats_to_print)
 
+        # Drop stay_id column after calculating statistics
+        dataset["data"] = self._drop_stay_id_if_present(dataset["data"])
+        logger.debug("Dropped stay_id column from all features and labels")
+
         # Apply advanced preprocessing if needed -> generate prompts
         if prompting_id is not None and model_type == "LLM":
-            # Drop stay_id columns BEFORE creating lists for few-shot learning
-            dataset["data"] = self._drop_stay_id_if_present(dataset["data"])
-            logger.debug("Dropped stay_id column before generating prompts.")
 
             prompting_preprocessor = get_prompting_preprocessor(
                 prompting_id=prompting_id
@@ -595,22 +597,19 @@ class DatasetManager:
         Returns:
             dict: The modified data dictionary
         """
-        # Log only once before processing all splits
-        logger.debug("Dropping 'stay_id' column from all features and labels")
+        # Loop through all dataframes in the data_dict
+        for key, df in data_dict.items():
+            if isinstance(df, pd.DataFrame) and "stay_id" in df.columns:
+                # Remove the stay_id column
+                data_dict[key] = df.drop(columns=["stay_id"])
+                logger.debug(f"Dropped 'stay_id' column from {key}")
 
-        for split in ["train", "val", "test"]:
-            if split in data_dict:
-                # Drop stay_id from X if present
-                if "X" in data_dict[split]:
-                    X_data = data_dict[split]["X"]
-                    if isinstance(X_data, pd.DataFrame) and "stay_id" in X_data.columns:
-                        data_dict[split]["X"] = X_data.drop(columns=["stay_id"])
-
-                # Drop stay_id from y if present
-                if "y" in data_dict[split]:
-                    y_data = data_dict[split]["y"]
-                    if isinstance(y_data, pd.DataFrame) and "stay_id" in y_data.columns:
-                        data_dict[split]["y"] = y_data.drop(columns=["stay_id"])
+                # Debug info for labels
+                if key.startswith("y_"):
+                    logger.debug(
+                        f"{key} shape after dropping stay_id: {data_dict[key].shape}"
+                    )
+                    logger.debug(f"{key} columns: {data_dict[key].columns.tolist()}")
 
         return data_dict
 
