@@ -336,7 +336,7 @@ def prompt_template_hf(
         ]
     elif model == "DeepseekR1Model":
         # avoid using a system prompt. including it all in the user prompt
-        formated_prompt = [
+        formatted_prompt = [
             {
                 "role": "user",
                 "content": f"{system_message} Text:\n{input_text} <think>\n",

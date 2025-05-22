@@ -26,7 +26,7 @@ logger = logging.getLogger("PULSE_logger")
 
 
 class Llama3Model(PulseTemplateModel):
-    """Llama 3 model wrapper using LangChain for prompt templating and inference."""
+    """Llama 3 model wrapper."""
 
     def __init__(self, params: Dict[str, Any], **kwargs) -> None:
         """Initializes the Llama3Model with parameters and paths.
@@ -35,9 +35,7 @@ class Llama3Model(PulseTemplateModel):
             params: Configuration dictionary with model parameters.
             **kwargs: Additional optional parameters such as `output_dir` and `wandb`.
         """
-        self.model_name = params.get(
-            "model_name", self.__class__.__name__.replace("Model", "")
-        )
+        self.model_name = kwargs.get("model_name", "Llama3Model")
         self.trainer_name = params["trainer_name"]
         super().__init__(self.model_name, self.trainer_name, params=params)
 
@@ -136,7 +134,7 @@ class Llama3Model(PulseTemplateModel):
         )
         token_time = time.perf_counter() - token_start
 
-        num_prompt_tokens = tokenized_inputs["input_ids"].size(1)
+        num_input_tokens = tokenized_inputs["input_ids"].size(1)
 
         input_ids = tokenized_inputs["input_ids"].to(self.device)
         attention_mask = tokenized_inputs["attention_mask"].to(self.device)
@@ -157,10 +155,9 @@ class Llama3Model(PulseTemplateModel):
         infer_time = time.perf_counter() - infer_start
 
         # Get generated token ids (excluding prompt) and convert to a Python list
-        generated_token_ids_list = outputs.sequences[0][num_prompt_tokens:].tolist()
-        generated_tokens = self.tokenizer.convert_ids_to_tokens(
-            generated_token_ids_list
-        )
+        generated_token_ids_list = outputs.sequences[0][num_input_tokens:].tolist()
+
+        num_output_tokens = len(generated_token_ids_list)
 
         decoded_output = self.tokenizer.decode(
             generated_token_ids_list,
@@ -182,14 +179,15 @@ class Llama3Model(PulseTemplateModel):
         parsed["probability"] = prob
 
         logger.info(
-            f"Tokenization time: {token_time:.4f}s | Inference time: {infer_time:.4f}s | Tokens: {num_prompt_tokens}"
+            f"Tokenization time: {token_time:.4f}s | Inference time: {infer_time:.4f}s | Tokens: {num_input_tokens + num_output_tokens}"
         )
 
         return {
             "generated_text": parsed,
             "token_time": token_time,
             "infer_time": infer_time,
-            "num_tokens": num_prompt_tokens,
+            "num_input_tokens": num_input_tokens,
+            "num_output_tokens": num_output_tokens,
         }
 
     def calculate_tokens(self, input_text: str) -> Dict[str, Any]:
@@ -240,29 +238,6 @@ class Llama3Model(PulseTemplateModel):
         self.trainer = Llama3Trainer(
             self, train_dataloader, val_dataloader, test_dataloader, **kwargs
         )
-
-    def parse_output(self, output: str) -> float:
-        """Parses the output string to extract the predicted probability.
-
-        Args:
-            output: The generated text from the model.
-
-        Returns:
-            A float representing the predicted probability.
-        """
-        # TODO: Implement a more robust parsing method
-        try:
-            # Extract the floating-point number from the output
-            if "not-" in output:
-                probability = np.abs(float(output.split(":")[-1].strip()) - 1.0)
-            else:
-                probability = float(output.split(":")[-1].strip())
-            return probability
-        except (ValueError, IndexError) as e:
-            logger.warning("Failed to parse output. Defaulting to 0.5: %s", e)
-            # Log the error and return a default value
-            logger.info("Output: %s", output)
-            return 0.5  # Default to 0.5 if parsing fails
 
 
 class Llama3Trainer:
@@ -434,10 +409,6 @@ class Llama3Trainer:
 
         self.llama_model.eval()
 
-        total_tokens = 0
-        total_token_time = 0.0
-        total_infer_time = 0.0
-
         for X, y in zip(test_loader[0].iterrows(), test_loader[1].iterrows()):
             X_input = X[1].iloc[0]
             y_true = y[1].iloc[0]
@@ -447,11 +418,8 @@ class Llama3Trainer:
             generated_text = result_dict["generated_text"]
             token_time = result_dict["token_time"]
             infer_time = result_dict["infer_time"]
-            num_tokens = result_dict["num_tokens"]
-
-            total_token_time += token_time
-            total_infer_time += infer_time
-            total_tokens += num_tokens
+            num_input_tokens = result_dict["num_input_tokens"]
+            num_output_tokens = result_dict["num_output_tokens"]
 
             predicted_probability = float(generated_text.get("probability", 0.5))
 
@@ -482,21 +450,27 @@ class Llama3Trainer:
                         "val_loss": loss.item(),
                         "token_time": token_time,
                         "infer_time": infer_time,
-                        "num_tokens": num_tokens,
+                        "num_input_tokens": num_input_tokens,
+                        "num_output_tokens": num_output_tokens,
                     }
                 )
 
             metrics_tracker.add_results(predicted_probability, y_true)
+            metrics_tracker.add_metadata_item(
+                {
+                    "Input Prompt": X_input,
+                    "Target Label": y_true,
+                    "Predicted Probability": predicted_probability,
+                    "Predicted Diagnosis": generated_text.get("diagnosis", ""),
+                    "Predicted Explanation": generated_text.get("explanation", ""),
+                    "Tokenization Time": token_time,
+                    "Inference Time": infer_time,
+                    "Input Tokens": num_input_tokens,
+                    "Output Tokens": num_output_tokens,
+                }
+            )
 
-        # After evaluation loop
-        logger.info("Total tokens: %s", total_tokens)
-        logger.info(
-            "Average tokenization time: %.4fs", total_token_time / len(test_loader[0])
-        )
-        logger.info(
-            "Average inference time: %.4fs", total_infer_time / len(test_loader[0])
-        )
-
+        metrics_tracker.log_metadata(save_to_file=self.model.save_metadata)
         metrics_tracker.summary = metrics_tracker.compute_overall_metrics()
         if save_report:
             metrics_tracker.save_report()

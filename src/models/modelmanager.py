@@ -101,6 +101,7 @@ class ModelManager:
             pretrained_model_path=config.get("pretrained_model_path", None),
             wandb=self.wandb.get("enabled", False),
             output_dir=self.output_dir,
+            model_name=model_name,
         )
 
         # Load model weights if path is specified

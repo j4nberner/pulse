@@ -74,8 +74,47 @@ class MetricsTracker:
 
         self.results["predictions"].extend(predictions)
         self.results["labels"].extend(labels)
+    
+    def add_metadata_item(self, item: Dict[str, Any]) -> None:
+        """
+        Add a single metadata item to the tracker.
 
-    def compute_overall_metrics(self) -> Dict[str, Dict[str, float]]:
+        Args:
+            item: Dictionary containing keys such as 'input', 'target', 'prediction',
+                  'token_time', 'infer_time', 'num_input_tokens', 'num_output_tokens', etc.
+        """
+        # Store predictions and labels for metrics computation
+        if "prediction" in item:
+            self.results["predictions"].append(item["prediction"])
+        if "target" in item:
+            self.results["labels"].append(item["target"])
+
+        # Optionally, store additional metadata if needed
+        if not hasattr(self, "items"):
+            self.items = []
+        self.items.append(item)
+    
+    def log_metadata(self, save_to_file: bool = False) -> None:
+        """
+        Print and summarize metadata for the tracked items.
+
+        Args:
+            save_to_file: If True, save the metadata summary to a file
+        """
+        if hasattr(self, "items") and self.items:
+            df = pd.DataFrame(self.items)
+            # Compute mean for numeric columns only
+            means = df.select_dtypes(include=[np.number]).mean().to_dict()
+            for k, v in means.items():
+                logger.info(f"Mean {k}: {v}")
+            if save_to_file:
+                summary_path = os.path.join(self.save_dir, f"{self.model_id}_{self.task_id}_{self.dataset_name}_{self.run_id}_metadata.csv")
+                df.to_csv(summary_path, index=False)
+                logger.info(f"Metadata saved to {summary_path}")
+        else:
+            logger.warning("No metadata items to print.")
+    
+    def compute_overall_metrics(self) -> Dict[str, Any]:
         """
         Compute summary statistics for all results in tracked metrics..
 
@@ -150,7 +189,7 @@ class MetricsTracker:
         # Save labels and predictions together as csv
         predictions_path = os.path.join(
             self.save_dir,
-            f"{self.model_id}_{self.task_id}_{self.dataset_name}_predictions.csv",
+            f"{self.model_id}_{self.task_id}_{self.dataset_name}_{self.run_id}_predictions.csv",
         )
         df_predictions = pd.DataFrame(
             {

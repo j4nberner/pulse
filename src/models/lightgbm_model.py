@@ -212,7 +212,7 @@ class LightGBMTrainer:
         logger.info("Test metrics: %s", metrics_tracker.summary)
 
         # Save the model
-        model_save_name = f"{self.model.model_name}_{self.task_name}_{self.dataset_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pt"
+        model_save_name = f"{self.model.model_name}_{self.task_name}_{self.dataset_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         save_sklearn_model(model_save_name, self.model.model, self.model_save_dir)
 
         # Log metrics to wandb

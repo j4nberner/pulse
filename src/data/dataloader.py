@@ -190,7 +190,7 @@ class DatasetManager:
             logger.error("Dataset %s not found in configuration", dataset_id)
             return False
 
-        dataset = self.datasets[dataset_id]
+        dataset = self.datasets[dataset_id].copy()
 
         if dataset["loaded"]:
             logger.debug("Dataset %s already loaded", dataset_id)
@@ -353,7 +353,7 @@ class DatasetManager:
             logger.error("Dataset %s not found", dataset_id)
             return None, None, None, None, None, None
 
-        dataset = self.datasets[dataset_id]
+        dataset = self.datasets[dataset_id].copy()
         prompting_id = kwargs.get("prompting_id", None)
         model_type = kwargs.get("model_type", None)
         fine_tuning = kwargs.get("fine_tuning", False)
@@ -460,7 +460,7 @@ class DatasetManager:
         del data  # Clear the data variable to free up memory
 
         # Convert categorical columns to numerical values for convML models
-        if model_type == "convML":
+        if model_type in ["convML", "convDL"]:
             # Process gender column in X if it exists
             for data_set in ["X_train", "X_val", "X_test"]:
                 X = dataset["data"][data_set]
@@ -565,17 +565,6 @@ class DatasetManager:
                 dataset["data"]["y_train"] = pd.DataFrame()
                 dataset["data"]["X_val"] = pd.DataFrame()
                 dataset["data"]["y_val"] = pd.DataFrame()
-
-            # Save prompts in testloader for debugging
-            if save_test_set:
-                dataset["data"]["X_test"].to_csv(
-                    os.path.join(self.config.output_dir, "test_set.csv"),
-                    index=False,
-                )
-                dataset["data"]["y_test"].to_csv(
-                    os.path.join(self.config.output_dir, "test_labels.csv"),
-                    index=False,
-                )
 
         return (
             dataset["data"]["X_train"],

@@ -81,6 +81,7 @@ class ModelTrainer:
                 model_name = model.__class__.__name__
                 model.task_name = task_name
                 model.dataset_name = dataset_name
+                model.save_metadata = self.config.general.get("save_metadata", False)
                 trainer_name = model.trainer_name
                 logger.info("--" * 30)
                 logger.info("Training model: %s on %s", model_name, task_dataset_name)
@@ -106,7 +107,6 @@ class ModelTrainer:
                     "dataset": self.config.datasets[0],
                     "task": self.config.tasks[0],
                     "print_stats": self.config.preprocessing_baseline.split_ratios.print_stats,
-                    "save_test_set": self.config.prompting.save_test_set,
                     "model_type": model.type,
                 }
 
@@ -121,6 +121,8 @@ class ModelTrainer:
                             logger.error(
                                 "Data standardization is enabled for LLM models. Please disable it in the config."
                             )
+                            continue
+
                         dm_kwargs.update(
                             {
                                 "prompting_id": model.prompting_id,

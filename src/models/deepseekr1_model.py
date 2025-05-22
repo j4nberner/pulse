@@ -38,9 +38,8 @@ class DeepseekR1Model(PulseTemplateModel):
             params: Configuration dictionary with model parameters.
             **kwargs: Additional optional parameters such as `output_dir` and `wandb`.
         """
-        self.model_name = params.get(
-            "model_name", self.__class__.__name__.replace("Model", "")
-        )
+        self.model_name = kwargs.get("model_name", "DeepseekR1Model")
+        print(self.model_name)
         self.trainer_name = params["trainer_name"]
         super().__init__(self.model_name, self.trainer_name, params=params)
 
@@ -85,13 +84,6 @@ class DeepseekR1Model(PulseTemplateModel):
                 device_map="auto",
                 torch_dtype=torch.bfloat16,
             )
-            # Add special tokens
-            special_tokens = {"additional_special_tokens": ["<yes>", "<no>"]}
-            added = self.tokenizer.add_special_tokens(special_tokens)
-            print(f"Special tokens added: {added}")  # should be 2
-            print("Yes token ID:", self.tokenizer.convert_tokens_to_ids("<yes>"))
-            print("No token ID:", self.tokenizer.convert_tokens_to_ids("<no>"))
-            self.deepseek_r1_model.resize_token_embeddings(len(self.tokenizer))
 
             if self.params.get("tuning", False):
                 logger.info("Applying Prompt Tuning")
@@ -142,7 +134,7 @@ class DeepseekR1Model(PulseTemplateModel):
             return_tensors="pt",
         )
         token_time = time.perf_counter() - token_start
-        num_prompt_tokens = tokenized_inputs["input_ids"].size(1)
+        num_input_tokens = tokenized_inputs["input_ids"].shape[-1]
         
         input_ids = tokenized_inputs["input_ids"].to(self.device)
         attention_mask = tokenized_inputs["attention_mask"].to(self.device)
@@ -163,8 +155,8 @@ class DeepseekR1Model(PulseTemplateModel):
         infer_time = time.perf_counter() - infer_start
 
         # Get generated token ids (excluding prompt)
-        gen_ids = outputs.sequences[0][num_prompt_tokens:]
-        answer_token_index = None
+        gen_ids = outputs.sequences[0][num_input_tokens:]
+        num_output_tokens = gen_ids.shape[-1]
 
         # Decode the full generated string
         decoded_output = self.tokenizer.decode(
@@ -175,7 +167,7 @@ class DeepseekR1Model(PulseTemplateModel):
         thinking_output = decoded_output.split("</think>")[0]
         answer_output = decoded_output.split("</think>")[1]
 
-        logger.debug("Thinking output:\n %s", thinking_output)
+        # logger.debug("Thinking output:\n %s", thinking_output)
         logger.debug("Answer output:\n %s", answer_output)
 
         # Extract dict from the decoded output
@@ -187,14 +179,17 @@ class DeepseekR1Model(PulseTemplateModel):
             parsed = {"diagnosis": None, "probability": 0.5, "explanation": decoded_output}
 
         logger.info(
-            f"Tokenization time: {token_time:.4f}s | Inference time: {infer_time:.4f}s | Tokens: {num_prompt_tokens}"
+            f"Tokenization time: {token_time:.4f}s | Inference time: {infer_time:.4f}s | Tokens: {num_input_tokens}"
         )
 
         return {
             "generated_text": parsed,
             "token_time": token_time,
             "infer_time": infer_time,
-            "num_tokens": num_prompt_tokens,
+            "num_input_tokens": num_input_tokens,
+            "num_output_tokens": num_output_tokens,
+            "thinking_output": thinking_output,
+
         }
 
     def set_trainer(
@@ -379,10 +374,6 @@ class DeepseekR1Trainer:
 
         self.deepseek_r1_model.eval()
 
-        total_tokens = 0
-        total_token_time = 0.0
-        total_infer_time = 0.0
-
         for X, y in zip(test_loader[0].iterrows(), test_loader[1].iterrows()):
             X_input = X[1].iloc[0]
             y_true = y[1].iloc[0]
@@ -392,11 +383,8 @@ class DeepseekR1Trainer:
             generated_text = result_dict["generated_text"]
             token_time = result_dict["token_time"]
             infer_time = result_dict["infer_time"]
-            num_tokens = result_dict["num_tokens"]
-
-            total_token_time += token_time
-            total_infer_time += infer_time
-            total_tokens += num_tokens
+            num_input_tokens = result_dict["num_input_tokens"]
+            num_output_tokens = result_dict["num_output_tokens"]
 
             predicted_probability = float(generated_text.get("probability", 0.5))
 
@@ -420,21 +408,28 @@ class DeepseekR1Trainer:
                         "val_loss": loss.item(),
                         "token_time": token_time,
                         "infer_time": infer_time,
-                        "num_tokens": num_tokens,
+                        "num_input_tokens": num_input_tokens,
+                        "num_output_tokens": num_output_tokens,
                     }
                 )
 
             metrics_tracker.add_results(predicted_probability, y_true)
+            metrics_tracker.add_metadata_item(
+                {
+                    "Input Prompt": X_input,
+                    "Target Label": y_true,
+                    "Predicted Probability": predicted_probability,
+                    "Predicted Diagnosis": generated_text["diagnosis"],
+                    "Predicted Explanation": generated_text["explanation"],
+                    "Reasoning": result_dict["thinking_output"],
+                    "Tokenization Time": token_time,
+                    "Inference Time": infer_time,
+                    "Input Tokens": num_input_tokens,
+                    "Output Tokens": num_output_tokens,
+                }
+            )
 
-        # After evaluation loop
-        logger.info("Total tokens: %s", total_tokens)
-        logger.info(
-            "Average tokenization time: %.4fs", total_token_time / len(test_loader[0])
-        )
-        logger.info(
-            "Average inference time: %.4fs", total_infer_time / len(test_loader[0])
-        )
-
+        metrics_tracker.log_metadata(save_to_file=self.model.save_metadata)
         metrics_tracker.summary = metrics_tracker.compute_overall_metrics()
         if save_report:
             metrics_tracker.save_report()
