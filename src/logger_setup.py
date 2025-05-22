@@ -15,7 +15,7 @@ def setup_logger():
     # Load the configuration file
     try:
         parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../"))
-        config_path = os.path.join(parent_dir, "config_train.yaml")
+        config_path = os.path.join(parent_dir, "configs", "config_benchmark.yaml")
         if os.path.exists(config_path):
             with open(config_path, "r") as f:
                 config_dict = yaml.safe_load(f)

@@ -33,6 +33,8 @@ class PulseTemplateModel:
         self.model = None
         self.dataset_name = None
         self.task_name = None
+        self.save_metadata = None
+
         self.prompting_id = params.get("prompting_id", None)
         self.pretrained_model_path = kwargs.get("pretrained_model_path")
         self.type = params.get("type", None)

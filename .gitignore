@@ -12,3 +12,6 @@ utils/__pycache__/
 .venv/
 __pycache__/
 docs/listed_models/
+frontend/
+app.py
+config_gui_adapted.yaml

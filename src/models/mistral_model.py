@@ -10,7 +10,8 @@ import torch.nn as nn
 import torch.optim as optim
 from peft import PromptTuningConfig, PromptTuningInit, TaskType, get_peft_model
 from torch.nn import functional as F
-from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, Gemma3ForConditionalGeneration
+from transformers import (AutoModelForCausalLM, AutoTokenizer,
+                          BitsAndBytesConfig)
 
 import wandb
 from src.eval.metrics import MetricsTracker
@@ -25,17 +26,17 @@ warnings.filterwarnings(
 logger = logging.getLogger("PULSE_logger")
 
 
-class Gemma3Model(PulseTemplateModel):
-    """Gemma 3 model wrapper."""
+class MistralModel(PulseTemplateModel):
+    """Mistral 7b model wrapper."""
 
     def __init__(self, params: Dict[str, Any], **kwargs) -> None:
-        """Initializes the Gemma3Model with parameters and paths.
+        """Initializes the MistralModel with parameters and paths.
 
         Args:
             params: Configuration dictionary with model parameters.
             **kwargs: Additional optional parameters such as `output_dir` and `wandb`.
         """
-        self.model_name = kwargs.get("model_name", "Gemma3Model")
+        self.model_name = kwargs.get("model_name", "MistralModel")
         self.trainer_name = params["trainer_name"]
         super().__init__(self.model_name, self.trainer_name, params=params)
 
@@ -54,12 +55,12 @@ class Gemma3Model(PulseTemplateModel):
         self.params["save_test_set"] = kwargs.get("save_test_set", False)
 
         self.model_id: str = self.params.get(
-            "model_id", "google/gemma-3-12b-it"
+            "model_id", "mistralai/Mistral-7B-Instruct-v0.3"
         )
         self.max_length: int = self.params.get("max_length", 5120)
 
         self.tokenizer: Optional[Any] = None
-        self.gemma_model: Optional[Any] = None
+        self.mistral_model: Optional[Any] = None
 
         self.quantization_config = BitsAndBytesConfig(
             load_in_8bit=True, llm_int8_threshold=6.0, llm_int8_has_fp16_weight=True
@@ -71,9 +72,9 @@ class Gemma3Model(PulseTemplateModel):
         """Loads the tokenizer and model weights and initializes HF pipeline."""
         try:
             self.tokenizer = AutoTokenizer.from_pretrained(
-                self.model_id, padding_side="left"
+                self.model_id, use_fast=False, padding_side="left"
             )
-            self.gemma_model = Gemma3ForConditionalGeneration.from_pretrained(
+            self.mistral_model = AutoModelForCausalLM.from_pretrained(
                 self.model_id,
                 device_map="auto",
                 torch_dtype=torch.bfloat16,
@@ -89,12 +90,12 @@ class Gemma3Model(PulseTemplateModel):
                     prompt_tuning_init=PromptTuningInit.TEXT,
                     prompt_tuning_init_text="Classify the diagnosis of following ICU data:",
                 )
-                self.gemma_model = get_peft_model(self.gemma_model, tuning_config)
-                logger.debug(self.gemma_model.print_trainable_parameters())
+                self.mistral_model = get_peft_model(self.mistral_model, tuning_config)
+                logger.debug(self.mistral_model.print_trainable_parameters())
 
-            logger.info("Successfully loaded Gemma3 model: %s", self.model_id)
+            logger.info("Successfully loaded Mistral model: %s", self.model_id)
         except Exception as e:
-            logger.error("Failed to load Gemma3 model: %s", e)
+            logger.error("Failed to load Mistral model: %s", e)
             raise
 
         logger.info(
@@ -110,7 +111,6 @@ class Gemma3Model(PulseTemplateModel):
 
         # Format input using prompt template
         input_text = prompt_template_hf(input_text)
-        # input_test = "Explain me some"
 
         # Tokenize with chat template
         chat_prompt = self.tokenizer.apply_chat_template(
@@ -124,8 +124,7 @@ class Gemma3Model(PulseTemplateModel):
         )
         token_time = time.perf_counter() - token_start
 
-        # num_prompt_tokens = tokenized_inputs["input_ids"].size(1)
-        num_prompt_tokens = tokenized_inputs["input_ids"].shape[-1]
+        num_input_tokens = tokenized_inputs["input_ids"].size(1)
 
         input_ids = tokenized_inputs["input_ids"].to(self.device)
         attention_mask = tokenized_inputs["attention_mask"].to(self.device)
@@ -133,7 +132,7 @@ class Gemma3Model(PulseTemplateModel):
         # Generate output with scores
         infer_start = time.perf_counter()
         with torch.no_grad():
-            outputs = self.gemma_model.generate(
+            outputs = self.mistral_model.generate(
                 input_ids=input_ids,
                 attention_mask=attention_mask,
                 max_new_tokens=self.params.max_new_tokens,
@@ -145,16 +144,17 @@ class Gemma3Model(PulseTemplateModel):
             )
         infer_time = time.perf_counter() - infer_start
 
-        # Get first sequence, decode to string
-        generated_text = self.tokenizer.decode(outputs.sequences[0][num_prompt_tokens:], skip_special_tokens=True)
-        num_output_tokens = outputs.sequences[0].size(0) - num_prompt_tokens
+        # Get generated token ids (excluding prompt) and convert to a Python list
+        generated_token_ids_list = outputs.sequences[0][num_input_tokens:].tolist()
+        decoded_output = self.tokenizer.decode(
+            generated_token_ids_list, skip_special_tokens=True, clean_up_tokenization_spaces=True
+        )
+        logger.debug("Decoded output:\n %s", decoded_output)
 
-        # Trim after first <end_of_turn>
-        generated_text = generated_text.split("<end_of_turn>")[0]
-        logger.debug("Generated text: %s", generated_text)
+        num_output_tokens = len(generated_token_ids_list)
 
         # Extract dict from the decoded output (e.g., via regex or JSON parsing)
-        parsed = extract_dict(generated_text)
+        parsed = extract_dict(decoded_output)
 
         # Check if probability is a number or string, try to convert, else default to 0.5
         prob = parsed.get("probability", 0.5)
@@ -173,7 +173,7 @@ class Gemma3Model(PulseTemplateModel):
             "generated_text": parsed,
             "token_time": token_time,
             "infer_time": infer_time,
-            "num_input_tokens": num_prompt_tokens,
+            "num_input_tokens": num_input_tokens,
             "num_output_tokens": num_output_tokens,
         }
     
@@ -223,23 +223,23 @@ class Gemma3Model(PulseTemplateModel):
             val_dataloader: DataLoader for validation data.
             test_dataloader: DataLoader for test data.
         """
-        self.trainer = Gemma3Trainer(
+        self.trainer = MistralTrainer(
             self, train_dataloader, val_dataloader, test_dataloader, **kwargs
         )
 
 
-class Gemma3Trainer:
-    """Trainer class for Gemma3Model."""
+class MistralTrainer:
+    """Trainer class for MistralModel."""
 
     def __init__(
-        self, model: Gemma3Model, train_loader, val_loader, test_loader, **kwargs
+        self, model: MistralModel, train_loader, val_loader, test_loader, **kwargs
     ) -> None:
         """
-        Initialize the Gemma3 trainer. Finetruning is not implemented yet.
+        Initialize the Mistral trainer. Finetruning is not implemented yet.
         This is a wrapper for inference only.
 
         Args:
-            model (Gemma3Model): The Gemma3 model to be trained.
+            model (MistralModel): The Mistral model to be trained.
             train_loader: The DataLoader object for the training dataset.
             val_loader: The DataLoader object for the validation dataset.
             test_loader: The DataLoader object for the testing dataset.
@@ -251,7 +251,7 @@ class Gemma3Trainer:
             model._load_model()  #
 
         self.model = model
-        self.gemma_model = model.gemma_model
+        self.mistral_model = model.mistral_model
         self.params = model.params
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.train_loader = train_loader
@@ -283,11 +283,11 @@ class Gemma3Trainer:
                 self.model_save_dir,
             )
             optimizer = optim.AdamW(
-                self.gemma_model.parameters(), lr=self.params.get("lr", 1e-4)
+                self.mistral_model.parameters(), lr=self.params.get("lr", 1e-4)
             )
             num_epochs = self.params.get("num_epochs", 1)
 
-            self.gemma_model.train()
+            self.mistral_model.train()
             for epoch in range(num_epochs):
                 epoch_loss = 0.0
                 logger.info(f"Epoch {epoch + 1} started...")
@@ -323,7 +323,7 @@ class Gemma3Trainer:
 
                     optimizer.zero_grad()
                     #TODO: Should be optimized for diagnosis or probability -> need to adapt
-                    outputs = self.gemma_model(
+                    outputs = self.mistral_model(
                         input_ids=encoded["input_ids"].to(self.device),
                         attention_mask=encoded["attention_mask"].to(self.device),
                         labels=encoded["labels"].to(self.device),
@@ -356,7 +356,7 @@ class Gemma3Trainer:
                 val_loss = self.evaluate_single(self.val_loader)
                 logger.info("Validation loss: %s", val_loss)
 
-                self.gemma_model.save_pretrained(self.model_save_dir)
+                self.mistral_model.save_pretrained(self.model_save_dir)
                 self.model.tokenizer.save_pretrained(self.model_save_dir)
                 logger.info("Model saved to %s", self.model_save_dir)
 
@@ -372,6 +372,15 @@ class Gemma3Trainer:
         Returns:
             The average validation loss across the test dataset.
         """
+        if self.save_test_set:
+            # Save test set to CSV
+            test_loader[0].to_csv(
+                os.path.join(self.model.save_dir, "test_set.csv"), index=False
+            )
+            test_loader[1].to_csv(
+                os.path.join(self.model.save_dir, "test_labels.csv"), index=False
+            )
+            logger.info("Test set saved to %s", self.model.save_dir)
         logger.info("Starting test evaluation...")
 
         metrics_tracker = MetricsTracker(
@@ -383,7 +392,11 @@ class Gemma3Trainer:
         verbose: int = self.params.get("verbose", 1)
         val_loss: list[float] = []
 
-        self.gemma_model.eval()
+        self.mistral_model.eval()
+
+        total_tokens = 0
+        total_token_time = 0.0
+        total_infer_time = 0.0
 
         for X, y in zip(test_loader[0].iterrows(), test_loader[1].iterrows()):
             X_input = X[1].iloc[0]
@@ -424,8 +437,7 @@ class Gemma3Trainer:
                         "val_loss": loss.item(),
                         "token_time": token_time,
                         "infer_time": infer_time,
-                        "num_input_tokens": num_input_tokens,
-                        "num_output_tokens": num_output_tokens,
+                        "num_tokens": num_tokens,
                     }
                 )
 
@@ -451,7 +463,7 @@ class Gemma3Trainer:
 
         logger.info("Test evaluation completed for %s", self.model.model_name)
         logger.info("Test metrics: %s", metrics_tracker.summary)
-        
+
         return float(np.mean(val_loss))
     
 
@@ -507,7 +519,7 @@ class Gemma3Trainer:
             The average validation loss across the test dataset.
         """
         NotImplementedError(
-            "Batch evaluation is not implemented for Gemma3Model. Use evaluate_single instead."
+            "Batch evaluation is not implemented for MistralModel. Use evaluate_single instead."
         )
 
     def encode_prompt_target(

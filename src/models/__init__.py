@@ -9,6 +9,7 @@ from .llama4_model import Llama4Model
 from .lstm_model import LSTMModel
 from .randomforest_model import RandomForestModel
 from .xgboost_model import XGBoostModel
+from .mistral_model import MistralModel
 
 model_cls_name_dict = {
     "RandomForest": RandomForestModel,
@@ -21,7 +22,9 @@ model_cls_name_dict = {
     "Llama3Model": Llama3Model,
     "Llama4Model": Llama4Model,
     "Gemma3Model": Gemma3Model,
-    "DeepseekR1Model": DeepseekR1Model,
+    "DeepseekR1Qwen7bModel": DeepseekR1Model,
+    "DeepseekR1Llama8bModel": DeepseekR1Model,
+    "MistralModel": MistralModel,
 }
 
 
