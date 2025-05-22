@@ -50,7 +50,7 @@ class ModelTrainer:
             if scratch_dir:
                 logger.info("Scratch directory available at: %s", scratch_dir)
                 # Update the config with scratch space paths
-                self.config, data_copied = copy_data_to_scratch(self.config)
+                self.config, _ = copy_data_to_scratch(self.config)
             else:
                 logger.warning("No scratch directory found, using original data paths")
 
@@ -255,7 +255,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--config",
         type=str,
-        default="config_train.yaml",
+        default="configs/config_benchmark.yaml",
         help="Path to configuration file",
     )
     return parser.parse_args()

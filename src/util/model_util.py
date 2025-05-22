@@ -203,7 +203,6 @@ def prepare_data_for_model_convdl(
 
     # Import the converter
     from src.preprocessing.preprocessing_advanced.windowing import WindowedDataTo3D
-    from src.preprocessing.preprocessing_advanced.windowing import WindowedDataTo3D
 
     # Create converter with model name and config
     converter = WindowedDataTo3D(
@@ -281,6 +280,7 @@ def calculate_pos_weight(train_loader):
         logger.error("Error calculating class weights: %s", e)
         return 1.0
 
+
 def prompt_template_hf(
     input_text: str, custom_system_message=None, model=None
 ) -> List[Dict[str, str]]:
@@ -336,8 +336,11 @@ def prompt_template_hf(
         ]
     elif model == "DeepseekR1Model":
         # avoid using a system prompt. including it all in the user prompt
-        formatted_prompt = [
-            {"role": "user", "content": system_message + f"Text:\n{input_text}"},
+        formated_prompt = [
+            {
+                "role": "user",
+                "content": f"{system_message} Text:\n{input_text} <think>\n",
+            },
         ]
     else:
         formatted_prompt = [

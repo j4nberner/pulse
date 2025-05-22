@@ -4,10 +4,10 @@
 general:
   app_name: "Pulse"
   app_version: "1.0.0"
-  app_mode: "count_tokens" # "debug", "count_tokens", "benchmark"
+  app_mode: "debug" # "debug", "count_tokens", "benchmark", "pytest"
   debug_data_length: 500 # Number of samples to use for debugging
   logging_level: "DEBUG" # "DEBUG", "INFO", "WARNING", "ERROR"
-  use_scratch: true
+  use_scratch: true # Whether to use scratch space for temporary files
 
 # Weight and Biases (wandb) logging configuration
 wandb:
@@ -15,20 +15,20 @@ wandb:
   entity: "berner"
 
 ###### Application specific settings ######
-base_path: "/cluster/project/bmds_lab/sepsis_sophia/pulse"
+base_path: ""
 
 # Tasks to process
 tasks:
-  # - "mortality"
   - "aki"
+  # - "mortality"
   # - "sepsis"
 
 # Datasets to process
-dataset_path: datasets/original_harmonized #"/path/to/datasets"
+dataset_path: "datasets/original_harmonized" #"/path/to/datasets"
 datasets:
+  # - "eicu"
   - "hirid"
   # - "miiv"
-  # - "eicu"
 
 # _______ Preprocessing Baseline _______
 
@@ -49,7 +49,7 @@ preprocessing_baseline:
 
 preprocessing_advanced:
   windowing:
-    enabled: true # Enable/disable windowing
+    enabled: false # Enable/disable windowing
     data_window: 6 # Size of the data window
     prediction_window: 0 # Size of the prediction window (0 = predict at the end of window)
     step_size: 1 # Step size for sliding windows
@@ -59,13 +59,12 @@ preprocessing_advanced:
 
 prompting:
   prompting_ids:
-    # - "liu_2023_few_shot_preprocessor" # Preprocessing ID for the model
+    # - "agentic_prompt_test_preprocessor"
+    # - "liu_2023_few_shot_preprocessor"
     # - "sarvari_2024_aggregation_preprocessor"
     # - "zhu_2024a_one_shot_cot_preprocessor"
     # - "zhu_2024b_one_shot_preprocessor"
     - "zhu_2024c_categorization_summary_agent_preprocessor"
-    
-    # - "agentic_prompt_test_preprocessor"
   shots: 0
   save_test_set: true # Whether to save the test set
 
@@ -76,14 +75,14 @@ benchmark_settings:
   random_seed: 42
 
 load_models:
-  # - model_configs/RandomForestModel.yaml
-  # - model_configs/XGBoost.yaml
-  # - model_configs/LightGBMModel.yaml
-  # - model_configs/CNNModel.yaml
-  # - model_configs/LSTMModel.yaml
-  # - model_configs/InceptionTimeModel.yaml
-  # - model_configs/GRUModel.yaml
-  - model_configs/Llama3.yaml
-  # - model_configs/DeepseekR1Model.yaml
-  # - model_configs/Llama4.yaml # To big for inference and finetuning
-  # - model_configs/Gemma.yaml # Not tested...
+  # - "configs/model_configs/CNNModel.yaml"
+  # - "configs/model_configs/DeepseekR1Model.yaml"
+  # - "configs/model_configs/GRUModel.yaml"
+  # - "configs/model_configs/Gemma.yaml"
+  # - "configs/model_configs/InceptionTimeModel.yaml"
+  # - "configs/model_configs/LSTMModel.yaml"
+  # - "configs/model_configs/LightGBMModel.yaml"
+  # - "configs/model_configs/Llama3.yaml"
+  # - "configs/model_configs/Llama4.yaml"
+  - "configs/model_configs/RandomForestModel.yaml"
+  # - "configs/model_configs/XGBoost.yaml"
