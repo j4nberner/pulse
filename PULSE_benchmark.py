@@ -115,13 +115,29 @@ class ModelTrainer:
                     X_train, y_train = None, None
                     X_val, y_val = None, None
 
+                    if model.type == "convML":
+                        # Sanity check if data standardization was disabled
+                        if self.config.preprocessing_baseline.get("standardize"):
+                            logger.error(
+                                "Data standardization is enabled for convML models. Please disable it in the config."
+                            )
+                            sys.exit(1)
+
+                    if model.type == "convDL":
+                        # Sanity check if data standardization was enabled
+                        if not self.config.preprocessing_baseline.get("standardize"):
+                            logger.error(
+                                "Data standardization is not enabled for convDL models. Please enable it in the config."
+                            )
+                            sys.exit(1)
+
                     if model.type == "LLM":
-                        # Sanity check if data normalization was disabled
-                        if self.config.preprocessing_baseline.get("standardize", False):
+                        # Sanity check if data standardization was disabled
+                        if self.config.preprocessing_baseline.get("standardize"):
                             logger.error(
                                 "Data standardization is enabled for LLM models. Please disable it in the config."
                             )
-                            continue
+                            sys.exit(1)
 
                         dm_kwargs.update(
                             {
