@@ -16,6 +16,7 @@ import wandb
 from src.eval.metrics import MetricsTracker
 from src.models.pulsetemplate_model import PulseTemplateModel
 from src.util.model_util import extract_dict, prompt_template_hf
+from src.util.config_util import set_seeds
 
 warnings.filterwarnings(
     "ignore",
@@ -39,12 +40,24 @@ class Llama3Model(PulseTemplateModel):
         self.trainer_name = params["trainer_name"]
         super().__init__(self.model_name, self.trainer_name, params=params)
 
+        # Store random seed from params (added by ModelManager)
+        self.random_seed = self.params.get("random_seed", 42)
+        logger.debug("Using random seed: %d", self.random_seed)
+
         self.save_dir: str = kwargs.get("output_dir", f"{os.getcwd()}/output")
         self.wandb: bool = kwargs.get("wandb", False)
 
         required_params = [
             "max_new_tokens",
+            "verbose",
+            "tuning",
+            "num_epochs",
+            "max_new_tokens",
+            "max_length",
+            "do_sample",
+            "temperature",
         ]
+
         # Check if all required parameters exist in config
         missing_params = [param for param in required_params if param not in params]
         if missing_params:
@@ -56,7 +69,7 @@ class Llama3Model(PulseTemplateModel):
         self.model_id: str = self.params.get(
             "model_id", "meta-llama/Llama-3.1-8B-Instruct"
         )
-        self.max_length: int = self.params.get("max_length", 5120)
+        self.max_length: int = self.params["max_length"]
 
         self.tokenizer: Optional[Any] = None
         self.llama_model: Optional[Any] = None
@@ -133,7 +146,6 @@ class Llama3Model(PulseTemplateModel):
             return_tensors="pt",
         )
         token_time = time.perf_counter() - token_start
-
         num_input_tokens = tokenized_inputs["input_ids"].size(1)
 
         input_ids = tokenized_inputs["input_ids"].to(self.device)
@@ -141,16 +153,22 @@ class Llama3Model(PulseTemplateModel):
 
         # Generate output with scores
         infer_start = time.perf_counter()
+
+        # Set seed for deterministic generation
+        set_seeds(self.random_seed)
+
         with torch.no_grad():
             outputs = self.llama_model.generate(
                 input_ids=input_ids,
                 attention_mask=attention_mask,
-                max_new_tokens=self.params.max_new_tokens,
+                max_new_tokens=self.params["max_new_tokens"],
                 return_dict_in_generate=True,
                 output_scores=False,
                 output_hidden_states=False,
                 pad_token_id=self.tokenizer.pad_token_id,
                 eos_token_id=self.tokenizer.eos_token_id,
+                do_sample=self.params["do_sample"],
+                temperature=self.params["temperature"],
             )
         infer_time = time.perf_counter() - infer_start
 
@@ -179,7 +197,10 @@ class Llama3Model(PulseTemplateModel):
         parsed["probability"] = prob
 
         logger.info(
-            f"Tokenization time: {token_time:.4f}s | Inference time: {infer_time:.4f}s | Tokens: {num_input_tokens + num_output_tokens}"
+            "Tokenization time: %.4fs | Inference time: %.4fs | Tokens: %d",
+            token_time,
+            infer_time,
+            num_input_tokens + num_output_tokens,
         )
 
         return {
@@ -256,6 +277,9 @@ class Llama3Trainer:
             val_loader: The DataLoader object for the validation dataset.
             test_loader: The DataLoader object for the testing dataset.
         """
+        # Set seed for deterministic generation
+        set_seeds(model.random_seed)
+
         # Load the model and tokenizer
         if kwargs.get("disable_model_load", False):
             logger.info("Skipping model loading for debugging purposes.")
@@ -285,6 +309,9 @@ class Llama3Trainer:
 
     def train(self):
         """Training loop."""
+        # Set seed for deterministic generation
+        set_seeds(self.model.random_seed)
+
         verbose = self.params.get("verbose", 1)
         logger.info("System message: %s", prompt_template_hf("")[0])
         logger.info("Starting training...")
@@ -387,6 +414,9 @@ class Llama3Trainer:
         Returns:
             The average validation loss across the test dataset.
         """
+        # Set seed for deterministic generation
+        set_seeds(self.model.random_seed)
+
         if self.save_test_set:
             # Save test set to CSV
             test_loader[0].to_csv(

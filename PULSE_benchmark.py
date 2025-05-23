@@ -38,7 +38,6 @@ class ModelTrainer:
         logger.info("Logging Level: %s", config.general.logging_level)
 
         # Set random seeds for reproducibility
-        # TODO: add random seed to LLM trainers (see convDL train() methods as reference)
         random_seed = self.config.benchmark_settings.get("random_seed", 42)
         set_seeds(random_seed)
         logger.info("Setting random seed to %s for reproducibility", random_seed)

@@ -10,12 +10,18 @@ import torch.nn as nn
 import torch.optim as optim
 from peft import PromptTuningConfig, PromptTuningInit, TaskType, get_peft_model
 from torch.nn import functional as F
-from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, Gemma3ForConditionalGeneration
+from transformers import (
+    AutoModelForCausalLM,
+    AutoTokenizer,
+    BitsAndBytesConfig,
+    Gemma3ForConditionalGeneration,
+)
 
 import wandb
 from src.eval.metrics import MetricsTracker
 from src.models.pulsetemplate_model import PulseTemplateModel
 from src.util.model_util import extract_dict, prompt_template_hf
+from src.util.config_util import set_seeds
 
 warnings.filterwarnings(
     "ignore",
@@ -39,12 +45,24 @@ class Gemma3Model(PulseTemplateModel):
         self.trainer_name = params["trainer_name"]
         super().__init__(self.model_name, self.trainer_name, params=params)
 
+        # Store random seed from params (added by ModelManager)
+        self.random_seed = self.params.get("random_seed", 42)
+        logger.debug("Using random seed: %d", self.random_seed)
+
         self.save_dir: str = kwargs.get("output_dir", f"{os.getcwd()}/output")
         self.wandb: bool = kwargs.get("wandb", False)
 
         required_params = [
             "max_new_tokens",
+            "verbose",
+            "tuning",
+            "num_epochs",
+            "max_new_tokens",
+            "max_length",
+            "do_sample",
+            "temperature",
         ]
+
         # Check if all required parameters exist in config
         missing_params = [param for param in required_params if param not in params]
         if missing_params:
@@ -53,9 +71,7 @@ class Gemma3Model(PulseTemplateModel):
         self.params: Dict[str, Any] = params
         self.params["save_test_set"] = kwargs.get("save_test_set", False)
 
-        self.model_id: str = self.params.get(
-            "model_id", "google/gemma-3-12b-it"
-        )
+        self.model_id: str = self.params.get("model_id", "google/gemma-3-12b-it")
         self.max_length: int = self.params.get("max_length", 5120)
 
         self.tokenizer: Optional[Any] = None
@@ -132,21 +148,29 @@ class Gemma3Model(PulseTemplateModel):
 
         # Generate output with scores
         infer_start = time.perf_counter()
+
+        # Set seed for deterministic generation
+        set_seeds(self.random_seed)
+
         with torch.no_grad():
             outputs = self.gemma_model.generate(
                 input_ids=input_ids,
                 attention_mask=attention_mask,
-                max_new_tokens=self.params.max_new_tokens,
+                max_new_tokens=self.params["max_new_tokens"],
                 return_dict_in_generate=True,
                 output_scores=False,
                 output_hidden_states=False,
                 pad_token_id=self.tokenizer.pad_token_id,
                 eos_token_id=self.tokenizer.eos_token_id,
+                do_sample=self.params["do_sample"],
+                temperature=self.params["temperature"],
             )
         infer_time = time.perf_counter() - infer_start
 
         # Get first sequence, decode to string
-        generated_text = self.tokenizer.decode(outputs.sequences[0][num_prompt_tokens:], skip_special_tokens=True)
+        generated_text = self.tokenizer.decode(
+            outputs.sequences[0][num_prompt_tokens:], skip_special_tokens=True
+        )
         num_output_tokens = outputs.sequences[0].size(0) - num_prompt_tokens
 
         # Trim after first <end_of_turn>
@@ -166,7 +190,10 @@ class Gemma3Model(PulseTemplateModel):
         parsed["probability"] = prob
 
         logger.info(
-            f"Tokenization time: {token_time:.4f}s | Inference time: {infer_time:.4f}s | Tokens: {num_input_tokens + num_output_tokens}"
+            "Tokenization time: %.4fs | Inference time: %.4fs | Tokens: %d",
+            token_time,
+            infer_time,
+            num_input_tokens + num_output_tokens,
         )
 
         return {
@@ -176,7 +203,7 @@ class Gemma3Model(PulseTemplateModel):
             "num_input_tokens": num_prompt_tokens,
             "num_output_tokens": num_output_tokens,
         }
-    
+
     def calculate_tokens(self, input_text: str) -> Dict[str, Any]:
         """
         Runs the full inference without loading the model and calculates the number of input and output tokens.
@@ -205,7 +232,6 @@ class Gemma3Model(PulseTemplateModel):
             "num_input_tokens": num_input_tokens,
             "num_output_tokens": self.params.max_new_tokens,
         }
-
 
     def set_trainer(
         self,
@@ -244,6 +270,9 @@ class Gemma3Trainer:
             val_loader: The DataLoader object for the validation dataset.
             test_loader: The DataLoader object for the testing dataset.
         """
+        # Set seed for deterministic generation
+        set_seeds(model.random_seed)
+
         # Load the model and tokenizer
         if kwargs.get("disable_model_load", False):
             logger.info("Skipping model loading for debugging purposes.")
@@ -273,6 +302,9 @@ class Gemma3Trainer:
 
     def train(self):
         """Training loop."""
+        # Set seed for deterministic generation
+        set_seeds(self.model.random_seed)
+
         verbose = self.params.get("verbose", 1)
         logger.info("System message: %s", prompt_template_hf("")[0])
         logger.info("Starting training...")
@@ -322,7 +354,7 @@ class Gemma3Trainer:
                     )
 
                     optimizer.zero_grad()
-                    #TODO: Should be optimized for diagnosis or probability -> need to adapt
+                    # TODO: Should be optimized for diagnosis or probability -> need to adapt
                     outputs = self.gemma_model(
                         input_ids=encoded["input_ids"].to(self.device),
                         attention_mask=encoded["attention_mask"].to(self.device),
@@ -372,6 +404,9 @@ class Gemma3Trainer:
         Returns:
             The average validation loss across the test dataset.
         """
+        # Set seed for deterministic generation
+        set_seeds(self.model.random_seed)
+
         logger.info("Starting test evaluation...")
 
         metrics_tracker = MetricsTracker(
@@ -406,7 +441,9 @@ class Gemma3Trainer:
             )
             if verbose > 1:
                 logger.info("Diagnosis for: %s", generated_text["diagnosis"])
-                logger.info("Generated explanation: %s \n", generated_text["explanation"])
+                logger.info(
+                    "Generated explanation: %s \n", generated_text["explanation"]
+                )
             if verbose > 2:
                 logger.info("Input prompt: %s \n", X_input)
 
@@ -451,9 +488,8 @@ class Gemma3Trainer:
 
         logger.info("Test evaluation completed for %s", self.model.model_name)
         logger.info("Test metrics: %s", metrics_tracker.summary)
-        
+
         return float(np.mean(val_loss))
-    
 
     def estimate_nr_tokens(self) -> int:
         """Estimates the number of tokens for a task-dataset combination.
@@ -464,7 +500,7 @@ class Gemma3Trainer:
         logger.info("Estimating number of tokens for the dataset...")
         # Load the tokenizer
         self.model.tokenizer = AutoTokenizer.from_pretrained(
-                self.model.model_id, use_fast=False, padding_side="left"
+            self.model.model_id, use_fast=False, padding_side="left"
         )
 
         test_loader = self.test_loader
@@ -488,13 +524,18 @@ class Gemma3Trainer:
                 num_output_tokens,
             )
 
-        logger.info(f"Total tokens for the task {self.model.task_name} dataset {self.model.dataset_name}: {total_tokens}")
+        logger.info(
+            f"Total tokens for the task {self.model.task_name} dataset {self.model.dataset_name}: {total_tokens}"
+        )
         logger.info("Total input tokens: %s", total_input_tokens)
         logger.info("Total output tokens: %s", total_output_tokens)
-        logger.info("Average input tokens: %s", total_input_tokens / len(test_loader[0]))
-        logger.info("Average output tokens: %s", total_output_tokens / len(test_loader[0]))
+        logger.info(
+            "Average input tokens: %s", total_input_tokens / len(test_loader[0])
+        )
+        logger.info(
+            "Average output tokens: %s", total_output_tokens / len(test_loader[0])
+        )
         return total_tokens
-
 
     def evaluate_batched(self, test_loader: Any, save_report: bool = False) -> float:
         """Evaluates the model on a given test set in batches.

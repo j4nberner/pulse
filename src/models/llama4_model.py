@@ -17,6 +17,7 @@ import wandb
 from src.eval.metrics import MetricsTracker
 from src.models.pulsetemplate_model import PulseTemplateModel
 from src.util.model_util import extract_dict, prompt_template_hf
+from src.util.config_util import set_seeds
 
 warnings.filterwarnings(
     "ignore",
@@ -40,12 +41,24 @@ class Llama4Model(PulseTemplateModel):
         self.trainer_name = params["trainer_name"]
         super().__init__(self.model_name, self.trainer_name, params=params)
 
+        # Store random seed from params (added by ModelManager)
+        self.random_seed = self.params.get("random_seed", 42)
+        logger.debug("Using random seed: %d", self.random_seed)
+
         self.save_dir: str = kwargs.get("output_dir", f"{os.getcwd()}/output")
         self.wandb: bool = kwargs.get("wandb", False)
 
         required_params = [
             "max_new_tokens",
+            "verbose",
+            "tuning",
+            "num_epochs",
+            "max_new_tokens",
+            "max_length",
+            "do_sample",
+            "temperature",
         ]
+
         # Check if all required parameters exist in config
         missing_params = [param for param in required_params if param not in params]
         if missing_params:
@@ -133,22 +146,27 @@ class Llama4Model(PulseTemplateModel):
         yes_token_id = self.tokenizer("yes", add_special_tokens=False).input_ids[0]
         no_token_id = self.tokenizer("no", add_special_tokens=False).input_ids[0]
         
-        # self.llama_model.to(self.device)
         input_ids = tokenized_inputs["input_ids"].to(self.device)
         attention_mask = tokenized_inputs["attention_mask"].to(self.device)
 
         # Generate output with scores
         infer_start = time.perf_counter()
+    
+        # Set seed for deterministic generation
+        set_seeds(self.random_seed)
+
         with torch.no_grad():
             outputs = self.llama_model.generate(
                 input_ids=input_ids,
                 attention_mask=attention_mask,
-                max_new_tokens=self.params.max_new_tokens,
+                max_new_tokens=self.params["max_new_tokens"],
                 return_dict_in_generate=True,
                 output_scores=True,
                 output_hidden_states=False,
                 pad_token_id=self.tokenizer.pad_token_id,
                 eos_token_id=self.tokenizer.eos_token_id,
+                do_sample=self.params["do_sample"],
+                temperature=self.params["temperature"],
             )
 
         infer_time = time.perf_counter() - infer_start
@@ -162,62 +180,6 @@ class Llama4Model(PulseTemplateModel):
         )
         logger.debug("Decoded output:\n %s", decoded_output)
 
-        # Calculate softmax over first generated token logits
-        first_token_logits = outputs.scores[0][0]  # shape: (vocab_size,)
-        # top_gen_ids = gen_ids[:5]  # First few generated tokens
-        # print("Generated token IDs:", top_gen_ids)
-        # print("Decoded tokens:", [self.tokenizer.decode([tid]) for tid in top_gen_ids])
-        # logger.debug(
-        #     "First token logits: %s", first_token_logits
-        # )
-        # Apply softmax to get probabilities
-        # Get top 10 probabilities and their corresponding token indices
-        probs = torch.topk(F.softmax(first_token_logits, dim=-1), 10) #(values, indices)
-        topk_values, topk_indices = probs
-
-        # Convert indices to list for easier matching
-        topk_indices_list = topk_indices.tolist()
-        topk_values_list = topk_values.tolist()
-
-        # Initialize with fallback values
-        yes_prob = 0.0
-        no_prob = 0.0
-
-        # Find index of yes_token_id and extract its probability
-        if yes_token_id in topk_indices_list:
-            yes_index = topk_indices_list.index(yes_token_id)
-            yes_prob = topk_values_list[yes_index]
-
-        if no_token_id in topk_indices_list:
-            no_index = topk_indices_list.index(no_token_id)
-            no_prob = topk_values_list[no_index]
-
-
-        # Fallback if yes and no tokens were not picked up. They are inlcuded in the vocab but
-        # have a value a -inf as logits
-        if yes_prob == 0.0 and no_prob == 0.0:
-            logger.warning(
-                "Yes or No token probabilities are zero. Defaulting to 0.5."
-            )
-            yes_prob = 0.5
-            no_prob = 0.5
-
-        if yes_prob > no_prob:
-            probability = yes_prob
-        else:
-            probability = 1 - no_prob
-        logger.debug(
-            "Yes token ID: %s | No token ID: %s", yes_token_id, no_token_id
-        )
-        logger.debug(
-            "Top 10 token probs: %s", probs
-        )
-        logger.debug(
-            "Yes token probability: %.4f | No token probability: %.4f",
-            yes_prob,
-            no_prob,
-        )
-
         # Extract dict from the decoded output (e.g., via regex or JSON parsing)
         try:
             parsed = extract_dict(decoded_output)
@@ -230,7 +192,10 @@ class Llama4Model(PulseTemplateModel):
         parsed["probability"] = round(probability, 4)
 
         logger.info(
-            f"Tokenization time: {token_time:.4f}s | Inference time: {infer_time:.4f}s | Tokens: {num_prompt_tokens}"
+            "Tokenization time: %.4fs | Inference time: %.4fs | Tokens: %d",
+            token_time,
+            infer_time,
+            num_input_tokens + num_output_tokens,
         )
 
         return {
@@ -300,6 +265,9 @@ class Llama4Trainer:
             val_loader: The DataLoader object for the validation dataset.
             test_loader: The DataLoader object for the testing dataset.
         """
+        # Set seed for deterministic generation
+        set_seeds(model.random_seed)
+
         # Load the model and tokenizer
         model._load_model()  # Comment out to only test preprocessing
 
@@ -326,6 +294,9 @@ class Llama4Trainer:
 
     def train(self):
         """Training loop."""
+        # Set seed for deterministic generation
+        set_seeds(self.model.random_seed)
+
         verbose = self.params.get("verbose", 1)
         logger.info("System message: %s", prompt_template_hf("")[0])
         logger.info("Starting training...")
@@ -425,6 +396,9 @@ class Llama4Trainer:
         Returns:
             The average validation loss across the test dataset.
         """
+        # Set seed for deterministic generation
+        set_seeds(self.model.random_seed)
+
         if self.save_test_set:
             # Save test set to CSV
             test_loader[0].to_csv(

@@ -71,13 +71,29 @@ def set_seeds(seed: int) -> None:
     Args:
         seed (int): The seed value to use
     """
+    os.environ["PYTHONHASHSEED"] = str(seed)
+
+    # Python's built-in random
     random.seed(seed)
+
+    # NumPy
     np.random.seed(seed)
+
+    # PyTorch
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
-    # For some operations in CUDA, you might also want to set:
+
+    # For CUDA operations
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
+
+    # For HuggingFace Transformers
+    try:
+        import transformers
+
+        transformers.set_seed(seed)
+    except (ImportError, AttributeError):
+        pass
 
 
 # Example usage:
