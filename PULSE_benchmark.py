@@ -11,7 +11,7 @@ from torch.utils.data import DataLoader
 from src.data.dataloader import DatasetManager, TorchDatasetWrapper
 from src.logger_setup import init_wandb, setup_logger
 from src.models.modelmanager import ModelManager
-from src.util.config_util import load_config_with_models, save_config_file, set_seeds
+from src.util.config_util import load_config_with_models, save_config_file, set_seeds, get_deterministic_dataloader_args
 from src.util.slurm_util import copy_data_to_scratch, get_local_scratch_dir, is_on_slurm
 
 logger, output_dir = setup_logger()
@@ -187,9 +187,9 @@ class ModelTrainer:
                             task_dataset_name,
                         )
 
-                        # Ensure that the Dataloaders use deterministic shuffling (even with multiple workers)
-                        g = torch.Generator()
-                        g.manual_seed(self.config.benchmark_settings.get("random_seed"))
+                        # Get the deterministic DataLoader arguments
+                        random_seed = self.config.benchmark_settings.get("random_seed")
+                        dataloader_args = get_deterministic_dataloader_args(random_seed)
 
                         train_loader = DataLoader(
                             train_dataset,
@@ -200,21 +200,21 @@ class ModelTrainer:
                             pin_memory=False,  # Speeds up CPU-to-GPU transfers
                             prefetch_factor=2,  # Default value, can increase if GPU is idle
                             persistent_workers=True,  # Keeps workers alive between epochs
-                            generator=g,
+                            **dataloader_args,
                         )
                         val_loader = DataLoader(
                             val_dataset,
                             batch_size=batch_size,
                             shuffle=False,
                             drop_last=False,
-                            generator=g,
+                            **dataloader_args,
                         )
                         test_loader = DataLoader(
                             test_dataset,
                             batch_size=batch_size,
                             shuffle=False,
                             drop_last=False,
-                            generator=g,
+                            **dataloader_args,
                         )
 
                     else:

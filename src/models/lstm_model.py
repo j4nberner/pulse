@@ -17,6 +17,7 @@ from src.util.model_util import (
     calculate_pos_weight,
     prepare_data_for_model_convdl,
     save_torch_model,
+    initialize_weights,
 )
 
 logger = logging.getLogger("PULSE_logger")
@@ -112,6 +113,7 @@ class LSTMModel(PulseTemplateModel, nn.Module):
         """
         Initialize the LSTM model.
         """
+        set_seeds(self.params["random_seed"])
 
         # Get parameters for the architecture
         self.lstm_units = self.params.get(
@@ -151,6 +153,9 @@ class LSTMModel(PulseTemplateModel, nn.Module):
         self.dropout_final = nn.Dropout(
             dropout_rates[-1]
         )  # Final dropout after first dense layer
+
+        # Initialize weights with Xavier initialization
+        self.apply(initialize_weights)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
@@ -208,6 +213,7 @@ class LSTMTrainer:
         self.model = lstm_model
         self.params = lstm_model.params
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        set_seeds(self.model.params["random_seed"])
 
         self.train_loader = train_loader
         self.val_loader = val_loader
@@ -292,15 +298,7 @@ class LSTMTrainer:
 
     def train(self):
         """Training loop."""
-        # Set random seed from params if available
-        if "random_seed" in self.params:
-            set_seeds(self.params["random_seed"])
-            logger.debug(
-                "Random seed set to %d before %s training",
-                self.params["random_seed"],
-                self.model.model_name,
-            )
-
+        set_seeds(self.model.params["random_seed"])
         num_epochs = self.params["num_epochs"]
         verbose = self.params.get("verbose", 1)
 
