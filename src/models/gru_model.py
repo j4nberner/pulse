@@ -42,10 +42,13 @@ class GRUModel(PulseTemplateModel, nn.Module):
         if "trainer_name" not in params:
             raise KeyError("Required parameter 'trainer_name' not found in config")
 
-        # Use the class name as model_name if not provided in params
-        self.model_name = params.get(
-            "model_name", self.__class__.__name__.replace("Model", "")
-        )
+        # Extract model_name from kwargs if it exists (passed from ModelManager)
+        if "model_name" in kwargs:
+            self.model_name = kwargs.pop("model_name")  # Remove to avoid duplication
+        else:
+            # Fallback to class name if model_name not in kwargs
+            self.model_name = self.__class__.__name__.replace("Model", "")
+
         self.trainer_name = params["trainer_name"]
         super().__init__(self.model_name, self.trainer_name, params=params, **kwargs)
         nn.Module.__init__(self)

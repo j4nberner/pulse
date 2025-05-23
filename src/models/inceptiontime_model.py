@@ -12,9 +12,12 @@ import wandb
 from src.eval.metrics import MetricsTracker
 from src.models.pulsetemplate_model import PulseTemplateModel
 from src.util.config_util import set_seeds
-from src.util.model_util import (EarlyStopping, calculate_pos_weight,
-                                 prepare_data_for_model_convdl,
-                                 save_torch_model)
+from src.util.model_util import (
+    EarlyStopping,
+    calculate_pos_weight,
+    prepare_data_for_model_convdl,
+    save_torch_model,
+)
 
 # Set up logger
 logger = logging.getLogger("PULSE_logger")
@@ -101,10 +104,13 @@ class InceptionTimeModel(PulseTemplateModel, nn.Module):
         if "trainer_name" not in params:
             raise KeyError("Required parameter 'trainer_name' not found in config")
 
-        # Use the class name as model_name if not provided in params
-        self.model_name = params.get(
-            "model_name", self.__class__.__name__.replace("Model", "")
-        )
+        # Extract model_name from kwargs if it exists (passed from ModelManager)
+        if "model_name" in kwargs:
+            self.model_name = kwargs.pop("model_name")  # Remove to avoid duplication
+        else:
+            # Fallback to class name if model_name not in kwargs
+            self.model_name = self.__class__.__name__.replace("Model", "")
+
         self.trainer_name = params["trainer_name"]
         super().__init__(self.model_name, self.trainer_name, params=params, **kwargs)
         nn.Module.__init__(self)
