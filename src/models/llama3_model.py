@@ -70,22 +70,20 @@ class Llama3Model(PulseTemplateModel):
             self.save_dir = kwargs.get("output_dir", f"{os.getcwd()}/output")
             self.wandb = kwargs.get("wandb", False)
 
-            # Check if all required parameters exist in config
-            required_params = [
-                "max_new_tokens",
-                "verbose",
-                "tuning",
-                "num_epochs",
-                "max_length",
-                "do_sample",
-                "temperature",
-            ]
+        # Check if all required parameters exist in config
+        required_params = [
+            "max_new_tokens",
+            "verbose",
+            "tuning",
+            "num_epochs",
+            "max_length",
+            "do_sample",
+            "temperature",
+        ]
 
-            missing_params = [param for param in required_params if param not in params]
-            if missing_params:
-                raise KeyError(
-                    f"Required parameters missing from config: {missing_params}"
-                )
+        missing_params = [param for param in required_params if param not in params]
+        if missing_params:
+            raise KeyError(f"Required parameters missing from config: {missing_params}")
 
         # Parameters for all modes - must be after the if/else since params might get modified
         self.params["save_test_set"] = kwargs.get("save_test_set", False)
@@ -117,7 +115,7 @@ class Llama3Model(PulseTemplateModel):
                 logger.info("Model already loaded, reusing existing instance")
                 return
 
-            logger.info(f"Loading model %s", self.model_id)
+            logger.debug(f"Loading model %s", self.model_id)
             self.tokenizer = AutoTokenizer.from_pretrained(
                 self.model_id, use_fast=False, padding_side="left"
             )
@@ -154,7 +152,6 @@ class Llama3Model(PulseTemplateModel):
 
             # Mark model as loaded after successful loading
             self.is_loaded = True
-            logger.debug(f"Successfully loaded model: {self.model_id}")
 
         except Exception as e:
             logger.error("Failed to load Llama3 model: %s", e)
@@ -175,6 +172,7 @@ class Llama3Model(PulseTemplateModel):
         """
         # Set seed for deterministic generation
         set_seeds(self.random_seed)
+        
         # Ensure model is loaded before trying to use it
         if self.tokenizer is None or self.llama_model is None:
             logger.debug("Model not loaded yet for inference, loading now...")
@@ -512,20 +510,28 @@ class Llama3Trainer:
         for X, y in zip(test_loader[0].iterrows(), test_loader[1].iterrows()):
             idx = X[0]  # The index of the current row
             X_input = X[1].iloc[0]  # The input text for standard pipeline
-            y_true = y[1].iloc[0]    # The true label
+            y_true = y[1].iloc[0]  # The true label
 
             # Check if this row contains an agent prediction
             is_agent_prediction = False
             if "is_agent_prediction" in test_loader[0].columns:
-                is_agent_prediction = bool(test_loader[0].at[idx, "is_agent_prediction"])
-                logger.debug(f"Sample {idx}: is_agent_prediction = {is_agent_prediction} (type: {type(is_agent_prediction)})")
+                is_agent_prediction = bool(
+                    test_loader[0].at[idx, "is_agent_prediction"]
+                )
+                logger.debug(
+                    f"Sample {idx}: is_agent_prediction = {is_agent_prediction} (type: {type(is_agent_prediction)})"
+                )
 
             if is_agent_prediction:
-                logger.info("Found agent prediction - using directly without additional inference")
+                logger.info(
+                    "Found agent prediction - using directly without additional inference"
+                )
 
                 try:
                     # Parse the agent's prediction JSON
-                    agent_output = json.loads(X_input) if isinstance(X_input, str) else X_input
+                    agent_output = (
+                        json.loads(X_input) if isinstance(X_input, str) else X_input
+                    )
 
                     # Extract prediction fields
                     predicted_probability = float(agent_output.get("probability", 0.5))
@@ -533,29 +539,42 @@ class Llama3Trainer:
                     explanation = agent_output.get("explanation", "")
 
                     # Get token metrics if available
-                    token_time = 0.001  # Placeholder values
-                    infer_time = 0.001
-                    num_input_tokens = test_loader[0].at[idx, "num_input_tokens"] if "num_input_tokens" in test_loader[0].columns else 100
-                    num_output_tokens = test_loader[0].at[idx, "num_output_tokens"] if "num_output_tokens" in test_loader[0].columns else 50
+                    token_time = 0.0  # Placeholder values
+                    infer_time = 0.0
+                    num_input_tokens = (
+                        test_loader[0].at[idx, "num_input_tokens"]
+                        if "num_input_tokens" in test_loader[0].columns
+                        else 100
+                    )
+                    num_output_tokens = (
+                        test_loader[0].at[idx, "num_output_tokens"]
+                        if "num_output_tokens" in test_loader[0].columns
+                        else 50
+                    )
 
                     # Create result structure matching what infer_llm would return
                     result_dict = {
                         "generated_text": {
                             "diagnosis": diagnosis,
                             "probability": predicted_probability,
-                            "explanation": explanation
+                            "explanation": explanation,
                         },
                         "token_time": token_time,
                         "infer_time": infer_time,
-                        "num_input_tokens": num_input_tokens, 
-                        "num_output_tokens": num_output_tokens
+                        "num_input_tokens": num_input_tokens,
+                        "num_output_tokens": num_output_tokens,
                     }
 
-                    logger.info("Using agent prediction: %s with probability %s", 
-                            diagnosis, predicted_probability)
+                    logger.info(
+                        "Using agent prediction: %s with probability %s",
+                        diagnosis,
+                        predicted_probability,
+                    )
 
                 except Exception as e:
-                    logger.error(f"Error parsing agent prediction: {e} - Falling back to standard inference")
+                    logger.error(
+                        f"Error parsing agent prediction: {e} - Falling back to standard inference"
+                    )
                     # Run normal inference as fallback
                     result_dict = self.model.infer_llm(X_input)
             else:

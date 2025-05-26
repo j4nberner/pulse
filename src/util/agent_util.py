@@ -97,6 +97,33 @@ def get_model_instance(model_config: Dict[str, Any], **kwargs) -> Any:
             output_dir=kwargs.get("output_dir", None),
             inference_only=kwargs.get("inference_only", False),
         )
+    elif model_name == "DeepseekR1Model":
+        from src.models.deepseekr1_model import DeepseekR1Model
+
+        return DeepseekR1Model(
+            params=params,
+            pretrained_model_path=model_config.get("pretrained_model_path", None),
+            wandb=kwargs.get("wandb", False),
+            output_dir=kwargs.get("output_dir", None),
+            inference_only=kwargs.get("inference_only", True),
+            model_name=model_name,
+            task_name=kwargs.get("task_name"),
+            dataset_name=kwargs.get("dataset_name"),
+        )
+    elif model_name == "Gemma3Model":
+        from src.models.gemma3_model import Gemma3Model
+
+        return Gemma3Model(
+            params=params,
+            pretrained_model_path=model_config.get("pretrained_model_path", None),
+            wandb=kwargs.get("wandb", False),
+            output_dir=kwargs.get("output_dir", None),
+            inference_only=kwargs.get("inference_only", True),
+            model_name=model_name,
+            task_name=kwargs.get("task_name"),
+            dataset_name=kwargs.get("dataset_name"),
+        )
+
     # Add more model types as needed
 
     logger.error(f"Unknown model: {model_name}")
@@ -255,7 +282,6 @@ class AgentMemoryManager:
         if steps:
             return steps[-1]
         return None
-
 
     def get_final_step(self, sample_id: Any) -> Optional[StepMemory]:
         """Get the final step for a specific sample."""
