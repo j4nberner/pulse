@@ -95,15 +95,20 @@ class ModelManager:
 
         # Check if we already have this model instance cached
         if cache_key in self._model_cache:
-            logger.info(f"Using cached model instance: {cache_key}")
+            logger.info("Using cached model instance: %s", cache_key)
             return self._model_cache[cache_key]
 
         # Create model as before
         model_cls = get_model_class(model_name)
 
+        # Add random seed to params if not already present
+        params = config.get("params", {})
+        if "random_seed" not in params:
+            params["random_seed"] = self.benchmark_settings.get("random_seed", 42)
+
         # Set parameters (no need to differentiate for agent)
         kwargs = {
-            "params": config.get("params", {}),
+            "params": params,
             "pretrained_model_path": config.get("pretrained_model_path", None),
             "wandb": self.wandb.get("enabled", False),
             "output_dir": self.output_dir,
@@ -115,7 +120,7 @@ class ModelManager:
 
         # Cache the model before returning
         self._model_cache[cache_key] = model
-        logger.info(f"Created and cached model instance: {cache_key}")
+        logger.info("Created and cached model instance: %s", cache_key)
 
         # Load model weights if path is specified
         if config.get("pretrained_model_path", None):
