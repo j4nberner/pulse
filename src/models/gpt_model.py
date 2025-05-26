@@ -26,7 +26,7 @@ warnings.filterwarnings(
 )
 
 logger = logging.getLogger("PULSE_logger")
-openai_key = os.environ.get("OPENAI_API_KEY")
+
 
 class GPTModel(PulseTemplateModel):
     """GPT model wrapper."""
@@ -48,7 +48,8 @@ class GPTModel(PulseTemplateModel):
         required_params = [
             "max_new_tokens",
             "api_version",
-            "azure_endpoint",
+            "api_key_name",
+            "api_uri_name",
         ]
         # Check if all required parameters exist in config
         missing_params = [param for param in required_params if param not in params]
@@ -57,10 +58,13 @@ class GPTModel(PulseTemplateModel):
 
         self.params: Dict[str, Any] = params
 
+        api_key = os.environ.get(params["api_key_name"])
+        endpoint_uri = os.environ.get(params["api_uri_name"])
+
         self.client = AzureOpenAI(
             api_version=params["api_version"],
-            azure_endpoint=params["azure_endpoint"],
-            api_key=openai_key,
+            azure_endpoint=endpoint_uri,
+            api_key=api_key,
         )
         self.deployment = params["deployment"]
 
@@ -83,7 +87,9 @@ class GPTModel(PulseTemplateModel):
             input_text = str(input_text)
 
         # Format input using prompt template
-        input_text = prompt_template_hf(input_text, custom_system_message, model="GPTModel")
+        input_text = prompt_template_hf(
+            input_text, custom_system_message, model="GPTModel"
+        )
 
         # Generate output with scores
         infer_start = time.perf_counter()
@@ -96,9 +102,12 @@ class GPTModel(PulseTemplateModel):
         infer_time = time.perf_counter() - infer_start
 
         # For Azure OpenAI, usage is in outputs.usage
-        num_input_tokens = outputs.usage.prompt_tokens if hasattr(outputs, "usage") else None
-        num_output_tokens = outputs.usage.completion_tokens if hasattr(outputs, "usage") else None
-
+        num_input_tokens = (
+            outputs.usage.prompt_tokens if hasattr(outputs, "usage") else None
+        )
+        num_output_tokens = (
+            outputs.usage.completion_tokens if hasattr(outputs, "usage") else None
+        )
 
         decoded_output = outputs.choices[0].message.content
         logger.debug("Decoded output:\n %s", decoded_output)
@@ -126,27 +135,23 @@ class GPTModel(PulseTemplateModel):
             "num_output_tokens": num_output_tokens,
         }
 
-    
-
     def set_trainer(
         self,
         trainer_name: str,
-        train_dataloader: Any,
-        val_dataloader: Any,
-        test_dataloader: Any,
+        train_loader: Any,
+        val_loader: Any,
+        test_loader: Any,
         **kwargs: Any,
     ) -> None:
         """Sets the associated trainer instance.
 
         Args:
             trainer_name: Name of the trainer class.
-            train_dataloader: DataLoader for training data.
-            val_dataloader: DataLoader for validation data.
-            test_dataloader: DataLoader for test data.
+            train_loader: DataLoader for training data.
+            val_loader: DataLoader for validation data.
+            test_loader: DataLoader for test data.
         """
-        self.trainer = GPTTrainer(
-            self, train_dataloader, val_dataloader, test_dataloader, **kwargs
-        )
+        self.trainer = GPTTrainer(self, train_loader, val_loader, test_loader, **kwargs)
 
 
 class GPTTrainer:
@@ -184,9 +189,9 @@ class GPTTrainer:
         os.makedirs(self.model_save_dir, exist_ok=True)
 
         # Exit if test_loader is bigger than 100
-        if len(self.test_loader) > 100:
+        if len(self.test_loader) > 1000:
             logger.warning(
-                "Test set is larger than 100 samples. Exiting to avoid bankrupcy..."
+                "Test set is larger than 1000 samples. Exiting to avoid bankrupcy..."
             )
             sys.exit(1)
 

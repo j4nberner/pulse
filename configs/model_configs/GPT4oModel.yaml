@@ -5,6 +5,8 @@ params:
   model_id: "GPT4o" # Model ID for Llama3, path to pretrained model (if any)
   deployment: "gpt-4o" # Deployment name
   api_version: "2024-12-01-preview"
+  api_key_name: "AZURE_GPT4O_KEY"
+  api_uri_name: "AZURE_GPT4O_URI"
   type: "LLM" # Type of model (convML for conventional machine learning, convDL for conventional deep learning and LLM for large language models)
   verbose: 2
   max_new_tokens: 200

@@ -6,10 +6,19 @@ from typing import Any, Dict, List, Optional, Union
 import numpy as np
 import pandas as pd
 import torch
-from sklearn.metrics import (accuracy_score, auc, balanced_accuracy_score,
-                             cohen_kappa_score, confusion_matrix, f1_score,
-                             matthews_corrcoef, precision_recall_curve,
-                             precision_score, recall_score, roc_auc_score)
+from sklearn.metrics import (
+    accuracy_score,
+    auc,
+    balanced_accuracy_score,
+    cohen_kappa_score,
+    confusion_matrix,
+    f1_score,
+    matthews_corrcoef,
+    precision_recall_curve,
+    precision_score,
+    recall_score,
+    roc_auc_score,
+)
 
 logger = logging.getLogger("PULSE_logger")
 
@@ -38,7 +47,7 @@ class MetricsTracker:
         self.task_id = task_id
         self.dataset_name = dataset_name
         self.save_dir = save_dir
-        self.run_id = save_dir.split("/")[-1]
+        self.run_id = save_dir.split("/")[-1].split("\\")[-1]
         self.summary = {}
         self.metrics_to_track = metrics_to_track or [
             "auroc",
@@ -74,7 +83,7 @@ class MetricsTracker:
 
         self.results["predictions"].extend(predictions)
         self.results["labels"].extend(labels)
-    
+
     def add_metadata_item(self, item: Dict[str, Any]) -> None:
         """
         Add a single metadata item to the tracker.
@@ -93,7 +102,7 @@ class MetricsTracker:
         if not hasattr(self, "items"):
             self.items = []
         self.items.append(item)
-    
+
     def log_metadata(self, save_to_file: bool = False) -> None:
         """
         Print and summarize metadata for the tracked items.
@@ -108,12 +117,16 @@ class MetricsTracker:
             for k, v in means.items():
                 logger.info(f"Mean {k}: {v}")
             if save_to_file:
-                summary_path = os.path.join(self.save_dir, f"{self.model_id}_{self.task_id}_{self.dataset_name}_{self.run_id}_metadata.csv")
+                summary_path = os.path.join(
+                    self.save_dir,
+                    f"{self.model_id}_{self.task_id}_{self.dataset_name}_{self.run_id}_metadata.csv",
+                )
+                logger.info(f"Saving Metadata to {summary_path}")
                 df.to_csv(summary_path, index=False)
-                logger.info(f"Metadata saved to {summary_path}")
+
         else:
             logger.warning("No metadata items to print.")
-    
+
     def compute_overall_metrics(self) -> Dict[str, Any]:
         """
         Compute summary statistics for all results in tracked metrics..

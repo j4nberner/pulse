@@ -13,6 +13,7 @@ from src.logger_setup import init_wandb, setup_logger
 from src.models.modelmanager import ModelManager
 from src.util.config_util import load_config_with_models, save_config_file, set_seeds
 from src.util.slurm_util import copy_data_to_scratch, get_local_scratch_dir, is_on_slurm
+from src.util.env_util import load_environment
 
 logger, output_dir = setup_logger()
 
@@ -127,7 +128,7 @@ class ModelTrainer:
                             {
                                 "prompting_id": model.prompting_id,
                                 "num_shots": self.config.prompting.get("shots", 0),
-                                "fine_tuning": model.params.tuning,
+                                "fine_tuning": model.params.get("tuning", False),
                             }
                         )
                     # Preprocess data for corresponding model
@@ -265,6 +266,7 @@ def parse_args() -> argparse.Namespace:
 
 def main():
     """Main entry point."""
+    load_environment()
     args = parse_args()
     config = load_config_with_models(args.config)
     config.output_dir = output_dir

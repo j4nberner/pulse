@@ -5,11 +5,10 @@ general:
   app_name: "Pulse"
   app_version: "1.0.0"
   app_mode: "debug" # "debug", "count_tokens", "benchmark", "pytest"
-  debug_data_length: 10 # Number of samples to use for debugging
+  debug_data_length: 1 # Number of samples to use for debugging
   logging_level: "DEBUG" # "DEBUG", "INFO", "WARNING", "ERROR"
   use_scratch: true # Whether to use scratch space for temporary files
   save_metadata: true # Whether to save the metadata file. Inludes prompts for LLMs
-
 
 # Weight and Biases (wandb) logging configuration
 wandb:
@@ -97,4 +96,3 @@ load_models:
   # - "configs/model_configs/MistralModel.yaml"
 
   - "configs/model_configs/GPT4oModel.yaml"
-
