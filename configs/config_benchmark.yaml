@@ -5,7 +5,7 @@ general:
   app_name: "Pulse"
   app_version: "1.0.0"
   app_mode: "debug" # "debug", "count_tokens", "benchmark", "pytest"
-  debug_data_length: 2 # Number of samples to use for debugging
+  debug_data_length: 10 # Number of samples to use for debugging
   logging_level: "DEBUG" # "DEBUG", "INFO", "WARNING", "ERROR"
   use_scratch: true # Whether to use scratch space for temporary files
   save_metadata: true # Whether to save the metadata file. Inludes prompts for LLMs
@@ -21,9 +21,9 @@ base_path: ""
 
 # Tasks to process
 tasks:
-  - "aki"
+  # - "aki"
   - "mortality"
-  - "sepsis"
+  # - "sepsis"
 
 # Datasets to process
 dataset_path: "datasets/original_harmonized" #"/path/to/datasets"
@@ -44,7 +44,7 @@ preprocessing_baseline:
     train: 0.8
     val: 0.1
     test: 0.1
-    test_limited: 2 # Number of stay_ids for limited test set, null = test set is not limited
+    test_limited: 10 # Number of stay_ids for limited test set, null = test set is not limited
     print_stats: true # Whether to print set statistics
 
 # _______ Preprocessing Advanced _______
@@ -87,7 +87,7 @@ load_models:
   # - "configs/model_configs/MedGemma4bModel.yaml"
   # - "configs/model_configs/Gemma312BModel.yaml"
 
-  - "configs/model_configs/Llama3.yaml"
+  # - "configs/model_configs/Llama3.yaml"
   # - "configs/model_configs/Llama4.yaml" # not tested...
 
   # - "configs/model_configs/DeepseekR1Llama8bModel.yaml"
@@ -95,4 +95,6 @@ load_models:
   # - "configs/model_configs/DeepseekR1Qwen14bModel.yaml" # needs testing. min 80GB GPU
 
   # - "configs/model_configs/MistralModel.yaml"
+
+  - "configs/model_configs/GPT4oModel.yaml"
 
