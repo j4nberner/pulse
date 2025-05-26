@@ -1,8 +1,9 @@
+import json
 import logging
 import os
 import time
 import warnings
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 import torch
@@ -36,44 +37,68 @@ class Llama3Model(PulseTemplateModel):
             params: Configuration dictionary with model parameters.
             **kwargs: Additional optional parameters such as `output_dir` and `wandb`.
         """
+        # Add model loading flag
+        self.is_loaded = False
+
+        # First define properties that need to be accessed right away
         self.model_name = kwargs.get("model_name", "Llama3Model")
-        self.trainer_name = params["trainer_name"]
-        super().__init__(self.model_name, self.trainer_name, params=params)
+        self.inference_only = kwargs.get("inference_only", False)
+        self.params = params
 
-        # Store random seed from params (added by ModelManager)
-        self.random_seed = self.params.get("random_seed", 42)
-        logger.debug("Using random seed: %d", self.random_seed)
+        if self.inference_only:
+            # For inference-only mode (agentic workflow)
+            self.trainer_name = params.get("trainer_name", "Llama3Trainer")
+            # Skip parent initialization for agentic workflow
+            self.random_seed = self.params.get("random_seed", 42)
+            logger.debug("Using random seed: %d", self.random_seed)
 
-        self.save_dir: str = kwargs.get("output_dir", f"{os.getcwd()}/output")
-        self.wandb: bool = kwargs.get("wandb", False)
+            # Set necessary parameters for inference
+            self.save_dir = kwargs.get("output_dir", f"{os.getcwd()}/output")
+            self.wandb = kwargs.get("wandb", False)
+            self.task_name = kwargs.get("task_name")
+            self.dataset_name = kwargs.get("dataset_name")
 
-        required_params = [
-            "max_new_tokens",
-            "verbose",
-            "tuning",
-            "num_epochs",
-            "max_new_tokens",
-            "max_length",
-            "do_sample",
-            "temperature",
-        ]
+        else:
+            # Full model initialization for standard workflow
+            self.trainer_name = params["trainer_name"]
+            super().__init__(self.model_name, self.trainer_name, params=params)
 
-        # Check if all required parameters exist in config
-        missing_params = [param for param in required_params if param not in params]
-        if missing_params:
-            raise KeyError(f"Required parameters missing from config: {missing_params}")
+            # Store random seed from params (added by ModelManager)
+            self.random_seed = self.params.get("random_seed", 42)
+            logger.debug("Using random seed: %d", self.random_seed)
 
-        self.params: Dict[str, Any] = params
+            self.save_dir = kwargs.get("output_dir", f"{os.getcwd()}/output")
+            self.wandb = kwargs.get("wandb", False)
+
+            # Check if all required parameters exist in config
+            required_params = [
+                "max_new_tokens",
+                "verbose",
+                "tuning",
+                "num_epochs",
+                "max_length",
+                "do_sample",
+                "temperature",
+            ]
+
+            missing_params = [param for param in required_params if param not in params]
+            if missing_params:
+                raise KeyError(
+                    f"Required parameters missing from config: {missing_params}"
+                )
+
+        # Parameters for all modes - must be after the if/else since params might get modified
         self.params["save_test_set"] = kwargs.get("save_test_set", False)
 
-        self.model_id: str = self.params.get(
-            "model_id", "meta-llama/Llama-3.1-8B-Instruct"
-        )
-        self.max_length: int = self.params["max_length"]
+        # Extract commonly used parameters
+        self.model_id = self.params.get("model_id", "meta-llama/Llama-3.1-8B-Instruct")
+        self.max_length = self.params["max_length"]
 
-        self.tokenizer: Optional[Any] = None
-        self.llama_model: Optional[Any] = None
+        # Initialize tokenizer and model to None - will be loaded on demand
+        self.tokenizer = None
+        self.llama_model = None
 
+        # Setup quantization config and device
         self.quantization_config = BitsAndBytesConfig(
             load_in_8bit=True, llm_int8_threshold=6.0, llm_int8_has_fp16_weight=True
         )
@@ -81,18 +106,31 @@ class Llama3Model(PulseTemplateModel):
         logger.debug("Number of GPUs: %d", torch.cuda.device_count())
 
     def _load_model(self) -> None:
-        """Loads the tokenizer and model weights and initializes HF pipeline."""
+        """Loads the tokenizer and model weights."""
         try:
+            # Skip loading if already loaded
+            if (
+                self.tokenizer is not None
+                and self.llama_model is not None
+                and self.is_loaded
+            ):
+                logger.info("Model already loaded, reusing existing instance")
+                return
+
+            logger.info(f"Loading model %s", self.model_id)
             self.tokenizer = AutoTokenizer.from_pretrained(
                 self.model_id, use_fast=False, padding_side="left"
             )
+
+            # Common model loading configuration - same for both modes
             self.llama_model = AutoModelForCausalLM.from_pretrained(
                 self.model_id,
                 device_map="auto",
                 torch_dtype=torch.bfloat16,
             )
 
-            if self.params.get("tuning", False):
+            # Apply tuning only in full training mode and if specified
+            if not self.inference_only and self.params.get("tuning", False):
                 logger.info("Applying Prompt Tuning")
                 tuning_config = PromptTuningConfig(
                     task_type=TaskType.CAUSAL_LM,
@@ -106,13 +144,21 @@ class Llama3Model(PulseTemplateModel):
                 logger.debug(self.llama_model.print_trainable_parameters())
 
             logger.info("Successfully loaded Llama3 model: %s", self.model_id)
+
+            # Only log pipeline initialization in full training mode
+            if not self.inference_only:
+                logger.info(
+                    "Initializing Hugging Face pipeline with parameters: %s",
+                    self.params,
+                )
+
+            # Mark model as loaded after successful loading
+            self.is_loaded = True
+            logger.debug(f"Successfully loaded model: {self.model_id}")
+
         except Exception as e:
             logger.error("Failed to load Llama3 model: %s", e)
             raise
-
-        logger.info(
-            "Initializing Hugging Face pipeline with parameters: %s", self.params
-        )
 
     def infer_llm(
         self,
@@ -127,13 +173,22 @@ class Llama3Model(PulseTemplateModel):
             custom_system_message: Optional custom system message
             force_raw_text: If True, returns raw text output without JSON parsing
         """
+        # Set seed for deterministic generation
+        set_seeds(self.random_seed)
+        # Ensure model is loaded before trying to use it
+        if self.tokenizer is None or self.llama_model is None:
+            logger.debug("Model not loaded yet for inference, loading now...")
+            self._load_model()
+
         logger.info("---------------------------------------------")
 
         if not isinstance(input_text, str):
             input_text = str(input_text)
 
         # Format input using prompt template
-        input_text = prompt_template_hf(input_text, custom_system_message)
+        input_text = prompt_template_hf(
+            input_text, custom_system_message, self.model_name
+        )
 
         # Tokenize with chat template
         chat_prompt = self.tokenizer.apply_chat_template(
@@ -153,9 +208,6 @@ class Llama3Model(PulseTemplateModel):
 
         # Generate output with scores
         infer_start = time.perf_counter()
-
-        # Set seed for deterministic generation
-        set_seeds(self.random_seed)
 
         with torch.no_grad():
             outputs = self.llama_model.generate(
@@ -183,6 +235,17 @@ class Llama3Model(PulseTemplateModel):
             clean_up_tokenization_spaces=True,
         )
         logger.debug("Decoded output:\n %s", decoded_output)
+
+        # Check if we should return raw text or parsed JSON (important for multi-turn conversations)
+        if force_raw_text:
+            # For text-only outputs like summaries
+            return {
+                "generated_text": decoded_output,  # Return raw text
+                "token_time": token_time,
+                "infer_time": infer_time,
+                "num_input_tokens": num_input_tokens,
+                "num_output_tokens": num_output_tokens,
+            }
 
         # Extract dict from the decoded output (e.g., via regex or JSON parsing)
         parsed = extract_dict(decoded_output)
@@ -417,6 +480,12 @@ class Llama3Trainer:
         # Set seed for deterministic generation
         set_seeds(self.model.random_seed)
 
+        # Check if model is already loaded before attempting to load
+        if not self.model.is_loaded:
+            self.model._load_model()
+        else:
+            logger.info("Using already loaded model instance for evaluation")
+
         if self.save_test_set:
             # Save test set to CSV
             test_loader[0].to_csv(
@@ -426,6 +495,7 @@ class Llama3Trainer:
                 os.path.join(self.model.save_dir, "test_labels.csv"), index=False
             )
             logger.info("Test set saved to %s", self.model.save_dir)
+
         logger.info("Starting test evaluation...")
 
         metrics_tracker = MetricsTracker(
@@ -440,10 +510,57 @@ class Llama3Trainer:
         self.llama_model.eval()
 
         for X, y in zip(test_loader[0].iterrows(), test_loader[1].iterrows()):
-            X_input = X[1].iloc[0]
-            y_true = y[1].iloc[0]
+            idx = X[0]  # The index of the current row
+            X_input = X[1].iloc[0]  # The input text for standard pipeline
+            y_true = y[1].iloc[0]    # The true label
 
-            result_dict = self.model.infer_llm(X_input)
+            # Check if this row contains an agent prediction
+            is_agent_prediction = False
+            if "is_agent_prediction" in test_loader[0].columns:
+                is_agent_prediction = bool(test_loader[0].at[idx, "is_agent_prediction"])
+                logger.debug(f"Sample {idx}: is_agent_prediction = {is_agent_prediction} (type: {type(is_agent_prediction)})")
+
+            if is_agent_prediction:
+                logger.info("Found agent prediction - using directly without additional inference")
+
+                try:
+                    # Parse the agent's prediction JSON
+                    agent_output = json.loads(X_input) if isinstance(X_input, str) else X_input
+
+                    # Extract prediction fields
+                    predicted_probability = float(agent_output.get("probability", 0.5))
+                    diagnosis = agent_output.get("diagnosis", "")
+                    explanation = agent_output.get("explanation", "")
+
+                    # Get token metrics if available
+                    token_time = 0.001  # Placeholder values
+                    infer_time = 0.001
+                    num_input_tokens = test_loader[0].at[idx, "num_input_tokens"] if "num_input_tokens" in test_loader[0].columns else 100
+                    num_output_tokens = test_loader[0].at[idx, "num_output_tokens"] if "num_output_tokens" in test_loader[0].columns else 50
+
+                    # Create result structure matching what infer_llm would return
+                    result_dict = {
+                        "generated_text": {
+                            "diagnosis": diagnosis,
+                            "probability": predicted_probability,
+                            "explanation": explanation
+                        },
+                        "token_time": token_time,
+                        "infer_time": infer_time,
+                        "num_input_tokens": num_input_tokens, 
+                        "num_output_tokens": num_output_tokens
+                    }
+
+                    logger.info("Using agent prediction: %s with probability %s", 
+                            diagnosis, predicted_probability)
+
+                except Exception as e:
+                    logger.error(f"Error parsing agent prediction: {e} - Falling back to standard inference")
+                    # Run normal inference as fallback
+                    result_dict = self.model.infer_llm(X_input)
+            else:
+                # Standard inference for non-agent predictions
+                result_dict = self.model.infer_llm(X_input)
 
             generated_text = result_dict["generated_text"]
             token_time = result_dict["token_time"]

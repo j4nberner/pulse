@@ -64,7 +64,7 @@ def save_config_file(config: OmegaConf, output_dir: str) -> None:
     logger.info("Configuration file copied to %s", config_copy_path)
 
 # ------------------------------------
-# Util functions for reproducibility
+# Utilities for setting random seeds
 # ------------------------------------
 
 def set_seeds(seed: int) -> None:
@@ -98,20 +98,21 @@ def set_seeds(seed: int) -> None:
     except (ImportError, AttributeError):
         pass
 
+
 def get_deterministic_dataloader_args(seed):
     """
     Create a generator and worker_init_fn using the same seed for deterministic data loading.
-    
+
     Args:
         seed (int): The base random seed
-        
+
     Returns:
         dict: A dictionary containing 'generator' and 'worker_init_fn' for DataLoader
     """
     # Create and seed a generator for shuffle reproducibility
     g = torch.Generator()
     g.manual_seed(seed)
-    
+
     # Create a worker_init_fn for worker process reproducibility
     def worker_init_fn(worker_id):
         # Each worker gets a different but deterministic seed derived from base seed
@@ -119,9 +120,6 @@ def get_deterministic_dataloader_args(seed):
         random.seed(worker_seed)
         np.random.seed(worker_seed)
         torch.manual_seed(worker_seed)
-    
+
     # Return both as a dictionary for easy unpacking
-    return {
-        'generator': g,
-        'worker_init_fn': worker_init_fn
-    }
+    return {"generator": g, "worker_init_fn": worker_init_fn}

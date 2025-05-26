@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import gc
@@ -6,7 +7,7 @@ from typing import Any, Dict, List, Tuple
 import pandas as pd
 import torch
 
-from src.preprocessing.preprocessing_prompts.zhu_2024c_categorization_summary_agent.zhu_2024c_agent import (
+from src.preprocessing.preprocessing_prompts.zhu_2024c_categorization_summary_agent.zhu_2024c_agent_class import (
     Zhu2024cAgent,
 )
 
@@ -29,25 +30,17 @@ def zhu_2024c_categorization_summary_agent_preprocessor(
     """
     task = info_dict.get("task")
     dataset = info_dict.get("dataset_name")
-    model_id = info_dict.get("model_name")
+    model_name = info_dict.get("model_name")
     mode = info_dict.get("mode")  # train/val/test
-
-    # Extract the model_id from the model yaml with fallback
-    llm_model_id = info_dict.get("llm_model_id", "meta-llama/Llama-3.1-8B-Instruct")
-
-    # Get output directory for logs from info_dict if available
+    model = info_dict.get("model_instance")  # Get the model instance
     output_dir = info_dict.get("output_dir", None)
-    if output_dir:
-        # Create a specific directory for agent logs
-        agent_log_dir = os.path.join(output_dir, "agent_logs")
-        os.makedirs(agent_log_dir, exist_ok=True)
-    else:
-        agent_log_dir = None
+    agent_log_dir = os.path.join(output_dir, "agent_logs")
+    os.makedirs(agent_log_dir, exist_ok=True)
 
     logger.info(
         "'%s'-mode: Starting agent-based prompt preprocessing for model '%s', dataset '%s', task '%s'.",
         mode,
-        model_id,
+        model_name,
         dataset,
         task,
     )
@@ -67,9 +60,17 @@ def zhu_2024c_categorization_summary_agent_preprocessor(
         # Only run the agent in test mode
         if mode == "test":
             logger.info("Running full agent pipeline for test mode")
+
+            # Check if we have a model instance
+            if model is None:
+                logger.error(
+                    "No model instance provided, cannot run agent-based preprocessing"
+                )
+                return X_in, y_in
+
             # Create the agent with correct parameters
             agent = Zhu2024cAgent(
-                model_id=llm_model_id,
+                model=model,
                 task_name=task,
                 dataset_name=dataset,
                 output_dir=agent_log_dir,
@@ -78,18 +79,42 @@ def zhu_2024c_categorization_summary_agent_preprocessor(
             # Process the data through the agent
             X_processed, y_processed = agent.process_batch(X_in, y_in)
 
+            # Add flag to indicate this is a final prediction
+            X_processed["is_agent_prediction"] = True
+
+            # Store reference to the model in info_dict to ensure it's reused during evaluation
+            # This prevents reloading during evaluate_single() method of the model without changing the non-agent pipeline
+            info_dict["loaded_model"] = model
+
+            # Also add essential info for evaluation
+            # (Assuming diagnosis output is in JSON format with these fields)
+            try:
+                # Extract key fields from JSON predictions
+                for idx in X_processed.index:
+                    try:
+                        text = X_processed.at[idx, "text"]
+                        data = json.loads(text)
+                        # Ensure probability is a float
+                        if "probability" in data:
+                            if isinstance(data["probability"], str):
+                                data["probability"] = float(data["probability"])
+                            X_processed.at[idx, "text"] = json.dumps(data)
+                    except:
+                        logger.warning(f"Failed to parse agent output as JSON for index {idx}")
+            except Exception as e:
+                logger.error(f"Error extracting agent prediction data: {e}")
+
             logger.debug(
                 "Processed %s samples using agent-based approach for model '%s'.",
                 len(X_processed),
-                model_id,
+                model_name,
             )
+            return X_processed, y_processed
+
         else:
             # For train/val modes, simply skip processing
             logger.debug(f"Skipping agent processing for {mode} mode")
-            X_processed = X_in
-            y_processed = y_in
-
-        return X_processed, y_processed
+            return X_in, y_in
 
     finally:
         # Memory cleanup

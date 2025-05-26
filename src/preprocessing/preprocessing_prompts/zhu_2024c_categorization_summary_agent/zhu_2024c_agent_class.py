@@ -1,5 +1,5 @@
+import json
 import logging
-import os
 from typing import Any, Dict, List, Optional, Tuple
 
 import pandas as pd
@@ -9,14 +9,11 @@ from langchain.prompts import PromptTemplate
 from src.preprocessing.preprocessing_prompts.agents.pulsetemplate_agent import (
     PulseTemplateAgent,
 )
-from src.preprocessing.preprocessing_prompts.agents.llama3_model_adapter import (
-    Llama3ModelAdapter,
-)
 from src.preprocessing.preprocessing_advanced.preprocessing_advanced import (
     PreprocessorAdvanced,
 )
-from src.util.model_util import extract_dict, prompt_template_hf
 from src.util.data_util import get_feature_name
+from src.util.model_util import extract_dict
 
 logger = logging.getLogger("PULSE_logger")
 
@@ -32,15 +29,15 @@ class Zhu2024cAgent(PulseTemplateAgent):
 
     def __init__(
         self,
-        model_id: str = "meta-llama/Llama-3.1-8B-Instruct",
+        model: Any,  # Now accepts a model instance
         task_name: Optional[str] = None,
         dataset_name: Optional[str] = None,
         output_dir: Optional[str] = None,
         **kwargs,
     ):
-        # Initialize parent class
+        # Initialize parent class with model
         super().__init__(
-            model_id=model_id,
+            model=model,
             task_name=task_name,
             dataset_name=dataset_name,
             output_dir=output_dir,
@@ -49,9 +46,6 @@ class Zhu2024cAgent(PulseTemplateAgent):
 
         # Initialize preprocessing tools
         self.preprocessor_advanced = PreprocessorAdvanced()
-
-        # Create model adapter
-        self.model_adapter = Llama3ModelAdapter(model_id=model_id, **kwargs)
 
         # Initialize task content
         self.task_content = self._get_task_specific_content()
@@ -80,6 +74,7 @@ class Zhu2024cAgent(PulseTemplateAgent):
                 "prediction_description": "prediction of the onset of sepsis",
                 "task_info": "Sepsis is a life-threatening condition characterized by organ dysfunction resulting from a dysregulated host response to infection. It is diagnosed when a suspected or confirmed infection is accompanied by an acute increase of two or more points in the patient's Sequential Organ Failure Assessment (SOFA) score relative to their baseline. The SOFA score evaluates six physiological parameters: the ratio of partial pressure of oxygen to the fraction of inspired oxygen, mean arterial pressure, serum bilirubin concentration, platelet count, serum creatinine level, and the Glasgow Coma Score. A complication of sepsis is septic shock, which is marked by a drop in blood pressure and elevated lactate levels. Indicators of suspected infection may include positive blood cultures or the initiation of antibiotic therapy.",
             }
+        return {}
 
     def _define_steps(self) -> None:
         """Define the reasoning steps for this agent."""
@@ -96,21 +91,29 @@ class Zhu2024cAgent(PulseTemplateAgent):
         # Step 2: Diagnosis
         self.add_step(
             name="diagnosis",
-            system_message="""You are a helpful assistant and medical professional that analyzes ICU time-series data and predicts whether a patient will develop a specific diagnosis.
-
-Start your answer with 'yes' or 'no' to indicate whether the patient is diagnosed or not.
-Make sure to not use capital letters or spaces for the yes or no answer.
-Then, make a line break and return the result strictly in this JSON format.
-Make sure that the binary answer is consistent with the JSON object.
-
-Example:
-yes
-{
-  "diagnosis": "<diagnosis or not-diagnosis>",
-  "probability": "<a value between 0 and 1 representing probability of your diagnosis>",
-  "explanation": "<a brief explanation for the prediction. state reference values and check against provided features>"
-}
-""",
+            system_message=(
+                "You are a helpful assistant and experienced medical professional analyzing ICU time-series data "
+                "to determine the presence of a critical condition.\n\n"
+                "Your response must strictly follow this format:\n"
+                "Output a valid JSON object with three keys: 'diagnosis', 'probability' and 'explanation'.\n\n"
+                "1. 'diagnosis' a string with either diganosis or not-diagnosis\n"
+                "2. 'probability' a value between 0 and 1. where 0 means not-diagnosis and 1 means diagnosis.\n"
+                "3. 'explanation' should be a string providing a brief explanation of your diagnosis.\n\n"
+                "Here is a positive example:\n"
+                "{\n"
+                '  "diagnosis": "sepsis",\n'
+                '  "probability": "0.76",\n'
+                '  "explanation": "lactate is 4.2 mmol/L (above normal <2.0); blood pressure is low (MAP 62 mmHg), which are signs of sepsis."\n'
+                "}\n\n"
+                "Here is a negative example:\n"
+                "{\n"
+                '  "diagnosis": "not-sepsis",\n'
+                '  "probability": "0.01",\n'
+                '  "explanation": "lactate is 1.2 mmol/L (normal <2.0); blood pressure is normal (MAP 80 mmHg), which are not signs of sepsis."\n'
+                "}\n\n"
+                "Do not include any other text or explanations outside of the JSON object.\n"
+                "Think about the probability of your prediction carefully before answering.\n"
+            ),  # Use default benchmark system message for the prediction step
             prompt_template=self._create_diagnosis_prompt_template(),
             input_formatter=None,
             output_processor=None,
@@ -122,6 +125,13 @@ yes
         # Reset memory for this patient
         self.memory.reset()
 
+        # Explicitly set the current sample ID
+        sample_id = patient_data.name if hasattr(patient_data, "name") else "default"
+        logger.debug(
+            f"Setting current sample ID: {sample_id} (type: {type(sample_id)})"
+        )
+        self.memory.set_current_sample(sample_id)
+
         # Initialize state
         state = {
             "patient_data": patient_data,
@@ -131,127 +141,47 @@ yes
 
         # Step 1: Feature Analysis (Summary)
         try:
-            # Process patient features
-            processed_features = self._process_patient_features(state, patient_data)
+            feature_result = self.run_step("feature_analysis", patient_data, state)
 
-            # Execute feature analysis step
-            feature_analysis_prompt = self.steps[0]["prompt_template"](
-                processed_features, state
-            )
-            messages = [
-                {"role": "system", "content": self.steps[0]["system_message"]},
-                {"role": "user", "content": feature_analysis_prompt},
-            ]
-
-            # Call LLM for feature analysis
-            response = self.model_adapter(
-                messages, parse_json=self.steps[0]["parse_json"]
-            )
-
-            # Extract generated text and metrics
-            if isinstance(response, dict):
-                feature_summary = response.get("generated_text", "")
-                system_message = response.get("system_message", "")
-
-                # Extract token counts and timing metrics
-                num_input_tokens = response.get("num_tokens", 0)  # From LLM response
-                token_time = response.get("token_time", 0.0)
-                infer_time = response.get("infer_time", 0.0)
-
-                # Calculate output tokens by counting text length (approx)
-                # 1 token ≈ 4 characters for English text
-                output_text = str(feature_summary)
-                num_output_tokens = len(output_text) // 4
+            # Store the actual output text in state
+            if isinstance(feature_result["output"], dict):
+                feature_summary = feature_result["output"].get("output", "")
             else:
-                # Fallback if response is not a dict
-                feature_summary = str(response)
-                system_message = self.steps[0]["system_message"]
-                num_input_tokens = 0
-                num_output_tokens = 0
-                token_time = 0.0
-                infer_time = 0.0
+                feature_summary = feature_result["output"]
 
-            # Log to memory with metrics
-            self.memory.add_step(
-                step_name="feature_analysis",
-                input_data=feature_analysis_prompt,
-                output_data=feature_summary,
-                system_message=system_message,
-                num_input_tokens=num_input_tokens,
-                num_output_tokens=num_output_tokens,
-                token_time=token_time,
-                infer_time=infer_time,
-            )
-
-            # Store in state
             state["feature_analysis_output"] = feature_summary
             logger.debug(f"Feature summary: {feature_summary[:100]}...")
         except Exception as e:
             logger.error(f"Error in feature analysis step: {e}", exc_info=True)
             state["feature_analysis_output"] = "Error generating patient summary."
 
-        # Step 2: Diagnosis - similar changes
+        # Step 2: Diagnosis using the summary from step 1
         try:
             # Get the summary from step 1
             summary = state.get("feature_analysis_output", "No summary available")
 
-            # Execute diagnosis step
-            diagnosis_prompt = self.steps[1]["prompt_template"](summary, state)
-            messages = [
-                {"role": "system", "content": self.steps[1]["system_message"]},
-                {"role": "user", "content": diagnosis_prompt},
-            ]
+            # Run the diagnosis step with the summary as input
+            diagnosis_result = self.run_step("diagnosis", summary, state)
 
-            # Call LLM for diagnosis
-            response = self.model_adapter(
-                messages, parse_json=self.steps[1]["parse_json"]
-            )
-
-            # Extract generated text and metrics
-            if isinstance(response, dict):
-                diagnosis_result = response.get("generated_text", "")
-                system_message = response.get("system_message", "")
-
-                # Extract token counts and timing metrics
-                num_input_tokens = response.get("num_tokens", 0)
-                token_time = response.get("token_time", 0.0)
-                infer_time = response.get("infer_time", 0.0)
-
-                # Calculate output tokens
-                output_text = str(diagnosis_result)
-                num_output_tokens = len(output_text) // 4
+            # Extract the output properly
+            if isinstance(diagnosis_result["output"], dict):
+                diagnosis_output = diagnosis_result["output"]
             else:
-                # Fallback if response is not a dict
-                diagnosis_result = str(response)
-                system_message = self.steps[1]["system_message"]
-                num_input_tokens = 0
-                num_output_tokens = 0
-                token_time = 0.0
-                infer_time = 0.0
+                diagnosis_output = diagnosis_result["output"]
 
-            # Log to memory with metrics
-            self.memory.add_step(
-                step_name="diagnosis",
-                input_data=diagnosis_prompt,
-                output_data=diagnosis_result,
-                system_message=system_message,
-                num_input_tokens=num_input_tokens,
-                num_output_tokens=num_output_tokens,
-                token_time=token_time,
-                infer_time=infer_time,
-            )
+            state["diagnosis_output"] = diagnosis_output
+            logger.debug(f"Diagnosis result: {str(diagnosis_output)[:100]}...")
 
-            # Store in state
-            state["diagnosis_output"] = diagnosis_result
-            logger.debug(f"Diagnosis result: {diagnosis_result[:100]}...")
-
-            # Extract JSON if available
-            try:
-                extracted = extract_dict(diagnosis_result)
-                if extracted:
-                    state["diagnosis_data"] = extracted
-            except Exception as e:
-                logger.warning(f"Error extracting diagnosis data: {e}")
+            # Extract JSON if needed
+            if isinstance(diagnosis_output, str):
+                try:
+                    extracted = extract_dict(diagnosis_output)
+                    if extracted:
+                        state["diagnosis_data"] = extracted
+                except Exception as e:
+                    logger.warning(f"Error extracting diagnosis data: {e}")
+            elif isinstance(diagnosis_output, dict):
+                state["diagnosis_data"] = diagnosis_output
         except Exception as e:
             logger.error(f"Error in diagnosis step: {e}", exc_info=True)
             state["diagnosis_output"] = "Error generating diagnosis."
@@ -301,8 +231,36 @@ Please provide your assessment following the required format."""
         self, state: Dict[str, Any], patient_data: pd.Series
     ) -> str:
         """Process patient features to extract abnormal values."""
-        # Create a DataFrame from the Series to use with categorize_features
+        # First convert patient_data to the right format if needed
+        if not isinstance(patient_data, pd.Series):
+            logger.debug(f"Patient data type: {type(patient_data)}")
+            if isinstance(patient_data, pd.DataFrame):
+                if not patient_data.empty:
+                    patient_data = patient_data.iloc[0]
+                    logger.debug("Converted DataFrame to Series")
+                else:
+                    return "No patient data available for analysis."
+            elif isinstance(patient_data, dict):
+                patient_data = pd.Series(patient_data)
+                logger.debug("Converted dict to Series")
+            elif hasattr(patient_data, "__iter__") and not isinstance(
+                patient_data, str
+            ):
+                # Try to iterate to debug
+                logger.debug("Iterating patient data:")
+                for item in patient_data:
+                    logger.debug(f"Item: {type(item)}")
+                return "Patient data format not supported"
+            else:
+                logger.error(f"Unsupported patient data type: {type(patient_data)}")
+                return "Error: Patient data format not supported"
+
+        # Now that patient_data should be a Series, create a DataFrame for further processing
         patient_df = pd.DataFrame([patient_data])
+        logger.debug(f"Created patient_df with shape: {patient_df.shape}")
+
+        # # Create a DataFrame from the Series to use with categorize_features
+        # patient_df = pd.DataFrame([patient_data])
 
         # Extract base feature names
         base_features = set()
@@ -358,18 +316,22 @@ Please provide your assessment following the required format."""
         return patient_features
 
     def _create_final_output(self, state: Dict[str, Any]) -> Dict[str, Any]:
-        """Create the final output from the agent's state.
-
-        Returns only the diagnosis output to match the format expected by the standard pipeline.
-        """
+        """Create the final output from the agent's state."""
         # Get the diagnosis output from the second step
         diagnosis_output = state.get("diagnosis_output", "")
+
+        # Ensure diagnosis_output is a string (crucial fix)
+        if not isinstance(diagnosis_output, str):
+            try:
+                # Convert dict/object to string if needed
+                diagnosis_output = json.dumps(diagnosis_output, indent=2)
+            except:
+                diagnosis_output = str(diagnosis_output)
 
         # Try to extract structured data if available
         try:
             parsed = extract_dict(diagnosis_output)
             if not parsed:
-                # If extract_dict returns None, create a default dict
                 parsed = {
                     "diagnosis": None,
                     "probability": 0.5,
@@ -383,10 +345,9 @@ Please provide your assessment following the required format."""
                 "explanation": diagnosis_output,
             }
 
-        # Simply return the diagnosis output as the final result
-        # This matches what would be returned by the standard pipeline
+        # Return the diagnosis output as the final result
         return {
-            "output": diagnosis_output,  # This will be assigned to X_processed.loc[idx, "prompt"]
+            "output": diagnosis_output,  # Now guaranteed to be a string
             "parsed": parsed,
             "state": state,
         }

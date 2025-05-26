@@ -524,6 +524,10 @@ class DatasetManager:
                 "data_window": data_window,
             }
 
+            # Add model instance to info_dict if provided in kwargs
+            if "model_instance" in kwargs:
+                info_dict["model_instance"] = kwargs["model_instance"]
+
             # Add output directory to info_dict
             info_dict["output_dir"] = getattr(self.config, "output_dir", None)
 
@@ -565,6 +569,11 @@ class DatasetManager:
                 dataset["data"]["y_train"] = pd.DataFrame()
                 dataset["data"]["X_val"] = pd.DataFrame()
                 dataset["data"]["y_val"] = pd.DataFrame()
+
+            # Pass the loaded model back through the info_dict
+            if "model_instance" in kwargs and "loaded_model" in info_dict:
+                # Store the loaded model back to the benchmark.py flow
+                kwargs["loaded_model"] = info_dict["loaded_model"]
 
         return (
             dataset["data"]["X_train"],

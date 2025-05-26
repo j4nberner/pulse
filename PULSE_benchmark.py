@@ -11,7 +11,12 @@ from torch.utils.data import DataLoader
 from src.data.dataloader import DatasetManager, TorchDatasetWrapper
 from src.logger_setup import init_wandb, setup_logger
 from src.models.modelmanager import ModelManager
-from src.util.config_util import load_config_with_models, save_config_file, set_seeds, get_deterministic_dataloader_args
+from src.util.config_util import (
+    load_config_with_models,
+    save_config_file,
+    set_seeds,
+    get_deterministic_dataloader_args,
+)
 from src.util.slurm_util import copy_data_to_scratch, get_local_scratch_dir, is_on_slurm
 
 logger, output_dir = setup_logger()
@@ -145,6 +150,25 @@ class ModelTrainer:
                                 "fine_tuning": model.params.tuning,
                             }
                         )
+
+                    # Check if this model requires an agent-based preprocessor
+                    if (
+                        model.type == "LLM"
+                        and hasattr(model, "prompting_id")
+                        and "agent" in model.prompting_id
+                    ):
+                        # Create an inference-only model for the agent - use cached instance if possible
+                        agent_model = self.mm.create_agent_model(
+                            model.__class__.__name__
+                        )
+                        if agent_model:
+                            # Store reference to the agent model
+                            model.agent_model = agent_model
+
+                            # Pass to data manager
+                            dm_kwargs["model_instance"] = agent_model
+                            logger.info(f"Created agent model for {model.prompting_id}")
+
                     # Preprocess data for corresponding model
                     X_train, y_train, X_val, y_val, X_test, y_test = (
                         self.dm.get_preprocessed_data(
@@ -159,6 +183,23 @@ class ModelTrainer:
                         X_val.shape,
                         X_test.shape,
                     )
+
+                    # Check if we can reuse an already loaded model from the agent pipeline
+                    loaded_model = None
+                    if "loaded_model" in dm_kwargs:
+                        loaded_model = dm_kwargs["loaded_model"]
+                        if (
+                            loaded_model
+                            and hasattr(loaded_model, "is_loaded")
+                            and loaded_model.is_loaded
+                        ):
+                            logger.info(
+                                "Reusing already loaded model instance for evaluation"
+                            )
+                            model = loaded_model
+                            # Update necessary properties for evaluation
+                            model.task_name = task_name
+                            model.dataset_name = dataset_name
 
                     # Choose the appropriate DataLoader based on model type
                     if model.type == "convML":
