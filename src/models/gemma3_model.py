@@ -119,6 +119,9 @@ class Gemma3Model(PulseTemplateModel):
 
     def infer_llm(self, input_text: str) -> Dict[str, Any]:
         """Runs the HF model on the input and extracts diagnosis, explanation, and probability."""
+        # Set seed for deterministic generation
+        set_seeds(self.random_seed)
+
         logger.info("---------------------------------------------")
 
         if not isinstance(input_text, str):
@@ -140,17 +143,14 @@ class Gemma3Model(PulseTemplateModel):
         )
         token_time = time.perf_counter() - token_start
 
-        # num_prompt_tokens = tokenized_inputs["input_ids"].size(1)
-        num_prompt_tokens = tokenized_inputs["input_ids"].shape[-1]
+        # num_input_tokens = tokenized_inputs["input_ids"].size(1)
+        num_input_tokens = tokenized_inputs["input_ids"].shape[-1]
 
         input_ids = tokenized_inputs["input_ids"].to(self.device)
         attention_mask = tokenized_inputs["attention_mask"].to(self.device)
 
         # Generate output with scores
         infer_start = time.perf_counter()
-
-        # Set seed for deterministic generation
-        set_seeds(self.random_seed)
 
         with torch.no_grad():
             outputs = self.gemma_model.generate(
@@ -169,9 +169,9 @@ class Gemma3Model(PulseTemplateModel):
 
         # Get first sequence, decode to string
         generated_text = self.tokenizer.decode(
-            outputs.sequences[0][num_prompt_tokens:], skip_special_tokens=True
+            outputs.sequences[0][num_input_tokens:], skip_special_tokens=True
         )
-        num_output_tokens = outputs.sequences[0].size(0) - num_prompt_tokens
+        num_output_tokens = outputs.sequences[0].size(0) - num_input_tokens
 
         # Trim after first <end_of_turn>
         generated_text = generated_text.split("<end_of_turn>")[0]
@@ -200,7 +200,7 @@ class Gemma3Model(PulseTemplateModel):
             "generated_text": parsed,
             "token_time": token_time,
             "infer_time": infer_time,
-            "num_input_tokens": num_prompt_tokens,
+            "num_input_tokens": num_input_tokens,
             "num_output_tokens": num_output_tokens,
         }
 

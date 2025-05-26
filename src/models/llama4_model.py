@@ -122,6 +122,9 @@ class Llama4Model(PulseTemplateModel):
 
     def infer_llm(self, input_text: str) -> Dict[str, Any]:
         """Runs the HF model on the input and extracts diagnosis, explanation, and probability."""
+        # Set seed for deterministic generation
+        set_seeds(self.random_seed)
+
         logger.info("---------------------------------------------")
 
         if not isinstance(input_text, str):
@@ -152,9 +155,6 @@ class Llama4Model(PulseTemplateModel):
         # Generate output with scores
         infer_start = time.perf_counter()
     
-        # Set seed for deterministic generation
-        set_seeds(self.random_seed)
-
         with torch.no_grad():
             outputs = self.llama_model.generate(
                 input_ids=input_ids,

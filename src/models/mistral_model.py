@@ -116,6 +116,9 @@ class MistralModel(PulseTemplateModel):
 
     def infer_llm(self, input_text: str) -> Dict[str, Any]:
         """Runs the HF model on the input and extracts diagnosis, explanation, and probability."""
+        # Set seed for deterministic generation
+        set_seeds(self.random_seed)
+
         logger.info("---------------------------------------------")
 
         if not isinstance(input_text, str):
@@ -143,9 +146,6 @@ class MistralModel(PulseTemplateModel):
 
         # Generate output with scores
         infer_start = time.perf_counter()
-
-        # Set seed for deterministic generation
-        set_seeds(self.random_seed)
 
         with torch.no_grad():
             outputs = self.mistral_model.generate(
@@ -469,7 +469,8 @@ class MistralTrainer:
                         "val_loss": loss.item(),
                         "token_time": token_time,
                         "infer_time": infer_time,
-                        "num_tokens": num_tokens,
+                        "num_input_tokens": num_input_tokens,
+                        "num_output_tokens": num_output_tokens,
                     }
                 )
 

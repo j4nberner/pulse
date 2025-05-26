@@ -129,6 +129,9 @@ class DeepseekR1Model(PulseTemplateModel):
         Returns:
             A dictionary with the generated text, timing information, and token count.
         """
+        # Set seed for deterministic generation
+        set_seeds(self.random_seed)
+
         logger.info("---------------------------------------------")
 
         if not isinstance(input_text, str):
@@ -153,9 +156,6 @@ class DeepseekR1Model(PulseTemplateModel):
         attention_mask = tokenized_inputs["attention_mask"].to(self.device)
 
         infer_start = time.perf_counter()
-
-        # Set seed for deterministic generation
-        set_seeds(self.random_seed)
 
         with torch.no_grad():
             outputs = self.deepseek_r1_model.generate(
