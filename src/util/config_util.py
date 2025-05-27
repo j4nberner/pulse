@@ -63,6 +63,9 @@ def save_config_file(config: OmegaConf, output_dir: str) -> None:
     OmegaConf.save(config, config_copy_path)
     logger.info("Configuration file copied to %s", config_copy_path)
 
+# ------------------------------------
+# Utilities for setting random seeds
+# ------------------------------------
 
 def set_seeds(seed: int) -> None:
     """
@@ -71,16 +74,52 @@ def set_seeds(seed: int) -> None:
     Args:
         seed (int): The seed value to use
     """
+    os.environ["PYTHONHASHSEED"] = str(seed)
+
+    # Python's built-in random
     random.seed(seed)
+
+    # NumPy
     np.random.seed(seed)
+
+    # PyTorch
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
-    # For some operations in CUDA, you might also want to set:
+
+    # For CUDA operations
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
+    # For HuggingFace Transformers
+    try:
+        import transformers
 
-# Example usage:
-if __name__ == "__main__":
-    config = load_config_with_models("path/to/base_config.yaml")
-    print(OmegaConf.to_yaml(config))
+        transformers.set_seed(seed)
+    except (ImportError, AttributeError):
+        pass
+
+
+def get_deterministic_dataloader_args(seed):
+    """
+    Create a generator and worker_init_fn using the same seed for deterministic data loading.
+
+    Args:
+        seed (int): The base random seed
+
+    Returns:
+        dict: A dictionary containing 'generator' and 'worker_init_fn' for DataLoader
+    """
+    # Create and seed a generator for shuffle reproducibility
+    g = torch.Generator()
+    g.manual_seed(seed)
+
+    # Create a worker_init_fn for worker process reproducibility
+    def worker_init_fn(worker_id):
+        # Each worker gets a different but deterministic seed derived from base seed
+        worker_seed = seed + worker_id
+        random.seed(worker_seed)
+        np.random.seed(worker_seed)
+        torch.manual_seed(worker_seed)
+
+    # Return both as a dictionary for easy unpacking
+    return {"generator": g, "worker_init_fn": worker_init_fn}

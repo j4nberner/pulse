@@ -12,9 +12,13 @@ import wandb
 from src.eval.metrics import MetricsTracker
 from src.models.pulsetemplate_model import PulseTemplateModel
 from src.util.config_util import set_seeds
-from src.util.model_util import (EarlyStopping, calculate_pos_weight,
-                                 prepare_data_for_model_convdl,
-                                 save_torch_model)
+from src.util.model_util import (
+    EarlyStopping,
+    calculate_pos_weight,
+    prepare_data_for_model_convdl,
+    save_torch_model,
+    initialize_weights,
+)
 
 # Set up logger
 logger = logging.getLogger("PULSE_logger")
@@ -101,10 +105,13 @@ class InceptionTimeModel(PulseTemplateModel, nn.Module):
         if "trainer_name" not in params:
             raise KeyError("Required parameter 'trainer_name' not found in config")
 
-        # Use the class name as model_name if not provided in params
-        self.model_name = params.get(
-            "model_name", self.__class__.__name__.replace("Model", "")
-        )
+        # Extract model_name from kwargs if it exists (passed from ModelManager)
+        if "model_name" in kwargs:
+            self.model_name = kwargs.pop("model_name")  # Remove to avoid duplication
+        else:
+            # Fallback to class name if model_name not in kwargs
+            self.model_name = self.__class__.__name__.replace("Model", "")
+
         self.trainer_name = params["trainer_name"]
         super().__init__(self.model_name, self.trainer_name, params=params, **kwargs)
         nn.Module.__init__(self)
@@ -171,6 +178,8 @@ class InceptionTimeModel(PulseTemplateModel, nn.Module):
         Initialize the InceptionTime network architecture with placeholder values.
         The actual input shape will be determined when data is prepared.
         """
+        set_seeds(self.params["random_seed"])
+
         # Just set up placeholder values (num_channels will be determined after data preparation)
         self._configure_channels(num_channels=1)
 
@@ -214,6 +223,7 @@ class InceptionTimeModel(PulseTemplateModel, nn.Module):
         Args:
             num_channels: Number of input channels from the data
         """
+        set_seeds(self.model.params["random_seed"])
 
         # Reconfigure channel dimensions using the helper method
         self._configure_channels(num_channels)
@@ -254,6 +264,9 @@ class InceptionTimeModel(PulseTemplateModel, nn.Module):
 
         # Clear the network attribute
         self.network = None
+
+        # Initialize weights with Xavier initialization
+        self.apply(initialize_weights)
 
     def forward(self, x):
         """
@@ -335,6 +348,7 @@ class InceptionTimeTrainer:
         self.wandb = self.model.wandb
         self.task_name = self.model.task_name
         self.dataset_name = self.model.dataset_name
+        set_seeds(self.model.params["random_seed"])
 
         # Create model save directory and checkpoint subdirectory if it doesn't exist
         self.model_save_dir = os.path.join(model.save_dir, "Models")
@@ -405,6 +419,7 @@ class InceptionTimeTrainer:
 
     def _prepare_data(self):
         """Prepare data for InceptionTime by getting a configured converter."""
+        set_seeds(self.model.params["random_seed"])
 
         # Get the configured converter
         self.converter = prepare_data_for_model_convdl(
@@ -436,14 +451,7 @@ class InceptionTimeTrainer:
 
     def train(self):
         """Training loop."""
-        # Set random seed from params if available
-        if "random_seed" in self.params:
-            set_seeds(self.params["random_seed"])
-            logger.debug(
-                "Random seed set to %d before %s training",
-                self.params["random_seed"],
-                self.model.model_name,
-            )
+        set_seeds(self.model.params["random_seed"])
 
         # Move to GPU if available
         self.model.to(self.device)

@@ -11,9 +11,13 @@ import wandb
 from src.eval.metrics import MetricsTracker
 from src.models.pulsetemplate_model import PulseTemplateModel
 from src.util.config_util import set_seeds
-from src.util.model_util import (EarlyStopping, calculate_pos_weight,
-                                 prepare_data_for_model_convdl,
-                                 save_torch_model)
+from src.util.model_util import (
+    EarlyStopping,
+    calculate_pos_weight,
+    prepare_data_for_model_convdl,
+    save_torch_model,
+    initialize_weights,
+)
 
 # Set up logger
 logger = logging.getLogger("PULSE_logger")
@@ -42,10 +46,13 @@ class GRUModel(PulseTemplateModel, nn.Module):
         if "trainer_name" not in params:
             raise KeyError("Required parameter 'trainer_name' not found in config")
 
-        # Use the class name as model_name if not provided in params
-        self.model_name = params.get(
-            "model_name", self.__class__.__name__.replace("Model", "")
-        )
+        # Extract model_name from kwargs if it exists (passed from ModelManager)
+        if "model_name" in kwargs:
+            self.model_name = kwargs.pop("model_name")  # Remove to avoid duplication
+        else:
+            # Fallback to class name if model_name not in kwargs
+            self.model_name = self.__class__.__name__.replace("Model", "")
+
         self.trainer_name = params["trainer_name"]
         super().__init__(self.model_name, self.trainer_name, params=params, **kwargs)
         nn.Module.__init__(self)
@@ -122,6 +129,7 @@ class GRUModel(PulseTemplateModel, nn.Module):
         Args:
             input_dim: Input dimension from the data
         """
+        set_seeds(self.params["random_seed"])
         self.input_dim = input_dim
 
         # Create separate dropout rates for different layers or use the same rate
@@ -192,6 +200,9 @@ class GRUModel(PulseTemplateModel, nn.Module):
 
         # Create sequential model with all layers
         self.fc = nn.Sequential(*layers)
+
+        # Initialize weights with Xavier initialization
+        self.apply(initialize_weights)
 
         logger.info(
             "GRU network initialized with input_dim %d, hidden_size %d, num_layers %d, "
@@ -279,6 +290,7 @@ class GRUTrainer:
         self.wandb = self.model.wandb
         self.task_name = self.model.task_name
         self.dataset_name = self.model.dataset_name
+        set_seeds(self.model.params["random_seed"])
 
         # Create model save directory and checkpoint subdirectory if it doesn't exist
         self.model_save_dir = os.path.join(model.save_dir, "Models")
@@ -378,14 +390,7 @@ class GRUTrainer:
 
     def train(self):
         """Train the GRU model using the provided data loaders."""
-        # Set random seed from params if available
-        if "random_seed" in self.params:
-            set_seeds(self.params["random_seed"])
-            logger.debug(
-                "Random seed set to %d before %s training",
-                self.params["random_seed"],
-                self.model.model_name,
-            )
+        set_seeds(self.model.params["random_seed"])
 
         # Move to GPU if available
         self.model.to(self.device)
@@ -558,7 +563,6 @@ class GRUTrainer:
                     features.to(self.device),
                     labels.to(self.device).float(),
                 )
-
 
                 # Forward pass
                 outputs = self.model(features)

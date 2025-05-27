@@ -11,7 +11,12 @@ from torch.utils.data import DataLoader
 from src.data.dataloader import DatasetManager, TorchDatasetWrapper
 from src.logger_setup import init_wandb, setup_logger
 from src.models.modelmanager import ModelManager
-from src.util.config_util import load_config_with_models, save_config_file, set_seeds
+from src.util.config_util import (
+    load_config_with_models,
+    save_config_file,
+    set_seeds,
+    get_deterministic_dataloader_args,
+)
 from src.util.slurm_util import copy_data_to_scratch, get_local_scratch_dir, is_on_slurm
 
 logger, output_dir = setup_logger()
@@ -38,7 +43,6 @@ class ModelTrainer:
         logger.info("Logging Level: %s", config.general.logging_level)
 
         # Set random seeds for reproducibility
-        # TODO: add random seed to LLM trainers (see convDL train() methods as reference)
         random_seed = self.config.benchmark_settings.get("random_seed", 42)
         set_seeds(random_seed)
         logger.info("Setting random seed to %s for reproducibility", random_seed)
@@ -115,13 +119,29 @@ class ModelTrainer:
                     X_train, y_train = None, None
                     X_val, y_val = None, None
 
+                    if model.type == "convML":
+                        # Sanity check if data standardization was disabled
+                        if self.config.preprocessing_baseline.get("standardize"):
+                            logger.error(
+                                "Data standardization is enabled for convML models. Please disable it in the config."
+                            )
+                            sys.exit(1)
+
+                    if model.type == "convDL":
+                        # Sanity check if data standardization was enabled
+                        if not self.config.preprocessing_baseline.get("standardize"):
+                            logger.error(
+                                "Data standardization is not enabled for convDL models. Please enable it in the config."
+                            )
+                            sys.exit(1)
+
                     if model.type == "LLM":
-                        # Sanity check if data normalization was disabled
-                        if self.config.preprocessing_baseline.get("standardize", False):
+                        # Sanity check if data standardization was disabled
+                        if self.config.preprocessing_baseline.get("standardize"):
                             logger.error(
                                 "Data standardization is enabled for LLM models. Please disable it in the config."
                             )
-                            continue
+                            sys.exit(1)
 
                         dm_kwargs.update(
                             {
@@ -130,6 +150,25 @@ class ModelTrainer:
                                 "fine_tuning": model.params.tuning,
                             }
                         )
+
+                    # Check if this model requires an agent-based preprocessor
+                    if (
+                        model.type == "LLM"
+                        and hasattr(model, "prompting_id")
+                        and "agent" in model.prompting_id
+                    ):
+                        # Create an inference-only model for the agent - use cached instance if possible
+                        agent_model = self.mm.create_agent_model(
+                            model.__class__.__name__
+                        )
+                        if agent_model:
+                            # Store reference to the agent model
+                            model.agent_model = agent_model
+
+                            # Pass to data manager
+                            dm_kwargs["model_instance"] = agent_model
+                            logger.info(f"Created agent model for {model.prompting_id}")
+
                     # Preprocess data for corresponding model
                     X_train, y_train, X_val, y_val, X_test, y_test = (
                         self.dm.get_preprocessed_data(
@@ -144,6 +183,23 @@ class ModelTrainer:
                         X_val.shape,
                         X_test.shape,
                     )
+
+                    # Check if we can reuse an already loaded model from the agent pipeline
+                    loaded_model = None
+                    if "loaded_model" in dm_kwargs:
+                        loaded_model = dm_kwargs["loaded_model"]
+                        if (
+                            loaded_model
+                            and hasattr(loaded_model, "is_loaded")
+                            and loaded_model.is_loaded
+                        ):
+                            logger.info(
+                                "Reusing already loaded model instance for evaluation"
+                            )
+                            model = loaded_model
+                            # Update necessary properties for evaluation
+                            model.task_name = task_name
+                            model.dataset_name = dataset_name
 
                     # Choose the appropriate DataLoader based on model type
                     if model.type == "convML":
@@ -172,9 +228,9 @@ class ModelTrainer:
                             task_dataset_name,
                         )
 
-                        # Ensure that the Dataloaders use deterministic shuffling (even with multiple workers)
-                        g = torch.Generator()
-                        g.manual_seed(self.config.benchmark_settings.get("random_seed"))
+                        # Get the deterministic DataLoader arguments
+                        random_seed = self.config.benchmark_settings.get("random_seed")
+                        dataloader_args = get_deterministic_dataloader_args(random_seed)
 
                         train_loader = DataLoader(
                             train_dataset,
@@ -185,21 +241,21 @@ class ModelTrainer:
                             pin_memory=False,  # Speeds up CPU-to-GPU transfers
                             prefetch_factor=2,  # Default value, can increase if GPU is idle
                             persistent_workers=True,  # Keeps workers alive between epochs
-                            generator=g,
+                            **dataloader_args,
                         )
                         val_loader = DataLoader(
                             val_dataset,
                             batch_size=batch_size,
                             shuffle=False,
                             drop_last=False,
-                            generator=g,
+                            **dataloader_args,
                         )
                         test_loader = DataLoader(
                             test_dataset,
                             batch_size=batch_size,
                             shuffle=False,
                             drop_last=False,
-                            generator=g,
+                            **dataloader_args,
                         )
 
                     else:

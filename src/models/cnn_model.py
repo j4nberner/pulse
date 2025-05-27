@@ -12,9 +12,13 @@ import wandb
 from src.eval.metrics import MetricsTracker
 from src.models.pulsetemplate_model import PulseTemplateModel
 from src.util.config_util import set_seeds
-from src.util.model_util import (EarlyStopping, calculate_pos_weight,
-                                 prepare_data_for_model_convdl,
-                                 save_torch_model)
+from src.util.model_util import (
+    EarlyStopping,
+    calculate_pos_weight,
+    prepare_data_for_model_convdl,
+    save_torch_model,
+    initialize_weights,
+)
 
 logger = logging.getLogger("PULSE_logger")
 
@@ -36,10 +40,13 @@ class CNNModel(PulseTemplateModel, nn.Module):
         if "trainer_name" not in params:
             raise KeyError("Required parameter 'trainer_name' not found in config")
 
-        # Use the class name as model_name if not provided in params
-        self.model_name = params.get(
-            "model_name", self.__class__.__name__.replace("Model", "")
-        )
+        # Extract model_name from kwargs if it exists (passed from ModelManager)
+        if "model_name" in kwargs:
+            self.model_name = kwargs.pop("model_name")  # Remove to avoid duplication
+        else:
+            # Fallback to class name if model_name not in kwargs
+            self.model_name = self.__class__.__name__.replace("Model", "")
+        
         self.trainer_name = params["trainer_name"]
         super().__init__(self.model_name, self.trainer_name, params=params, **kwargs)
         nn.Module.__init__(self)
@@ -97,6 +104,8 @@ class CNNModel(PulseTemplateModel, nn.Module):
         Initialize the CNN model.
 
         """
+        set_seeds(self.params["random_seed"])
+        logger.debug("Setting seed %d before CNN model initialization", self.params["random_seed"])
 
         # -------------------------Define layers-------------------------
         self.conv1 = nn.Conv1d(
@@ -141,7 +150,10 @@ class CNNModel(PulseTemplateModel, nn.Module):
         self.fc1_bn = nn.BatchNorm1d(flattened_size // 2)
         self.fc2 = nn.Linear(flattened_size // 2, self.params["output_shape"])
 
-        # -------------------------Define layers-------------------------
+        # Initialize weights with Xavier initialization
+        self.apply(initialize_weights)
+
+    # -------------------------Define layers-------------------------
 
     def _forward_features(self, x):
         x = self.leaky_relu(self.norm1(self.conv1(x)))
@@ -182,6 +194,8 @@ class CNNTrainer:
         self.model = cnn_model
         self.params = cnn_model.params
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        set_seeds(self.model.params["random_seed"])
+        
         self.train_loader = train_loader
         self.val_loader = val_loader
         self.test_loader = test_loader
@@ -231,6 +245,7 @@ class CNNTrainer:
         transformed_features = self.converter.convert_batch_to_3d(features)
 
         # Update the model input shape based on the data
+        set_seeds(self.model.params["random_seed"])
         self.model.params["num_channels"] = transformed_features.shape[1]
         self.model.params["window_size"] = transformed_features.shape[2]
         self.model._init_model()
@@ -256,14 +271,7 @@ class CNNTrainer:
 
     def train(self):
         """Training loop."""
-        # Set random seed from params if available
-        if "random_seed" in self.params:
-            set_seeds(self.params["random_seed"])
-            logger.debug(
-                "Random seed set to %d before %s training",
-                self.params["random_seed"],
-                self.model.model_name,
-            )
+        set_seeds(self.model.params["random_seed"])
 
         num_epochs = self.params["num_epochs"]
         verbose = self.params.get("verbose", 1)

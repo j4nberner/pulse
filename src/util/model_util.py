@@ -13,6 +13,10 @@ import torch.nn as nn
 
 logger = logging.getLogger("PULSE_logger")
 
+# ------------------------------------
+# Util functions for convDL models
+# ------------------------------------
+
 
 class EarlyStopping:
     """
@@ -279,6 +283,30 @@ def calculate_pos_weight(train_loader):
     except Exception as e:
         logger.error("Error calculating class weights: %s", e)
         return 1.0
+
+
+def initialize_weights(module):
+    """Apply Xavier initialization to model weights."""
+    if isinstance(module, (nn.Conv1d, nn.Linear)):
+        nn.init.xavier_normal_(module.weight)
+        if module.bias is not None:
+            nn.init.zeros_(module.bias)
+    elif isinstance(module, nn.BatchNorm1d):
+        nn.init.ones_(module.weight)
+        nn.init.zeros_(module.bias)
+    elif isinstance(module, (nn.LSTM, nn.GRU)):
+        for name, param in module.named_parameters():
+            if "weight_ih" in name:
+                nn.init.xavier_normal_(param)
+            elif "weight_hh" in name:
+                nn.init.xavier_normal_(param)
+            elif "bias" in name:
+                nn.init.zeros_(param)
+
+
+# ------------------------------------
+# Util functions for LLMs
+# ------------------------------------
 
 
 def prompt_template_hf(
