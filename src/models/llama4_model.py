@@ -36,6 +36,9 @@ class Llama4Model(PulseTemplateModel):
             params: Configuration dictionary with model parameters.
             **kwargs: Additional optional parameters such as `output_dir` and `wandb`.
         """
+        raise NotImplementedError(
+            "Llama4Model is not implemented yet."
+        )
         self.model_name = kwargs.get("model_name", "Llama4Model")
         self.trainer_name = params["trainer_name"]
         super().__init__(self.model_name, self.trainer_name, params=params)

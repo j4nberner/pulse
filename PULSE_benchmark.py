@@ -209,11 +209,24 @@ class ModelTrainer:
                         )
                         sys.exit(1)
 
-                    # Set trainer for the model and train
-                    model.set_trainer(
-                        trainer_name, train_loader, val_loader, test_loader
-                    )
-                    model.trainer.train()
+
+                    if self.config.general.app_mode == "count_tokens":
+                        # Estimate number of tokens for LLMs. Implemented only for Llama3.
+                        if model.model_name == "Llama3Model":
+                            model.set_trainer(
+                                trainer_name, train_loader, val_loader, test_loader, disable_model_load = True
+                            )
+                            model.trainer.estimate_nr_tokens()
+                        else:
+                            logger.warning(
+                                "Token estimation is only applicable for LLM models."
+                            )
+                    else:
+                        # Set trainer for the model and train
+                        model.set_trainer(
+                            trainer_name, train_loader, val_loader, test_loader
+                        )
+                        model.trainer.train()
 
                 except Exception as e:
                     logger.error(
@@ -266,7 +279,6 @@ def parse_args() -> argparse.Namespace:
 
 def main():
     """Main entry point."""
-    load_environment()
     args = parse_args()
     config = load_config_with_models(args.config)
     config.output_dir = output_dir
@@ -276,6 +288,12 @@ def main():
     # Log if running on Slurm
     if is_on_slurm():
         logger.info("Running on Slurm cluster (Job ID: %s)", os.getenv("SLURM_JOB_ID"))
+        # Load .env from home directory
+        env_path = os.path.expanduser("~/.env")
+        logger.debug(f"Loading environment variables from {env_path}")
+        load_environment(env_path)
+    else:
+        load_environment("secrets/.env")  # Load from default secrets folder
 
     # Run training
     trainer = ModelTrainer(config)

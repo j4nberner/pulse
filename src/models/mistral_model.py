@@ -81,6 +81,9 @@ class MistralModel(PulseTemplateModel):
             )
 
             if self.params.get("tuning", False):
+                raise NotImplementedError(
+                    "Prompt tuning is not implemented for MistralModel yet. Set tuning parameter to false."
+                )
                 logger.info("Applying Prompt Tuning")
                 tuning_config = PromptTuningConfig(
                     task_type=TaskType.CAUSAL_LM,

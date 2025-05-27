@@ -215,9 +215,10 @@ class Llama3Model(PulseTemplateModel):
         num_input_tokens = tokenized_inputs["input_ids"].size(1)
 
         return {
-            "num_input_tokens": num_input_tokens,
-            "num_output_tokens": self.params.max_new_tokens,
-        }
+                "Input Prompt": input_text,
+                "Input Tokens": num_input_tokens,
+                "Output Tokens": self.params.max_new_tokens,
+                }
 
     def set_trainer(
         self,
@@ -290,6 +291,9 @@ class Llama3Trainer:
         logger.info("Starting training...")
 
         if self.tuning:
+            raise NotImplementedError(
+                    "Prompt tuning is not implemented for MistralModel yet. Set tuning parameter to false."
+                )
             logger.info(
                 "Tuning model with prompt tuning. Model is saved in %s",
                 self.model_save_dir,
@@ -491,6 +495,12 @@ class Llama3Trainer:
         self.model.tokenizer = AutoTokenizer.from_pretrained(
             self.model.model_id, use_fast=False, padding_side="left"
         )
+        metrics_tracker = MetricsTracker(
+            self.model.model_name,
+            self.model.task_name,
+            self.model.dataset_name,
+            self.model.save_dir,
+        )
 
         test_loader = self.test_loader
         total_tokens = 0
@@ -502,8 +512,9 @@ class Llama3Trainer:
         for X, y in zip(test_loader[0].iterrows(), test_loader[1].iterrows()):
             X_input = X[1].iloc[0]
             token_dict = self.model.calculate_tokens(X_input)
-            num_input_tokens = token_dict["num_input_tokens"]
-            num_output_tokens = token_dict["num_output_tokens"]
+            metrics_tracker.add_metadata_item(token_dict)
+            num_input_tokens = token_dict["Input Tokens"]
+            num_output_tokens = token_dict["Output Tokens"]
             total_input_tokens += num_input_tokens
             total_output_tokens += num_output_tokens
             total_tokens += num_input_tokens + num_output_tokens
@@ -513,32 +524,9 @@ class Llama3Trainer:
                 num_output_tokens,
             )
 
-        logger.info(
-            f"Total tokens for the task {self.model.task_name} dataset {self.model.dataset_name}: {total_tokens}"
-        )
-        logger.info("Total input tokens: %s", total_input_tokens)
-        logger.info("Total output tokens: %s", total_output_tokens)
-        logger.info(
-            "Average input tokens: %s", total_input_tokens / len(test_loader[0])
-        )
-        logger.info(
-            "Average output tokens: %s", total_output_tokens / len(test_loader[0])
-        )
+
+        metrics_tracker.log_metadata(save_to_file=self.model.save_metadata)
         return total_tokens
-
-    def evaluate_batched(self, test_loader: Any, save_report: bool = False) -> float:
-        """Evaluates the model on a given test set in batches.
-
-        Args:
-            test_loader: Tuple of (X, y) test data in DataFrame form.
-            save_report: Whether to save the evaluation report.
-
-        Returns:
-            The average validation loss across the test dataset.
-        """
-        NotImplementedError(
-            "Batch evaluation is not implemented for Llama3Model. Use evaluate_single instead."
-        )
 
     def encode_prompt_target(
         self,

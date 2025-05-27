@@ -7,7 +7,7 @@ params:
   verbose: 2
   tuning: false # Whether to use prompt tuning
   num_epochs: 10 # Number of epochs for training
-  max_new_tokens: 1000
-  max_length: 100000 # Maximum length of input sequences
-  do_sample: false # Whether to sample new tokens
+  max_new_tokens: 200
+  max_length: 20000 # Maximum length of input sequences
+  do_sample: true # Whether to sample new tokens
   temperature: 0.4 # Temperature for sampling (0.0 = greedy sampling)
