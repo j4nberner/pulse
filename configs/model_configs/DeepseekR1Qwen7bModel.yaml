@@ -8,6 +8,6 @@ params:
   tuning: false # Whether to use prompt tuning
   num_epochs: 10 # Number of epochs for training
   max_new_tokens: 10000
-  max_length: 100000 # Maximum length of input sequences
+  max_length: 20000 # Maximum length of input sequences
   do_sample: true # Whether to sample new tokens (false -> Use greedy decoding for full determinism)
   temperature: 0.6 # Temperature for sampling (0.0 = greedy sampling -> like do_sample: false)

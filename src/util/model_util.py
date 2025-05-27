@@ -424,6 +424,9 @@ def extract_dict(output_text: str) -> Optional[Dict[str, str]]:
         "explanation": "No explanation provided.",
     }
 
+    if output_text.count("{") > output_text.count("}"):
+        output_text = output_text + "}"
+
     json_text = extract_last_json_block(output_text)
     if not json_text:
         logger.warning("No JSON object found in assistant output. Returning default.")
@@ -447,6 +450,13 @@ def extract_dict(output_text: str) -> Optional[Dict[str, str]]:
         return re.sub(r'"(.*?)"', repl, s, flags=re.DOTALL)
 
     json_text_clean = escape_newlines_in_strings(json_text)
+
+    # Check if the correct keys are present
+    if not all(key in json_text_clean for key in ["diagnosis", "probability", "explanation"]):
+        logger.warning(
+            "JSON object does not contain all required keys. Returning default."
+        )
+        return default_json
 
     try:
         return json.loads(json_text_clean)

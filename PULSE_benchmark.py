@@ -37,7 +37,6 @@ class ModelTrainer:
         self.config.output_dir = output_dir
 
         # Log general information
-        logger.info("Initializing ModelTrainer with configuration:")
         logger.info("App Name: %s", config.general.app_name)
         logger.info("App Version: %s", config.general.app_version)
         logger.info("App Mode: %s", config.general.app_mode)
@@ -78,12 +77,12 @@ class ModelTrainer:
             task_name = task_dataset_name.split("_")[0]
             dataset_name = task_dataset_name.split("_")[-1]
 
-            # Get fresh models for this dataset/task combination
+            # Get updated models for this dataset/task combination
             updated_models = self.mm.get_models_for_task(task_dataset_name)
 
             # Each fresh model is used only for this dataset
             for model in updated_models:
-                model_name = model.__class__.__name__
+                model_name = model.model_name
                 model.task_name = task_name
                 model.dataset_name = dataset_name
                 model.save_metadata = self.config.general.get("save_metadata", False)
@@ -186,6 +185,7 @@ class ModelTrainer:
                     )
 
                     # Check if we can reuse an already loaded model from the agent pipeline
+                    #TODO: Do we need this? 
                     loaded_model = None
                     if "loaded_model" in dm_kwargs:
                         loaded_model = dm_kwargs["loaded_model"]
@@ -201,6 +201,7 @@ class ModelTrainer:
                             # Update necessary properties for evaluation
                             model.task_name = task_name
                             model.dataset_name = dataset_name
+                    
 
                     # Choose the appropriate DataLoader based on model type
                     if model.type == "convML":
@@ -275,13 +276,14 @@ class ModelTrainer:
                             model.trainer.estimate_nr_tokens()
                         else:
                             logger.warning(
-                                "Token estimation is only applicable for LLM models."
+                                "Token estimation is only applicable for Llama3."
                             )
                     else:
                         # Set trainer for the model and train
                         model.set_trainer(
                             trainer_name, train_loader, val_loader, test_loader
                         )
+                        model.load_model_to_gpu()
                         model.trainer.train()
 
                 except Exception as e:
@@ -293,6 +295,8 @@ class ModelTrainer:
                         exc_info=True,
                     )
                 finally:
+                    model.offload_model_to_cpu()
+
                     # Memory cleanup after training each model
                     if hasattr(model, "trainer"):
                         del model.trainer
@@ -300,10 +304,6 @@ class ModelTrainer:
                     # Clear variables that might hold large data
                     train_loader = val_loader = test_loader = None
                     X_train = y_train = X_val = y_val = X_test = y_test = None
-
-                    # If using PyTorch with CUDA, empty the cache
-                    if torch.cuda.is_available():
-                        torch.cuda.empty_cache()
 
                     # Force garbage collection
                     gc.collect()
