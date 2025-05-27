@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import time
@@ -10,13 +11,18 @@ import torch.nn as nn
 import torch.optim as optim
 from peft import PromptTuningConfig, PromptTuningInit, TaskType, get_peft_model
 from torch.nn import functional as F
-from transformers import (AutoModelForCausalLM, AutoTokenizer,
-                          BitsAndBytesConfig, Llama4ForConditionalGeneration)
+from transformers import (
+    AutoModelForCausalLM,
+    AutoTokenizer,
+    BitsAndBytesConfig,
+    Llama4ForConditionalGeneration,
+)
 
 import wandb
 from src.eval.metrics import MetricsTracker
 from src.models.pulsetemplate_model import PulseTemplateModel
 from src.util.model_util import extract_dict, prompt_template_hf
+from src.util.config_util import set_seeds
 
 warnings.filterwarnings(
     "ignore",
@@ -36,19 +42,51 @@ class Llama4Model(PulseTemplateModel):
             params: Configuration dictionary with model parameters.
             **kwargs: Additional optional parameters such as `output_dir` and `wandb`.
         """
-        raise NotImplementedError(
-            "Llama4Model is not implemented yet."
-        )
-        self.model_name = kwargs.get("model_name", "Llama4Model")
-        self.trainer_name = params["trainer_name"]
-        super().__init__(self.model_name, self.trainer_name, params=params)
+        raise NotImplementedError("Llama4Model is not implemented yet.")
 
-        self.save_dir: str = kwargs.get("output_dir", f"{os.getcwd()}/output")
-        self.wandb: bool = kwargs.get("wandb", False)
+        # Add model loading flag
+        self.is_loaded = False
+
+        # Initialize essential properties first
+        self.model_name = kwargs.get("model_name", "Llama4Model")
+        self.inference_only = kwargs.get("inference_only", False)
+        self.params = params
+
+        if self.inference_only:
+            # For inference-only mode (agentic workflow)
+            self.trainer_name = params.get("trainer_name", "Llama4Trainer")
+            # Skip parent initialization for agentic workflow
+            self.random_seed = self.params.get("random_seed", 42)
+            logger.debug("Using random seed: %d", self.random_seed)
+
+            # Set necessary parameters for inference
+            self.save_dir = kwargs.get("output_dir", f"{os.getcwd()}/output")
+            self.wandb = kwargs.get("wandb", False)
+            self.task_name = kwargs.get("task_name")
+            self.dataset_name = kwargs.get("dataset_name")
+        else:
+            # Full model initialization for standard workflow
+            self.trainer_name = params["trainer_name"]
+            super().__init__(self.model_name, self.trainer_name, params=params)
+
+            # Store random seed from params (added by ModelManager)
+            self.random_seed = self.params.get("random_seed", 42)
+            logger.debug("Using random seed: %d", self.random_seed)
+
+            self.save_dir = kwargs.get("output_dir", f"{os.getcwd()}/output")
+            self.wandb = kwargs.get("wandb", False)
 
         required_params = [
             "max_new_tokens",
+            "verbose",
+            "tuning",
+            "num_epochs",
+            "max_new_tokens",
+            "max_length",
+            "do_sample",
+            "temperature",
         ]
+
         # Check if all required parameters exist in config
         missing_params = [param for param in required_params if param not in params]
         if missing_params:
@@ -58,8 +96,7 @@ class Llama4Model(PulseTemplateModel):
         self.params["save_test_set"] = kwargs.get("save_test_set", False)
 
         self.model_id: str = self.params.get(
-            "model_id", 
-            "meta-llama/Llama-4-Scout-17B-16E-Instruct"
+            "model_id", "meta-llama/Llama-4-Scout-17B-16E-Instruct"
         )
         self.max_length: int = self.params.get("max_length", 5120)
 
@@ -70,19 +107,29 @@ class Llama4Model(PulseTemplateModel):
             load_in_4bit=True,
             bnb_4bit_compute_dtype=torch.bfloat16,
             bnb_4bit_quant_type="nf4",  # Options: "nf4", "fp4"
-            bnb_4bit_use_double_quant=True  # Optional: enables nested quantization
+            bnb_4bit_use_double_quant=True,  # Optional: enables nested quantization
         )
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     def _load_model(self) -> None:
         """Loads the tokenizer and model weights and initializes HF pipeline."""
         try:
+            # Skip loading if already loaded
+            if (
+                self.tokenizer is not None
+                and self.llama_model is not None
+                and self.is_loaded
+            ):
+                logger.info("Model already loaded, reusing existing instance")
+                return
+
+            logger.debug(f"Loading model %s", self.model_id)
             self.tokenizer = AutoTokenizer.from_pretrained(
                 self.model_id, padding_side="left"
             )
             self.llama_model = Llama4ForConditionalGeneration.from_pretrained(
                 self.model_id,
-                attn_implementation="sdpa", # good for long context windows
+                attn_implementation="sdpa",  # good for long context windows
                 device_map="auto",
                 torch_dtype=torch.bfloat16,
                 load_in_4bit=True,
@@ -102,23 +149,51 @@ class Llama4Model(PulseTemplateModel):
                 logger.debug(self.llama_model.print_trainable_parameters())
 
             logger.info("Successfully loaded Llama4 model: %s", self.model_id)
+
+            # Only log pipeline initialization in full training mode
+            if not self.inference_only:
+                logger.info(
+                    "Initializing Hugging Face pipeline with parameters: %s",
+                    self.params,
+                )
+
+            # Mark model as loaded after successful loading
+            self.is_loaded = True
+
         except Exception as e:
             logger.error("Failed to load Llama4 model: %s", e)
             raise
 
-        logger.info(
-            "Initializing Hugging Face pipeline with parameters: %s", self.params
-        )
+    def infer_llm(
+        self,
+        input_text: str,
+        custom_system_message: str = None,
+        force_raw_text: bool = False,
+    ) -> Dict[str, Any]:
+        """Runs the HF model on the input and extracts diagnosis, explanation, and probability.
 
-    def infer_llm(self, input_text: str) -> Dict[str, Any]:
-        """Runs the HF model on the input and extracts diagnosis, explanation, and probability."""
+        Args:
+            input_text: The text to analyze
+            custom_system_message: Optional custom system message
+            force_raw_text: If True, returns raw text output without JSON parsing
+        """
+        # Set seed for deterministic generation
+        set_seeds(self.random_seed)
+
+        # Ensure model is loaded before trying to use it
+        if self.tokenizer is None or self.llama_model is None:
+            logger.debug("Model not loaded yet for inference, loading now...")
+            self._load_model()
+
         logger.info("---------------------------------------------")
 
         if not isinstance(input_text, str):
             input_text = str(input_text)
 
         # Format input using prompt template
-        input_text = prompt_template_hf(input_text)
+        input_text = prompt_template_hf(
+            input_text, custom_system_message, self.model_name
+        )
 
         # Apply chat template
         chat_prompt = self.tokenizer.apply_chat_template(
@@ -135,23 +210,25 @@ class Llama4Model(PulseTemplateModel):
 
         yes_token_id = self.tokenizer("yes", add_special_tokens=False).input_ids[0]
         no_token_id = self.tokenizer("no", add_special_tokens=False).input_ids[0]
-        
-        # self.llama_model.to(self.device)
+
         input_ids = tokenized_inputs["input_ids"].to(self.device)
         attention_mask = tokenized_inputs["attention_mask"].to(self.device)
 
         # Generate output with scores
         infer_start = time.perf_counter()
+
         with torch.no_grad():
             outputs = self.llama_model.generate(
                 input_ids=input_ids,
                 attention_mask=attention_mask,
-                max_new_tokens=self.params.max_new_tokens,
+                max_new_tokens=self.params["max_new_tokens"],
                 return_dict_in_generate=True,
                 output_scores=True,
                 output_hidden_states=False,
                 pad_token_id=self.tokenizer.pad_token_id,
                 eos_token_id=self.tokenizer.eos_token_id,
+                do_sample=self.params["do_sample"],
+                temperature=self.params["temperature"],
             )
 
         infer_time = time.perf_counter() - infer_start
@@ -165,61 +242,16 @@ class Llama4Model(PulseTemplateModel):
         )
         logger.debug("Decoded output:\n %s", decoded_output)
 
-        # Calculate softmax over first generated token logits
-        first_token_logits = outputs.scores[0][0]  # shape: (vocab_size,)
-        # top_gen_ids = gen_ids[:5]  # First few generated tokens
-        # print("Generated token IDs:", top_gen_ids)
-        # print("Decoded tokens:", [self.tokenizer.decode([tid]) for tid in top_gen_ids])
-        # logger.debug(
-        #     "First token logits: %s", first_token_logits
-        # )
-        # Apply softmax to get probabilities
-        # Get top 10 probabilities and their corresponding token indices
-        probs = torch.topk(F.softmax(first_token_logits, dim=-1), 10) #(values, indices)
-        topk_values, topk_indices = probs
-
-        # Convert indices to list for easier matching
-        topk_indices_list = topk_indices.tolist()
-        topk_values_list = topk_values.tolist()
-
-        # Initialize with fallback values
-        yes_prob = 0.0
-        no_prob = 0.0
-
-        # Find index of yes_token_id and extract its probability
-        if yes_token_id in topk_indices_list:
-            yes_index = topk_indices_list.index(yes_token_id)
-            yes_prob = topk_values_list[yes_index]
-
-        if no_token_id in topk_indices_list:
-            no_index = topk_indices_list.index(no_token_id)
-            no_prob = topk_values_list[no_index]
-
-
-        # Fallback if yes and no tokens were not picked up. They are inlcuded in the vocab but
-        # have a value a -inf as logits
-        if yes_prob == 0.0 and no_prob == 0.0:
-            logger.warning(
-                "Yes or No token probabilities are zero. Defaulting to 0.5."
-            )
-            yes_prob = 0.5
-            no_prob = 0.5
-
-        if yes_prob > no_prob:
-            probability = yes_prob
-        else:
-            probability = 1 - no_prob
-        logger.debug(
-            "Yes token ID: %s | No token ID: %s", yes_token_id, no_token_id
-        )
-        logger.debug(
-            "Top 10 token probs: %s", probs
-        )
-        logger.debug(
-            "Yes token probability: %.4f | No token probability: %.4f",
-            yes_prob,
-            no_prob,
-        )
+        # Check if we should return raw text or parsed JSON (important for multi-turn conversations)
+        if force_raw_text:
+            # For text-only outputs like summaries
+            return {
+                "generated_text": decoded_output,  # Return raw text
+                "token_time": token_time,
+                "infer_time": infer_time,
+                "num_input_tokens": num_input_tokens,
+                "num_output_tokens": num_output_tokens,
+            }
 
         # Extract dict from the decoded output (e.g., via regex or JSON parsing)
         try:
@@ -233,7 +265,10 @@ class Llama4Model(PulseTemplateModel):
         parsed["probability"] = round(probability, 4)
 
         logger.info(
-            f"Tokenization time: {token_time:.4f}s | Inference time: {infer_time:.4f}s | Tokens: {num_prompt_tokens}"
+            "Tokenization time: %.4fs | Inference time: %.4fs | Tokens: %d",
+            token_time,
+            infer_time,
+            num_input_tokens + num_output_tokens,
         )
 
         return {
@@ -242,7 +277,6 @@ class Llama4Model(PulseTemplateModel):
             "infer_time": infer_time,
             "num_tokens": num_prompt_tokens,
         }
-
 
     def set_trainer(
         self,
@@ -303,6 +337,9 @@ class Llama4Trainer:
             val_loader: The DataLoader object for the validation dataset.
             test_loader: The DataLoader object for the testing dataset.
         """
+        # Set seed for deterministic generation
+        set_seeds(model.random_seed)
+
         # Load the model and tokenizer
         model._load_model()  # Comment out to only test preprocessing
 
@@ -329,6 +366,9 @@ class Llama4Trainer:
 
     def train(self):
         """Training loop."""
+        # Set seed for deterministic generation
+        set_seeds(self.model.random_seed)
+
         verbose = self.params.get("verbose", 1)
         logger.info("System message: %s", prompt_template_hf("")[0])
         logger.info("Starting training...")
@@ -378,7 +418,7 @@ class Llama4Trainer:
                     )
 
                     optimizer.zero_grad()
-                    #TODO: Should be optimized for diagnosis or probability -> need to adapt
+                    # TODO: Should be optimized for diagnosis or probability -> need to adapt
                     outputs = self.llama_model(
                         input_ids=encoded["input_ids"].to(self.device),
                         attention_mask=encoded["attention_mask"].to(self.device),
@@ -428,6 +468,15 @@ class Llama4Trainer:
         Returns:
             The average validation loss across the test dataset.
         """
+        # Set seed for deterministic generation
+        set_seeds(self.model.random_seed)
+
+        # Check if model is already loaded before attempting to load
+        if not self.model.is_loaded:
+            self.model._load_model()
+        else:
+            logger.info("Using already loaded model instance for evaluation")
+
         if self.save_test_set:
             # Save test set to CSV
             test_loader[0].to_csv(
@@ -450,15 +499,82 @@ class Llama4Trainer:
 
         self.llama_model.eval()
 
-        total_tokens = 0
-        total_token_time = 0.0
-        total_infer_time = 0.0
-
         for X, y in zip(test_loader[0].iterrows(), test_loader[1].iterrows()):
-            X_input = X[1].iloc[0]
-            y_true = y[1].iloc[0]
+            idx = X[0]  # The index of the current row
+            X_input = X[1].iloc[0]  # The input text for standard pipeline
+            y_true = y[1].iloc[0]  # The true label
 
-            result_dict = self.model.infer_llm(X_input)
+            # Check if this row contains an agent prediction
+            is_agent_prediction = False
+            if "is_agent_prediction" in test_loader[0].columns:
+                is_agent_prediction = bool(
+                    test_loader[0].at[idx, "is_agent_prediction"]
+                )
+                logger.debug(
+                    "Sample %s: is_agent_prediction = %s (type: %s)",
+                    idx,
+                    is_agent_prediction,
+                    type(is_agent_prediction),
+                )
+
+            if is_agent_prediction:
+                logger.info(
+                    "Found agent prediction - using directly without additional inference"
+                )
+
+                try:
+                    # Parse the agent's prediction JSON
+                    agent_output = (
+                        json.loads(X_input) if isinstance(X_input, str) else X_input
+                    )
+
+                    # Extract prediction fields
+                    predicted_probability = float(agent_output.get("probability", 0.5))
+                    diagnosis = agent_output.get("diagnosis", "")
+                    explanation = agent_output.get("explanation", "")
+
+                    # Get token metrics if available
+                    token_time = 0.0  # Placeholder values
+                    infer_time = 0.0
+                    num_input_tokens = (
+                        test_loader[0].at[idx, "num_input_tokens"]
+                        if "num_input_tokens" in test_loader[0].columns
+                        else 100
+                    )
+                    num_output_tokens = (
+                        test_loader[0].at[idx, "num_output_tokens"]
+                        if "num_output_tokens" in test_loader[0].columns
+                        else 50
+                    )
+
+                    # Create result structure matching what infer_llm would return
+                    result_dict = {
+                        "generated_text": {
+                            "diagnosis": diagnosis,
+                            "probability": predicted_probability,
+                            "explanation": explanation,
+                        },
+                        "token_time": token_time,
+                        "infer_time": infer_time,
+                        "num_input_tokens": num_input_tokens,
+                        "num_output_tokens": num_output_tokens,
+                    }
+
+                    logger.info(
+                        "Using agent prediction: %s with probability %s",
+                        diagnosis,
+                        predicted_probability,
+                    )
+
+                except Exception as e:
+                    logger.error(
+                        f"Error parsing agent prediction: {e} - Falling back to standard inference"
+                    )
+                    # Run normal inference as fallback
+                    result_dict = self.model.infer_llm(X_input)
+            else:
+                # Standard inference for non-agent predictions
+                result_dict = self.model.infer_llm(X_input)
 
             generated_text = result_dict["generated_text"]
             token_time = result_dict["token_time"]
@@ -478,7 +594,9 @@ class Llama4Trainer:
             )
             if verbose > 1:
                 logger.info("Generated label: %s", generated_text["diagnosis"])
-                logger.info("Generated explanation: %s \n", generated_text["explanation"])
+                logger.info(
+                    "Generated explanation: %s \n", generated_text["explanation"]
+                )
             if verbose > 2:
                 logger.info("Input prompt: %s \n", X_input)
 

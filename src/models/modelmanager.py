@@ -36,6 +36,9 @@ class ModelManager:
         self.output_dir = config.get("output_dir", "")
         self.model_configs = self.models
         self.prompt_configs = config.get("prompting", None)
+
+        self._model_cache = {}
+
         self.models = self._prepare_models()
 
     def _prepare_models(self) -> List[Any]:
@@ -77,7 +80,7 @@ class ModelManager:
             sys.exit(1)
         return prepared_models
 
-    def _create_model_from_config(self, config: Dict) -> Any:
+    def _create_model_from_config(self, config: Dict, for_agent: bool = False) -> Any:
         """
         Create a fresh model instance from a configuration.
 
@@ -88,21 +91,36 @@ class ModelManager:
             A new model instance
         """
         model_name = config.get("name")
+        cache_key = model_name
+
+        # Check if we already have this model instance cached
+        if cache_key in self._model_cache:
+            logger.info("Using cached model instance: %s", cache_key)
+            return self._model_cache[cache_key]
+
+        # Create model as before
+        model_cls = get_model_class(model_name)
 
         # Add random seed to params if not already present
         params = config.get("params", {})
         if "random_seed" not in params:
             params["random_seed"] = self.benchmark_settings.get("random_seed", 42)
 
-        # Create model instance from configuration
-        model_cls = get_model_class(model_name)
-        model = model_cls(
-            params,
-            pretrained_model_path=config.get("pretrained_model_path", None),
-            wandb=self.wandb.get("enabled", False),
-            output_dir=self.output_dir,
-            model_name=model_name,
-        )
+        # Set parameters (no need to differentiate for agent)
+        kwargs = {
+            "params": params,
+            "pretrained_model_path": config.get("pretrained_model_path", None),
+            "wandb": self.wandb.get("enabled", False),
+            "output_dir": self.output_dir,
+            "model_name": model_name,
+        }
+
+        # Create the model
+        model = model_cls(**kwargs)
+
+        # Cache the model before returning
+        self._model_cache[cache_key] = model
+        logger.info("Created and cached model instance: %s", cache_key)
 
         # Load model weights if path is specified
         if config.get("pretrained_model_path", None):
@@ -136,6 +154,17 @@ class ModelManager:
 
         return model
 
+    def create_agent_model(self, model_name: str) -> Any:
+        """Create a model instance specifically for agent use."""
+        # Find the matching config for this model name
+        for _, config in self.model_configs.items():
+            if config.get("name") == model_name:
+                # Create the model with for_agent=True flag
+                return self._create_model_from_config(config, for_agent=True)
+
+        logger.error(f"No configuration found for model {model_name}")
+        return None
+
     def get_models_for_task(self, dataset_name: str) -> List[Any]:
         """
         Create fresh model instances for a specific task/dataset combination.
@@ -146,7 +175,7 @@ class ModelManager:
         Returns:
             List[Any]: List of fresh model instances
         """
-        logger.info(f"Creating fresh model instances for dataset: {dataset_name}")
+        logger.info("Creating fresh model instances for dataset: %s", dataset_name)
         fresh_models = []
 
         for _, config in self.model_configs.items():
@@ -157,7 +186,10 @@ class ModelManager:
             except Exception as e:
                 model_name = config.get("name", "unknown")
                 logger.error(
-                    f"Failed to create fresh model '{model_name}' for dataset {dataset_name}: {str(e)}"
+                    "Failed to create fresh model '%s' for dataset %s: %s",
+                    model_name,
+                    dataset_name,
+                    str(e),
                 )
 
         return fresh_models
