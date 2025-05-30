@@ -2,6 +2,10 @@
 
 https://onlinelibrary.wiley.com/doi/full/10.1002/hcs2.79
 
+Approach:
+- Aggregate time-series of each independent feature and prompt model with:
+    - Featurename (unit: g/dL): min=3.000, max=3.060, mean=3.055
+
 ### Example Prompt as stated in paper:
 
 Suggest as many potential diagnoses as possible from the following patient data.
@@ -75,9 +79,6 @@ Patient data:
 ### Adjusted prompt for Pulse benchmark
 
 Suggest a diagnoses of mortality or not-mortality for the following patient data.
-In addition, include information about patient's medical history (if any). 
-Give exact numbers and/or text quotes from the data that made you think of each of the diagnoses and, if necessary, give further tests that could confirm the diagnosis.
-Use the International Classification of Disease (ICD) standard for reporting the diagnoses.
 Before finalizing your answer check if you haven't missed any abnormal data points. ´´´
 
 For example, if the patient data mentions:
@@ -90,46 +91,8 @@ Aspartate Aminotransferase (AST) (unit: U/L): min=27.000, max=300.580, mean=278.
 Base Excess (unit: mmol/L): min=-6.000, max=-1.610, mean=-3.313
 Bicarbonate (unit: mmol/L): min=21.000, max=22.750, mean=21.570
 Total Bilirubin (unit: mg/dL): min=0.400, max=3.300, mean=2.765
-Band Neutrophils (unit: %): min=5.710, max=5.710, mean=5.710
-Blood Urea Nitrogen (BUN) (unit: mg/dL): min=12.000, max=28.900, mean=19.932
-Calcium (unit: mg/dL): min=7.300, max=8.290, mean=7.633
-Ionized Calcium (unit: mmol/L): min=1.130, max=1.130, mean=1.130
-Creatine Kinase (CK) (unit: U/L): min=1553.340, max=1553.340, mean=1553.340
-Creatine Kinase-MB (CK-MB) (unit: ng/mL): min=25.030, max=25.030, mean=25.030
-Chloride (unit: mmol/L): min=102.000, max=105.000, mean=104.483
-Creatinine (unit: mg/dL): min=0.900, max=1.580, mean=1.090
-C-Reactive Protein (CRP) (unit: mg/L): min=77.230, max=77.230, mean=77.230
-Diastolic Blood Pressure (unit: mmHg): min=44.000, max=70.000, mean=58.730
-Fibrinogen (unit: mg/dL): min=265.640, max=720.000, mean=449.419
-Fraction of Inspired Oxygen (FiO2) (unit: %): min=53.970, max=53.970, mean=53.970
-Glucose (unit: mg/dL): min=105.000, max=145.910, mean=120.295
-Hemoglobin (unit: g/dL): min=9.900, max=10.200, mean=10.000
-Heart Rate (unit: bpm): min=65.000, max=98.000, mean=79.800
-inr (unit: ): min=1.100, max=1.550, mean=1.482
-Potassium (unit: mmol/L): min=4.230, max=4.400, mean=4.344
-Lactate (unit: mmol/L): min=0.700, max=2.720, mean=1.358
-Lymphocytes (unit: %): min=12.460, max=12.460, mean=12.460
-Mean Arterial Pressure (MAP) (unit: mmHg): min=59.000, max=83.000, mean=66.620
-Mean Corpuscular Hemoglobin (MCH) (unit: pg): min=30.060, max=31.400, mean=31.009
-Mean Corpuscular Hemoglobin Concentration (MCHC) (unit: g/dL): min=32.300, max=33.050, mean=32.638
-Mean Corpuscular Volume (MCV) (unit: fL): min=91.040, max=97.000, mean=95.331
-Methemoglobin (unit: %): min=1.080, max=1.080, mean=1.080
-Magnesium (unit: mg/dL): min=2.070, max=2.900, mean=2.644
-Sodium (unit: mmol/L): min=135.000, max=138.190, mean=135.973
-Neutrophils (unit: %): min=77.710, max=77.710, mean=77.710
-Oxygen Saturation (unit: %): min=93.000, max=100.000, mean=97.520
-Partial Pressure of Carbon Dioxide (PaCO2) (unit: mmHg): min=39.000, max=55.000, mean=41.912
-pH Level (unit: /): min=7.200, max=7.360, mean=7.327
-Phosphate (unit: mg/dL): min=2.800, max=3.770, mean=3.456
-Platelets (unit: 1000/µL): min=167.000, max=191.280, mean=176.998
-Partial Pressure of Oxygen (PaO2) (unit: mmHg): min=98.000, max=155.160, mean=107.099
-Partial Thromboplastin Time (PTT) (unit: sec): min=32.900, max=41.260, mean=37.481
-Respiratory Rate (unit: breaths/min): min=3.000, max=19.000, mean=10.900
-Systolic Blood Pressure (unit: mmHg): min=89.000, max=119.000, mean=108.510
-Temperature (unit: °C): min=36.722, max=37.222, mean=36.976
-Troponin T (unit: ng/mL): min=0.940, max=0.940, mean=0.940
-Urine Output (unit: mL/h): min=50.000, max=400.000, mean=168.430
-White Blood Cell Count (WBC) (unit: 1000/µL): min=12.810, max=17.500, mean=16.139
+
+...
 
 Then your answer may be: 
 {
@@ -152,41 +115,5 @@ Bicarbonate (unit: mmol/L): min=20.000, max=23.000, mean=20.960
 Total Bilirubin (unit: mg/dL): min=2.390, max=3.300, mean=2.845
 Band Neutrophils (unit: %): min=5.710, max=5.710, mean=5.710
 Blood Urea Nitrogen (BUN) (unit: mg/dL): min=25.000, max=34.000, mean=31.120
-Calcium (unit: mg/dL): min=8.800, max=9.100, mean=9.004
-Ionized Calcium (unit: mmol/L): min=1.180, max=1.210, mean=1.200
-Creatine Kinase (CK) (unit: U/L): min=1553.340, max=1553.340, mean=1553.340
-Creatine Kinase-MB (CK-MB) (unit: ng/mL): min=25.030, max=25.030, mean=25.030
-Chloride (unit: mmol/L): min=99.000, max=106.000, mean=101.240
-Creatinine (unit: mg/dL): min=1.100, max=1.500, mean=1.372
-C-Reactive Protein (CRP) (unit: mg/L): min=77.230, max=77.230, mean=77.230
-Diastolic Blood Pressure (unit: mmHg): min=42.000, max=56.000, mean=47.980
-Fibrinogen (unit: mg/dL): min=597.000, max=597.000, mean=597.000
-Fraction of Inspired Oxygen (FiO2) (unit: %): min=50.000, max=100.000, mean=56.400
-Glucose (unit: mg/dL): min=105.000, max=209.000, mean=171.440
-Hemoglobin (unit: g/dL): min=9.000, max=9.200, mean=9.136
-Heart Rate (unit: bpm): min=54.000, max=103.000, mean=77.040
-inr (unit: ): min=2.100, max=2.300, mean=2.164
-Potassium (unit: mmol/L): min=4.200, max=4.200, mean=4.200
-Lactate (unit: mmol/L): min=1.100, max=2.100, mean=1.524
-Lymphocytes (unit: %): min=12.460, max=12.460, mean=12.460
-Mean Arterial Pressure (MAP) (unit: mmHg): min=58.000, max=77.000, mean=66.380
-Mean Corpuscular Hemoglobin (MCH) (unit: pg): min=29.000, max=29.500, mean=29.160
-Mean Corpuscular Hemoglobin Concentration (MCHC) (unit: g/dL): min=32.100, max=32.300, mean=32.236
-Mean Corpuscular Volume (MCV) (unit: fL): min=90.000, max=92.000, mean=90.640
-Methemoglobin (unit: %): min=1.080, max=1.080, mean=1.080
-Magnesium (unit: mg/dL): min=1.700, max=2.200, mean=1.860
-Sodium (unit: mmol/L): min=134.000, max=141.000, mean=136.240
-Neutrophils (unit: %): min=77.710, max=77.710, mean=77.710
-Oxygen Saturation (unit: %): min=90.000, max=100.000, mean=95.840
-Partial Pressure of Carbon Dioxide (PaCO2) (unit: mmHg): min=39.000, max=45.000, mean=41.040
-pH Level (unit: /): min=7.320, max=7.410, mean=7.378
-Phosphate (unit: mg/dL): min=2.900, max=3.800, mean=3.512
-Platelets (unit: 1000/µL): min=122.000, max=156.000, mean=145.120
-Partial Pressure of Oxygen (PaO2) (unit: mmHg): min=94.000, max=233.000, mean=137.480
-Partial Thromboplastin Time (PTT) (unit: sec): min=33.300, max=33.900, mean=33.492
-Respiratory Rate (unit: breaths/min): min=8.000, max=22.000, mean=16.820
-Systolic Blood Pressure (unit: mmHg): min=95.000, max=128.000, mean=108.020
-Temperature (unit: °C): min=35.500, max=37.111, mean=36.533
-Troponin T (unit: ng/mL): min=0.940, max=0.940, mean=0.940
-Urine Output (unit: mL/h): min=35.000, max=325.000, mean=151.615
-White Blood Cell Count (WBC) (unit: 1000/µL): min=9.900, max=16.000, mean=14.048
+
+...

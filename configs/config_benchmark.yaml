@@ -10,7 +10,6 @@ general:
   use_scratch: true # Whether to use scratch space for temporary files
   save_metadata: true # Whether to save the metadata file. Inludes prompts for LLMs
 
-
 # Weight and Biases (wandb) logging configuration
 wandb:
   enabled: false
@@ -63,8 +62,8 @@ preprocessing_advanced:
 prompting:
   prompting_ids:
     # - "agentic_prompt_test_preprocessor"
-    # - "liu_2023_few_shot_preprocessor"
-    - "sarvari_2024_aggregation_preprocessor"
+    - "liu_2023_few_shot_preprocessor"
+    # - "sarvari_2024_aggregation_preprocessor"
     # - "zhu_2024a_one_shot_cot_preprocessor"
     # - "zhu_2024b_one_shot_preprocessor"
     # - "zhu_2024c_categorization_summary_agent_preprocessor"
@@ -97,3 +96,4 @@ load_models:
 
   # - "configs/model_configs/MistralModel.yaml"
 
+  # - "configs/model_configs/GPT4oModel.yaml"
