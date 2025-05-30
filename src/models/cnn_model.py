@@ -46,7 +46,7 @@ class CNNModel(PulseTemplateModel, nn.Module):
         else:
             # Fallback to class name if model_name not in kwargs
             self.model_name = self.__class__.__name__.replace("Model", "")
-        
+
         self.trainer_name = params["trainer_name"]
         super().__init__(self.model_name, self.trainer_name, params=params, **kwargs)
         nn.Module.__init__(self)
@@ -105,7 +105,10 @@ class CNNModel(PulseTemplateModel, nn.Module):
 
         """
         set_seeds(self.params["random_seed"])
-        logger.debug("Setting seed %d before CNN model initialization", self.params["random_seed"])
+        logger.debug(
+            "Setting seed %d before CNN model initialization",
+            self.params["random_seed"],
+        )
 
         # -------------------------Define layers-------------------------
         self.conv1 = nn.Conv1d(
@@ -195,11 +198,11 @@ class CNNTrainer:
         self.params = cnn_model.params
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         set_seeds(self.model.params["random_seed"])
-        
+
         self.train_loader = train_loader
         self.val_loader = val_loader
         self.test_loader = test_loader
-        self.pos_weight = calculate_pos_weight(self.train_loader)
+        self.pos_weight = self.train_loader.dataset.pos_weight
         self.criterion = nn.BCEWithLogitsLoss(
             pos_weight=torch.tensor([self.pos_weight])
         )  # inbalanced dataset
@@ -395,9 +398,6 @@ class CNNTrainer:
                 loss = self.criterion(outputs, labels).item()
                 val_loss.append(loss)
 
-                # Append results to metrics tracker
-                metrics_tracker.add_results(outputs.cpu().numpy(), labels.cpu().numpy())
-
                 if verbose == 2:  # Verbose level 2: log every batch
                     logger.info("Testing - Batch %d: Loss = %.4f", batch + 1, loss)
                     if self.wandb:
@@ -408,7 +408,22 @@ class CNNTrainer:
                     if self.wandb:
                         wandb.log({"Test loss": loss})
 
+                metadata_dict = {
+                    "batch": batch,
+                    "prediction": outputs.cpu().numpy(),
+                    "label": labels.cpu().numpy(),
+                    "loss": loss,
+                    "age": inputs[:, 0, 0].cpu().numpy(),
+                    "sex": inputs[:, 0, 1].cpu().numpy(),
+                    "height": inputs[:, 0, 2].cpu().numpy(),
+                    "weight": inputs[:, 0, 3].cpu().numpy(),
+                }
+                # Append results to metrics tracker
+                metrics_tracker.add_results(outputs.cpu().numpy(), labels.cpu().numpy())
+                metrics_tracker.add_metadata_item(metadata_dict)
+
         # Calculate and log metrics
+        metrics_tracker.log_metadata(True)
         metrics_tracker.summary = metrics_tracker.compute_overall_metrics()
         if save_report:
             metrics_tracker.save_report()

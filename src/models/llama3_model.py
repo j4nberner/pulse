@@ -172,7 +172,7 @@ class Llama3Model(PulseTemplateModel):
         """
         # Set seed for deterministic generation
         set_seeds(self.random_seed)
-        
+
         # Ensure model is loaded before trying to use it
         if self.tokenizer is None or self.llama_model is None:
             logger.debug("Model not loaded yet for inference, loading now...")
@@ -297,10 +297,10 @@ class Llama3Model(PulseTemplateModel):
         num_input_tokens = tokenized_inputs["input_ids"].size(1)
 
         return {
-                "Input Prompt": input_text,
-                "Input Tokens": num_input_tokens,
-                "Output Tokens": self.params.max_new_tokens,
-                }
+            "Input Prompt": input_text,
+            "Input Tokens": num_input_tokens,
+            "Output Tokens": self.params.max_new_tokens,
+        }
 
     def set_trainer(
         self,
@@ -380,8 +380,8 @@ class Llama3Trainer:
 
         if self.tuning:
             raise NotImplementedError(
-                    "Prompt tuning is not implemented for MistralModel yet. Set tuning parameter to false."
-                )
+                "Prompt tuning is not implemented for MistralModel yet. Set tuning parameter to false."
+            )
             logger.info(
                 "Tuning model with prompt tuning. Model is saved in %s",
                 self.model_save_dir,
@@ -426,7 +426,6 @@ class Llama3Trainer:
                     )
 
                     optimizer.zero_grad()
-                    # TODO: Should be optimized for diagnosis or probability -> need to adapt
                     outputs = self.llama_model(
                         input_ids=encoded["input_ids"].to(self.device),
                         attention_mask=encoded["attention_mask"].to(self.device),
@@ -689,7 +688,6 @@ class Llama3Trainer:
                 num_input_tokens,
                 num_output_tokens,
             )
-
 
         metrics_tracker.log_metadata(save_to_file=self.model.save_metadata)
         return total_tokens

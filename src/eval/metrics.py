@@ -92,13 +92,7 @@ class MetricsTracker:
             item: Dictionary containing keys such as 'input', 'target', 'prediction',
                   'token_time', 'infer_time', 'num_input_tokens', 'num_output_tokens', etc.
         """
-        # Store predictions and labels for metrics computation
-        if "prediction" in item:
-            self.results["predictions"].append(item["prediction"])
-        if "target" in item:
-            self.results["labels"].append(item["target"])
-
-        # Optionally, store additional metadata if needed
+        # Store additional metadata if needed
         if not hasattr(self, "items"):
             self.items = []
         self.items.append(item)

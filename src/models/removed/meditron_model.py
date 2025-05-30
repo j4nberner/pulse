@@ -11,8 +11,7 @@ import torch.optim as optim
 from langchain.prompts import PromptTemplate
 from langchain.schema.runnable import Runnable
 from peft import PromptTuningConfig, PromptTuningInit, TaskType, get_peft_model
-from transformers import (AutoModelForCausalLM, AutoTokenizer,
-                          BitsAndBytesConfig)
+from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
 import wandb
 from src.eval.metrics import MetricsTracker
@@ -57,9 +56,7 @@ class MeditronModel(PulseTemplateModel):
         self.params: Dict[str, Any] = params
         self.params["save_test_set"] = kwargs.get("save_test_set", False)
 
-        self.model_id: str = self.params.get(
-            "model_id", "epfl-llm/meditron-7b"
-        )
+        self.model_id: str = self.params.get("model_id", "epfl-llm/meditron-7b")
         self.max_length: int = self.params.get("max_length", 5120)
 
         self.tokenizer: Optional[Any] = None
@@ -234,7 +231,6 @@ class MeditronModel(PulseTemplateModel):
         Returns:
             A float representing the predicted probability.
         """
-        # TODO: Implement a more robust parsing method
         try:
             # Extract the floating-point number from the output
             if "not-" in output:

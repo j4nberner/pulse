@@ -12,8 +12,7 @@ from xgboost import XGBClassifier
 import wandb
 from src.eval.metrics import MetricsTracker
 from src.models.pulsetemplate_model import PulseTemplateModel
-from src.util.model_util import (prepare_data_for_model_convml,
-                                 save_sklearn_model)
+from src.util.model_util import prepare_data_for_model_convml, save_sklearn_model
 
 logger = logging.getLogger("PULSE_logger")
 
@@ -263,9 +262,21 @@ class XGBoostTrainer:
 
         y_pred = self.model.model.predict(X_test_df)
         y_pred_proba = self.model.model.predict_proba(X_test_df)
+
+        metadata_dict = {
+            "prediction": y_pred_proba[:, 1],
+            "label": y_test,
+            "age": X_test_df["age"].values,
+            "sex": X_test_df["sex"].values,
+            "height": X_test_df["height"].values,
+            "weight": X_test_df["weight"].values,
+        }
+
         metrics_tracker.add_results(y_pred_proba[:, 1], y_test)
+        metrics_tracker.add_metadata_item(metadata_dict)
 
         # Calculate and log metrics
+        metrics_tracker.log_metadata(True)
         metrics_tracker.summary = metrics_tracker.compute_overall_metrics()
         metrics_tracker.save_report()
 

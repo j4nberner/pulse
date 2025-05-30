@@ -248,6 +248,7 @@ def prepare_data_for_model_convdl(
     return converter
 
 
+@DeprecationWarning
 def calculate_pos_weight(train_loader):
     """
     Calculate positive class weight for imbalanced binary classification data.
@@ -358,15 +359,15 @@ def prompt_template_hf(
         ]
     elif model == "GPTModel":
         formatted_prompt = [
-        {
-            "role": "developer",
-            "content": system_message,
-        },
-        {
-            "role": "user",
-            "content": input_text,
-        },
-    ]
+            {
+                "role": "developer",
+                "content": system_message,
+            },
+            {
+                "role": "user",
+                "content": input_text,
+            },
+        ]
     elif model == "MeditronModel":
         formatted_prompt = [
             f"<|im_start|>system\n{system_message}<|im_end|>\n"

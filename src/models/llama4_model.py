@@ -306,7 +306,6 @@ class Llama4Model(PulseTemplateModel):
         Returns:
             A float representing the predicted probability.
         """
-        # TODO: Implement a more robust parsing method
         try:
             # Extract the floating-point number from the output
             if "not-" in output:
@@ -418,7 +417,6 @@ class Llama4Trainer:
                     )
 
                     optimizer.zero_grad()
-                    # TODO: Should be optimized for diagnosis or probability -> need to adapt
                     outputs = self.llama_model(
                         input_ids=encoded["input_ids"].to(self.device),
                         attention_mask=encoded["attention_mask"].to(self.device),

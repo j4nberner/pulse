@@ -365,7 +365,7 @@ class InceptionTimeTrainer:
         self._prepare_data()
 
         # Set criterion after calculating class weights for imbalanced datasets
-        self.pos_weight = calculate_pos_weight(self.train_loader)
+        self.pos_weight = self.train_loader.dataset.pos_weight
         self.criterion = nn.BCEWithLogitsLoss(
             pos_weight=torch.tensor([self.pos_weight]).to(self.device)
         )
@@ -458,6 +458,7 @@ class InceptionTimeTrainer:
         self.criterion.to(self.device)
 
         # Initialize metrics tracking dictionary (not used for earlystopping, logging or wandb)
+        # TODO: @sophiafe self.metrics is not used. Do we need it?
         self.metrics = {"train_loss": [], "val_loss": []}
 
         logger.info("Starting training on device: %s", self.device)
@@ -634,9 +635,6 @@ class InceptionTimeTrainer:
                 batch_accuracy = (preds == labels).sum().item() / labels.size(0)
                 batch_metrics.append(batch_accuracy)
 
-                # Add results to metrics tracker
-                metrics_tracker.add_results(outputs.cpu().numpy(), labels.cpu().numpy())
-
                 # Log batch progress if verbose
                 if self.params["verbose"] == 2 or (
                     self.params["verbose"] == 1 and batch_idx % 100 == 0
@@ -647,6 +645,21 @@ class InceptionTimeTrainer:
                         len(self.test_loader),
                         batch_accuracy,
                     )
+                metadata_dict = {
+                    "batch": batch_idx,
+                    "prediction": outputs.cpu().numpy(),
+                    "label": labels.cpu().numpy(),
+                    "age": features[:, 0, 0].cpu().numpy(),
+                    "sex": features[:, 0, 1].cpu().numpy(),
+                    "height": features[:, 0, 2].cpu().numpy(),
+                    "weight": features[:, 0, 3].cpu().numpy(),
+                }
+                # Append results to metrics tracker
+                metrics_tracker.add_results(outputs.cpu().numpy(), labels.cpu().numpy())
+                metrics_tracker.add_metadata_item(metadata_dict)
+
+        # Calculate and log metrics
+        metrics_tracker.log_metadata(True)
 
         # Calculate and log metrics
         metrics_tracker.summary = metrics_tracker.compute_overall_metrics()

@@ -415,13 +415,28 @@ class LSTMTrainer:
 
                 val_loss.append(loss)
 
-                # Append results to metrics tracker
-                metrics_tracker.add_results(outputs.cpu().numpy(), labels.cpu().numpy())
                 if verbose == 2 or (verbose == 1 and batch % 10 == 9):
                     logger.info("Evaluating batch %d: Loss = %.4f", batch + 1, loss)
 
                     if self.wandb:
                         wandb.log({"val_loss": loss})
+
+                metadata_dict = {
+                    "batch": batch,
+                    "prediction": outputs.cpu().numpy(),
+                    "label": labels.cpu().numpy(),
+                    "loss": loss,
+                    "age": inputs[:, 0, 0].cpu().numpy(),
+                    "sex": inputs[:, 0, 1].cpu().numpy(),
+                    "height": inputs[:, 0, 2].cpu().numpy(),
+                    "weight": inputs[:, 0, 3].cpu().numpy(),
+                }
+                # Append results to metrics tracker
+                metrics_tracker.add_results(outputs.cpu().numpy(), labels.cpu().numpy())
+                metrics_tracker.add_metadata_item(metadata_dict)
+
+        # Calculate and log metrics
+        metrics_tracker.log_metadata(True)
 
         # Calculate and log metrics
         metrics_tracker.summary = metrics_tracker.compute_overall_metrics()

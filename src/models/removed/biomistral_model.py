@@ -9,8 +9,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from peft import PromptTuningConfig, PromptTuningInit, TaskType, get_peft_model
-from transformers import (AutoModelForCausalLM, AutoTokenizer,
-                          BitsAndBytesConfig)
+from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
 import wandb
 from src.eval.metrics import MetricsTracker
@@ -55,9 +54,7 @@ class BioMistralModel(PulseTemplateModel):
         self.params: Dict[str, Any] = params
         self.params["save_test_set"] = kwargs.get("save_test_set", False)
 
-        self.model_id: str = self.params.get(
-            "model_id", "BioMistral/BioMistral-7B"
-        )
+        self.model_id: str = self.params.get("model_id", "BioMistral/BioMistral-7B")
         self.max_length: int = self.params.get("max_length", 5120)
 
         self.tokenizer: Optional[Any] = None
@@ -90,7 +87,9 @@ class BioMistralModel(PulseTemplateModel):
                     prompt_tuning_init=PromptTuningInit.TEXT,
                     prompt_tuning_init_text="Classify the diagnosis of following ICU data:",
                 )
-                self.biomistral_model = get_peft_model(self.biomistral_model, tuning_config)
+                self.biomistral_model = get_peft_model(
+                    self.biomistral_model, tuning_config
+                )
                 logger.debug(self.biomistral_model.print_trainable_parameters())
 
             logger.info("Successfully loaded BioMistral model: %s", self.model_id)
@@ -220,7 +219,6 @@ class BioMistralModel(PulseTemplateModel):
         Returns:
             A float representing the predicted probability.
         """
-        # TODO: Implement a more robust parsing method
         try:
             # Extract the floating-point number from the output
             if "not-" in output:

@@ -420,7 +420,6 @@ class MistralTrainer:
                     )
 
                     optimizer.zero_grad()
-                    # TODO: Should be optimized for diagnosis or probability -> need to adapt
                     outputs = self.mistral_model(
                         input_ids=encoded["input_ids"].to(self.device),
                         attention_mask=encoded["attention_mask"].to(self.device),

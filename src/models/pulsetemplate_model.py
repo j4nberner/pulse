@@ -35,9 +35,13 @@ class PulseTemplateModel:
         self.task_name = None
         self.save_metadata = None
 
-        self.prompting_id = params.get("prompting_id", None)
         self.pretrained_model_path = kwargs.get("pretrained_model_path")
         self.type = params.get("type", None)
+
+        if self.type == "LLM":
+            self.prompting_id = params.get("prompting_id", None)
+        else:
+            self.prompting_id = None
 
     def set_trainer(
         self,
