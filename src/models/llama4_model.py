@@ -101,7 +101,7 @@ class Llama4Model(PulseTemplateModel):
         self.max_length: int = self.params.get("max_length", 5120)
 
         self.tokenizer: Optional[Any] = None
-        self.llama_model: Optional[Any] = None
+        self.llm_model: Optional[Any] = None
 
         self.quantization_config = BitsAndBytesConfig(
             load_in_4bit=True,
@@ -117,7 +117,7 @@ class Llama4Model(PulseTemplateModel):
             # Skip loading if already loaded
             if (
                 self.tokenizer is not None
-                and self.llama_model is not None
+                and self.llm_model is not None
                 and self.is_loaded
             ):
                 logger.info("Model already loaded, reusing existing instance")
@@ -127,7 +127,7 @@ class Llama4Model(PulseTemplateModel):
             self.tokenizer = AutoTokenizer.from_pretrained(
                 self.model_id, padding_side="left"
             )
-            self.llama_model = Llama4ForConditionalGeneration.from_pretrained(
+            self.llm_model = Llama4ForConditionalGeneration.from_pretrained(
                 self.model_id,
                 attn_implementation="sdpa",  # good for long context windows
                 device_map="auto",
@@ -145,8 +145,8 @@ class Llama4Model(PulseTemplateModel):
                     prompt_tuning_init=PromptTuningInit.TEXT,
                     prompt_tuning_init_text="Classify the diagnosis of following ICU data:",
                 )
-                self.llama_model = get_peft_model(self.llama_model, tuning_config)
-                logger.debug(self.llama_model.print_trainable_parameters())
+                self.llm_model = get_peft_model(self.llm_model, tuning_config)
+                logger.debug(self.llm_model.print_trainable_parameters())
 
             logger.info("Successfully loaded Llama4 model: %s", self.model_id)
 
@@ -181,7 +181,7 @@ class Llama4Model(PulseTemplateModel):
         set_seeds(self.random_seed)
 
         # Ensure model is loaded before trying to use it
-        if self.tokenizer is None or self.llama_model is None:
+        if self.tokenizer is None or self.llm_model is None:
             logger.debug("Model not loaded yet for inference, loading now...")
             self._load_model()
 
@@ -218,7 +218,7 @@ class Llama4Model(PulseTemplateModel):
         infer_start = time.perf_counter()
 
         with torch.no_grad():
-            outputs = self.llama_model.generate(
+            outputs = self.llm_model.generate(
                 input_ids=input_ids,
                 attention_mask=attention_mask,
                 max_new_tokens=self.params["max_new_tokens"],
@@ -343,7 +343,7 @@ class Llama4Trainer:
         model._load_model()  # Comment out to only test preprocessing
 
         self.model = model
-        self.llama_model = model.llama_model
+        self.llm_model = model.llm_model
         self.params = model.params
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.train_loader = train_loader
@@ -378,11 +378,11 @@ class Llama4Trainer:
                 self.model_save_dir,
             )
             optimizer = optim.AdamW(
-                self.llama_model.parameters(), lr=self.params.get("lr", 1e-4)
+                self.llm_model.parameters(), lr=self.params.get("lr", 1e-4)
             )
             num_epochs = self.params.get("num_epochs", 1)
 
-            self.llama_model.train()
+            self.llm_model.train()
             for epoch in range(num_epochs):
                 epoch_loss = 0.0
                 logger.info(f"Epoch {epoch + 1} started...")
@@ -417,7 +417,7 @@ class Llama4Trainer:
                     )
 
                     optimizer.zero_grad()
-                    outputs = self.llama_model(
+                    outputs = self.llm_model(
                         input_ids=encoded["input_ids"].to(self.device),
                         attention_mask=encoded["attention_mask"].to(self.device),
                         labels=encoded["labels"].to(self.device),
@@ -450,7 +450,7 @@ class Llama4Trainer:
                 val_loss = self.evaluate_single(self.val_loader)
                 logger.info("Validation loss: %s", val_loss)
 
-                self.llama_model.save_pretrained(self.model_save_dir)
+                self.llm_model.save_pretrained(self.model_save_dir)
                 self.model.tokenizer.save_pretrained(self.model_save_dir)
                 logger.info("Model saved to %s", self.model_save_dir)
 
@@ -495,7 +495,7 @@ class Llama4Trainer:
         verbose: int = self.params.get("verbose", 1)
         val_loss: list[float] = []
 
-        self.llama_model.eval()
+        self.llm_model.eval()
 
         for X, y in zip(test_loader[0].iterrows(), test_loader[1].iterrows()):
             idx = X[0]  # The index of the current row

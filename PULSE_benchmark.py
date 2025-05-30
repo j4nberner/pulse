@@ -38,7 +38,6 @@ class ModelTrainer:
         self.config.output_dir = output_dir
 
         # Log general information
-        logger.info("Initializing ModelTrainer with configuration:")
         logger.info("App Name: %s", config.general.app_name)
         logger.info("App Version: %s", config.general.app_version)
         logger.info("App Mode: %s", config.general.app_mode)
@@ -80,6 +79,7 @@ class ModelTrainer:
             task_name = self.dm.datasets[task_dataset_name]["task"]
             dataset_name = self.dm.datasets[task_dataset_name]["name"]
 
+            # Get updated models for this dataset/task combination
             # Get updated models for this dataset/task combination
             updated_models = self.mm.get_models_for_task(task_dataset_name)
 
@@ -266,6 +266,7 @@ class ModelTrainer:
                         model.set_trainer(
                             model.trainer_name, train_loader, val_loader, test_loader
                         )
+                        model.load_model_to_gpu()
                         model.trainer.train()
 
                 except Exception as e:
@@ -277,6 +278,8 @@ class ModelTrainer:
                         exc_info=True,
                     )
                 finally:
+                    model.offload_model_to_cpu()
+
                     # Memory cleanup after training each model
                     if hasattr(model, "trainer"):
                         del model.trainer
@@ -284,10 +287,6 @@ class ModelTrainer:
                     # Clear variables that might hold large data
                     train_loader = val_loader = test_loader = None
                     X_train = y_train = X_val = y_val = X_test = y_test = None
-
-                    # If using PyTorch with CUDA, empty the cache
-                    if torch.cuda.is_available():
-                        torch.cuda.empty_cache()
 
                     # Force garbage collection
                     gc.collect()

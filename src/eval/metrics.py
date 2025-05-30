@@ -22,8 +22,6 @@ from sklearn.metrics import (
 
 logger = logging.getLogger("PULSE_logger")
 
-# TODO: maybe implement sub-group AUROC and AUPRC (considering the fairness and biases of models) for different genders, age ranges, etc.
-
 
 class MetricsTracker:
     """
@@ -110,8 +108,8 @@ class MetricsTracker:
             means = df.select_dtypes(include=[np.number]).mean().to_dict()
             for k, v in means.items():
                 logger.info(f"Average {k}: {v}")
-                logger.info(f"Max {k}: {df[k].max()}")
-                logger.info(f"Min {k}: {df[k].min()}")
+                logger.debug(f"Max {k}: {df[k].max()}")
+                logger.debug(f"Min {k}: {df[k].min()}")
                 logger.info(f"Total {k}: {df[k].sum()}")
             if save_to_file:
                 summary_path = os.path.join(

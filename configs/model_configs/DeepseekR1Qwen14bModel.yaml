@@ -1,4 +1,4 @@
-name: "DeepseekR1Model"
+name: "DeepseekR1Qwen14bModel"
 pretrained_model_path: null # Path to pretrained model (if any)
 params:
   trainer_name: "DeepseekR1Trainer"
