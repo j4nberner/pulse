@@ -356,6 +356,17 @@ def prompt_template_hf(
                 "content": [{"type": "text", "text": f"Text:\n{input_text}"}],
             },
         ]
+    elif model == "GPTModel":
+        formatted_prompt = [
+        {
+            "role": "developer",
+            "content": system_message,
+        },
+        {
+            "role": "user",
+            "content": input_text,
+        },
+    ]
     elif model == "MeditronModel":
         formatted_prompt = [
             f"<|im_start|>system\n{system_message}<|im_end|>\n"

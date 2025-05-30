@@ -18,6 +18,7 @@ from src.util.config_util import (
     get_deterministic_dataloader_args,
 )
 from src.util.slurm_util import copy_data_to_scratch, get_local_scratch_dir, is_on_slurm
+from src.util.env_util import load_environment
 
 logger, output_dir = setup_logger()
 
@@ -147,7 +148,7 @@ class ModelTrainer:
                             {
                                 "prompting_id": model.prompting_id,
                                 "num_shots": self.config.prompting.get("shots", 0),
-                                "fine_tuning": model.params.tuning,
+                                "fine_tuning": model.params.get("tuning", False),
                             }
                         )
 
@@ -264,11 +265,24 @@ class ModelTrainer:
                         )
                         sys.exit(1)
 
-                    # Set trainer for the model and train
-                    model.set_trainer(
-                        trainer_name, train_loader, val_loader, test_loader
-                    )
-                    model.trainer.train()
+
+                    if self.config.general.app_mode == "count_tokens":
+                        # Estimate number of tokens for LLMs. Implemented only for Llama3.
+                        if model.model_name == "Llama3Model":
+                            model.set_trainer(
+                                trainer_name, train_loader, val_loader, test_loader, disable_model_load = True
+                            )
+                            model.trainer.estimate_nr_tokens()
+                        else:
+                            logger.warning(
+                                "Token estimation is only applicable for LLM models."
+                            )
+                    else:
+                        # Set trainer for the model and train
+                        model.set_trainer(
+                            trainer_name, train_loader, val_loader, test_loader
+                        )
+                        model.trainer.train()
 
                 except Exception as e:
                     logger.error(
@@ -330,6 +344,12 @@ def main():
     # Log if running on Slurm
     if is_on_slurm():
         logger.info("Running on Slurm cluster (Job ID: %s)", os.getenv("SLURM_JOB_ID"))
+        # Load .env from home directory
+        env_path = os.path.expanduser("~/.env")
+        logger.debug(f"Loading environment variables from {env_path}")
+        load_environment(env_path)
+    else:
+        load_environment("secrets/.env")  # Load from default secrets folder
 
     # Run training
     trainer = ModelTrainer(config)

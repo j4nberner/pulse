@@ -42,6 +42,8 @@ class Llama4Model(PulseTemplateModel):
             params: Configuration dictionary with model parameters.
             **kwargs: Additional optional parameters such as `output_dir` and `wandb`.
         """
+        raise NotImplementedError("Llama4Model is not implemented yet.")
+
         # Add model loading flag
         self.is_loaded = False
 
