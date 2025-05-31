@@ -128,10 +128,12 @@ class PulseBenchmark:
                     }
                     if model.type == "LLM":
                         # For LLMs, we might need to pass additional parameters
-                        dm_kwargs["fine_tuning"] = model.params.get("tuning", None),
-                        dm_kwargs["prompting_id"] = model.prompting_id,
-                        dm_kwargs["num_shots"] = self.config.prompting.get(
-                            "shots", None
+                        dm_kwargs.update(
+                            {
+                                "fine_tuning": model.params.get("tuning", None),
+                                "prompting_id": model.prompting_id,
+                                "num_shots": self.config.prompting.get("shots", None),
+                            }
                         )
 
                     # Check if this model requires an agent-based preprocessor
@@ -253,8 +255,11 @@ class PulseBenchmark:
                         )
                         sys.exit(1)
 
-                    if self.config.general.app_mode == "count_tokens":
-                        # Estimate number of tokens for LLMs. 
+                    if (
+                        self.config.general.app_mode == "count_tokens"
+                        and model.type == "LLM"
+                    ):
+                        # Estimate number of tokens for LLMs.
                         model.estimate_nr_tokens(test_loader)
 
                     else:
@@ -265,11 +270,10 @@ class PulseBenchmark:
                                 model.trainer_name,
                                 train_loader,
                                 val_loader,
-                                test_loader,
                             )
                             model.trainer.train()
                         # Evaluate the model
-                        model.evaluate(test_loader=test_loader, save_report=True)
+                        model.evaluate(test_loader, save_report=True)
 
                 except Exception as e:
                     logger.error(

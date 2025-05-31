@@ -42,19 +42,14 @@ class GRUModel(PulseTemplateModel, nn.Module):
         Raises:
             KeyError: If any required parameters are missing from the config.
         """
-        # Validate trainer_name in params
-        if "trainer_name" not in params:
-            raise KeyError("Required parameter 'trainer_name' not found in config")
-
-        # Extract model_name from kwargs if it exists (passed from ModelManager)
-        if "model_name" in kwargs:
-            self.model_name = kwargs.pop("model_name")  # Remove to avoid duplication
-        else:
-            # Fallback to class name if model_name not in kwargs
-            self.model_name = self.__class__.__name__.replace("Model", "")
-
-        self.trainer_name = params["trainer_name"]
-        super().__init__(self.model_name, self.trainer_name, params=params, **kwargs)
+        model_name = kwargs.pop("model_name", "GRUModel")
+        trainer_name = params["trainer_name"]
+        super().__init__(
+            model_name=model_name,
+            params=params,
+            trainer_name=trainer_name,
+            **kwargs,
+        )
         nn.Module.__init__(self)
 
         # Define required parameters based on GRUModel.yaml
@@ -79,28 +74,21 @@ class GRUModel(PulseTemplateModel, nn.Module):
         ]
 
         # Check if all required parameters exist in config
-        missing_params = [param for param in required_params if param not in params]
-        if missing_params:
-            raise KeyError(f"Required parameters missing from config: {missing_params}")
-
-        # Extract parameters from config
-        self.params = params
+        self.check_required_params(params, required_params)
 
         # Log configuration details
         logger.info(
             "Initializing %s model with parameters: %s", self.model_name, self.params
         )
 
-        # Set the model save directory
-        self.save_dir = kwargs.get("output_dir", f"{os.getcwd()}/output")
-
-        # Check if wandb is enabled
-        self.wandb = kwargs.get("wandb", False)
-
         # Extracting architecture parameters
         self.hidden_size = self.params["hidden_size"]
         self.num_layers = self.params["num_layers"]
         self.dropout_rate = self.params["dropout_rate"]
+        # Create ModuleLists for GRU layers with separate dropout and batch normalization
+        self.gru_layers = nn.ModuleList()
+        self.dropout_layers = nn.ModuleList()
+        self.batch_norm_layers = nn.ModuleList()
 
         # These will be set when data shape is known
         self.input_dim = None
@@ -109,18 +97,6 @@ class GRUModel(PulseTemplateModel, nn.Module):
         self.early_stopping = EarlyStopping(
             patience=self.params["earlystopping_patience"], verbose=True
         )
-
-        # Initialize the model architecture placeholder
-        self._init_model()
-
-    def _init_model(self) -> None:
-        """
-        Initialize the GRU model architecture with placeholder values.
-        The actual input shape will be determined when data is prepared.
-        """
-        # The actual network will be built in create_network_with_input_shape
-        # when we know the actual input shape
-        pass
 
     def create_network_with_input_shape(self, input_dim: int) -> None:
         """
@@ -144,11 +120,6 @@ class GRUModel(PulseTemplateModel, nn.Module):
                     self.num_layers + len(self.params.get("fc_layers", [64, 16]))
                 )
             ]
-
-        # Create ModuleLists for GRU layers with separate dropout and batch normalization
-        self.gru_layers = nn.ModuleList()
-        self.dropout_layers = nn.ModuleList()
-        self.batch_norm_layers = nn.ModuleList()
 
         # Create GRU layers
         input_size = input_dim
@@ -261,6 +232,113 @@ class GRUModel(PulseTemplateModel, nn.Module):
             Trainer instance
         """
         self.trainer = GRUTrainer(self, train_loader, val_loader, test_loader)
+
+    def evaluate(self, data_loader, save_report: bool = False):
+        """
+        Evaluate the model on a dataset with comprehensive metrics.
+        Logs all metrics to wandb and returns the results.
+        """
+        metrics_tracker = MetricsTracker(
+            self.model_name,
+            self.task_name,
+            self.dataset_name,
+            self.save_dir,
+        )
+        self.eval()
+        # Get the configured data converter
+        converter = prepare_data_for_model_convdl(
+            data_loader,
+            self.params,
+            model_name=self.model_name,
+            task_name=self.task_name,
+        )
+        self.criterion = nn.BCEWithLogitsLoss(
+            pos_weight=torch.tensor([data_loader.dataset.pos_weight])
+        )
+
+        # To identify input_dim: Get a sample batch and transform
+        features, _ = next(iter(data_loader))
+        transformed_features = converter.convert_batch_to_3d(features)
+
+        # Get the input dimension from the transformed features
+        # For RNN models: (batch_size, time_steps, num_features)
+        num_channels = transformed_features.shape[-1]
+
+        # Update model architecture with correct shape
+        self.create_network_with_input_shape(num_channels)
+        logger.info(self)
+
+        # Track both batches and per-batch metrics for logging
+        batch_metrics = []
+
+        with torch.no_grad():
+            for batch_idx, (features, labels) in enumerate(data_loader):
+                # Convert features for the model
+                features = converter.convert_batch_to_3d(features)
+                features, labels = (
+                    features.to(self.device),
+                    labels.to(self.device).float(),
+                )
+
+                # Forward pass
+                outputs = self(features)
+
+                # Get predictions (sigmoid for binary classification)
+                probs = torch.sigmoid(outputs).squeeze()
+                preds = (probs >= 0.5).int()
+
+                # Calculate batch accuracy for logging
+                batch_accuracy = (preds == labels).sum().item() / labels.size(0)
+                batch_metrics.append(batch_accuracy)
+
+                # Log batch progress if verbose
+                if self.params["verbose"] == 2 or (
+                    self.params["verbose"] == 1 and batch_idx % 100 == 0
+                ):
+                    logger.info(
+                        "Evaluating batch %d/%d: Accuracy = %.4f",
+                        batch_idx + 1,
+                        len(data_loader),
+                        batch_accuracy,
+                    )
+
+                metadata_dict = {
+                    "batch": batch_idx,
+                    "prediction": outputs.cpu().numpy(),
+                    "label": labels.cpu().numpy(),
+                    "age": features[:, 0, 0].cpu().numpy(),
+                    "sex": features[:, 0, 1].cpu().numpy(),
+                    "height": features[:, 0, 2].cpu().numpy(),
+                    "weight": features[:, 0, 3].cpu().numpy(),
+                }
+                # Append results to metrics tracker
+                metrics_tracker.add_results(outputs.cpu().numpy(), labels.cpu().numpy())
+                metrics_tracker.add_metadata_item(metadata_dict)
+
+        # Calculate and log metrics
+        metrics_tracker.log_metadata(True)
+
+        # Calculate comprehensive metrics
+        metrics_tracker.summary = metrics_tracker.compute_overall_metrics()
+        metrics_tracker.save_report()
+
+        # Log results to console
+        logger.info("Test evaluation completed for %s", self.model_name)
+        logger.info("Test metrics: %s", metrics_tracker.summary)
+        logger.info(
+            "Average batch accuracy: %.4f", sum(batch_metrics) / len(batch_metrics)
+        )
+
+        # Log all metrics to wandb if enabled
+        if self.wandb:
+            # Create a dictionary with all metrics
+            wandb_metrics = {f"test_{k}": v for k, v in metrics_tracker.summary.items()}
+            # Add average batch accuracy
+            wandb_metrics["test_avg_batch_accuracy"] = sum(batch_metrics) / len(
+                batch_metrics
+            )
+            # Log all metrics at once
+            wandb.log(wandb_metrics)
 
 
 class GRUTrainer:
@@ -423,8 +501,6 @@ class GRUTrainer:
         self.model.early_stopping.load_best_model(self.model)
         model_save_name = f"{self.model.model_name}_{self.task_name}_{self.dataset_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         save_torch_model(model_save_name, self.model, self.model_save_dir)
-        # Evaluate the model on the testing set
-        self.evaluate()
 
     def train_epoch(self, epoch: int, verbose: int = 1) -> None:
         """
@@ -538,88 +614,3 @@ class GRUTrainer:
                 val_loss += loss.item()
 
         return val_loss / len(self.val_loader)
-
-    def evaluate(self):
-        """
-        Evaluate the model on the test set with comprehensive metrics.
-        Logs all metrics to wandb and returns the results.
-        """
-        metrics_tracker = MetricsTracker(
-            self.model.model_name,
-            self.model.task_name,
-            self.model.dataset_name,
-            self.model.save_dir,
-        )
-        self.model.eval()
-
-        # Track both batches and per-batch metrics for logging
-        batch_metrics = []
-
-        with torch.no_grad():
-            for batch_idx, (features, labels) in enumerate(self.test_loader):
-                # Convert features for the model
-                features = self.converter.convert_batch_to_3d(features)
-                features, labels = (
-                    features.to(self.device),
-                    labels.to(self.device).float(),
-                )
-
-                # Forward pass
-                outputs = self.model(features)
-
-                # Get predictions (sigmoid for binary classification)
-                probs = torch.sigmoid(outputs).squeeze()
-                preds = (probs >= 0.5).int()
-
-                # Calculate batch accuracy for logging
-                batch_accuracy = (preds == labels).sum().item() / labels.size(0)
-                batch_metrics.append(batch_accuracy)
-
-                # Log batch progress if verbose
-                if self.params["verbose"] == 2 or (
-                    self.params["verbose"] == 1 and batch_idx % 100 == 0
-                ):
-                    logger.info(
-                        "Evaluating batch %d/%d: Accuracy = %.4f",
-                        batch_idx + 1,
-                        len(self.test_loader),
-                        batch_accuracy,
-                    )
-
-                metadata_dict = {
-                    "batch": batch_idx,
-                    "prediction": outputs.cpu().numpy(),
-                    "label": labels.cpu().numpy(),
-                    "age": features[:, 0, 0].cpu().numpy(),
-                    "sex": features[:, 0, 1].cpu().numpy(),
-                    "height": features[:, 0, 2].cpu().numpy(),
-                    "weight": features[:, 0, 3].cpu().numpy(),
-                }
-                # Append results to metrics tracker
-                metrics_tracker.add_results(outputs.cpu().numpy(), labels.cpu().numpy())
-                metrics_tracker.add_metadata_item(metadata_dict)
-
-        # Calculate and log metrics
-        metrics_tracker.log_metadata(True)
-
-        # Calculate comprehensive metrics
-        metrics_tracker.summary = metrics_tracker.compute_overall_metrics()
-        metrics_tracker.save_report()
-
-        # Log results to console
-        logger.info("Test evaluation completed for %s", self.model.model_name)
-        logger.info("Test metrics: %s", metrics_tracker.summary)
-        logger.info(
-            "Average batch accuracy: %.4f", sum(batch_metrics) / len(batch_metrics)
-        )
-
-        # Log all metrics to wandb if enabled
-        if self.wandb:
-            # Create a dictionary with all metrics
-            wandb_metrics = {f"test_{k}": v for k, v in metrics_tracker.summary.items()}
-            # Add average batch accuracy
-            wandb_metrics["test_avg_batch_accuracy"] = sum(batch_metrics) / len(
-                batch_metrics
-            )
-            # Log all metrics at once
-            wandb.log(wandb_metrics)

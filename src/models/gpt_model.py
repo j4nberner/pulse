@@ -1,18 +1,11 @@
 import logging
 import os
-import sys
 import time
 import warnings
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 import numpy as np
 import torch
-import torch.nn as nn
-import torch.optim as optim
-import yaml
-from peft import PromptTuningConfig, PromptTuningInit, TaskType, get_peft_model
-from torch.nn import functional as F
-from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 from openai import AzureOpenAI
 
 import wandb
@@ -126,3 +119,93 @@ class GPTModel(PulseTemplateModel):
             "num_input_tokens": num_input_tokens,
             "num_output_tokens": num_output_tokens,
         }
+
+    def evaluate(self, test_loader: Any, save_report: bool = False) -> float:
+        """Evaluates the model on a given test set.
+
+        Args:
+            test_loader: Tuple of (X, y) test data in DataFrame form.
+            save_report: Whether to save the evaluation report.
+
+        Returns:
+            The average validation loss across the test dataset.
+        """
+        logger.info("Starting test evaluation...")
+
+        metrics_tracker = MetricsTracker(
+            self.model_name,
+            self.task_name,
+            self.dataset_name,
+            self.save_dir,
+        )
+        criterion = torch.nn.BCELoss()
+        verbose: int = self.params.get("verbose", 1)
+        val_loss: list[float] = []
+
+        for X, y in zip(test_loader[0].iterrows(), test_loader[1].iterrows()):
+            X_input = X[1].iloc[0]
+            y_true = y[1].iloc[0]
+
+            result_dict = self.generate(X_input)
+
+            generated_text = result_dict["generated_text"]
+            infer_time = result_dict["infer_time"]
+            num_input_tokens = result_dict["num_input_tokens"]
+            num_output_tokens = result_dict["num_output_tokens"]
+
+            predicted_probability = float(generated_text.get("probability", 0.5))
+
+            logger.info(
+                "Predicted probability: %s | True label: %s",
+                predicted_probability,
+                y_true,
+            )
+            if verbose > 1:
+                logger.info("Diagnosis for: %s", generated_text["diagnosis"])
+                logger.info(
+                    "Generated explanation: %s \n", generated_text["explanation"]
+                )
+            if verbose > 2:
+                logger.info("Input prompt: %s \n", X_input)
+
+            predicted_label = torch.tensor(
+                predicted_probability, dtype=torch.float32
+            ).unsqueeze(0)
+            target = torch.tensor(float(y_true), dtype=torch.float32).unsqueeze(0)
+
+            loss = criterion(predicted_label, target)
+            val_loss.append(loss.item())
+
+            if self.wandb:
+                wandb.log(
+                    {
+                        "val_loss": loss.item(),
+                        "infer_time": infer_time,
+                        "num_input_tokens": num_input_tokens,
+                        "num_output_tokens": num_output_tokens,
+                    }
+                )
+
+            metrics_tracker.add_results(predicted_probability, y_true)
+            metrics_tracker.add_metadata_item(
+                {
+                    "Input Prompt": X_input,
+                    "Target Label": y_true,
+                    "Predicted Probability": predicted_probability,
+                    "Predicted Diagnosis": generated_text.get("diagnosis", ""),
+                    "Predicted Explanation": generated_text.get("explanation", ""),
+                    "Inference Time": infer_time,
+                    "Input Tokens": num_input_tokens,
+                    "Output Tokens": num_output_tokens,
+                }
+            )
+
+        metrics_tracker.log_metadata(save_to_file=self.save_metadata)
+        metrics_tracker.summary = metrics_tracker.compute_overall_metrics()
+        if save_report:
+            metrics_tracker.save_report()
+
+        logger.info("Test evaluation completed for %s", self.model_name)
+        logger.info("Test metrics: %s", metrics_tracker.summary)
+
+        return float(np.mean(val_loss))

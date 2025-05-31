@@ -47,16 +47,18 @@ class PulseTemplateModel:
         self.params = params
         self.model = None
         self.type = params.get("type", None)
-        self.mode = params.get("mode", "inference")  # train, eval, or inference
+        self.mode = params.get("mode", "inference")  # train, inference
         self.is_loaded = False
         self.dataset_name = None
         self.task_name = None
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         self.random_seed = self.params.get("random_seed", 42)
         logger.debug("Using random seed: %d", self.random_seed)
 
         self.trainer_name = trainer_name
         self.trainer = None
+        self.criterion = None
 
         self.save_dir = kwargs.get("output_dir", f"{os.getcwd()}/output")
         self.save_metadata = kwargs.get("save_metadata", True)
@@ -338,6 +340,7 @@ class PulseLLMModel(PulseTemplateModel):
             raise e
 
     def offload_model(self) -> None:
+        # TODO: Implement offloading for LLM models
         logger.error("Offloading not implemented for LLM models.")
         pass
 
@@ -632,7 +635,7 @@ class PulseLLMModel(PulseTemplateModel):
         logger.info("Test metrics: %s", metrics_tracker.summary)
 
         return float(np.mean(val_loss))
-    
+
     def estimate_nr_tokens(self, data_loader) -> int:
         """Estimates the number of tokens for a task-dataset combination.
 

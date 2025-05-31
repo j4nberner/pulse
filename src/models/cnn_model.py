@@ -14,7 +14,6 @@ from src.models.pulse_model import PulseTemplateModel
 from src.util.config_util import set_seeds
 from src.util.model_util import (
     EarlyStopping,
-    calculate_pos_weight,
     prepare_data_for_model_convdl,
     save_torch_model,
     initialize_weights,
@@ -36,23 +35,15 @@ class CNNModel(PulseTemplateModel, nn.Module):
             params (Dict[str, Any]): Configuration parameters for the model.
             **kwargs: Additional keyword arguments.
         """
-        # For trainer_name we still require it to be explicitly in the params
-        if "trainer_name" not in params:
-            raise KeyError("Required parameter 'trainer_name' not found in config")
-
-        # Extract model_name from kwargs if it exists (passed from ModelManager)
-        if "model_name" in kwargs:
-            self.model_name = kwargs.pop("model_name")  # Remove to avoid duplication
-        else:
-            # Fallback to class name if model_name not in kwargs
-            self.model_name = self.__class__.__name__.replace("Model", "")
-
-        self.trainer_name = params["trainer_name"]
-        super().__init__(self.model_name, self.trainer_name, params=params, **kwargs)
+        model_name = params.get("model_name", "CNNModel")
+        trainer_name = params["trainer_name"]
+        super().__init__(
+            model_name=model_name,
+            params=params,
+            trainer_name=trainer_name,
+            **kwargs,
+        )
         nn.Module.__init__(self)
-
-        # Set the model save directory
-        self.save_dir = kwargs.get("output_dir", f"{os.getcwd()}/output")
 
         # Define all required parameters
         required_params = [
@@ -72,16 +63,8 @@ class CNNModel(PulseTemplateModel, nn.Module):
             "min_lr",
         ]
 
-        # Check if wandb is enabled and set up
-        self.wandb = kwargs.get("wandb", False)
-
         # Check if all required parameters exist in config
-        missing_params = [param for param in required_params if param not in params]
-        if missing_params:
-            raise KeyError(f"Required parameters missing from config: {missing_params}")
-
-        # Extract parameters from config
-        self.params = params  # {param: params[param] for param in required_params}
+        self.check_required_params(params, required_params)
 
         # Log the parameters being used
         logger.info("Initializing CNN with parameters: %s", self.params)
@@ -173,27 +156,135 @@ class CNNModel(PulseTemplateModel, nn.Module):
         x = self.leaky_relu(x)
         return self.fc2(x)
 
-    def set_trainer(
-        self, trainer_name: str, train_loader, val_loader, test_loader
-    ) -> None:
+    def set_trainer(self, trainer_name: str, train_loader, val_loader) -> None:
         """
         Sets the trainer for the CNN model.
 
         Args:
             trainer_name (str): The name of the trainer to be used.
             train_loader: The DataLoader object for the training dataset.
-            test_loader: The DataLoader object for the testing dataset.
 
         Returns:
             None
         """
-        self.trainer = CNNTrainer(self, train_loader, val_loader, test_loader)
+        self.trainer_name = trainer_name
+        self.trainer = CNNTrainer(self, train_loader, val_loader)
+
+    def evaluate(self, data_loader, save_report: bool = False) -> float:
+        """Evaluates the model on the given dataset."""
+        metrics_tracker = MetricsTracker(
+            self.model_name,
+            self.task_name,
+            self.dataset_name,
+            self.save_dir,
+        )
+        verbose = self.params.get("verbose", 1)
+        self.eval()
+        val_loss = []
+
+        # Get the configured data converter
+        converter = prepare_data_for_model_convdl(
+            data_loader,
+            self.params,
+            model_name=self.model_name,
+            task_name=self.task_name,
+        )
+        self.criterion = nn.BCEWithLogitsLoss(
+            pos_weight=torch.tensor([data_loader.dataset.pos_weight])
+        )
+        # To identify num_channels: Get a sample batch and transform using the converter
+        features, _ = next(iter(data_loader))
+        transformed_features = converter.convert_batch_to_3d(features)
+
+        # Update the model input shape based on the data
+        set_seeds(self.params["random_seed"])
+        self.params["num_channels"] = transformed_features.shape[1]
+        self.params["window_size"] = transformed_features.shape[2]
+        self._init_model()
+        logger.info(self.model)
+        logger.info(
+            "Input shape to model (after transformation): %s",
+            transformed_features.shape,
+        )
+
+        with torch.no_grad():
+            for batch, (inputs, labels) in enumerate(data_loader):
+                inputs = converter.convert_batch_to_3d(inputs)
+                inputs, labels = inputs.to(self.device), labels.to(self.device)
+
+                outputs = self(inputs)
+
+                loss = self.criterion(outputs, labels).item()
+                val_loss.append(loss)
+
+                if verbose == 2:  # Verbose level 2: log every batch
+                    logger.info("Testing - Batch %d: Loss = %.4f", batch + 1, loss)
+                    if self.wandb:
+                        wandb.log({"Test loss": loss})
+                if verbose == 1:  # Verbose level 1: log every 10 batches
+                    if batch % 10 == 0:
+                        logger.info("Testing - Batch %d: Loss = %.4f", batch + 1, loss)
+                    if self.wandb:
+                        wandb.log({"Test loss": loss})
+
+                metadata_dict = {
+                    "batch": batch,
+                    "prediction": outputs.cpu().numpy(),
+                    "label": labels.cpu().numpy(),
+                    "loss": loss,
+                    "age": inputs[:, 0, 0].cpu().numpy(),
+                    "sex": inputs[:, 0, 1].cpu().numpy(),
+                    "height": inputs[:, 0, 2].cpu().numpy(),
+                    "weight": inputs[:, 0, 3].cpu().numpy(),
+                }
+                # Append results to metrics tracker
+                metrics_tracker.add_results(outputs.cpu().numpy(), labels.cpu().numpy())
+                metrics_tracker.add_metadata_item(metadata_dict)
+
+        # Calculate and log metrics
+        metrics_tracker.log_metadata(True)
+        metrics_tracker.summary = metrics_tracker.compute_overall_metrics()
+        if save_report:
+            metrics_tracker.save_report()
+
+        # Log results to console
+        logger.info("Test evaluation completed for %s", self.model_name)
+        logger.info("Test metrics: %s", metrics_tracker.summary)
+
+        if self.wandb:
+            wandb.log(
+                {
+                    "Test metrics": wandb.Table(
+                        data=[
+                            [metric, value]
+                            for metric, value in metrics_tracker.summary.items()
+                        ],
+                        columns=["Metric", "Value"],
+                    )
+                }
+            )
+
+        model_save_name = f"{self.model_name}_{self.task_name}_{self.dataset_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        # Log the model architecture and parameters to wandb
+        if self.wandb:
+            wandb.log(
+                {
+                    "model_architecture": str(self.model),
+                    "model_parameters": self.state_dict(),
+                }
+            )
+
+        save_torch_model(
+            model_save_name, self, os.path.join(self.save_dir, "Models")
+        )  # Save the final model
+
+        return np.mean(val_loss)
 
 
 class CNNTrainer:
     """Trainer for the CNN model."""
 
-    def __init__(self, cnn_model, train_loader, val_loader, test_loader):
+    def __init__(self, cnn_model, train_loader, val_loader):
         self.model = cnn_model
         self.params = cnn_model.params
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -201,7 +292,6 @@ class CNNTrainer:
 
         self.train_loader = train_loader
         self.val_loader = val_loader
-        self.test_loader = test_loader
         self.pos_weight = self.train_loader.dataset.pos_weight
         self.criterion = nn.BCEWithLogitsLoss(
             pos_weight=torch.tensor([self.pos_weight])
@@ -292,7 +382,9 @@ class CNNTrainer:
             self.train_epoch(epoch, verbose)
             logger.info("Epoch %d finished", epoch + 1)
 
-            val_loss = self.evaluate(self.val_loader)  # Evaluate on validation set
+            val_loss = self.model.evaluate(
+                self.val_loader
+            )  # Evaluate on validation set
 
             self.early_stopping(val_loss, self.model)
             if self.early_stopping.early_stop:
@@ -312,22 +404,6 @@ class CNNTrainer:
 
         logger.info("Training finished.")
         self.early_stopping.load_best_model(self.model)  # Load the best model
-        self.evaluate(
-            self.test_loader, save_report=True
-        )  # Evaluate on test set and save metrics
-        model_save_name = f"{self.model.model_name}_{self.task_name}_{self.dataset_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-        # Log the model architecture and parameters to wandb
-        if self.wandb:
-            wandb.log(
-                {
-                    "model_architecture": str(self.model),
-                    "model_parameters": self.model.state_dict(),
-                }
-            )
-
-        save_torch_model(
-            model_save_name, self.model, os.path.join(self.model.save_dir, "Models")
-        )  # Save the final model
 
     def train_epoch(self, epoch: int, verbose: int = 1) -> None:
         """
@@ -375,74 +451,3 @@ class CNNTrainer:
                     wandb.log({"train_loss": loss_value})
 
                 running_loss = 0.0
-
-    def evaluate(self, data_loader, save_report: bool = False) -> float:
-        """Evaluates the model on the given dataset."""
-        metrics_tracker = MetricsTracker(
-            self.model.model_name,
-            self.model.task_name,
-            self.model.dataset_name,
-            self.model.save_dir,
-        )
-        verbose = self.params.get("verbose", 1)
-        self.model.eval()
-        val_loss = []
-
-        with torch.no_grad():
-            for batch, (inputs, labels) in enumerate(data_loader):
-                inputs = self.converter.convert_batch_to_3d(inputs)
-                inputs, labels = inputs.to(self.device), labels.to(self.device)
-
-                outputs = self.model(inputs)
-
-                loss = self.criterion(outputs, labels).item()
-                val_loss.append(loss)
-
-                if verbose == 2:  # Verbose level 2: log every batch
-                    logger.info("Testing - Batch %d: Loss = %.4f", batch + 1, loss)
-                    if self.wandb:
-                        wandb.log({"Test loss": loss})
-                if verbose == 1:  # Verbose level 1: log every 10 batches
-                    if batch % 10 == 0:
-                        logger.info("Testing - Batch %d: Loss = %.4f", batch + 1, loss)
-                    if self.wandb:
-                        wandb.log({"Test loss": loss})
-
-                metadata_dict = {
-                    "batch": batch,
-                    "prediction": outputs.cpu().numpy(),
-                    "label": labels.cpu().numpy(),
-                    "loss": loss,
-                    "age": inputs[:, 0, 0].cpu().numpy(),
-                    "sex": inputs[:, 0, 1].cpu().numpy(),
-                    "height": inputs[:, 0, 2].cpu().numpy(),
-                    "weight": inputs[:, 0, 3].cpu().numpy(),
-                }
-                # Append results to metrics tracker
-                metrics_tracker.add_results(outputs.cpu().numpy(), labels.cpu().numpy())
-                metrics_tracker.add_metadata_item(metadata_dict)
-
-        # Calculate and log metrics
-        metrics_tracker.log_metadata(True)
-        metrics_tracker.summary = metrics_tracker.compute_overall_metrics()
-        if save_report:
-            metrics_tracker.save_report()
-
-        # Log results to console
-        logger.info("Test evaluation completed for %s", self.model.model_name)
-        logger.info("Test metrics: %s", metrics_tracker.summary)
-
-        if self.wandb:
-            wandb.log(
-                {
-                    "Test metrics": wandb.Table(
-                        data=[
-                            [metric, value]
-                            for metric, value in metrics_tracker.summary.items()
-                        ],
-                        columns=["Metric", "Value"],
-                    )
-                }
-            )
-
-        return np.mean(val_loss)

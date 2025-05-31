@@ -360,11 +360,6 @@ class DatasetManager:
             "split_ratios"
         ]["print_stats"]
 
-        # Model specific parameters from kwargs. Throws KeyError if not provided.
-        prompting_id = kwargs["prompting_id"]
-        model_type = kwargs["model_type"]
-        fine_tuning = kwargs["fine_tuning"]
-
         if not dataset["loaded"]:
             success, dataset = self.load_dataset(dataset_id)
             if not success:
@@ -464,6 +459,9 @@ class DatasetManager:
 
         del data  # Clear the data variable to free up memory
 
+        # Model specific parameters from kwargs. Throws KeyError if not provided.
+        model_type = kwargs["model_type"]
+
         # Convert categorical columns to numerical values for convML models
         if model_type in ["convML", "convDL"]:
             # Process gender column in X if it exists
@@ -471,7 +469,6 @@ class DatasetManager:
                 X = dataset["data"][data_set]
                 X["sex"] = X["sex"].map({"Male": 1, "Female": 0}).fillna(-1)
                 dataset["data"][data_set] = X
-
             logger.debug("Converted gender column to numerical values")
 
         # Print statistics if requested (Print train, val and both original and limited test set statistics to compare distributions)
@@ -512,7 +509,9 @@ class DatasetManager:
         logger.debug("Dropped stay_id column from all features and labels")
 
         # Apply advanced preprocessing if needed -> generate prompts
-        if prompting_id is not None and model_type == "LLM":
+        if model_type == "LLM":
+            prompting_id = kwargs["prompting_id"]
+            fine_tuning = kwargs["fine_tuning"]
 
             prompting_preprocessor = get_prompting_preprocessor(
                 prompting_id=prompting_id
