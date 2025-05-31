@@ -9,7 +9,7 @@ import torch.optim as optim
 
 import wandb
 from src.eval.metrics import MetricsTracker
-from src.models.pulsetemplate_model import PulseTemplateModel
+from src.models.pulse_model import PulseTemplateModel
 from src.util.config_util import set_seeds
 from src.util.model_util import (
     EarlyStopping,

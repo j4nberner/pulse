@@ -17,7 +17,7 @@ from openai import AzureOpenAI
 
 import wandb
 from src.eval.metrics import MetricsTracker
-from src.models.pulsetemplate_model import PulseTemplateModel
+from src.models.pulse_model import PulseTemplateModel
 from src.util.model_util import extract_dict, prompt_template_hf
 
 warnings.filterwarnings(

@@ -16,7 +16,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
 import wandb
 from src.eval.metrics import MetricsTracker
-from src.models.pulsetemplate_model import PulseTemplateModel
+from src.models.pulse_model import PulseTemplateModel
 from src.util.model_util import extract_dict, prompt_template_hf
 from src.util.config_util import set_seeds
 
@@ -109,10 +109,7 @@ class DeepseekR1Model(PulseTemplateModel):
         """Loads the tokenizer and model weights and initializes HF pipeline."""
         try:
             # Skip loading if already loaded
-            if (
-                self.tokenizer is not None
-                and self.llm_model is not None
-            ):
+            if self.tokenizer is not None and self.llm_model is not None:
                 logger.info("Model already loaded, reusing existing instance")
                 return
 
@@ -136,9 +133,7 @@ class DeepseekR1Model(PulseTemplateModel):
                     prompt_tuning_init=PromptTuningInit.TEXT,
                     prompt_tuning_init_text="Classify the diagnosis of following ICU data:",
                 )
-                self.llm_model = get_peft_model(
-                    self.llm_model, tuning_config
-                )
+                self.llm_model = get_peft_model(self.llm_model, tuning_config)
                 logger.debug(self.llm_model.print_trainable_parameters())
 
             logger.info("Successfully loaded DeepseekR1 model: %s", self.model_id)

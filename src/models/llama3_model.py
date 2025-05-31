@@ -15,7 +15,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
 import wandb
 from src.eval.metrics import MetricsTracker
-from src.models.pulsetemplate_model import PulseLLMModel
+from src.models.pulse_model import PulseLLMModel
 from src.util.model_util import extract_dict, prompt_template_hf
 from src.util.config_util import set_seeds
 
@@ -40,10 +40,7 @@ class Llama3Model(PulseLLMModel):
         model_name = kwargs.pop("model_name", "Llama3Model")
         trainer_name = kwargs.get("trainer_name", "Llama3Trainer")
 
-        super().__init__(model_name, **kwargs)
-        # First define properties that need to be accessed right away
-        self.params = params
-        
+        super().__init__(model_name, params, **kwargs)
 
         if self.inference_only:
             # For inference-only mode (agentic workflow)
@@ -58,18 +55,6 @@ class Llama3Model(PulseLLMModel):
             self.task_name = kwargs.get("task_name")
             self.dataset_name = kwargs.get("dataset_name")
 
-        else:
-            # Full model initialization for standard workflow
-            self.trainer_name = params["trainer_name"]
-            
-
-            # Store random seed from params (added by ModelManager)
-            self.random_seed = self.params.get("random_seed", 42)
-            logger.debug("Using random seed: %d", self.random_seed)
-
-            # self.save_dir = kwargs.get("output_dir", f"{os.getcwd()}/output")
-            # self.wandb = kwargs.get("wandb", False)
-
         # Check if all required parameters exist in config
         required_params = [
             "max_new_tokens",
@@ -83,22 +68,14 @@ class Llama3Model(PulseLLMModel):
         self.check_required_params(params, required_params)
 
         # Extract commonly used parameters
-        self.model_id = self.params.get("model_id", "meta-llama/Llama-3.1-8B-Instruct")
         self.max_length = self.params["max_length"]
-
-        # Initialize tokenizer and model to None - will be loaded on demand
-        self.tokenizer = None
-        self.llm_model = None
 
         # Setup quantization config and device
         self.quantization_config = BitsAndBytesConfig(
             load_in_8bit=True, llm_int8_threshold=6.0, llm_int8_has_fp16_weight=True
         )
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        logger.debug("Number of GPUs: %d", torch.cuda.device_count())
 
-
-    def infer_llm(
+    def generate(
         self,
         input_text: str,
         custom_system_message: str = None,
@@ -115,7 +92,7 @@ class Llama3Model(PulseLLMModel):
         set_seeds(self.random_seed)
 
         # Ensure model is loaded before trying to use it
-        if self.tokenizer is None or self.llm_model is None:
+        if self.tokenizer is None or self.model is None:
             logger.debug("Model not loaded yet for inference, loading now...")
             self._load_model()
 
@@ -149,7 +126,7 @@ class Llama3Model(PulseLLMModel):
         infer_start = time.perf_counter()
 
         with torch.no_grad():
-            outputs = self.llm_model.generate(
+            outputs = self.model.generate(
                 input_ids=input_ids,
                 attention_mask=attention_mask,
                 max_new_tokens=self.params["max_new_tokens"],
@@ -243,12 +220,53 @@ class Llama3Model(PulseLLMModel):
             "Output Tokens": self.params.max_new_tokens,
         }
 
+    def estimate_nr_tokens(self, data_loader) -> int:
+        """Estimates the number of tokens for a task-dataset combination.
+
+        Returns:
+            The estimated number of tokens.
+        """
+        logger.info("Estimating number of tokens for the dataset...")
+        # Load the tokenizer
+        self.model.tokenizer = AutoTokenizer.from_pretrained(
+            self.model.model_id, use_fast=False, padding_side="left"
+        )
+        metrics_tracker = MetricsTracker(
+            self.model.model_name,
+            self.model.task_name,
+            self.model.dataset_name,
+            self.model.save_dir,
+        )
+
+        total_tokens = 0
+        total_input_tokens = 0
+        total_output_tokens = 0
+        num_input_tokens = 0
+        num_output_tokens = 0
+
+        for X, y in zip(data_loader[0].iterrows(), data_loader[1].iterrows()):
+            X_input = X[1].iloc[0]
+            token_dict = self.model.calculate_tokens(X_input)
+            metrics_tracker.add_metadata_item(token_dict)
+            num_input_tokens = token_dict["Input Tokens"]
+            num_output_tokens = token_dict["Output Tokens"]
+            total_input_tokens += num_input_tokens
+            total_output_tokens += num_output_tokens
+            total_tokens += num_input_tokens + num_output_tokens
+            logger.debug(
+                "Input tokens: %s | Output tokens: %s",
+                num_input_tokens,
+                num_output_tokens,
+            )
+
+        metrics_tracker.log_metadata(save_to_file=self.model.save_metadata)
+        return total_tokens
+
     def set_trainer(
         self,
         trainer_name: str,
-        train_dataloader: Any,
-        val_dataloader: Any,
-        test_dataloader: Any,
+        train_loader: Any,
+        val_loader: Any,
         **kwargs: Any,
     ) -> None:
         """Sets the associated trainer instance.
@@ -257,19 +275,16 @@ class Llama3Model(PulseLLMModel):
             trainer_name: Name of the trainer class.
             train_dataloader: DataLoader for training data.
             val_dataloader: DataLoader for validation data.
-            test_dataloader: DataLoader for test data.
         """
-        self.trainer = Llama3Trainer(
-            self, train_dataloader, val_dataloader, test_dataloader, **kwargs
-        )
+        self.trainer_name = trainer_name
+        logger.info("Setting trainer: %s", self.trainer_name)
+        self.trainer = Llama3Trainer(self, train_loader, val_loader, **kwargs)
 
 
 class Llama3Trainer:
     """Trainer class for Llama3Model."""
 
-    def __init__(
-        self, model: Llama3Model, train_loader, val_loader, test_loader, **kwargs
-    ) -> None:
+    def __init__(self, model: Llama3Model, train_loader, val_loader, **kwargs) -> None:
         """
         Initialize the Llama3 trainer. Finetruning is not implemented yet.
         This is a wrapper for inference only.
@@ -290,12 +305,11 @@ class Llama3Trainer:
             model._load_model()  #
 
         self.model = model
-        self.llm_model = model.llm_model
+        self.model = model.model
         self.params = model.params
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.train_loader = train_loader
         self.val_loader = val_loader
-        self.test_loader = test_loader
 
         self.criterion = nn.BCELoss()  # Binary Cross Entropy Loss
         self.wandb = self.model.wandb
@@ -314,7 +328,6 @@ class Llama3Trainer:
         # Set seed for deterministic generation
         set_seeds(self.model.random_seed)
 
-        verbose = self.params.get("verbose", 1)
         logger.info("System message: %s", prompt_template_hf("")[0])
         logger.info("Starting training...")
 
@@ -327,11 +340,11 @@ class Llama3Trainer:
                 self.model_save_dir,
             )
             optimizer = optim.AdamW(
-                self.llm_model.parameters(), lr=self.params.get("lr", 1e-4)
+                self.model.parameters(), lr=self.params.get("lr", 1e-4)
             )
             num_epochs = self.params.get("num_epochs", 1)
 
-            self.llm_model.train()
+            self.model.train()
             for epoch in range(num_epochs):
                 epoch_loss = 0.0
                 logger.info(f"Epoch {epoch + 1} started...")
@@ -366,7 +379,7 @@ class Llama3Trainer:
                     )
 
                     optimizer.zero_grad()
-                    outputs = self.llm_model(
+                    outputs = self.model(
                         input_ids=encoded["input_ids"].to(self.device),
                         attention_mask=encoded["attention_mask"].to(self.device),
                         labels=encoded["labels"].to(self.device),
@@ -402,226 +415,9 @@ class Llama3Trainer:
                 val_loss = self.evaluate_single(self.val_loader)
                 logger.info("Validation loss: %s", val_loss)
 
-                self.llm_model.save_pretrained(self.model_save_dir)
+                self.model.save_pretrained(self.model_save_dir)
                 self.model.tokenizer.save_pretrained(self.model_save_dir)
                 logger.info("Model saved to %s", self.model_save_dir)
-
-        self.evaluate_single(self.test_loader, save_report=True)
-
-    def evaluate_single(self, test_loader: Any, save_report: bool = False) -> float:
-        """Evaluates the model on a given test set.
-
-        Args:
-            test_loader: Tuple of (X, y) test data in DataFrame form.
-            save_report: Whether to save the evaluation report.
-
-        Returns:
-            The average validation loss across the test dataset.
-        """
-        # Set seed for deterministic generation
-        set_seeds(self.model.random_seed)
-
-        # Check if model is already loaded before attempting to load
-        if not self.model.is_loaded:
-            self.model._load_model()
-        else:
-            logger.info("Using already loaded model instance for evaluation")
-
-
-        logger.info("Starting test evaluation...")
-
-        metrics_tracker = MetricsTracker(
-            self.model.model_name,
-            self.model.task_name,
-            self.model.dataset_name,
-            self.model.save_dir,
-        )
-        verbose: int = self.params.get("verbose", 1)
-        val_loss: list[float] = []
-
-        self.llm_model.eval()
-
-        for X, y in zip(test_loader[0].iterrows(), test_loader[1].iterrows()):
-            idx = X[0]  # The index of the current row
-            X_input = X[1].iloc[0]  # The input text for standard pipeline
-            y_true = y[1].iloc[0]  # The true label
-
-            # Check if this row contains an agent prediction
-            is_agent_prediction = False
-            if "is_agent_prediction" in test_loader[0].columns:
-                is_agent_prediction = bool(
-                    test_loader[0].at[idx, "is_agent_prediction"]
-                )
-                logger.debug(
-                    f"Sample {idx}: is_agent_prediction = {is_agent_prediction} (type: {type(is_agent_prediction)})"
-                )
-
-            if is_agent_prediction:
-                logger.info(
-                    "Found agent prediction - using directly without additional inference"
-                )
-
-                try:
-                    # Parse the agent's prediction JSON
-                    agent_output = (
-                        json.loads(X_input) if isinstance(X_input, str) else X_input
-                    )
-
-                    # Extract prediction fields
-                    predicted_probability = float(agent_output.get("probability", 0.5))
-                    diagnosis = agent_output.get("diagnosis", "")
-                    explanation = agent_output.get("explanation", "")
-
-                    # Get token metrics if available
-                    token_time = 0.0  # Placeholder values
-                    infer_time = 0.0
-                    num_input_tokens = (
-                        test_loader[0].at[idx, "num_input_tokens"]
-                        if "num_input_tokens" in test_loader[0].columns
-                        else 100
-                    )
-                    num_output_tokens = (
-                        test_loader[0].at[idx, "num_output_tokens"]
-                        if "num_output_tokens" in test_loader[0].columns
-                        else 50
-                    )
-
-                    # Create result structure matching what infer_llm would return
-                    result_dict = {
-                        "generated_text": {
-                            "diagnosis": diagnosis,
-                            "probability": predicted_probability,
-                            "explanation": explanation,
-                        },
-                        "token_time": token_time,
-                        "infer_time": infer_time,
-                        "num_input_tokens": num_input_tokens,
-                        "num_output_tokens": num_output_tokens,
-                    }
-
-                    logger.info(
-                        "Using agent prediction: %s with probability %s",
-                        diagnosis,
-                        predicted_probability,
-                    )
-
-                except Exception as e:
-                    logger.error(
-                        f"Error parsing agent prediction: {e} - Falling back to standard inference"
-                    )
-                    # Run normal inference as fallback
-                    result_dict = self.model.infer_llm(X_input)
-            else:
-                # Standard inference for non-agent predictions
-                result_dict = self.model.infer_llm(X_input)
-
-            generated_text = result_dict["generated_text"]
-            token_time = result_dict["token_time"]
-            infer_time = result_dict["infer_time"]
-            num_input_tokens = result_dict["num_input_tokens"]
-            num_output_tokens = result_dict["num_output_tokens"]
-
-            predicted_probability = float(generated_text.get("probability", 0.5))
-
-            logger.info(
-                "Predicted probability: %s | True label: %s",
-                predicted_probability,
-                y_true,
-            )
-            if verbose > 1:
-                logger.info("Diagnosis for: %s", generated_text["diagnosis"])
-                logger.info(
-                    "Generated explanation: %s \n", generated_text["explanation"]
-                )
-            if verbose > 2:
-                logger.info("Input prompt: %s \n", X_input)
-
-            predicted_label = torch.tensor(
-                predicted_probability, dtype=torch.float32
-            ).unsqueeze(0)
-            target = torch.tensor(float(y_true), dtype=torch.float32).unsqueeze(0)
-
-            loss = self.criterion(predicted_label, target)
-            val_loss.append(loss.item())
-
-            if self.wandb:
-                wandb.log(
-                    {
-                        "val_loss": loss.item(),
-                        "token_time": token_time,
-                        "infer_time": infer_time,
-                        "num_input_tokens": num_input_tokens,
-                        "num_output_tokens": num_output_tokens,
-                    }
-                )
-
-            metrics_tracker.add_results(predicted_probability, y_true)
-            metrics_tracker.add_metadata_item(
-                {
-                    "Input Prompt": X_input,
-                    "Target Label": y_true,
-                    "Predicted Probability": predicted_probability,
-                    "Predicted Diagnosis": generated_text.get("diagnosis", ""),
-                    "Predicted Explanation": generated_text.get("explanation", ""),
-                    "Tokenization Time": token_time,
-                    "Inference Time": infer_time,
-                    "Input Tokens": num_input_tokens,
-                    "Output Tokens": num_output_tokens,
-                }
-            )
-
-        metrics_tracker.log_metadata(save_to_file=self.model.save_metadata)
-        metrics_tracker.summary = metrics_tracker.compute_overall_metrics()
-        if save_report:
-            metrics_tracker.save_report()
-
-        logger.info("Test evaluation completed for %s", self.model.model_name)
-        logger.info("Test metrics: %s", metrics_tracker.summary)
-
-        return float(np.mean(val_loss))
-
-    def estimate_nr_tokens(self) -> int:
-        """Estimates the number of tokens for a task-dataset combination.
-
-        Returns:
-            The estimated number of tokens.
-        """
-        logger.info("Estimating number of tokens for the dataset...")
-        # Load the tokenizer
-        self.model.tokenizer = AutoTokenizer.from_pretrained(
-            self.model.model_id, use_fast=False, padding_side="left"
-        )
-        metrics_tracker = MetricsTracker(
-            self.model.model_name,
-            self.model.task_name,
-            self.model.dataset_name,
-            self.model.save_dir,
-        )
-
-        test_loader = self.test_loader
-        total_tokens = 0
-        total_input_tokens = 0
-        total_output_tokens = 0
-        num_input_tokens = 0
-        num_output_tokens = 0
-
-        for X, y in zip(test_loader[0].iterrows(), test_loader[1].iterrows()):
-            X_input = X[1].iloc[0]
-            token_dict = self.model.calculate_tokens(X_input)
-            metrics_tracker.add_metadata_item(token_dict)
-            num_input_tokens = token_dict["Input Tokens"]
-            num_output_tokens = token_dict["Output Tokens"]
-            total_input_tokens += num_input_tokens
-            total_output_tokens += num_output_tokens
-            total_tokens += num_input_tokens + num_output_tokens
-            logger.debug(
-                "Input tokens: %s | Output tokens: %s",
-                num_input_tokens,
-                num_output_tokens,
-            )
-
-        metrics_tracker.log_metadata(save_to_file=self.model.save_metadata)
-        return total_tokens
 
     def encode_prompt_target(
         self,

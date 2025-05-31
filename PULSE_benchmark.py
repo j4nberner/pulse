@@ -24,15 +24,19 @@ from src.util.env_util import load_environment
 logger, output_dir = setup_logger()
 
 
-class ModelTrainer:
-    """Core training functionality for convML/convDL models and LLMs."""
+class PulseBenchmark:
+    """
+    Core benchmark functionality for convML/convDL models and LLMs.
+    This class initializes the benchmark with the provided configuration,
+    sets up the dataset and model managers, and runs the training process if applicable.
+    """
 
     def __init__(self, config: OmegaConf):
         """
-        Initialize the model trainer.
+        Initialize the Pulse Benchmark.
 
         Args:
-            config (TrainConfig): Configuration object containing training settings.
+            config (OmegaConf): Configuration object containing benchmark settings.
         """
         self.config = config
         self.config.output_dir = output_dir
@@ -66,11 +70,11 @@ class ModelTrainer:
         self.mm = ModelManager(self.config)
 
     def run(self):
-        """Run the training process for all configured models and datasets."""
-        logger.info("Starting training process...")
+        """Run the benchmark process for all configured models and datasets."""
+        logger.info("Starting benchmark process...")
         timestamp = pd.Timestamp.now().strftime("%Y%m%d_%H%M%S")
 
-        # Train and evaluate each model on each dataset
+        # Train and/or evaluate each model on each dataset
         for task_dataset_name, _ in self.dm.datasets.items():
             logger.info("#" * 60)
             logger.info("Processing dataset: %s", task_dataset_name)
@@ -262,11 +266,18 @@ class ModelTrainer:
                                 "Token estimation is only applicable for LLama3."
                             )
                     else:
-                        # Set trainer for the model and train
-                        model.set_trainer(
-                            model.trainer_name, train_loader, val_loader, test_loader
-                        )
-                        model.trainer.train()
+                        # Train the model if specified in the config
+                        if model.mode == "train":
+                            # Set trainer for the model and train
+                            model.set_trainer(
+                                model.trainer_name,
+                                train_loader,
+                                val_loader,
+                                test_loader,
+                            )
+                            model.trainer.train()
+                        # Evaluate the model
+                        model.evaluate(test_loader=test_loader, save_report=True)
 
                 except Exception as e:
                     logger.error(
@@ -334,8 +345,8 @@ def main():
         load_environment("secrets/.env")  # Load from default secrets folder
 
     # Run training
-    trainer = ModelTrainer(config)
-    trainer.run()
+    pulse_bench = PulseBenchmark(config)
+    pulse_bench.run()
 
 
 if __name__ == "__main__":

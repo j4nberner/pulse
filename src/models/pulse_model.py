@@ -1,8 +1,11 @@
+import json
 import logging
 from typing import Any, Dict, Optional
 
 import joblib
+import numpy as np
 import torch
+import torch.nn as nn
 from torch.utils.data import DataLoader
 import gc
 import psutil
@@ -11,6 +14,8 @@ import os
 from peft import PromptTuningConfig, PromptTuningInit, TaskType, get_peft_model
 from torch.nn import functional as F
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+import wandb
+from src.eval.metrics import MetricsTracker
 from src.util.config_util import set_seeds
 from src.util.model_util import extract_dict, prompt_template_hf
 
@@ -27,38 +32,42 @@ class PulseTemplateModel:
     """
 
     def __init__(
-        self, model_name: str, trainer_name: Optional[str] = None, **kwargs
+        self, model_name: str, params, trainer_name: Optional[str] = None, **kwargs
     ) -> None:
-        """Initialize a new Pulse model.
+        """Initialize a new Pulse model with the model name and configuration parameters.
 
         Args:
             model_name: Name of the model
+            params: Dictionary of parameters for the model
             trainer_name: Optional name of the trainer
+            **kwargs: Additional keyword arguments for model configuration
         """
-        params = kwargs.get("params", {})
-        self.params = params
+        # Required parameters for all models
         self.model_name = model_name
-        self.trainer_name = trainer_name
-        self.trainer = None
+        self.params = params
         self.model = None
+        self.type = params.get("type", None)
+        self.mode = params.get("mode", "inference")  # train, eval, or inference
+        self.is_loaded = False
         self.dataset_name = None
         self.task_name = None
+
+        self.random_seed = self.params.get("random_seed", 42)
+        logger.debug("Using random seed: %d", self.random_seed)
+
+        self.trainer_name = trainer_name
+        self.trainer = None
+
+        self.save_dir = kwargs.get("output_dir", f"{os.getcwd()}/output")
         self.save_metadata = None
-
-        self.pretrained_model_path = kwargs.get("pretrained_model_path")
-        self.type = params.get("type", None)
-
-        if self.type == "LLM":
-            self.prompting_id = params.get("prompting_id", None)
-        else:
-            self.prompting_id = None
+        self.wandb = kwargs.get("wandb", False)
+        self.pretrained_model_path = kwargs.get("pretrained_model_path", None)
 
     def set_trainer(
         self,
         trainer_name: str,
         train_loader: DataLoader,
         val_loader: DataLoader,
-        test_loader: DataLoader,
     ) -> None:
         """
         Set the trainer for this model. This method should be overridden by subclasses.
@@ -72,7 +81,7 @@ class PulseTemplateModel:
         self.trainer_name = trainer_name
         self.trainer = None
 
-    def check_required_params(params: dict, required_params: list) -> None:
+    def check_required_params(self, params: dict, required_params: list) -> None:
         """Check if all required parameters are present in the params dictionary.
 
         Args:
@@ -84,8 +93,9 @@ class PulseTemplateModel:
         """
         missing_params = [p for p in required_params if p not in params]
         if missing_params:
-            raise ValueError(f"Missing required parameters: {', '.join(missing_params)}")
-
+            raise ValueError(
+                f"Missing required parameters: {', '.join(missing_params)}"
+            )
 
     def load_model_weights(self, model_path: str) -> None:
         """Load model weights from a specified path.
@@ -119,32 +129,42 @@ class PulseTemplateModel:
             pass
         else:
             logger.warning("Model type not recognized. Cannot load model weights.")
-    
+
     def offload_model_to_cpu(self) -> None:
         """Offloads the model from GPU memory (if applicable)."""
         if self.type in ["convDL", "LLM"]:
             # For PyTorch and LLM models
             if self.type == "LLM":
-                free_mem = psutil.virtual_memory().available / (1024 ** 2)  # in MB
-                model_size = sum(p.numel() for p in self.llm_model.parameters()) * 4 / (1024 ** 2)  # float32 assumed
-                logger.debug("CPU free memory: %.2f MB | Model size: %.2f MB", free_mem, model_size)
+                free_mem = psutil.virtual_memory().available / (1024**2)  # in MB
+                model_size = (
+                    sum(p.numel() for p in self.model.parameters()) * 4 / (1024**2)
+                )  # float32 assumed
+                logger.debug(
+                    "CPU free memory: %.2f MB | Model size: %.2f MB",
+                    free_mem,
+                    model_size,
+                )
                 if free_mem < model_size * 1.2:  # safety margin
-                    logger.warning("Not enough CPU memory to offload the model. Free: %.2f MB, Required: %.2f MB. Deleting from GPU only")
+                    logger.warning(
+                        "Not enough CPU memory to offload the model. Free: %.2f MB, Required: %.2f MB. Deleting from GPU only"
+                    )
                     # Delete from GPU only
-                    del self.llm_model
+                    del self.model
                     gc.collect()
                     torch.cuda.empty_cache()
 
                 else:
                     # Check if only partially offloaded: if any parameter is still on CUDA, delete the model
-                    if any(p.device.type == "cuda" for p in self.llm_model.parameters()):
-                        logger.warning("Model is only partially offloaded. Deleting model from GPU.")
-                        del self.llm_model
+                    if any(p.device.type == "cuda" for p in self.model.parameters()):
+                        logger.warning(
+                            "Model is only partially offloaded. Deleting model from GPU."
+                        )
+                        del self.model
                         gc.collect()
                         torch.cuda.empty_cache()
                     else:
                         # Fully offload the model to CPU
-                        self.llm_model.to("cpu")
+                        self.model.to("cpu")
                         logger.info("LLM model offloaded to CPU memory")
             else:
                 # TODO: implement for convDL models
@@ -169,15 +189,25 @@ class PulseTemplateModel:
                 if self.type == "LLM":
                     torch.cuda.empty_cache()
                     gc.collect()
-                    free_mem = torch.cuda.mem_get_info(device)[0] / (1024 ** 2)  # in MB
-                    model_size = sum(p.numel() for p in self.llm_model.parameters()) * 4 / (1024 ** 2)  # float32 assumed
-                    logger.debug("GPU free memory: %.2f MB | Model size: %.2f MB", free_mem, model_size)
+                    free_mem = torch.cuda.mem_get_info(device)[0] / (1024**2)  # in MB
+                    model_size = (
+                        sum(p.numel() for p in self.model.parameters()) * 4 / (1024**2)
+                    )  # float32 assumed
+                    logger.debug(
+                        "GPU free memory: %.2f MB | Model size: %.2f MB",
+                        free_mem,
+                        model_size,
+                    )
                     if free_mem < model_size * 1.2:  # add a safety margin
-                        logger.warning("Not enough GPU memory to load the model. Free: %.2f MB, Required: %.2f MB", free_mem, model_size)
-                    self.llm_model.to(device)
+                        logger.warning(
+                            "Not enough GPU memory to load the model. Free: %.2f MB, Required: %.2f MB",
+                            free_mem,
+                            model_size,
+                        )
+                    self.model.to(device)
                 else:
                     # For convDL models, load the model to the specified device
-                    #TODO: implement for confDL models
+                    # TODO: implement for confDL models
                     pass
                     # self.model.to(device)
                 logger.info("Model loaded to GPU memory")
@@ -197,20 +227,36 @@ class PulseLLMModel(PulseTemplateModel):
     This class provides additional attributes and methods specific to LLMs.
     """
 
-    def __init__(self, model_name: str, **kwargs) -> None:
-        super().__init__(model_name, **kwargs)
-        self.llm_model = None
-        self.is_loaded = False
+    def __init__(
+        self,
+        model_name: str,
+        params: Dict[str, Any],
+        trainer_name: Optional[str] = None,
+        **kwargs: Dict[str, Any],
+    ) -> None:
+        """Initialize a new Pulse LLM model.
+        Args:
+            model_name: Name of the model
+            params: Dictionary of parameters for the model
+            trainer_name: Optional name of the trainer
+            **kwargs: Additional keyword arguments for model configuration
+        """
+        super().__init__(model_name, params, trainer_name, **kwargs)
 
-        self.device = kwargs.get("device", torch.device("cuda" if torch.cuda.is_available() else "cpu"))
-        self.model_name = kwargs.get("model_name", None)
-        self.inference_only = kwargs.get("inference_only", True)
-        self.save_dir = kwargs.get("output_dir", f"{os.getcwd()}/output")
-        self.wandb = kwargs.get("wandb", False)
-        self.task_name = kwargs.get("task_name")
-        self.dataset_name = kwargs.get("dataset_name")
+        self.device = kwargs.get(
+            "device", torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        )
+        logger.debug("Number of GPUs: %d", torch.cuda.device_count())
 
-    def _load_model(self) -> None:
+        self.model_id = params.get("model_id", None)
+        self.tokenizer = None
+
+        self.inference_only = kwargs.get(
+            "inference_only", False
+        )  # TODO: @sophiafe needed?
+        self.prompting_id = params.get("prompting_id", None)
+
+    def load_model(self) -> None:
         """Loads the tokenizer and model weights."""
         try:
             # Skip loading if already loaded
@@ -227,9 +273,9 @@ class PulseLLMModel(PulseTemplateModel):
             if torch.cuda.is_available():
                 device = getattr(self, "device", torch.device("cuda"))
                 torch.cuda.empty_cache()
-                free_mem = torch.cuda.mem_get_info(device)[0] / (1024 ** 2)
+                free_mem = torch.cuda.mem_get_info(device)[0] / (1024**2)
                 model_size = (
-                    sum(p.numel() for p in self.llm_model.parameters()) * 4 / (1024 ** 2)
+                    sum(p.numel() for p in self.model.parameters()) * 4 / (1024**2)
                 )
                 logger.debug(
                     "GPU free memory: %.2f MB | Model size: %.2f MB",
@@ -246,7 +292,7 @@ class PulseLLMModel(PulseTemplateModel):
                 logger.error("CUDA not available.")
 
             # Common model loading configuration
-            self.llm_model = AutoModelForCausalLM.from_pretrained(
+            self.model = AutoModelForCausalLM.from_pretrained(
                 self.model_id,
                 device_map="auto",
                 torch_dtype=torch.bfloat16,
@@ -263,8 +309,8 @@ class PulseLLMModel(PulseTemplateModel):
                     prompt_tuning_init=PromptTuningInit.TEXT,
                     prompt_tuning_init_text="Classify the diagnosis of following ICU data:",
                 )
-                self.llm_model = get_peft_model(self.llm_model, tuning_config)
-                logger.debug(self.llm_model.print_trainable_parameters())
+                self.model = get_peft_model(self.model, tuning_config)
+                logger.debug(self.model.print_trainable_parameters())
 
             logger.info("Successfully loaded %s model.", self.model_id)
 
@@ -282,8 +328,12 @@ class PulseLLMModel(PulseTemplateModel):
             logger.error("Failed to load the %s model.", self.model_id)
             logger.exception(e)
             raise e
-        
-    def infer_llm(
+
+    def offload_model(self) -> None:
+        logger.error("Offloading not implemented for LLM models.")
+        pass
+
+    def generate(
         self,
         input_text: str,
         custom_system_message: str = None,
@@ -300,9 +350,9 @@ class PulseLLMModel(PulseTemplateModel):
         set_seeds(self.random_seed)
 
         # Ensure model is loaded before trying to use it
-        if self.tokenizer is None or self.llm_model is None:
+        if self.tokenizer is None or self.model is None:
             logger.debug("Model not loaded yet for inference, loading now...")
-            self._load_model()
+            self.load_model()
 
         logger.info("---------------------------------------------")
 
@@ -334,7 +384,7 @@ class PulseLLMModel(PulseTemplateModel):
         infer_start = time.perf_counter()
 
         with torch.no_grad():
-            outputs = self.llm_model.generate(
+            outputs = self.model.generate(
                 input_ids=input_ids,
                 attention_mask=attention_mask,
                 max_new_tokens=self.params["max_new_tokens"],
@@ -397,3 +447,176 @@ class PulseLLMModel(PulseTemplateModel):
             "num_input_tokens": num_input_tokens,
             "num_output_tokens": num_output_tokens,
         }
+
+    def evaluate(self, test_loader: Any, save_report: bool = False) -> float:
+        """Evaluates the model on a given test set.
+
+        Args:
+            test_loader: Tuple of (X, y) test data in DataFrame form.
+            save_report: Whether to save the evaluation report.
+
+        Returns:
+            The average validation loss across the test dataset.
+        """
+        criterion = nn.BCELoss()  # Binary Cross Entropy Loss
+
+        # Check if model is already loaded before attempting to load
+        if not self.model.is_loaded:
+            self.load_model()
+        else:
+            logger.info("Using already loaded model instance for evaluation")
+
+        logger.info("Starting test evaluation...")
+
+        # Set seed for deterministic generation
+        set_seeds(self.model.random_seed)
+
+        metrics_tracker = MetricsTracker(
+            self.model.model_name,
+            self.model.task_name,
+            self.model.dataset_name,
+            self.model.save_dir,
+        )
+        verbose: int = self.params.get("verbose", 1)
+        val_loss: list[float] = []
+
+        self.model.eval()
+
+        for X, y in zip(test_loader[0].iterrows(), test_loader[1].iterrows()):
+            idx = X[0]  # The index of the current row
+            X_input = X[1].iloc[0]  # The input text for standard pipeline
+            y_true = y[1].iloc[0]  # The true label
+
+            # Check if this row contains an agent prediction
+            is_agent_prediction = False
+            if "is_agent_prediction" in test_loader[0].columns:
+                is_agent_prediction = bool(
+                    test_loader[0].at[idx, "is_agent_prediction"]
+                )
+                logger.debug(
+                    f"Sample {idx}: is_agent_prediction = {is_agent_prediction} (type: {type(is_agent_prediction)})"
+                )
+
+            if is_agent_prediction:
+                logger.info(
+                    "Found agent prediction - using directly without additional inference"
+                )
+
+                try:
+                    # Parse the agent's prediction JSON
+                    agent_output = (
+                        json.loads(X_input) if isinstance(X_input, str) else X_input
+                    )
+
+                    # Extract prediction fields
+                    predicted_probability = float(agent_output.get("probability", 0.5))
+                    diagnosis = agent_output.get("diagnosis", "")
+                    explanation = agent_output.get("explanation", "")
+
+                    # Get token metrics if available
+                    token_time = 0.0  # Placeholder values
+                    infer_time = 0.0
+                    num_input_tokens = (
+                        test_loader[0].at[idx, "num_input_tokens"]
+                        if "num_input_tokens" in test_loader[0].columns
+                        else 100
+                    )
+                    num_output_tokens = (
+                        test_loader[0].at[idx, "num_output_tokens"]
+                        if "num_output_tokens" in test_loader[0].columns
+                        else 50
+                    )
+
+                    # Create result structure matching what infer_llm would return
+                    result_dict = {
+                        "generated_text": {
+                            "diagnosis": diagnosis,
+                            "probability": predicted_probability,
+                            "explanation": explanation,
+                        },
+                        "token_time": token_time,
+                        "infer_time": infer_time,
+                        "num_input_tokens": num_input_tokens,
+                        "num_output_tokens": num_output_tokens,
+                    }
+
+                    logger.info(
+                        "Using agent prediction: %s with probability %s",
+                        diagnosis,
+                        predicted_probability,
+                    )
+
+                except Exception as e:
+                    logger.error(
+                        f"Error parsing agent prediction: {e} - Falling back to standard inference"
+                    )
+                    # Run normal inference as fallback
+                    result_dict = self.generate(X_input)
+            else:
+                # Standard inference for non-agent predictions
+                result_dict = self.generate(X_input)
+
+            generated_text = result_dict["generated_text"]
+            token_time = result_dict["token_time"]
+            infer_time = result_dict["infer_time"]
+            num_input_tokens = result_dict["num_input_tokens"]
+            num_output_tokens = result_dict["num_output_tokens"]
+
+            predicted_probability = float(generated_text.get("probability", 0.5))
+
+            logger.info(
+                "Predicted probability: %s | True label: %s",
+                predicted_probability,
+                y_true,
+            )
+            if verbose > 1:
+                logger.info("Diagnosis for: %s", generated_text["diagnosis"])
+                logger.info(
+                    "Generated explanation: %s \n", generated_text["explanation"]
+                )
+            if verbose > 2:
+                logger.info("Input prompt: %s \n", X_input)
+
+            predicted_label = torch.tensor(
+                predicted_probability, dtype=torch.float32
+            ).unsqueeze(0)
+            target = torch.tensor(float(y_true), dtype=torch.float32).unsqueeze(0)
+
+            loss = criterion(predicted_label, target)
+            val_loss.append(loss.item())
+
+            if self.wandb:
+                wandb.log(
+                    {
+                        "val_loss": loss.item(),
+                        "token_time": token_time,
+                        "infer_time": infer_time,
+                        "num_input_tokens": num_input_tokens,
+                        "num_output_tokens": num_output_tokens,
+                    }
+                )
+
+            metrics_tracker.add_results(predicted_probability, y_true)
+            metrics_tracker.add_metadata_item(
+                {
+                    "Input Prompt": X_input,
+                    "Target Label": y_true,
+                    "Predicted Probability": predicted_probability,
+                    "Predicted Diagnosis": generated_text.get("diagnosis", ""),
+                    "Predicted Explanation": generated_text.get("explanation", ""),
+                    "Tokenization Time": token_time,
+                    "Inference Time": infer_time,
+                    "Input Tokens": num_input_tokens,
+                    "Output Tokens": num_output_tokens,
+                }
+            )
+
+        metrics_tracker.log_metadata(save_to_file=self.model.save_metadata)
+        metrics_tracker.summary = metrics_tracker.compute_overall_metrics()
+        if save_report:
+            metrics_tracker.save_report()
+
+        logger.info("Test evaluation completed for %s", self.model.model_name)
+        logger.info("Test metrics: %s", metrics_tracker.summary)
+
+        return float(np.mean(val_loss))

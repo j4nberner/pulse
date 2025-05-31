@@ -13,7 +13,7 @@ from sklearn.model_selection import GridSearchCV
 
 import wandb
 from src.eval.metrics import MetricsTracker
-from src.models.pulsetemplate_model import PulseTemplateModel
+from src.models.pulse_model import PulseTemplateModel
 from src.util.model_util import prepare_data_for_model_convml, save_sklearn_model
 
 # Filter the specific warning about feature names

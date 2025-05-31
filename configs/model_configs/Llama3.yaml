@@ -1,10 +1,11 @@
 name: "Llama3Model"
 pretrained_model_path: null # Path to pretrained model (if any)
 params:
-  trainer_name: "Llama3Trainer"
   model_id: "meta-llama/Llama-3.1-8B-Instruct" # Model ID for Llama3, path to pretrained model (if any)
   type: "LLM" # Type of model (convML for conventional machine learning, convDL for conventional deep learning and LLM for large language models)
+  mode: "inference" # Mode of operation (inference, training)
   verbose: 2
+  trainer_name: null
   tuning: false # Whether to use prompt tuning
   num_epochs: 10 # Number of epochs for training
   max_new_tokens: 300
