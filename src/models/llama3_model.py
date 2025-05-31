@@ -15,7 +15,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
 import wandb
 from src.eval.metrics import MetricsTracker
-from src.models.pulsetemplate_model import PulseTemplateModel
+from src.models.pulsetemplate_model import PulseLLMModel
 from src.util.model_util import extract_dict, prompt_template_hf
 from src.util.config_util import set_seeds
 
@@ -27,23 +27,23 @@ warnings.filterwarnings(
 logger = logging.getLogger("PULSE_logger")
 
 
-class Llama3Model(PulseTemplateModel):
+class Llama3Model(PulseLLMModel):
     """Llama 3 model wrapper."""
 
     def __init__(self, params: Dict[str, Any], **kwargs) -> None:
         """Initializes the Llama3Model with parameters and paths.
 
         Args:
-            params: Configuration dictionary with model parameters.
+            params: Configuration dictionary with model specific parameters.
             **kwargs: Additional optional parameters such as `output_dir` and `wandb`.
         """
-        # Add model loading flag
-        self.is_loaded = False
+        model_name = kwargs.pop("model_name", "Llama3Model")
+        trainer_name = kwargs.get("trainer_name", "Llama3Trainer")
 
+        super().__init__(model_name, **kwargs)
         # First define properties that need to be accessed right away
-        self.model_name = kwargs.get("model_name", "Llama3Model")
-        self.inference_only = kwargs.get("inference_only", False)
         self.params = params
+        
 
         if self.inference_only:
             # For inference-only mode (agentic workflow)
@@ -61,14 +61,14 @@ class Llama3Model(PulseTemplateModel):
         else:
             # Full model initialization for standard workflow
             self.trainer_name = params["trainer_name"]
-            super().__init__(self.model_name, self.trainer_name, params=params)
+            
 
             # Store random seed from params (added by ModelManager)
             self.random_seed = self.params.get("random_seed", 42)
             logger.debug("Using random seed: %d", self.random_seed)
 
-            self.save_dir = kwargs.get("output_dir", f"{os.getcwd()}/output")
-            self.wandb = kwargs.get("wandb", False)
+            # self.save_dir = kwargs.get("output_dir", f"{os.getcwd()}/output")
+            # self.wandb = kwargs.get("wandb", False)
 
         # Check if all required parameters exist in config
         required_params = [
@@ -80,13 +80,7 @@ class Llama3Model(PulseTemplateModel):
             "do_sample",
             "temperature",
         ]
-
-        missing_params = [param for param in required_params if param not in params]
-        if missing_params:
-            raise KeyError(f"Required parameters missing from config: {missing_params}")
-
-        # Parameters for all modes - must be after the if/else since params might get modified
-        self.params["save_test_set"] = kwargs.get("save_test_set", False)
+        self.check_required_params(params, required_params)
 
         # Extract commonly used parameters
         self.model_id = self.params.get("model_id", "meta-llama/Llama-3.1-8B-Instruct")
@@ -103,55 +97,6 @@ class Llama3Model(PulseTemplateModel):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         logger.debug("Number of GPUs: %d", torch.cuda.device_count())
 
-    def _load_model(self) -> None:
-        """Loads the tokenizer and model weights."""
-        try:
-            # Skip loading if already loaded
-            if self.tokenizer is not None and self.llm_model is not None:
-                logger.info("Model already loaded, reusing existing instance")
-                return
-
-            logger.debug(f"Loading model %s", self.model_id)
-            self.tokenizer = AutoTokenizer.from_pretrained(
-                self.model_id, use_fast=False, padding_side="left"
-            )
-
-            # Common model loading configuration - same for both modes
-            self.llm_model = AutoModelForCausalLM.from_pretrained(
-                self.model_id,
-                device_map="auto",
-                torch_dtype=torch.bfloat16,
-            )
-
-            # Apply tuning only in full training mode and if specified
-            if not self.inference_only and self.params.get("tuning", False):
-                logger.info("Applying Prompt Tuning")
-                tuning_config = PromptTuningConfig(
-                    task_type=TaskType.CAUSAL_LM,
-                    inference_mode=False,
-                    tokenizer_name_or_path=self.model_id,
-                    num_virtual_tokens=20,
-                    prompt_tuning_init=PromptTuningInit.TEXT,
-                    prompt_tuning_init_text="Classify the diagnosis of following ICU data:",
-                )
-                self.llm_model = get_peft_model(self.llm_model, tuning_config)
-                logger.debug(self.llm_model.print_trainable_parameters())
-
-            logger.info("Successfully loaded Llama3 model: %s", self.model_id)
-
-            # Only log pipeline initialization in full training mode
-            if not self.inference_only:
-                logger.info(
-                    "Initializing Hugging Face pipeline with parameters: %s",
-                    self.params,
-                )
-
-            # Mark model as loaded after successful loading
-            self.is_loaded = True
-
-        except Exception as e:
-            logger.error("Failed to load Llama3 model: %s", e)
-            raise
 
     def infer_llm(
         self,
@@ -351,7 +296,6 @@ class Llama3Trainer:
         self.train_loader = train_loader
         self.val_loader = val_loader
         self.test_loader = test_loader
-        self.save_test_set = self.params.get("save_test_set", False)
 
         self.criterion = nn.BCELoss()  # Binary Cross Entropy Loss
         self.wandb = self.model.wandb
@@ -483,15 +427,6 @@ class Llama3Trainer:
         else:
             logger.info("Using already loaded model instance for evaluation")
 
-        if self.save_test_set:
-            # Save test set to CSV
-            test_loader[0].to_csv(
-                os.path.join(self.model.save_dir, "test_set.csv"), index=False
-            )
-            test_loader[1].to_csv(
-                os.path.join(self.model.save_dir, "test_labels.csv"), index=False
-            )
-            logger.info("Test set saved to %s", self.model.save_dir)
 
         logger.info("Starting test evaluation...")
 

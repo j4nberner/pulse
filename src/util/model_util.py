@@ -330,7 +330,7 @@ def prompt_template_hf(
         "Your response must strictly follow this format:\n"
         "Output a valid JSON object with three keys: 'diagnosis', 'probability' and 'explanation'.\n\n"
         "1. 'diagnosis' a string with either diganosis or not-diagnosis\n"
-        "2. 'probability' a value between 0 and 1. where 0 means not-diagnosis and 1 means diagnosis.\n"
+        "2. 'probability' a value between 0 and 1. where 0 means not diagnosed and 1 means diagnosed.\n"
         "3. 'explanation' should be a string providing a brief explanation of your diagnosis.\n\n"
         "Here is a positive example:\n"
         "{\n"
@@ -464,3 +464,4 @@ def extract_dict(output_text: str) -> Optional[Dict[str, str]]:
     except json.JSONDecodeError as e:
         logger.warning(f"Failed to parse JSON: {e}\nRaw: {json_text_clean}")
         return default_json
+

@@ -266,7 +266,6 @@ class ModelTrainer:
                         model.set_trainer(
                             model.trainer_name, train_loader, val_loader, test_loader
                         )
-                        model.load_model_to_gpu()
                         model.trainer.train()
 
                 except Exception as e:
@@ -278,7 +277,7 @@ class ModelTrainer:
                         exc_info=True,
                     )
                 finally:
-                    model.offload_model_to_cpu()
+                    # model.offload_model_to_cpu()
 
                     # Memory cleanup after training each model
                     if hasattr(model, "trainer"):
