@@ -2,6 +2,7 @@ name: "ClaudeSonnet4Model"
 pretrained_model_path: null # Path to pretrained model (if any)
 params:
   trainer_name: "DummyTrainer"
+  mode: "inference" # Mode of operation (inference, training)
   model_id: "ClaudeSonnet4" # Model ID, path to pretrained model (if any)
   deployment: "claude_sonnet_4" # Deployment name
   api_version: "2024-12-01-preview"

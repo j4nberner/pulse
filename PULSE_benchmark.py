@@ -84,7 +84,6 @@ class PulseBenchmark:
             dataset_name = self.dm.datasets[task_dataset_name]["name"]
 
             # Get updated models for this dataset/task combination
-            # Get updated models for this dataset/task combination
             updated_models = self.mm.get_models_for_task(task_dataset_name)
 
             # Each updated model is used only for this dataset
@@ -92,7 +91,7 @@ class PulseBenchmark:
                 # Update model attributes for this task and dataset
                 model.task_name = task_name
                 model.dataset_name = dataset_name
-                model.save_metadata = self.config.get("save_metadata", False)
+                model.save_metadata = self.config.general.save_metadata
 
                 logger.info("--" * 30)
                 logger.info(
@@ -125,11 +124,15 @@ class PulseBenchmark:
 
                     # Prepare model-specific arguments for the data manager
                     dm_kwargs = {
-                        "prompting_id": model.prompting_id,
                         "model_type": model.type,
-                        "fine_tuning": model.params.get("tuning", None),
-                        "num_shots": self.config.prompting.get("shots", None),
                     }
+                    if model.type == "LLM":
+                        # For LLMs, we might need to pass additional parameters
+                        dm_kwargs["fine_tuning"] = model.params.get("tuning", None),
+                        dm_kwargs["prompting_id"] = model.prompting_id,
+                        dm_kwargs["num_shots"] = self.config.prompting.get(
+                            "shots", None
+                        )
 
                     # Check if this model requires an agent-based preprocessor
                     # TODO @sophiafe Can we handle this in the ModelManager and DatasetManager?
@@ -251,20 +254,9 @@ class PulseBenchmark:
                         sys.exit(1)
 
                     if self.config.general.app_mode == "count_tokens":
-                        # Estimate number of tokens for LLMs. Implemented only for Llama3.
-                        if model.model_name == "Llama3Model":
-                            model.set_trainer(
-                                model.trainer_name,
-                                train_loader,
-                                val_loader,
-                                test_loader,
-                                disable_model_load=True,
-                            )
-                            model.trainer.estimate_nr_tokens()
-                        else:
-                            logger.warning(
-                                "Token estimation is only applicable for LLama3."
-                            )
+                        # Estimate number of tokens for LLMs. 
+                        model.estimate_nr_tokens(test_loader)
+
                     else:
                         # Train the model if specified in the config
                         if model.mode == "train":

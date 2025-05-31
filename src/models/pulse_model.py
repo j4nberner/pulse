@@ -59,7 +59,7 @@ class PulseTemplateModel:
         self.trainer = None
 
         self.save_dir = kwargs.get("output_dir", f"{os.getcwd()}/output")
-        self.save_metadata = None
+        self.save_metadata = kwargs.get("save_metadata", True)
         self.wandb = kwargs.get("wandb", False)
         self.pretrained_model_path = kwargs.get("pretrained_model_path", None)
 
@@ -221,9 +221,39 @@ class PulseTemplateModel:
             logger.warning("Unknown model type; cannot load to GPU")
 
 
+class PulseDLModel(PulseTemplateModel):
+    """
+    Base model template for deep learning models that inherits from PulseTemplateModel.
+    This class provides additional attributes and methods specific to deep learning models.
+    """
+
+    def __init__(
+        self,
+        model_name: str,
+        params: Dict[str, Any],
+        trainer_name: Optional[str] = None,
+        **kwargs: Dict[str, Any],
+    ) -> None:
+        """Initialize a new Pulse DL model.
+        Args:
+            model_name: Name of the model
+            params: Dictionary of parameters for the model
+            trainer_name: Optional name of the trainer
+            **kwargs: Additional keyword arguments for model configuration
+        """
+        super().__init__(model_name, params, trainer_name, **kwargs)
+
+        self.device = kwargs.get(
+            "device", torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        )
+        logger.debug("Number of GPUs: %d", torch.cuda.device_count())
+
+        self.model_id = params.get("model_id", None)
+
+
 class PulseLLMModel(PulseTemplateModel):
     """
-    Base model template for LLMs that inherits from PulseTemplateModel.
+    Base model template for Huggingface-LLMs that inherits from PulseTemplateModel.
     This class provides additional attributes and methods specific to LLMs.
     """
 
@@ -268,28 +298,6 @@ class PulseLLMModel(PulseTemplateModel):
             self.tokenizer = AutoTokenizer.from_pretrained(
                 self.model_id, use_fast=False, padding_side="left"
             )
-
-            # Check if there is enough GPU memory for the model
-            if torch.cuda.is_available():
-                device = getattr(self, "device", torch.device("cuda"))
-                torch.cuda.empty_cache()
-                free_mem = torch.cuda.mem_get_info(device)[0] / (1024**2)
-                model_size = (
-                    sum(p.numel() for p in self.model.parameters()) * 4 / (1024**2)
-                )
-                logger.debug(
-                    "GPU free memory: %.2f MB | Model size: %.2f MB",
-                    free_mem,
-                    model_size,
-                )
-                if free_mem < model_size * 1.2:  # add a safety margin
-                    logger.warning(
-                        "Not enough GPU memory to load the model. Free: %.2f MB, Required: %.2f MB",
-                        free_mem,
-                        model_size,
-                    )
-            else:
-                logger.error("CUDA not available.")
 
             # Common model loading configuration
             self.model = AutoModelForCausalLM.from_pretrained(
@@ -350,7 +358,7 @@ class PulseLLMModel(PulseTemplateModel):
         set_seeds(self.random_seed)
 
         # Ensure model is loaded before trying to use it
-        if self.tokenizer is None or self.model is None:
+        if not self.is_loaded:
             logger.debug("Model not loaded yet for inference, loading now...")
             self.load_model()
 
@@ -400,7 +408,6 @@ class PulseLLMModel(PulseTemplateModel):
 
         # Get generated token ids (excluding prompt) and convert to a Python list
         generated_token_ids_list = outputs.sequences[0][num_input_tokens:].tolist()
-
         num_output_tokens = len(generated_token_ids_list)
 
         decoded_output = self.tokenizer.decode(
@@ -408,6 +415,11 @@ class PulseLLMModel(PulseTemplateModel):
             skip_special_tokens=True,
             clean_up_tokenization_spaces=True,
         )
+
+        if self.model_name == "Gemma3Model":
+            # Trim after first <end_of_turn>
+            decoded_output = decoded_output.split("<end_of_turn>")[0]
+
         logger.debug("Decoded output:\n %s", decoded_output)
 
         # Check if we should return raw text or parsed JSON (important for multi-turn conversations)
@@ -461,7 +473,7 @@ class PulseLLMModel(PulseTemplateModel):
         criterion = nn.BCELoss()  # Binary Cross Entropy Loss
 
         # Check if model is already loaded before attempting to load
-        if not self.model.is_loaded:
+        if not self.is_loaded:
             self.load_model()
         else:
             logger.info("Using already loaded model instance for evaluation")
@@ -469,13 +481,13 @@ class PulseLLMModel(PulseTemplateModel):
         logger.info("Starting test evaluation...")
 
         # Set seed for deterministic generation
-        set_seeds(self.model.random_seed)
+        set_seeds(self.random_seed)
 
         metrics_tracker = MetricsTracker(
-            self.model.model_name,
-            self.model.task_name,
-            self.model.dataset_name,
-            self.model.save_dir,
+            self.model_name,
+            self.task_name,
+            self.dataset_name,
+            self.save_dir,
         )
         verbose: int = self.params.get("verbose", 1)
         val_loss: list[float] = []
@@ -611,12 +623,71 @@ class PulseLLMModel(PulseTemplateModel):
                 }
             )
 
-        metrics_tracker.log_metadata(save_to_file=self.model.save_metadata)
+        metrics_tracker.log_metadata(save_to_file=self.save_metadata)
         metrics_tracker.summary = metrics_tracker.compute_overall_metrics()
         if save_report:
             metrics_tracker.save_report()
 
-        logger.info("Test evaluation completed for %s", self.model.model_name)
+        logger.info("Test evaluation completed for %s", self.model_name)
         logger.info("Test metrics: %s", metrics_tracker.summary)
 
         return float(np.mean(val_loss))
+    
+    def estimate_nr_tokens(self, data_loader) -> int:
+        """Estimates the number of tokens for a task-dataset combination.
+
+        Returns:
+            The estimated number of tokens.
+        """
+        logger.info("Estimating number of tokens for the dataset...")
+        # Load the tokenizer
+        self.tokenizer = AutoTokenizer.from_pretrained(
+            self.model_id, use_fast=False, padding_side="left"
+        )
+        metrics_tracker = MetricsTracker(
+            self.model_name,
+            self.task_name,
+            self.dataset_name,
+            self.save_dir,
+        )
+
+        total_tokens = 0
+        total_input_tokens = 0
+        total_output_tokens = 0
+        num_input_tokens = 0
+        num_output_tokens = 0
+
+        for X, y in zip(data_loader[0].iterrows(), data_loader[1].iterrows()):
+            X_input = X[1].iloc[0]
+            # Format input using prompt template
+            input_text = prompt_template_hf(X_input)
+
+            # Tokenize with chat template
+            chat_prompt = self.tokenizer.apply_chat_template(
+                input_text, tokenize=False, add_generation_prompt=True
+            )
+            tokenized_inputs = self.tokenizer(
+                chat_prompt,
+                return_tensors="pt",
+            )
+            num_input_tokens = tokenized_inputs["input_ids"].size(1)
+            token_dict = {
+                "Input Prompt": input_text,
+                "Input Tokens": num_input_tokens,
+                "Output Tokens": self.params.max_new_tokens,
+            }
+
+            metrics_tracker.add_metadata_item(token_dict)
+            num_input_tokens = token_dict["Input Tokens"]
+            num_output_tokens = token_dict["Output Tokens"]
+            total_input_tokens += num_input_tokens
+            total_output_tokens += num_output_tokens
+            total_tokens += num_input_tokens + num_output_tokens
+            logger.debug(
+                "Input tokens: %s | Output tokens: %s",
+                num_input_tokens,
+                num_output_tokens,
+            )
+
+        metrics_tracker.log_metadata(save_to_file=self.save_metadata)
+        return total_tokens

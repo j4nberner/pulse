@@ -1,9 +1,8 @@
-import json
 import logging
 import os
 import time
 import warnings
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict
 
 import numpy as np
 import torch
@@ -42,6 +41,7 @@ class Llama3Model(PulseLLMModel):
 
         super().__init__(model_name, params, **kwargs)
 
+        #TODO: @sophiafe needed?
         if self.inference_only:
             # For inference-only mode (agentic workflow)
             self.trainer_name = params.get("trainer_name", "Llama3Trainer")
@@ -75,192 +75,6 @@ class Llama3Model(PulseLLMModel):
             load_in_8bit=True, llm_int8_threshold=6.0, llm_int8_has_fp16_weight=True
         )
 
-    def generate(
-        self,
-        input_text: str,
-        custom_system_message: str = None,
-        force_raw_text: bool = False,
-    ) -> Dict[str, Any]:
-        """Runs the HF model on the input and extracts diagnosis, explanation, and probability.
-
-        Args:
-            input_text: The text to analyze
-            custom_system_message: Optional custom system message
-            force_raw_text: If True, returns raw text output without JSON parsing
-        """
-        # Set seed for deterministic generation
-        set_seeds(self.random_seed)
-
-        # Ensure model is loaded before trying to use it
-        if self.tokenizer is None or self.model is None:
-            logger.debug("Model not loaded yet for inference, loading now...")
-            self._load_model()
-
-        logger.info("---------------------------------------------")
-
-        if not isinstance(input_text, str):
-            input_text = str(input_text)
-
-        # Format input using prompt template
-        input_text = prompt_template_hf(
-            input_text, custom_system_message, self.model_name
-        )
-
-        # Tokenize with chat template
-        chat_prompt = self.tokenizer.apply_chat_template(
-            input_text, tokenize=False, add_generation_prompt=True
-        )
-
-        token_start = time.perf_counter()
-        tokenized_inputs = self.tokenizer(
-            chat_prompt,
-            return_tensors="pt",
-        )
-        token_time = time.perf_counter() - token_start
-        num_input_tokens = tokenized_inputs["input_ids"].size(1)
-
-        input_ids = tokenized_inputs["input_ids"].to(self.device)
-        attention_mask = tokenized_inputs["attention_mask"].to(self.device)
-
-        # Generate output with scores
-        infer_start = time.perf_counter()
-
-        with torch.no_grad():
-            outputs = self.model.generate(
-                input_ids=input_ids,
-                attention_mask=attention_mask,
-                max_new_tokens=self.params["max_new_tokens"],
-                return_dict_in_generate=True,
-                output_scores=False,
-                output_hidden_states=False,
-                pad_token_id=self.tokenizer.pad_token_id,
-                eos_token_id=self.tokenizer.eos_token_id,
-                do_sample=self.params["do_sample"],
-                temperature=self.params["temperature"],
-            )
-        infer_time = time.perf_counter() - infer_start
-
-        # Get generated token ids (excluding prompt) and convert to a Python list
-        generated_token_ids_list = outputs.sequences[0][num_input_tokens:].tolist()
-
-        num_output_tokens = len(generated_token_ids_list)
-
-        decoded_output = self.tokenizer.decode(
-            generated_token_ids_list,
-            skip_special_tokens=True,
-            clean_up_tokenization_spaces=True,
-        )
-        logger.debug("Decoded output:\n %s", decoded_output)
-
-        # Check if we should return raw text or parsed JSON (important for multi-turn conversations)
-        if force_raw_text:
-            # For text-only outputs like summaries
-            return {
-                "generated_text": decoded_output,  # Return raw text
-                "token_time": token_time,
-                "infer_time": infer_time,
-                "num_input_tokens": num_input_tokens,
-                "num_output_tokens": num_output_tokens,
-            }
-
-        # Extract dict from the decoded output (e.g., via regex or JSON parsing)
-        parsed = extract_dict(decoded_output)
-
-        # Check if probability is a number or string, try to convert, else default to 0.5
-        prob = parsed.get("probability", 0.5)
-        try:
-            prob = float(prob)
-        except (ValueError, TypeError):
-            logger.warning("Failed to convert probability to float. Defaulting to 0.5")
-            prob = 0.5
-        parsed["probability"] = prob
-
-        logger.info(
-            "Tokenization time: %.4fs | Inference time: %.4fs | Tokens: %d",
-            token_time,
-            infer_time,
-            num_input_tokens + num_output_tokens,
-        )
-
-        return {
-            "generated_text": parsed,
-            "token_time": token_time,
-            "infer_time": infer_time,
-            "num_input_tokens": num_input_tokens,
-            "num_output_tokens": num_output_tokens,
-        }
-
-    def calculate_tokens(self, input_text: str) -> Dict[str, Any]:
-        """
-        Runs the full inference without loading the model and calculates the number of input and output tokens.
-        Assuming num_output_tokens = max_new_tokens.
-
-        Args:
-            input_text: The input text to be tokenized.
-        Returns:
-            A dictionary containing the number of input and output tokens.
-        """
-
-        # Format input using prompt template
-        input_text = prompt_template_hf(input_text)
-
-        # Tokenize with chat template
-        chat_prompt = self.tokenizer.apply_chat_template(
-            input_text, tokenize=False, add_generation_prompt=True
-        )
-        tokenized_inputs = self.tokenizer(
-            chat_prompt,
-            return_tensors="pt",
-        )
-        num_input_tokens = tokenized_inputs["input_ids"].size(1)
-
-        return {
-            "Input Prompt": input_text,
-            "Input Tokens": num_input_tokens,
-            "Output Tokens": self.params.max_new_tokens,
-        }
-
-    def estimate_nr_tokens(self, data_loader) -> int:
-        """Estimates the number of tokens for a task-dataset combination.
-
-        Returns:
-            The estimated number of tokens.
-        """
-        logger.info("Estimating number of tokens for the dataset...")
-        # Load the tokenizer
-        self.model.tokenizer = AutoTokenizer.from_pretrained(
-            self.model.model_id, use_fast=False, padding_side="left"
-        )
-        metrics_tracker = MetricsTracker(
-            self.model.model_name,
-            self.model.task_name,
-            self.model.dataset_name,
-            self.model.save_dir,
-        )
-
-        total_tokens = 0
-        total_input_tokens = 0
-        total_output_tokens = 0
-        num_input_tokens = 0
-        num_output_tokens = 0
-
-        for X, y in zip(data_loader[0].iterrows(), data_loader[1].iterrows()):
-            X_input = X[1].iloc[0]
-            token_dict = self.model.calculate_tokens(X_input)
-            metrics_tracker.add_metadata_item(token_dict)
-            num_input_tokens = token_dict["Input Tokens"]
-            num_output_tokens = token_dict["Output Tokens"]
-            total_input_tokens += num_input_tokens
-            total_output_tokens += num_output_tokens
-            total_tokens += num_input_tokens + num_output_tokens
-            logger.debug(
-                "Input tokens: %s | Output tokens: %s",
-                num_input_tokens,
-                num_output_tokens,
-            )
-
-        metrics_tracker.log_metadata(save_to_file=self.model.save_metadata)
-        return total_tokens
 
     def set_trainer(
         self,

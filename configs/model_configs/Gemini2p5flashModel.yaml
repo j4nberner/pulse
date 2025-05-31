@@ -2,6 +2,7 @@ name: "Gemini2p5flashModel"
 pretrained_model_path: null # Path to pretrained model (if any)
 params:
   trainer_name: "DummyTrainer"
+  mode: "inference" # Mode of operation (inference, training)
   model_id: "Gemini2p5flash" # Model ID, path to pretrained model (if any)
   deployment: "gemini_2p5flash" # Deployment name
   api_version: "2024-12-01-preview"
