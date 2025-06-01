@@ -190,6 +190,7 @@ class LSTMModel(PulseModel, nn.Module):
         criterion = nn.BCEWithLogitsLoss(
             pos_weight=torch.tensor([data_loader.dataset.pos_weight])
         )
+        criterion.to(self.device)
         converter = prepare_data_for_model_convdl(
             data_loader,
             self.params,

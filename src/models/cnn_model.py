@@ -178,6 +178,7 @@ class CNNModel(PulseModel, nn.Module):
         self.criterion = nn.BCEWithLogitsLoss(
             pos_weight=torch.tensor([data_loader.dataset.pos_weight])
         )
+        self.criterion.to(self.device)
         # To identify num_channels: Get a sample batch and transform using the converter
         features, _ = next(iter(data_loader))
         transformed_features = converter.convert_batch_to_3d(features)
