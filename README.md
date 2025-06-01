@@ -79,6 +79,8 @@ Task Definitions are in accordance with YAIB (https://arxiv.org/abs/2306.05109).
 
 ## Results
 
+Check https://j4nberner.github.io/pulse/ for Benchmark Results.
+
 Each benchmark run creates an output folder with a timestamp.
 A Metric Tracker is running alongside each training / evaluation process. Predictions are tracked and evaluated of all validation and test runs and saved to a json file in the output. Metadata with prompt infos and demographic distribution is saved as csv to output folder.
 
@@ -108,26 +110,25 @@ A Metric Tracker is running alongside each training / evaluation process. Predic
    - name: "ExampleModel"
       params:
          trainer_name: "ExampleTrainer"
-         input_size: 784
-         hidden_size: 128
-         output_size: 10
+         type: "convML"
+         mode: "train"
+         output_shape: 1
+         ...
    ```
 
 2. List the model name in config_train.yaml under models
 
-3. Add a new file in src/models which will host the model and the trainer class
+3. Add a new file in src/models which will host the model and optionally the trainer class
 
    ```python
-   class ExampleModel(PulseTemplateModel):
+   class ExampleModel(PulseModel):
       def __init__(self, params: Dict[str, Any], **kwargs) -> None:
-         super().__init__(model_name, trainer_name, params=params)
-      def set_trainer(self, trainer_name, train_loader, val_loader, test_dataloader):
-         self.trainer = ExampleTrainer(self,train_loader, val_loader, test_dataloader)
+         super().__init__(model_name, params, trainer_name, **kwargs)
    ```
 
    ```python
    class ExampleTrainer():
-      def __init__(self, model, train_loader, val_loader, test_loader):
+      def __init__(self, model, train_loader, val_loader):
          self.model = model
          self.train_loader = train_loader
          self.test_loader = test_loader
@@ -136,11 +137,10 @@ A Metric Tracker is running alongside each training / evaluation process. Predic
       def train(self):
          # training loop
          pass
-
-      def validate(self, val_loader):
-         # validation loop
-         metrics_tracker = MetricsTracker()
    ```
 
-4. add the new model name and import to the src/models/**init**.py
-5. adjust **getitem** method in src/data/dataloader.py for model specific preprocessing
+4. add the new model and optional trainer and import to the src/models/\_\_init\_\_.py
+
+## Inference with proprietary LLMs
+
+Proprietary LLMs request an endpoint URI and api key to work. They are searched for by name in the environment variables. When working locally,place a .env file in the root/secrets folder with URI's and keys. Check the model file to get the correct names.
