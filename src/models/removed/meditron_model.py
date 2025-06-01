@@ -11,7 +11,8 @@ import torch.optim as optim
 from langchain.prompts import PromptTemplate
 from langchain.schema.runnable import Runnable
 from peft import PromptTuningConfig, PromptTuningInit, TaskType, get_peft_model
-from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+from transformers import (AutoModelForCausalLM, AutoTokenizer,
+                          BitsAndBytesConfig)
 
 import wandb
 from src.eval.metrics import MetricsTracker

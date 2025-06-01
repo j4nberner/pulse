@@ -10,20 +10,20 @@ import torch.optim as optim
 
 import wandb
 from src.eval.metrics import MetricsTracker
-from src.models.pulse_model import PulseTemplateModel
+from src.models.pulse_model import PulseModel
 from src.util.config_util import set_seeds
 from src.util.model_util import (
     EarlyStopping,
     calculate_pos_weight,
+    initialize_weights,
     prepare_data_for_model_convdl,
     save_torch_model,
-    initialize_weights,
 )
 
 logger = logging.getLogger("PULSE_logger")
 
 
-class LSTMModel(PulseTemplateModel, nn.Module):
+class LSTMModel(PulseModel, nn.Module):
     """
     LSTM model for time series data.
     """
@@ -36,23 +36,12 @@ class LSTMModel(PulseTemplateModel, nn.Module):
             params (Dict[str, Any]): Configuration parameters for the model.
             **kwargs: Additional keyword arguments.
         """
-        # For trainer_name we still require it to be explicitly in the params
-        if "trainer_name" not in params:
-            raise KeyError("Required parameter 'trainer_name' not found in config")
-
-        # Extract model_name from kwargs if it exists (passed from ModelManager)
-        if "model_name" in kwargs:
-            self.model_name = kwargs.pop("model_name")  # Remove to avoid duplication
-        else:
-            # Fallback to class name if model_name not in kwargs
-            self.model_name = self.__class__.__name__.replace("Model", "")
-
-        self.trainer_name = params["trainer_name"]
-        super().__init__(self.model_name, self.trainer_name, params=params, **kwargs)
+        model_name = kwargs.pop("model_name", "LSTMModel")
+        trainer_name = params["trainer_name"]
+        super().__init__(
+            model_name=model_name, params=params, trainer_name=trainer_name, **kwargs
+        )
         nn.Module.__init__(self)
-
-        # Set the model save directory
-        self.save_dir = kwargs.get("output_dir", f"{os.getcwd()}/output")
 
         # Define all required parameters
         required_params = [
@@ -75,16 +64,8 @@ class LSTMModel(PulseTemplateModel, nn.Module):
             "num_epochs",
         ]
 
-        # Check if wandb is enabled and set up
-        self.wandb = kwargs.get("wandb", False)
-
-        # Check if all required parameters exist in config
-        missing_params = [param for param in required_params if param not in params]
-        if missing_params:
-            raise KeyError(f"Required parameters missing from config: {missing_params}")
-
-        # Extract parameters from config
-        self.params = params.copy()
+        # Check if all required parameters are present
+        self.check_required_params(params, required_params)
 
         # Log the parameters being used
         logger.info("Initializing LSTM with parameters: %s", self.params)
@@ -188,28 +169,104 @@ class LSTMModel(PulseTemplateModel, nn.Module):
 
         return x
 
-    def set_trainer(
-        self, trainer_name: str, train_loader, val_loader, test_loader
-    ) -> None:
+    def evaluate(self, data_loader, save_report: bool = False) -> float:
         """
-        Sets the trainer for the LSTM model.
+        Evaluates the model on the test set.
 
         Args:
-            trainer_name (str): The name of the trainer to be used.
-            train_loader: The DataLoader object for the training dataset.
-            val_loader: The DataLoader object for the validation dataset.
             test_loader: The DataLoader object for the testing dataset.
-
-        Returns:
-            None
         """
-        self.trainer = LSTMTrainer(self, train_loader, val_loader, test_loader)
+        metrics_tracker = MetricsTracker(
+            self.model_name,
+            self.task_name,
+            self.dataset_name,
+            self.save_dir,
+        )
+        verbose = self.params.get("verbose", 1)
+
+        self.eval()
+        val_loss = []
+
+        criterion = nn.BCEWithLogitsLoss(
+            pos_weight=torch.tensor([data_loader.dataset.pos_weight])
+        )
+        converter = prepare_data_for_model_convdl(
+            data_loader,
+            self.params,
+            model_name=self.model_name,
+            task_name=self.task_name,
+        )
+
+        # Load model from pretrained state if available and not in training mode
+        if self.pretrained_model_path and self.mode != "train":
+            # Configure the model input size based on the data
+            features, _ = next(iter(data_loader))
+            transformed_features = converter.convert_batch_to_3d(features)
+            input_dim = transformed_features.shape[-1]
+            self.input_size = input_dim
+            self._init_model()
+            self.load_model_weights(self.pretrained_model_path)
+
+        with torch.no_grad():
+            for batch, (inputs, labels) in enumerate(data_loader):
+                inputs = converter.convert_batch_to_3d(inputs)
+                inputs, labels = inputs.to(self.device), labels.to(self.device)
+
+                outputs = self(inputs)
+                loss = criterion(outputs, labels).item()
+
+                val_loss.append(loss)
+
+                if verbose == 2 or (verbose == 1 and batch % 10 == 9):
+                    logger.info("Evaluating batch %d: Loss = %.4f", batch + 1, loss)
+
+                    if self.wandb:
+                        wandb.log({"val_loss": loss})
+
+                metadata_dict = {
+                    "batch": batch,
+                    "prediction": outputs.cpu().numpy(),
+                    "label": labels.cpu().numpy(),
+                    "loss": loss,
+                    "age": inputs[:, 0, 0].cpu().numpy(),
+                    "sex": inputs[:, 0, 1].cpu().numpy(),
+                    "height": inputs[:, 0, 2].cpu().numpy(),
+                    "weight": inputs[:, 0, 3].cpu().numpy(),
+                }
+                # Append results to metrics tracker
+                metrics_tracker.add_results(outputs.cpu().numpy(), labels.cpu().numpy())
+                metrics_tracker.add_metadata_item(metadata_dict)
+
+        # Calculate and log metrics
+        metrics_tracker.summary = metrics_tracker.compute_overall_metrics()
+        if save_report:
+            metrics_tracker.save_report()
+            metrics_tracker.log_metadata(True)
+
+        # Log results to console
+        logger.info("Test evaluation completed for %s", self.model_name)
+        logger.info("Test metrics: %s", metrics_tracker.summary)
+
+        if self.wandb:
+            wandb.log(
+                {
+                    "Test metrics": wandb.Table(
+                        data=[
+                            [metric, value]
+                            for metric, value in metrics_tracker.summary.items()
+                        ],
+                        columns=["Metric", "Value"],
+                    )
+                }
+            )
+
+        return np.mean(val_loss)
 
 
 class LSTMTrainer:
     """Trainer for the LSTM model."""
 
-    def __init__(self, lstm_model, train_loader, val_loader, test_loader):
+    def __init__(self, lstm_model, train_loader, val_loader):
         self.model = lstm_model
         self.params = lstm_model.params
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -217,11 +274,10 @@ class LSTMTrainer:
 
         self.train_loader = train_loader
         self.val_loader = val_loader
-        self.test_loader = test_loader
         self.optimizer = optim.Adam(
             self.model.parameters(), lr=self.params["learning_rate"]
         )
-        self.pos_weight = calculate_pos_weight(self.train_loader)
+        self.pos_weight = self.train_loader.dataset.pos_weight
         self.criterion = nn.BCEWithLogitsLoss(
             pos_weight=torch.tensor([self.pos_weight])
         )
@@ -311,7 +367,7 @@ class LSTMTrainer:
             self.train_epoch(epoch, verbose)
             logger.info("Epoch %d finished", epoch + 1)
 
-            val_loss = self.evaluate(self.val_loader)
+            val_loss = self.model.evaluate(self.val_loader)
 
             self.early_stopping(val_loss, self.model)
             if self.early_stopping.early_stop:
@@ -331,8 +387,6 @@ class LSTMTrainer:
 
         logger.info("Training finished.")
         self.early_stopping.load_best_model(self.model)  # Load the best model
-        self.evaluate(self.test_loader, save_report=True)
-
         model_save_name = f"{self.model.model_name}_{self.task_name}_{self.dataset_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         save_torch_model(
             model_save_name, self.model, os.path.join(self.model.save_dir, "Models")
@@ -387,77 +441,3 @@ class LSTMTrainer:
                     wandb.log({"train_loss": loss_value})
 
                 running_loss = 0.0
-
-    def evaluate(self, test_loader, save_report: bool = False) -> float:
-        """
-        Evaluates the model on the test set.
-
-        Args:
-            test_loader: The DataLoader object for the testing dataset.
-        """
-        metrics_tracker = MetricsTracker(
-            self.model.model_name,
-            self.model.task_name,
-            self.model.dataset_name,
-            self.model.save_dir,
-        )
-        verbose = self.params.get("verbose", 1)
-        self.model.eval()
-        val_loss = []
-
-        with torch.no_grad():
-            for batch, (inputs, labels) in enumerate(test_loader):
-                inputs = self.converter.convert_batch_to_3d(inputs)
-                inputs, labels = inputs.to(self.device), labels.to(self.device)
-
-                outputs = self.model(inputs)
-                loss = self.criterion(outputs, labels).item()
-
-                val_loss.append(loss)
-
-                if verbose == 2 or (verbose == 1 and batch % 10 == 9):
-                    logger.info("Evaluating batch %d: Loss = %.4f", batch + 1, loss)
-
-                    if self.wandb:
-                        wandb.log({"val_loss": loss})
-
-                metadata_dict = {
-                    "batch": batch,
-                    "prediction": outputs.cpu().numpy(),
-                    "label": labels.cpu().numpy(),
-                    "loss": loss,
-                    "age": inputs[:, 0, 0].cpu().numpy(),
-                    "sex": inputs[:, 0, 1].cpu().numpy(),
-                    "height": inputs[:, 0, 2].cpu().numpy(),
-                    "weight": inputs[:, 0, 3].cpu().numpy(),
-                }
-                # Append results to metrics tracker
-                metrics_tracker.add_results(outputs.cpu().numpy(), labels.cpu().numpy())
-                metrics_tracker.add_metadata_item(metadata_dict)
-
-        # Calculate and log metrics
-        metrics_tracker.log_metadata(True)
-
-        # Calculate and log metrics
-        metrics_tracker.summary = metrics_tracker.compute_overall_metrics()
-        if save_report:
-            metrics_tracker.save_report()
-
-        # Log results to console
-        logger.info("Test evaluation completed for %s", self.model.model_name)
-        logger.info("Test metrics: %s", metrics_tracker.summary)
-
-        if self.wandb:
-            wandb.log(
-                {
-                    "Test metrics": wandb.Table(
-                        data=[
-                            [metric, value]
-                            for metric, value in metrics_tracker.summary.items()
-                        ],
-                        columns=["Metric", "Value"],
-                    )
-                }
-            )
-
-        return np.mean(val_loss)

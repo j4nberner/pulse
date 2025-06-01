@@ -95,7 +95,7 @@ class MetricsTracker:
             self.items = []
         self.items.append(item)
 
-    def log_metadata(self, save_to_file: bool = False) -> None:
+    def log_metadata(self, save_to_file: bool = True) -> None:
         """
         Print and summarize metadata for the tracked items.
 

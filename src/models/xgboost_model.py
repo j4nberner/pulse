@@ -11,13 +11,13 @@ from xgboost import XGBClassifier
 
 import wandb
 from src.eval.metrics import MetricsTracker
-from src.models.pulse_model import PulseTemplateModel
+from src.models.pulse_model import PulseModel
 from src.util.model_util import prepare_data_for_model_convml, save_sklearn_model
 
 logger = logging.getLogger("PULSE_logger")
 
 
-class XGBoostModel(PulseTemplateModel):
+class XGBoostModel(PulseModel):
     """
     Implementation of XGBoost model for classification and regression tasks.
 
@@ -37,24 +37,9 @@ class XGBoostModel(PulseTemplateModel):
         Raises:
             KeyError: If any required parameters are missing from the config.
         """
-        self.params = params
-
-        # For trainer_name we still require it to be explicitly in the params
-        if "trainer_name" not in params:
-            raise KeyError("Required parameter 'trainer_name' not found in config")
-
-        # Use the class name as model_name if not provided in params
-        self.model_name = self.params.get(
-            "model_name", self.__class__.__name__.replace("Model", "")
-        )
-        self.trainer_name = params["trainer_name"]
-        super().__init__(self.model_name, self.trainer_name, params=params)
-
-        # Set the model save directory
-        self.save_dir = kwargs.get("output_dir", f"{os.getcwd()}/output")
-
-        # Check if wandb is enabled and set up
-        self.wandb = kwargs.get("wandb", False)
+        model_name = kwargs.pop("model_name", "XGBoost")
+        trainer_name = params["trainer_name"]
+        super().__init__(model_name, params=params, trainer_name=trainer_name, **kwargs)
 
         self.tune_hyperparameters = params.get("tune_hyperparameters", False)
 
@@ -78,11 +63,7 @@ class XGBoostModel(PulseTemplateModel):
         ]
 
         # Check if all required XGBoost parameters exist in config
-        missing_params = [param for param in required_xgb_params if param not in params]
-        if missing_params:
-            raise KeyError(
-                f"Required XGBoost parameters missing from config: {missing_params}"
-            )
+        self.check_required_params(params, required_xgb_params)
 
         # For XGBoost 2.0.3: include early_stopping_rounds in model initialization
         model_params = {param: params[param] for param in required_xgb_params}
@@ -99,20 +80,103 @@ class XGBoostModel(PulseTemplateModel):
             **model_params,
         )
 
-    def set_trainer(self, trainer_name, train_loader, val_loader, test_loader):
+    def evaluate(self, data_loader: Any, save_report: bool = False) -> Dict[str, Any]:
         """
-        Set the trainer for the model.
+        Evaluate the model on the provided data loader.
 
         Args:
-            trainer_name: Name of the trainer.
-            train_loader: DataLoader for training data.
-            val_loader: DataLoader for validation data. (not used)
-            test_loader: DataLoader for testing data.
+            data_loader: DataLoader containing the evaluation data.
+            save_report: Whether to save the evaluation report.
+
+        Returns:
+            Dictionary containing evaluation metrics.
         """
-        if trainer_name == "XGBoostTrainer":
-            self.trainer = XGBoostTrainer(self, train_loader, val_loader, test_loader)
-        else:
-            raise ValueError(f"Trainer {trainer_name} not supported for XGBoost.")
+        X_test, y_test, feature_names = prepare_data_for_model_convml(data_loader)
+        logger.info("Evaluating XGBoost model...")
+
+        # Load model from pretrained state if available and not in training mode
+        if self.pretrained_model_path and self.mode != "train":
+            self.load_model_weights(self.pretrained_model_path)
+
+        # Create DataFrame with feature names for prediction to avoid warnings
+        X_test_df = pd.DataFrame(X_test, columns=feature_names)
+
+        # Evaluate the model
+        metrics_tracker = MetricsTracker(
+            self.model_name,
+            self.task_name,
+            self.dataset_name,
+            self.save_dir,
+        )
+
+        y_pred = self.model.predict(X_test_df)
+        y_pred_proba = self.model.predict_proba(X_test_df)
+
+        metadata_dict = {
+            "prediction": y_pred_proba[:, 1],
+            "label": y_test,
+            "age": X_test_df["age"].values,
+            "sex": X_test_df["sex"].values,
+            "height": X_test_df["height"].values,
+            "weight": X_test_df["weight"].values,
+        }
+
+        metrics_tracker.add_results(y_pred_proba[:, 1], y_test)
+        metrics_tracker.add_metadata_item(metadata_dict)
+
+        # Calculate and log metrics
+        metrics_tracker.summary = metrics_tracker.compute_overall_metrics()
+        if save_report:
+            metrics_tracker.save_report()
+            metrics_tracker.log_metadata(True)
+
+        # Log results to console
+        logger.info("Test evaluation completed for %s", self.model_name)
+        logger.info("Test metrics: %s", metrics_tracker.summary)
+
+        # Save the model
+        model_save_name = f"{self.model_name}_{self.task_name}_{self.dataset_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        model_save_dir = os.path.join(self.save_dir, "Models")
+        save_sklearn_model(model_save_name, self.model, model_save_dir)
+
+        # Log metrics to wandb
+        if self.wandb:
+            if "overall" in metrics_tracker.summary:
+                wandb.log(metrics_tracker.summary["overall"])
+
+            y_pred_binary = (y_pred >= 0.5).astype(int)
+            wandb.log(
+                {
+                    "confusion_matrix": wandb.sklearn.plot_confusion_matrix(
+                        y_pred=y_pred_binary,
+                        y_true=y_test,
+                        labels=["Negative", "Positive"],
+                    ),
+                    "roc_curve": wandb.sklearn.plot_roc(
+                        y_true=y_test,
+                        y_probas=y_pred_proba,
+                        labels=["Negative", "Positive"],
+                    ),
+                }
+            )
+
+            if hasattr(self.model, "feature_importances_"):
+                # Feature importances
+                importances = self.model.feature_importances_
+                wandb.log(
+                    {
+                        "feature_importances": wandb.plot.bar(
+                            wandb.Table(
+                                data=[
+                                    [f, i] for f, i in zip(feature_names, importances)
+                                ],
+                                columns=["Feature", "Importance"],
+                            ),
+                            "Feature",
+                            "Importance",
+                        )
+                    }
+                )
 
 
 class XGBoostTrainer:
@@ -123,7 +187,7 @@ class XGBoostTrainer:
     including data preparation, model training, evaluation and saving.
     """
 
-    def __init__(self, model, train_loader, val_loader, test_loader) -> None:
+    def __init__(self, model, train_loader, val_loader) -> None:
         """
         Initialize the XGBoost trainer.
 
@@ -131,12 +195,10 @@ class XGBoostTrainer:
             model: The XGBoost model to train.
             train_loader: DataLoader for training data.
             val_loader: DataLoader for validation data.
-            test_loader: DataLoader for testing data.
         """
         self.model = model
         self.train_loader = train_loader
         self.val_loader = val_loader
-        self.test_loader = test_loader
         self.task_name = self.model.task_name
         self.dataset_name = self.model.dataset_name
         self.wandb = model.wandb
@@ -195,20 +257,10 @@ class XGBoostTrainer:
         logger.info("Starting training process for XGBoost model...")
 
         # Use the utility function to prepare data
-        prepared_data = prepare_data_for_model_convml(
-            self.train_loader,
-            self.val_loader,
-            self.test_loader,
+        X_train, y_train, feature_names = prepare_data_for_model_convml(
+            self.train_loader
         )
-
-        # Extract all data from the prepared_data dictionary
-        X_train = prepared_data["X_train"]
-        y_train = prepared_data["y_train"]
-        X_val = prepared_data["X_val"]
-        y_val = prepared_data["y_val"]
-        X_test = prepared_data["X_test"]
-        y_test = prepared_data["y_test"]
-        feature_names = prepared_data["feature_names"]
+        X_val, y_val, _ = prepare_data_for_model_convml(self.val_loader)
 
         # Log training start to wandb
         if self.wandb:
@@ -216,7 +268,6 @@ class XGBoostTrainer:
                 {
                     "train_samples": len(X_train),
                     "val_sample": len(X_val),
-                    "test_samples": len(X_test),
                 }
             )
 
@@ -248,81 +299,3 @@ class XGBoostTrainer:
                 "Loading best iteration with n_estimators: %d",
                 self.model.model.n_estimators,
             )
-
-        # Create DataFrame with feature names for prediction to avoid warnings
-        X_test_df = pd.DataFrame(X_test, columns=feature_names)
-
-        # Evaluate the model
-        metrics_tracker = MetricsTracker(
-            self.model.model_name,
-            self.model.task_name,
-            self.model.dataset_name,
-            self.model.save_dir,
-        )
-
-        y_pred = self.model.model.predict(X_test_df)
-        y_pred_proba = self.model.model.predict_proba(X_test_df)
-
-        metadata_dict = {
-            "prediction": y_pred_proba[:, 1],
-            "label": y_test,
-            "age": X_test_df["age"].values,
-            "sex": X_test_df["sex"].values,
-            "height": X_test_df["height"].values,
-            "weight": X_test_df["weight"].values,
-        }
-
-        metrics_tracker.add_results(y_pred_proba[:, 1], y_test)
-        metrics_tracker.add_metadata_item(metadata_dict)
-
-        # Calculate and log metrics
-        metrics_tracker.log_metadata(True)
-        metrics_tracker.summary = metrics_tracker.compute_overall_metrics()
-        metrics_tracker.save_report()
-
-        # Log results to console
-        logger.info("Test evaluation completed for %s", self.model.model_name)
-        logger.info("Test metrics: %s", metrics_tracker.summary)
-
-        # Save the model
-        model_save_name = f"{self.model.model_name}_{self.task_name}_{self.dataset_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-        save_sklearn_model(model_save_name, self.model.model, self.model_save_dir)
-
-        # Log metrics to wandb
-        if self.wandb:
-            if "overall" in metrics_tracker.summary:
-                wandb.log(metrics_tracker.summary["overall"])
-
-            y_pred_binary = (y_pred >= 0.5).astype(int)
-            wandb.log(
-                {
-                    "confusion_matrix": wandb.sklearn.plot_confusion_matrix(
-                        y_pred=y_pred_binary,
-                        y_true=y_test,
-                        labels=["Negative", "Positive"],
-                    ),
-                    "roc_curve": wandb.sklearn.plot_roc(
-                        y_true=y_test,
-                        y_probas=y_pred_proba,
-                        labels=["Negative", "Positive"],
-                    ),
-                }
-            )
-
-            if hasattr(self.model.model, "feature_importances_"):
-                # Feature importances
-                importances = self.model.model.feature_importances_
-                wandb.log(
-                    {
-                        "feature_importances": wandb.plot.bar(
-                            wandb.Table(
-                                data=[
-                                    [f, i] for f, i in zip(feature_names, importances)
-                                ],
-                                columns=["Feature", "Importance"],
-                            ),
-                            "Feature",
-                            "Importance",
-                        )
-                    }
-                )

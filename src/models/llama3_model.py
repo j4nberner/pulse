@@ -10,13 +10,14 @@ import torch.nn as nn
 import torch.optim as optim
 from peft import PromptTuningConfig, PromptTuningInit, TaskType, get_peft_model
 from torch.nn import functional as F
-from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+from transformers import (AutoModelForCausalLM, AutoTokenizer,
+                          BitsAndBytesConfig)
 
 import wandb
 from src.eval.metrics import MetricsTracker
 from src.models.pulse_model import PulseLLMModel
-from src.util.model_util import extract_dict, prompt_template_hf
 from src.util.config_util import set_seeds
+from src.util.model_util import extract_dict, prompt_template_hf
 
 warnings.filterwarnings(
     "ignore",
@@ -41,7 +42,7 @@ class Llama3Model(PulseLLMModel):
 
         super().__init__(model_name, params, **kwargs)
 
-        #TODO: @sophiafe needed?
+        # TODO: @sophiafe needed?
         if self.inference_only:
             # For inference-only mode (agentic workflow)
             self.trainer_name = params.get("trainer_name", "Llama3Trainer")
@@ -74,7 +75,6 @@ class Llama3Model(PulseLLMModel):
         self.quantization_config = BitsAndBytesConfig(
             load_in_8bit=True, llm_int8_threshold=6.0, llm_int8_has_fp16_weight=True
         )
-
 
     def set_trainer(
         self,
@@ -109,6 +109,7 @@ class Llama3Trainer:
             val_loader: The DataLoader object for the validation dataset.
             test_loader: The DataLoader object for the testing dataset.
         """
+        raise NotImplementedError("Finetuning is not implemented yet for Llama3Model.")
         # Set seed for deterministic generation
         set_seeds(model.random_seed)
 
@@ -149,89 +150,89 @@ class Llama3Trainer:
             raise NotImplementedError(
                 "Prompt tuning is not implemented for MistralModel yet. Set tuning parameter to false."
             )
-            logger.info(
-                "Tuning model with prompt tuning. Model is saved in %s",
-                self.model_save_dir,
-            )
-            optimizer = optim.AdamW(
-                self.model.parameters(), lr=self.params.get("lr", 1e-4)
-            )
-            num_epochs = self.params.get("num_epochs", 1)
+            # logger.info(
+            #     "Tuning model with prompt tuning. Model is saved in %s",
+            #     self.model_save_dir,
+            # )
+            # optimizer = optim.AdamW(
+            #     self.model.parameters(), lr=self.params.get("lr", 1e-4)
+            # )
+            # num_epochs = self.params.get("num_epochs", 1)
 
-            self.model.train()
-            for epoch in range(num_epochs):
-                epoch_loss = 0.0
-                logger.info(f"Epoch {epoch + 1} started...")
-                for i, (X, y) in enumerate(
-                    zip(
-                        self.train_loader[0].iterrows(), self.train_loader[1].iterrows()
-                    )
-                ):
-                    # Input prompt
-                    X_input = prompt_template_hf(X[1].iloc[0])
-                    inputs = self.model.tokenizer.apply_chat_template(
-                        X_input, tokenize=False, add_generation_prompt=True
-                    )
+            # self.model.train()
+            # for epoch in range(num_epochs):
+            #     epoch_loss = 0.0
+            #     logger.info(f"Epoch {epoch + 1} started...")
+            #     for i, (X, y) in enumerate(
+            #         zip(
+            #             self.train_loader[0].iterrows(), self.train_loader[1].iterrows()
+            #         )
+            #     ):
+            #         # Input prompt
+            #         X_input = prompt_template_hf(X[1].iloc[0])
+            #         inputs = self.model.tokenizer.apply_chat_template(
+            #             X_input, tokenize=False, add_generation_prompt=True
+            #         )
 
-                    # Build target output label
-                    probability = y[1].iloc[0]  # float
-                    diagnosis = (
-                        "not-" if probability < 0.5 else ""
-                    ) + self.model.task_name
-                    target_output = (
-                        "{\n"
-                        f'  "diagnosis": "{diagnosis}",\n'
-                        f'  "probability": {round(probability, 4)},\n'
-                        '  "explanation": "N/A"\n'
-                        "}\n\n"
-                    )
+            #         # Build target output label
+            #         probability = y[1].iloc[0]  # float
+            #         diagnosis = (
+            #             "not-" if probability < 0.5 else ""
+            #         ) + self.model.task_name
+            #         target_output = (
+            #             "{\n"
+            #             f'  "diagnosis": "{diagnosis}",\n'
+            #             f'  "probability": {round(probability, 4)},\n'
+            #             '  "explanation": "N/A"\n'
+            #             "}\n\n"
+            #         )
 
-                    encoded = self.encode_prompt_target(
-                        inputs,
-                        target_output,
-                        max_len=self.model.tokenizer.model_max_length,
-                    )
+            #         encoded = self.encode_prompt_target(
+            #             inputs,
+            #             target_output,
+            #             max_len=self.model.tokenizer.model_max_length,
+            #         )
 
-                    optimizer.zero_grad()
-                    outputs = self.model(
-                        input_ids=encoded["input_ids"].to(self.device),
-                        attention_mask=encoded["attention_mask"].to(self.device),
-                        labels=encoded["labels"].to(self.device),
-                    )
+            #         optimizer.zero_grad()
+            #         outputs = self.model(
+            #             input_ids=encoded["input_ids"].to(self.device),
+            #             attention_mask=encoded["attention_mask"].to(self.device),
+            #             labels=encoded["labels"].to(self.device),
+            #         )
 
-                    loss = outputs.loss
-                    loss.backward()
+            #         loss = outputs.loss
+            #         loss.backward()
 
-                    optimizer.step()
-                    epoch_loss += loss.item()
+            #         optimizer.step()
+            #         epoch_loss += loss.item()
 
-                    logger.info(
-                        "Step %d/%d, Loss: %.4f",
-                        i + 1,
-                        len(self.train_loader[0]),
-                        loss.item(),
-                    )
+            #         logger.info(
+            #             "Step %d/%d, Loss: %.4f",
+            #             i + 1,
+            #             len(self.train_loader[0]),
+            #             loss.item(),
+            #         )
 
-                    if self.wandb:
-                        wandb.log({"train_loss": loss.item()})
+            #         if self.wandb:
+            #             wandb.log({"train_loss": loss.item()})
 
-                logger.info(
-                    "Epoch %d/%d, Avg Total Loss: %.4f",
-                    epoch + 1,
-                    num_epochs,
-                    epoch_loss / len(self.train_loader[0]),
-                )
-                if self.wandb:
-                    wandb.log(
-                        {f"avg_epoch_loss": epoch_loss / len(self.train_loader[0])}
-                    )
+            #     logger.info(
+            #         "Epoch %d/%d, Avg Total Loss: %.4f",
+            #         epoch + 1,
+            #         num_epochs,
+            #         epoch_loss / len(self.train_loader[0]),
+            #     )
+            #     if self.wandb:
+            #         wandb.log(
+            #             {f"avg_epoch_loss": epoch_loss / len(self.train_loader[0])}
+            #         )
 
-                val_loss = self.evaluate_single(self.val_loader)
-                logger.info("Validation loss: %s", val_loss)
+            #     val_loss = self.evaluate_single(self.val_loader)
+            #     logger.info("Validation loss: %s", val_loss)
 
-                self.model.save_pretrained(self.model_save_dir)
-                self.model.tokenizer.save_pretrained(self.model_save_dir)
-                logger.info("Model saved to %s", self.model_save_dir)
+            #     self.model.save_pretrained(self.model_save_dir)
+            #     self.model.tokenizer.save_pretrained(self.model_save_dir)
+            #     logger.info("Model saved to %s", self.model_save_dir)
 
     def encode_prompt_target(
         self,

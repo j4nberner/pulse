@@ -11,18 +11,14 @@ import torch.nn as nn
 import torch.optim as optim
 from peft import PromptTuningConfig, PromptTuningInit, TaskType, get_peft_model
 from torch.nn import functional as F
-from transformers import (
-    AutoModelForCausalLM,
-    AutoTokenizer,
-    BitsAndBytesConfig,
-    Llama4ForConditionalGeneration,
-)
+from transformers import (AutoModelForCausalLM, AutoTokenizer,
+                          BitsAndBytesConfig, Llama4ForConditionalGeneration)
 
 import wandb
 from src.eval.metrics import MetricsTracker
-from src.models.pulse_model import PulseTemplateModel
-from src.util.model_util import extract_dict, prompt_template_hf
+from src.models.pulse_model import PulseLLMModel
 from src.util.config_util import set_seeds
+from src.util.model_util import extract_dict, prompt_template_hf
 
 warnings.filterwarnings(
     "ignore",
@@ -32,7 +28,7 @@ warnings.filterwarnings(
 logger = logging.getLogger("PULSE_logger")
 
 
-class Llama4Model(PulseTemplateModel):
+class Llama4Model(PulseLLMModel):
     """Llama 4 model wrapper using LangChain for prompt templating and inference."""
 
     def __init__(self, params: Dict[str, Any], **kwargs) -> None:
@@ -43,5 +39,3 @@ class Llama4Model(PulseTemplateModel):
             **kwargs: Additional optional parameters such as `output_dir` and `wandb`.
         """
         raise NotImplementedError("Llama4Model is not implemented yet.")
-
-        

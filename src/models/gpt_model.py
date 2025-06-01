@@ -10,7 +10,7 @@ from openai import AzureOpenAI
 
 import wandb
 from src.eval.metrics import MetricsTracker
-from src.models.pulse_model import PulseTemplateModel
+from src.models.pulse_model import PulseModel
 from src.util.model_util import extract_dict, prompt_template_hf
 
 warnings.filterwarnings(
@@ -21,7 +21,7 @@ warnings.filterwarnings(
 logger = logging.getLogger("PULSE_logger")
 
 
-class GPTModel(PulseTemplateModel):
+class GPTModel(PulseModel):
     """GPT model wrapper."""
 
     def __init__(self, params: Dict[str, Any], **kwargs) -> None:

@@ -9,21 +9,21 @@ import torch.optim as optim
 
 import wandb
 from src.eval.metrics import MetricsTracker
-from src.models.pulse_model import PulseTemplateModel
+from src.models.pulse_model import PulseModel
 from src.util.config_util import set_seeds
 from src.util.model_util import (
     EarlyStopping,
     calculate_pos_weight,
+    initialize_weights,
     prepare_data_for_model_convdl,
     save_torch_model,
-    initialize_weights,
 )
 
 # Set up logger
 logger = logging.getLogger("PULSE_logger")
 
 
-class GRUModel(PulseTemplateModel, nn.Module):
+class GRUModel(PulseModel, nn.Module):
     """
     Implementation of Gated Recurrent Unit (GRU) model for time series classification.
 
@@ -106,6 +106,10 @@ class GRUModel(PulseTemplateModel, nn.Module):
             input_dim: Input dimension from the data
         """
         set_seeds(self.params["random_seed"])
+        self.gru_layers = nn.ModuleList()
+        self.dropout_layers = nn.ModuleList()
+        self.batch_norm_layers = nn.ModuleList()
+
         self.input_dim = input_dim
 
         # Create separate dropout rates for different layers or use the same rate
@@ -218,21 +222,6 @@ class GRUModel(PulseTemplateModel, nn.Module):
 
         return out
 
-    def set_trainer(self, trainer_name, train_loader, val_loader, test_loader):
-        """
-        Set the trainer for the model.
-
-        Args:
-            trainer_name: Name of the trainer.
-            train_loader: DataLoader for training data.
-            val_loader: DataLoader for validation data.
-            test_loader: DataLoader for testing data.
-
-        Returns:
-            Trainer instance
-        """
-        self.trainer = GRUTrainer(self, train_loader, val_loader, test_loader)
-
     def evaluate(self, data_loader, save_report: bool = False):
         """
         Evaluate the model on a dataset with comprehensive metrics.
@@ -244,7 +233,7 @@ class GRUModel(PulseTemplateModel, nn.Module):
             self.dataset_name,
             self.save_dir,
         )
-        self.eval()
+
         # Get the configured data converter
         converter = prepare_data_for_model_convdl(
             data_loader,
@@ -252,25 +241,21 @@ class GRUModel(PulseTemplateModel, nn.Module):
             model_name=self.model_name,
             task_name=self.task_name,
         )
-        self.criterion = nn.BCEWithLogitsLoss(
-            pos_weight=torch.tensor([data_loader.dataset.pos_weight])
-        )
 
-        # To identify input_dim: Get a sample batch and transform
-        features, _ = next(iter(data_loader))
-        transformed_features = converter.convert_batch_to_3d(features)
-
-        # Get the input dimension from the transformed features
-        # For RNN models: (batch_size, time_steps, num_features)
-        num_channels = transformed_features.shape[-1]
-
-        # Update model architecture with correct shape
-        self.create_network_with_input_shape(num_channels)
-        logger.info(self)
+        # Load model from pretrained state if available and not in training mode
+        if self.pretrained_model_path and self.mode != "train":
+            # To identify input_dim: Get a sample batch and transform
+            features, _ = next(iter(data_loader))
+            transformed_features = converter.convert_batch_to_3d(features)
+            num_channels = transformed_features.shape[-1]
+            self.create_network_with_input_shape(num_channels)
+            logger.info(self)
+            self.load_model_weights(self.pretrained_model_path)
 
         # Track both batches and per-batch metrics for logging
         batch_metrics = []
 
+        self.eval()  # Set model to evaluation mode
         with torch.no_grad():
             for batch_idx, (features, labels) in enumerate(data_loader):
                 # Convert features for the model
@@ -315,12 +300,12 @@ class GRUModel(PulseTemplateModel, nn.Module):
                 metrics_tracker.add_results(outputs.cpu().numpy(), labels.cpu().numpy())
                 metrics_tracker.add_metadata_item(metadata_dict)
 
-        # Calculate and log metrics
-        metrics_tracker.log_metadata(True)
-
         # Calculate comprehensive metrics
         metrics_tracker.summary = metrics_tracker.compute_overall_metrics()
-        metrics_tracker.save_report()
+        if save_report:
+            # Calculate and log metrics
+            metrics_tracker.log_metadata(True)
+            metrics_tracker.save_report()
 
         # Log results to console
         logger.info("Test evaluation completed for %s", self.model_name)
@@ -349,7 +334,7 @@ class GRUTrainer:
     including data preparation, model training, evaluation and saving.
     """
 
-    def __init__(self, model, train_loader, val_loader, test_loader):
+    def __init__(self, model, train_loader, val_loader):
         """
         Initialize the GRU trainer.
 
@@ -357,14 +342,12 @@ class GRUTrainer:
             model: The GRU model to train.
             train_loader: DataLoader for training data.
             val_loader: DataLoader for validation data.
-            test_loader: DataLoader for testing data.
         """
         self.model = model
         self.params = model.params
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.train_loader = train_loader
         self.val_loader = val_loader
-        self.test_loader = test_loader
         self.wandb = self.model.wandb
         self.task_name = self.model.task_name
         self.dataset_name = self.model.dataset_name

@@ -1,31 +1,32 @@
+import gc
 import json
 import logging
+import os
+import time
 from typing import Any, Dict, Optional
 
 import joblib
 import numpy as np
+import psutil
 import torch
 import torch.nn as nn
-from torch.utils.data import DataLoader
-import gc
-import psutil
-import time
-import os
 from peft import PromptTuningConfig, PromptTuningInit, TaskType, get_peft_model
 from torch.nn import functional as F
-from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+from torch.utils.data import DataLoader
+from transformers import (AutoModelForCausalLM, AutoTokenizer,
+                          BitsAndBytesConfig)
+
 import wandb
 from src.eval.metrics import MetricsTracker
 from src.util.config_util import set_seeds
 from src.util.model_util import extract_dict, prompt_template_hf
 
-
 logger = logging.getLogger("PULSE_logger")
 
 
-class PulseTemplateModel:
+class PulseModel:
     """
-    Base model template that all other models will inherit from.
+    Base pulse model.
 
     This class provides the common attributes and methods that all models
     in the Pulse framework should implement.
@@ -54,6 +55,7 @@ class PulseTemplateModel:
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         self.random_seed = self.params.get("random_seed", 42)
+        set_seeds(self.params["random_seed"])
         logger.debug("Using random seed: %d", self.random_seed)
 
         self.trainer_name = trainer_name
@@ -68,6 +70,7 @@ class PulseTemplateModel:
     def set_trainer(
         self,
         trainer_name: str,
+        model: Any,
         train_loader: DataLoader,
         val_loader: DataLoader,
     ) -> None:
@@ -77,11 +80,15 @@ class PulseTemplateModel:
 
         Args:
             trainer_name: Name of the trainer to use
+            model: The model instance to train
             train_loader: DataLoader for training data
             test_loader: DataLoader for test data
         """
+        from src.models import get_trainer_class
+
         self.trainer_name = trainer_name
-        self.trainer = None
+        cls = get_trainer_class(trainer_name)
+        self.trainer = cls(model, train_loader, val_loader)
 
     def check_required_params(self, params: dict, required_params: list) -> None:
         """Check if all required parameters are present in the params dictionary.
@@ -108,6 +115,7 @@ class PulseTemplateModel:
         if self.type == "convML":
             # Load the sklearn model using joblib
             self.model = joblib.load(model_path)
+            logger.info("Sklearn model loaded successfully from %s", model_path)
 
         elif self.type == "convDL":
             # Load the state dictionary
@@ -223,39 +231,9 @@ class PulseTemplateModel:
             logger.warning("Unknown model type; cannot load to GPU")
 
 
-class PulseDLModel(PulseTemplateModel):
+class PulseLLMModel(PulseModel):
     """
-    Base model template for deep learning models that inherits from PulseTemplateModel.
-    This class provides additional attributes and methods specific to deep learning models.
-    """
-
-    def __init__(
-        self,
-        model_name: str,
-        params: Dict[str, Any],
-        trainer_name: Optional[str] = None,
-        **kwargs: Dict[str, Any],
-    ) -> None:
-        """Initialize a new Pulse DL model.
-        Args:
-            model_name: Name of the model
-            params: Dictionary of parameters for the model
-            trainer_name: Optional name of the trainer
-            **kwargs: Additional keyword arguments for model configuration
-        """
-        super().__init__(model_name, params, trainer_name, **kwargs)
-
-        self.device = kwargs.get(
-            "device", torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        )
-        logger.debug("Number of GPUs: %d", torch.cuda.device_count())
-
-        self.model_id = params.get("model_id", None)
-
-
-class PulseLLMModel(PulseTemplateModel):
-    """
-    Base model template for Huggingface-LLMs that inherits from PulseTemplateModel.
+    Base model for Huggingface-LLMs that inherits from PulseTemplateModel.
     This class provides additional attributes and methods specific to LLMs.
     """
 
@@ -509,7 +487,10 @@ class PulseLLMModel(PulseTemplateModel):
                     test_loader[0].at[idx, "is_agent_prediction"]
                 )
                 logger.debug(
-                    f"Sample {idx}: is_agent_prediction = {is_agent_prediction} (type: {type(is_agent_prediction)})"
+                    "Sample %s: is_agent_prediction = %s (type: %s)",
+                    idx,
+                    is_agent_prediction,
+                    type(is_agent_prediction),
                 )
 
             if is_agent_prediction:
@@ -563,7 +544,8 @@ class PulseLLMModel(PulseTemplateModel):
 
                 except Exception as e:
                     logger.error(
-                        f"Error parsing agent prediction: {e} - Falling back to standard inference"
+                        "Error parsing agent prediction: %s - Falling back to standard inference",
+                        e,
                     )
                     # Run normal inference as fallback
                     result_dict = self.generate(X_input)

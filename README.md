@@ -29,41 +29,15 @@ This repository contains the implementation for predicting mortality, acute kidn
    pip install -r requirements.txt
    ```
 
-3. Adjust config_train and run train_models.py
-
-## Project Structure
-
-```
-├── README.md
-├── requirements.txt
-├── config_train.yaml
-├── config_benchmark.yaml
-├── model_configs/
-│   └── exampleModel.yaml
-├── train_models.py
-├── benchmark_models.py
-├── src/
-│   ├── data/
-│   │   ├── __init__.py
-│   │   ├── dataloader.py
-│   ├── eval/
-│   │   ├── __init__.py
-│   │   └── metrics.py
-│   ├── models/
-│   │   ├── __init__.py
-│   │   ├── modelmanager.py
-│   │   └── example_model.py
-│   ├── preprocessing/
-│   │   ├── __init__.py
-│   │   ├── preprocessing_advanced/
-│   │   ├── preprocessing_baseline/
-│   │   └── preprocessing_prompts/
-|   └── framework.png
-├── notebooks/
-├── visualizations/
-├── datasets/
-└── secrets/
-```
+3. Adjust configs/config_benchmark.yaml
+   Default config
+   - app_mode: "benchmark"
+   - tasks: choose tasks to perform benchmark on
+   - dataset: choose datasets to perform benchmark on
+   - standardize: true/false depending on models selected
+   - windowing: enabled and window size 6
+   - prompting_ids: choose prompting approach to perform benchark on and set number of shots to perform few-shot prompting.
+   - Load_models: choose models to perform benchmark on. Make sure that standardization method matches the model
 
 ## Data
 
@@ -97,32 +71,34 @@ Task Definitions are in accordance with YAIB (https://arxiv.org/abs/2306.05109).
 
 ## Implemented Models
 
-| Type                | Models                          |
-| ------------------- | ------------------------------- |
-| **conventional ML** | RandomForest, XGBoost, LightGBM |
-| **conventional DL** | CNN, LSTM, GRU, InceptionTime   |
-| **LLM**             | Llama 3.1-8b-Instruct           |
+| Type                | Models                                                                                                       |
+| ------------------- | ------------------------------------------------------------------------------------------------------------ |
+| **conventional ML** | RandomForest, XGBoost, LightGBM                                                                              |
+| **conventional DL** | CNN, LSTM, GRU, InceptionTime                                                                                |
+| **LLM**             | Llama 3.1-8b-Instruct, DeepseekR1Llama8b, DeepseekR1Qwen7b, Mistral-7b, GPT4o, Gemini2p5flash, ClaudeSonnet4 |
 
 ## Results
 
-A Metric Tracker is running alongside each training / evaluation process. Predictions are tracked and evaluated of all validation and test runs and saved to a json file in the output.
+Each benchmark run creates an output folder with a timestamp.
+A Metric Tracker is running alongside each training / evaluation process. Predictions are tracked and evaluated of all validation and test runs and saved to a json file in the output. Metadata with prompt infos and demographic distribution is saved as csv to output folder.
 
 ## Train a model
 
-1. adjust config_train.yaml
-   - set debug flag to only load n rows of data (can be specified in dataloader.py)
-   - set wandb flag and entity
-   - set project base path
+1. adjust config_benchmark.yaml
+   - make sure that in the model-specific config, mode is set to "train"
    - choose tasks & datasets to train and evaluate
    - choose models to train
-2. run train_models.py
+2. run PULSE_benchmark.py
 
-## Evaluate a model
+-> models are evaluated automatically
 
--> not implemented yet...Use train_model instead which calls eval methods.
+## Evaluate a model (without training)
 
 1. adjust config_benchmark.yaml
-2. run benchmark_models.py
+   - make sure that in the model-specific config, mode is set to "inference"
+   - choose tasks & datasets to train and evaluate
+   - choose models to train
+2. run PULSE_benchmark.py
 
 ## Add a new model
 

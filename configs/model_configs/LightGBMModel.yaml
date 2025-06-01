@@ -4,26 +4,27 @@ params:
   # Basic configuration
   trainer_name: "LightGBMTrainer" # Class that implements the training process
   type: "convML" # Type of model (convML for conventional machine learning, convDL for conventional deep learning and LLM for large language models)
+  mode: "train"
   verbose: -1 # Controls the level of logging output (-1: silent, >=0: logging)
   n_jobs: -1 # Number of parallel threads (-1 to use all CPUs)
-  
+
   # Model Structure
   n_estimators: 100 # Number of boosting rounds/trees to build
   max_depth: 7 # Maximum depth of each tree (-1 means no limit)
   boosting_type: "gbdt" # Boosting type (gbdt, dart, goss, rf)
   num_leaves: 31 # Maximum number of leaves in each tree
-  
+
   # Split Criteria
   min_child_samples: 20 # Minimum number of samples required in a leaf node
-  
+
   # Sampling
   subsample: 1.0 # Fraction of samples used for tree building
   colsample_bytree: 1.0 # Fraction of features used for tree building
-  
+
   # Regularization
   reg_alpha: 0 # L1 regularization on weights
   reg_lambda: 1 # L2 regularization on weights
-  
+
   # Optimization
   learning_rate: 0.1 # Controls how much each tree contributes to the final model
   objective: "binary" # For binary classification tasks like AKI prediction

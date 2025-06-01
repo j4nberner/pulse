@@ -10,19 +10,19 @@ import torch.optim as optim
 
 import wandb
 from src.eval.metrics import MetricsTracker
-from src.models.pulse_model import PulseTemplateModel
+from src.models.pulse_model import PulseModel
 from src.util.config_util import set_seeds
 from src.util.model_util import (
     EarlyStopping,
+    initialize_weights,
     prepare_data_for_model_convdl,
     save_torch_model,
-    initialize_weights,
 )
 
 logger = logging.getLogger("PULSE_logger")
 
 
-class CNNModel(PulseTemplateModel, nn.Module):
+class CNNModel(PulseModel, nn.Module):
     """
     A Convolutional Neural Network (CNN) model for time series data.
     """
@@ -35,7 +35,7 @@ class CNNModel(PulseTemplateModel, nn.Module):
             params (Dict[str, Any]): Configuration parameters for the model.
             **kwargs: Additional keyword arguments.
         """
-        model_name = params.get("model_name", "CNNModel")
+        model_name = kwargs.pop("model_name", "CNNModel")
         trainer_name = params["trainer_name"]
         super().__init__(
             model_name=model_name,
@@ -156,22 +156,9 @@ class CNNModel(PulseTemplateModel, nn.Module):
         x = self.leaky_relu(x)
         return self.fc2(x)
 
-    def set_trainer(self, trainer_name: str, train_loader, val_loader) -> None:
-        """
-        Sets the trainer for the CNN model.
-
-        Args:
-            trainer_name (str): The name of the trainer to be used.
-            train_loader: The DataLoader object for the training dataset.
-
-        Returns:
-            None
-        """
-        self.trainer_name = trainer_name
-        self.trainer = CNNTrainer(self, train_loader, val_loader)
-
     def evaluate(self, data_loader, save_report: bool = False) -> float:
         """Evaluates the model on the given dataset."""
+        set_seeds(self.params["random_seed"])
         metrics_tracker = MetricsTracker(
             self.model_name,
             self.task_name,
@@ -179,7 +166,6 @@ class CNNModel(PulseTemplateModel, nn.Module):
             self.save_dir,
         )
         verbose = self.params.get("verbose", 1)
-        self.eval()
         val_loss = []
 
         # Get the configured data converter
@@ -196,16 +182,20 @@ class CNNModel(PulseTemplateModel, nn.Module):
         features, _ = next(iter(data_loader))
         transformed_features = converter.convert_batch_to_3d(features)
 
-        # Update the model input shape based on the data
-        set_seeds(self.params["random_seed"])
-        self.params["num_channels"] = transformed_features.shape[1]
-        self.params["window_size"] = transformed_features.shape[2]
-        self._init_model()
-        logger.info(self.model)
-        logger.info(
-            "Input shape to model (after transformation): %s",
-            transformed_features.shape,
-        )
+        # Load model from pretrained state if available and not in training mode
+        if self.pretrained_model_path and self.mode != "train":
+            # Update the model input shape based on the data
+            self.params["num_channels"] = transformed_features.shape[1]
+            self.params["window_size"] = transformed_features.shape[2]
+            self._init_model()
+            logger.info(self.model)
+            logger.info(
+                "Input shape to model (after transformation): %s",
+                transformed_features.shape,
+            )
+            self.load_model_weights(self.pretrained_model_path)
+
+        self.eval()
 
         with torch.no_grad():
             for batch, (inputs, labels) in enumerate(data_loader):
@@ -242,9 +232,9 @@ class CNNModel(PulseTemplateModel, nn.Module):
                 metrics_tracker.add_metadata_item(metadata_dict)
 
         # Calculate and log metrics
-        metrics_tracker.log_metadata(True)
         metrics_tracker.summary = metrics_tracker.compute_overall_metrics()
         if save_report:
+            metrics_tracker.log_metadata(True)
             metrics_tracker.save_report()
 
         # Log results to console
@@ -264,19 +254,21 @@ class CNNModel(PulseTemplateModel, nn.Module):
                 }
             )
 
-        model_save_name = f"{self.model_name}_{self.task_name}_{self.dataset_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-        # Log the model architecture and parameters to wandb
-        if self.wandb:
-            wandb.log(
-                {
-                    "model_architecture": str(self.model),
-                    "model_parameters": self.state_dict(),
-                }
-            )
+        # Only saveing the model when save_report is True -> when in test mode.
+        if save_report:
+            model_save_name = f"{self.model_name}_{self.task_name}_{self.dataset_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            # Log the model architecture and parameters to wandb
+            if self.wandb:
+                wandb.log(
+                    {
+                        "model_architecture": str(self.model),
+                        "model_parameters": self.state_dict(),
+                    }
+                )
 
-        save_torch_model(
-            model_save_name, self, os.path.join(self.save_dir, "Models")
-        )  # Save the final model
+            save_torch_model(
+                model_save_name, self, os.path.join(self.save_dir, "Models")
+            )  # Save the final model
 
         return np.mean(val_loss)
 

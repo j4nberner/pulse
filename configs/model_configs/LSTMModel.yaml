@@ -1,12 +1,13 @@
 name: "LSTMModel"
-pretrained_model_path: null # Path to pretrained model (if any)
+pretrained_model_path: output/20250601_104743/Models/LSTMModel_aki_miiv_20250601_104757.pth # Path to pretrained model (if any)
 params:
   # Basic configuration
   trainer_name: "LSTMTrainer"
   type: "convDL" # Type of model (convML for conventional machine learning, convDL for conventional deep learning and LLM for large language models)
+  mode: "train"
   save_checkpoint: 0 # Save checkpoint every n epochs. Set to 0 to disable.
   verbose: 2 # Controls verbosity of output (0 = silent, 1 = log every 100 batches, 2 = log every batch)
-  
+
   # Model Architecture
   hidden_size: 64 # Number of hidden units in LSTM layers
   num_layers: 3 # Number of LSTM layers (should match length of lstm_units)
@@ -14,11 +15,11 @@ params:
   dense_units: 64 # Number of units in the first dense layer
   dropout: [0.2, 0.3, 0.4] # Dropout rate for LSTM layers, can be single value or list
   output_shape: 1
-  
+
   # Training
   num_epochs: 100
   early_stopping_rounds: 10
-  
+
   # Optimization
   learning_rate: 0.001
   grad_clip_max_norm: 1.0 # max_norm = 1.0 (LSTM, GRU) or 2.0 (CNN, InceptionTime)

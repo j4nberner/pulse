@@ -117,73 +117,42 @@ def save_sklearn_model(model_name: str, model: Any, save_dir: str) -> None:
 
 
 def prepare_data_for_model_convml(
-    train_loader, val_loader, test_loader
-) -> Dict[str, Any]:
+    data_loader: Any,
+) -> tuple[np.ndarray, np.ndarray, List[str]]:
     """
     Prepare data for conventional machine learning models by converting PyTorch tensors
     from dataloaders to numpy arrays while preserving feature names.
 
     Args:
-        train_dataloader: DataLoader containing the training data or list of data in debug mode
-        test_dataloader: DataLoader containing the test data or list of data in debug mode
+        data_loader: DataLoader containing the data or list of data in debug mode
 
     Returns:
-        dict: Dictionary containing:
-            - X_train: numpy array of training features
-            - y_train: numpy array of training labels
-            - X_val: numpy array of validation features (if available)
-            - y_val: numpy array of validation labels (if available)
-            - X_test: numpy array of test features
-            - y_test: numpy array of test labels
-            - feature_names: list of feature names (if available)
+        Tuple containing:
+            - X: Numpy array of features
+            - y: Numpy array of labels
+            - feature_names: List of feature names
     """
 
     # Extract data from dataloaders
-    X_train, y_train = [], []
-    X_val, y_val = [], []
-    X_test, y_test = [], []
+    X, y = [], []
     feature_names = []
 
-    if isinstance(train_loader[0], pd.DataFrame):
+    if isinstance(data_loader[0], pd.DataFrame):
         # If DataLoader is a DataFrame, extract features and labels directly
-        X_train = np.array(train_loader[0].values)
-        y_train = np.array(train_loader[1].values).squeeze()
-        X_val = np.array(val_loader[0].values)
-        y_val = np.array(val_loader[1].values).squeeze()
-        X_test = np.array(test_loader[0].values)
-        y_test = np.array(test_loader[1].values).squeeze()
-        feature_names = list(train_loader[0].columns)
+        X = np.array(data_loader[0].values)
+        y = np.array(data_loader[1].values).squeeze()
+        feature_names = list(data_loader[0].columns)
 
     else:
         # Convert lists to numpy arrays
-        X_train = np.array(X_train)
-        y_train = np.array(y_train)
-        X_val = np.array(X_val)
-        y_val = np.array(y_val)
-        X_test = np.array(X_test)
-        y_test = np.array(y_test)
+        X = np.array(X)
+        y = np.array(y)
 
     # Log shapes
-    logger.debug(
-        "Prepared data shapes - X_train: %s, y_train: %s", X_train.shape, y_train.shape
-    )
-    logger.debug(
-        "Prepared data shapes - X_val: %s, y_val: %s", X_val.shape, y_val.shape
-    )
-    logger.debug(
-        "Prepared data shapes - X_test: %s, y_test: %s", X_test.shape, y_test.shape
-    )
+    logger.debug("Prepared data shapes - X: %s, y: %s", X.shape, y.shape)
 
     # Return all processed data
-    return {
-        "X_train": X_train,
-        "y_train": y_train,
-        "X_val": X_val,
-        "y_val": y_val,
-        "X_test": X_test,
-        "y_test": y_test,
-        "feature_names": feature_names,
-    }
+    return X, y, feature_names
 
 
 def prepare_data_for_model_convdl(
@@ -206,7 +175,8 @@ def prepare_data_for_model_convdl(
     """
 
     # Import the converter
-    from src.preprocessing.preprocessing_advanced.windowing import WindowedDataTo3D
+    from src.preprocessing.preprocessing_advanced.windowing import \
+        WindowedDataTo3D
 
     # Create converter with model name and config
     converter = WindowedDataTo3D(
@@ -453,7 +423,9 @@ def extract_dict(output_text: str) -> Optional[Dict[str, str]]:
     json_text_clean = escape_newlines_in_strings(json_text)
 
     # Check if the correct keys are present
-    if not all(key in json_text_clean for key in ["diagnosis", "probability", "explanation"]):
+    if not all(
+        key in json_text_clean for key in ["diagnosis", "probability", "explanation"]
+    ):
         logger.warning(
             "JSON object does not contain all required keys. Returning default."
         )
@@ -464,4 +436,3 @@ def extract_dict(output_text: str) -> Optional[Dict[str, str]]:
     except json.JSONDecodeError as e:
         logger.warning(f"Failed to parse JSON: {e}\nRaw: {json_text_clean}")
         return default_json
-

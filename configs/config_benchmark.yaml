@@ -3,9 +3,9 @@
 # General settings
 general:
   app_name: "Pulse"
-  app_version: "1.0.0"
+  app_version: "1.0.1"
   app_mode: "debug" # "debug", "count_tokens", "benchmark",
-  debug_data_length: 10 # Number of samples to use for debugging
+  debug_data_length: 1000 # Number of samples to use for debugging
   logging_level: "DEBUG" # "DEBUG", "INFO", "WARNING", "ERROR"
   use_scratch: true # Whether to use scratch space for temporary files
   save_metadata: true # Whether to save the metadata file. Inludes prompts for LLMs
@@ -21,15 +21,15 @@ base_path: ""
 # Tasks to process
 tasks:
   - "aki"
-  # - "mortality"
-  # - "sepsis"
+  - "mortality"
+  - "sepsis"
 
 # Datasets to process
 dataset_path: "datasets/original_harmonized" #"/path/to/datasets"
 datasets:
   # - "eicu"
-  # - "hirid"
-  - "miiv"
+  - "hirid"
+  # - "miiv"
 
 # _______ Preprocessing Baseline _______
 
@@ -43,7 +43,7 @@ preprocessing_baseline:
     train: 0.8
     val: 0.1
     test: 0.1
-    test_limited: 10 # Number of stay_ids for limited test set, null = test set is not limited
+    test_limited: 100 # Number of stay_ids for limited test set, null = test set is not limited
     print_stats: true # Whether to print set statistics
 
 # _______ Preprocessing Advanced _______
@@ -75,13 +75,14 @@ benchmark_settings:
   random_seed: 42
 
 load_models:
-  # - "configs/model_configs/CNNModel.yaml"
   # - "configs/model_configs/RandomForestModel.yaml"
   # - "configs/model_configs/XGBoost.yaml"
-  # - "configs/model_configs/InceptionTimeModel.yaml"
-  # - "configs/model_configs/LSTMModel.yaml"
   # - "configs/model_configs/LightGBMModel.yaml"
-  - "configs/model_configs/GRUModel.yaml"
+
+  # - "configs/model_configs/CNNModel.yaml"
+  # - "configs/model_configs/InceptionTimeModel.yaml"
+  - "configs/model_configs/LSTMModel.yaml"
+  # - "configs/model_configs/GRUModel.yaml"
 
   # - "configs/model_configs/MedGemma4bModel.yaml"
   # - "configs/model_configs/Gemma312BModel.yaml"

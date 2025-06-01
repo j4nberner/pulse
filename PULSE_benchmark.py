@@ -11,15 +11,13 @@ from torch.utils.data import DataLoader
 from src.data.dataloader import DatasetManager, TorchDatasetWrapper
 from src.logger_setup import init_wandb, setup_logger
 from src.models.modelmanager import ModelManager
-from src.util.config_util import (
-    load_config_with_models,
-    save_config_file,
-    check_model_config_validity,
-    set_seeds,
-    get_deterministic_dataloader_args,
-)
-from src.util.slurm_util import copy_data_to_scratch, get_local_scratch_dir, is_on_slurm
+from src.util.config_util import (check_model_config_validity,
+                                  get_deterministic_dataloader_args,
+                                  load_config_with_models, save_config_file,
+                                  set_seeds)
 from src.util.env_util import load_environment
+from src.util.slurm_util import (copy_data_to_scratch, get_local_scratch_dir,
+                                 is_on_slurm)
 
 logger, output_dir = setup_logger()
 
@@ -268,6 +266,7 @@ class PulseBenchmark:
                             # Set trainer for the model and train
                             model.set_trainer(
                                 model.trainer_name,
+                                model,
                                 train_loader,
                                 val_loader,
                             )
@@ -296,7 +295,7 @@ class PulseBenchmark:
 
                     # Force garbage collection
                     gc.collect()
-                    logger.info("Memory cleaned up after training %s", model.model_name)
+                    logger.info("Memory cleaned up after running %s", model.model_name)
 
             # Memory cleanup after processing each task-dataset combination
             del updated_models
@@ -306,7 +305,7 @@ class PulseBenchmark:
             gc.collect()
             logger.info("Memory cleaned up after processing %s", task_dataset_name)
 
-        logger.info("Training process completed.")
+        logger.info("Benchmark process completed.")
 
 
 def parse_args() -> argparse.Namespace:
