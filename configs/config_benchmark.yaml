@@ -5,10 +5,11 @@ general:
   app_name: "Pulse"
   app_version: "1.0.1"
   app_mode: "debug" # "debug", "count_tokens", "benchmark",
-  debug_data_length: 1000 # Number of samples to use for debugging
+  debug_data_length: 10000 # Number of samples to use for debugging
   logging_level: "DEBUG" # "DEBUG", "INFO", "WARNING", "ERROR"
   use_scratch: true # Whether to use scratch space for temporary files
   save_metadata: true # Whether to save the metadata file. Inludes prompts for LLMs
+
 
 # Weight and Biases (wandb) logging configuration
 wandb:
@@ -16,27 +17,27 @@ wandb:
   entity: "berner"
 
 ###### Application specific settings ######
-base_path: ""
+base_path: "/cluster/project/bmds_lab/sepsis_sophia/pulse"
 
 # Tasks to process
 tasks:
-  - "aki"
   # - "mortality"
+  - "aki"
   # - "sepsis"
 
 # Datasets to process
 dataset_path: "datasets/original_harmonized" #"/path/to/datasets"
 datasets:
-  # - "eicu"
   - "hirid"
   # - "miiv"
+  # - "eicu"
 
 # _______ Preprocessing Baseline _______
 
 preprocessing_baseline:
   replace_outliers: true # Whether to replace outliers with NaNs
   flag_na: true # Whether to flag NA values with binary indicators
-  standardize: true # Whether to standardize features (yes: convDL, not required: convML, LLM)
+  standardize: false # Whether to standardize features (yes: convDL, not required: convML, LLM)
   static_imputation: true # Whether to perform static feature imputation
   dynamic_imputation: true # Whether to perform dynamic feature imputation
   split_ratios: # Train/Val/Test split ratios
@@ -44,7 +45,7 @@ preprocessing_baseline:
     val: 0.1
     test: 0.1
     test_limited: 100 # Number of stay_ids for limited test set, null = test set is not limited
-    samples_per_stayid: 10  # Number of samples to keep per stay_id for aki/hirid
+    samples_per_stayid: null  # Number of samples to keep per stay_id for aki/hirid (null = all samples)
     print_stats: true # Whether to print set statistics
 
 # _______ Preprocessing Advanced _______
@@ -60,10 +61,10 @@ preprocessing_advanced:
 # _______ Preprocessing Prompting _______
 
 prompting:
-  prompting_ids:
+  prompting_ids: # Only select one at a time
     # - "agentic_prompt_test_preprocessor"
     # - "liu_2023_few_shot_preprocessor"
-    - "sarvari_2024_aggregation_preprocessor"
+    # - "sarvari_2024_aggregation_preprocessor"
     # - "zhu_2024a_one_shot_cot_preprocessor"
     # - "zhu_2024b_one_shot_preprocessor"
     # - "zhu_2024c_categorization_summary_agent_preprocessor"
@@ -76,13 +77,13 @@ benchmark_settings:
   random_seed: 42
 
 load_models:
-  # - "configs/model_configs/RandomForestModel.yaml"
+  - "configs/model_configs/RandomForestModel.yaml"
   # - "configs/model_configs/XGBoost.yaml"
   # - "configs/model_configs/LightGBMModel.yaml"
 
   # - "configs/model_configs/CNNModel.yaml"
   # - "configs/model_configs/InceptionTimeModel.yaml"
-  - "configs/model_configs/LSTMModel.yaml"
+  # - "configs/model_configs/LSTMModel.yaml"
   # - "configs/model_configs/GRUModel.yaml"
 
   # - "configs/model_configs/MedGemma4bModel.yaml"

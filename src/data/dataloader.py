@@ -11,8 +11,9 @@ from omegaconf import OmegaConf
 from torch.utils.data import Dataset
 
 from src.preprocessing.preprocessing_advanced.windowing import Windower
-from src.preprocessing.preprocessing_baseline.preprocessing_baseline import \
-    PreprocessorBaseline
+from src.preprocessing.preprocessing_baseline.preprocessing_baseline import (
+    PreprocessorBaseline,
+)
 from src.preprocessing.preprocessing_prompts import get_prompting_preprocessor
 from src.util.config_util import set_seeds
 
@@ -428,7 +429,7 @@ class DatasetManager:
 
             if self.samples_per_stayid is not None and dataset["task"] in [
                 "aki",
-                "hirid",
+                "sepsis",
             ]:
                 X_test_limited = dataset["data"]["X_test"]
                 y_test_limited = dataset["data"]["y_test"]
@@ -454,17 +455,14 @@ class DatasetManager:
                         # If we have fewer rows than requested, take all of them
                         selected_indices = indices
                     else:
-                        # Calculate step size for completely even distribution
+                        # For even spacing, we need to divide the range into samples_per_stayid-1 segments
                         step = (n_indices - 1) / (self.samples_per_stayid - 1)
 
                         # Generate evenly spaced indices
                         selected_indices = [
-                            indices[min(int(i * step), n_indices - 1)]
+                            indices[min(round(i * step), n_indices - 1)]
                             for i in range(self.samples_per_stayid)
                         ]
-
-                        # Make sure the last index is exactly the last available row
-                        selected_indices[-1] = indices[-1]
 
                     # Add the selected rows to the sampled dataframes
                     X_limited_sampled = pd.concat(
@@ -526,11 +524,24 @@ class DatasetManager:
 
         # Convert categorical columns to numerical values for convML models
         if model_type in ["convML"]:
-            # Process gender column in X if it exists
-            for data_set in ["X_train", "X_val", "X_test"]:
-                X = dataset["data"][data_set]
-                X["sex"] = X["sex"].map({"Male": 1, "Female": 0}).fillna(-1)
-                dataset["data"][data_set] = X
+
+            def convert_categorical_columns(df):
+                """Convert categorical columns to numerical values."""
+                if "sex" in df.columns:
+                    df = df.copy()
+                    df["sex"] = df["sex"].map({"Male": 1, "Female": 0}).fillna(-1)
+                return df
+
+            # Process all feature datasets
+            feature_datasets = ["X_train", "X_val", "X_test"]
+            if "X_test_sampled" in dataset["data"]:
+                feature_datasets.append("X_test_sampled")
+
+            for data_set in feature_datasets:
+                dataset["data"][data_set] = convert_categorical_columns(
+                    dataset["data"][data_set]
+                )
+
             logger.debug("Converted gender column to numerical values")
 
         # Print statistics if requested (Print train, val and both original and limited test set statistics to compare distributions)
@@ -604,7 +615,7 @@ class DatasetManager:
                 "data_window": data_window,
             }
 
-            # Add model instance to info_dict if provided in kwargs
+            # Add model instance to info_dict if provided in kwargs (for ModelManager and agent setup)
             if "model_instance" in kwargs:
                 info_dict["model_instance"] = kwargs["model_instance"]
 
@@ -655,11 +666,11 @@ class DatasetManager:
                 # Store the loaded model back to the benchmark.py flow
                 kwargs["loaded_model"] = info_dict["loaded_model"]
 
-        # Return the appropriate test set based on mode and availability
+        # Return the appropriate test set based on availability
         if (
-            mode == "test"
-            and "X_test_sampled" in dataset["data"]
-            and dataset["task"] in ["aki", "hirid"]
+            "X_test_sampled" in dataset["data"]
+            and "y_test_sampled" in dataset["data"]
+            and dataset["task"] in ["aki", "sepsis"]
         ):
             return (
                 dataset["data"]["X_train"],
