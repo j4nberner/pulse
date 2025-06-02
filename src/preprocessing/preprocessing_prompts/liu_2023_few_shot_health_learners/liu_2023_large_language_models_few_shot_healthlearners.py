@@ -165,7 +165,7 @@ def build_liu_query(
                 lines.append(
                     "Answer: \n"
                     "{\n"
-                    f' "diagnosing": "{diagnosis}",\n'
+                    f' "diagnosis": "{diagnosis}",\n'
                     '  "classification": "<the probability of your estimation as a float>",\n'
                     '  "explanation": "<a brief explanation for the prediction>"\n'
                     "}\n"

@@ -5,20 +5,20 @@ import sys
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
-from omegaconf import OmegaConf
 import pandas as pd
 import torch
+from omegaconf import OmegaConf
 from torch.utils.data import Dataset
 
-from src.util.config_util import set_seeds
 from src.preprocessing.preprocessing_advanced.windowing import Windower
-from src.preprocessing.preprocessing_baseline.preprocessing_baseline import (
-    PreprocessorBaseline,
-)
+from src.preprocessing.preprocessing_baseline.preprocessing_baseline import \
+    PreprocessorBaseline
 from src.preprocessing.preprocessing_prompts import get_prompting_preprocessor
+from src.util.config_util import set_seeds
 
 # Set up logger
 logger = logging.getLogger("PULSE_logger")
+
 
 class DatasetManager:
     """
@@ -338,9 +338,10 @@ class DatasetManager:
             model_name (str): Name of the model
             mode (str): train, val, or test (default: train)
             **kwargs: Additional keyword arguments
-            - debug (bool): If True, take only a specified number of rows
-            - print_stats (bool): If True, print statistics for the datasets
             - prompting_id (str): ID of prompt preprocessing to apply
+            - model_type (str): Type of model (e.g., "convML", "convDL", "LLM")
+            - fine_tuning (bool): Whether to apply fine-tuning (default: False)
+
 
         Returns:
             Tuple[pd.DataFrame]: Features and labels
@@ -354,11 +355,9 @@ class DatasetManager:
             return None, None, None, None, None, None
 
         dataset = self.datasets[dataset_id].copy()
-        prompting_id = kwargs.get("prompting_id", None)
-        model_type = kwargs.get("model_type", None)
-        fine_tuning = kwargs.get("fine_tuning", False)
-        print_stats = kwargs.get("print_stats", False)
-        save_test_set = kwargs.get("save_test_set", False)
+        print_stats = self.datasets[dataset_id]["preprocessing_baseline"][
+            "split_ratios"
+        ]["print_stats"]
 
         if not dataset["loaded"]:
             success, dataset = self.load_dataset(dataset_id)
@@ -419,7 +418,7 @@ class DatasetManager:
             dataset["data"]["y_test"] = y_limited
             logger.info(
                 "Limited test set to first %s stay_ids for %s",
-                self.test_limited,
+                len(selected_stay_ids),
                 dataset_id,
             )
 
@@ -459,6 +458,9 @@ class DatasetManager:
 
         del data  # Clear the data variable to free up memory
 
+        # Model specific parameters from kwargs. Throws KeyError if not provided.
+        model_type = kwargs["model_type"]
+
         # Convert categorical columns to numerical values for convML models
         if model_type in ["convML", "convDL"]:
             # Process gender column in X if it exists
@@ -466,7 +468,6 @@ class DatasetManager:
                 X = dataset["data"][data_set]
                 X["sex"] = X["sex"].map({"Male": 1, "Female": 0}).fillna(-1)
                 dataset["data"][data_set] = X
-
             logger.debug("Converted gender column to numerical values")
 
         # Print statistics if requested (Print train, val and both original and limited test set statistics to compare distributions)
@@ -507,7 +508,9 @@ class DatasetManager:
         logger.debug("Dropped stay_id column from all features and labels")
 
         # Apply advanced preprocessing if needed -> generate prompts
-        if prompting_id is not None and model_type == "LLM":
+        if model_type == "LLM":
+            prompting_id = kwargs["prompting_id"]
+            fine_tuning = kwargs["fine_tuning"]
 
             prompting_preprocessor = get_prompting_preprocessor(
                 prompting_id=prompting_id
@@ -649,11 +652,28 @@ class TorchDatasetWrapper(Dataset):
         # Optional: Convert DataFrames to NumPy arrays upfront if they fit in memory
         # This avoids repeated conversions during __getitem__ calls
         # Comment this out if data is too large
-        self.X_array = X.values.astype(np.float32)
-        self.y_array = y.values.astype(np.float32)
+        # TODO: @sophiafe - Can we remove this? Very prone to memory issues. Or check available memory before converting.
+        # self.X_array = X.values.astype(np.float32)
+        # self.y_array = y.values.astype(np.float32)
 
         # Store column dtypes for efficient conversion
         self.dtypes = X.dtypes
+
+        # Calculate pos/neg ratio, avoid division by zero
+        neg = len(y) - y["label"].sum()
+        pos = y["label"].sum()
+        if pos == 0:
+            logger.warning(
+                "No positive samples found in the dataset. Setting pos_weight to 1."
+            )
+            self.pos_weight = 1.0
+        elif neg == 0:
+            logger.warning(
+                "No negative samples found in the dataset. Setting pos_weight to 0."
+            )
+            self.pos_weight = 0.0
+        else:
+            self.pos_weight = neg / pos
 
     def __len__(self):
         """Return the number of samples in the dataset."""
@@ -669,7 +689,6 @@ class TorchDatasetWrapper(Dataset):
         Returns:
             tuple: (features, label) as torch.Tensor
         """
-
         # If we pre-computed arrays, use them
         if hasattr(self, "X_array") and hasattr(self, "y_array"):
             X_sample = self.X_array[idx]
@@ -686,6 +705,7 @@ class TorchDatasetWrapper(Dataset):
         # Convert to PyTorch tensors
         return torch.tensor(X_sample), torch.tensor(y_sample)
 
+    # TODO: @sophiafe Is this still needed?
     def get_batch(self, indices):
         """
         Custom method to get a batch with explicit indices.

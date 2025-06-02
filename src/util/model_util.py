@@ -117,73 +117,42 @@ def save_sklearn_model(model_name: str, model: Any, save_dir: str) -> None:
 
 
 def prepare_data_for_model_convml(
-    train_loader, val_loader, test_loader
-) -> Dict[str, Any]:
+    data_loader: Any,
+) -> tuple[np.ndarray, np.ndarray, List[str]]:
     """
     Prepare data for conventional machine learning models by converting PyTorch tensors
     from dataloaders to numpy arrays while preserving feature names.
 
     Args:
-        train_dataloader: DataLoader containing the training data or list of data in debug mode
-        test_dataloader: DataLoader containing the test data or list of data in debug mode
+        data_loader: DataLoader containing the data or list of data in debug mode
 
     Returns:
-        dict: Dictionary containing:
-            - X_train: numpy array of training features
-            - y_train: numpy array of training labels
-            - X_val: numpy array of validation features (if available)
-            - y_val: numpy array of validation labels (if available)
-            - X_test: numpy array of test features
-            - y_test: numpy array of test labels
-            - feature_names: list of feature names (if available)
+        Tuple containing:
+            - X: Numpy array of features
+            - y: Numpy array of labels
+            - feature_names: List of feature names
     """
 
     # Extract data from dataloaders
-    X_train, y_train = [], []
-    X_val, y_val = [], []
-    X_test, y_test = [], []
+    X, y = [], []
     feature_names = []
 
-    if isinstance(train_loader[0], pd.DataFrame):
+    if isinstance(data_loader[0], pd.DataFrame):
         # If DataLoader is a DataFrame, extract features and labels directly
-        X_train = np.array(train_loader[0].values)
-        y_train = np.array(train_loader[1].values).squeeze()
-        X_val = np.array(val_loader[0].values)
-        y_val = np.array(val_loader[1].values).squeeze()
-        X_test = np.array(test_loader[0].values)
-        y_test = np.array(test_loader[1].values).squeeze()
-        feature_names = list(train_loader[0].columns)
+        X = np.array(data_loader[0].values)
+        y = np.array(data_loader[1].values).squeeze()
+        feature_names = list(data_loader[0].columns)
 
     else:
         # Convert lists to numpy arrays
-        X_train = np.array(X_train)
-        y_train = np.array(y_train)
-        X_val = np.array(X_val)
-        y_val = np.array(y_val)
-        X_test = np.array(X_test)
-        y_test = np.array(y_test)
+        X = np.array(X)
+        y = np.array(y)
 
     # Log shapes
-    logger.debug(
-        "Prepared data shapes - X_train: %s, y_train: %s", X_train.shape, y_train.shape
-    )
-    logger.debug(
-        "Prepared data shapes - X_val: %s, y_val: %s", X_val.shape, y_val.shape
-    )
-    logger.debug(
-        "Prepared data shapes - X_test: %s, y_test: %s", X_test.shape, y_test.shape
-    )
+    logger.debug("Prepared data shapes - X: %s, y: %s", X.shape, y.shape)
 
     # Return all processed data
-    return {
-        "X_train": X_train,
-        "y_train": y_train,
-        "X_val": X_val,
-        "y_val": y_val,
-        "X_test": X_test,
-        "y_test": y_test,
-        "feature_names": feature_names,
-    }
+    return X, y, feature_names
 
 
 def prepare_data_for_model_convdl(
@@ -206,7 +175,8 @@ def prepare_data_for_model_convdl(
     """
 
     # Import the converter
-    from src.preprocessing.preprocessing_advanced.windowing import WindowedDataTo3D
+    from src.preprocessing.preprocessing_advanced.windowing import \
+        WindowedDataTo3D
 
     # Create converter with model name and config
     converter = WindowedDataTo3D(
@@ -248,6 +218,7 @@ def prepare_data_for_model_convdl(
     return converter
 
 
+@DeprecationWarning
 def calculate_pos_weight(train_loader):
     """
     Calculate positive class weight for imbalanced binary classification data.
@@ -329,7 +300,7 @@ def prompt_template_hf(
         "Your response must strictly follow this format:\n"
         "Output a valid JSON object with three keys: 'diagnosis', 'probability' and 'explanation'.\n\n"
         "1. 'diagnosis' a string with either diganosis or not-diagnosis\n"
-        "2. 'probability' a value between 0 and 1. where 0 means not-diagnosis and 1 means diagnosis.\n"
+        "2. 'probability' a value between 0 and 1. where 0 means not diagnosed and 1 means diagnosed.\n"
         "3. 'explanation' should be a string providing a brief explanation of your diagnosis.\n\n"
         "Here is a positive example:\n"
         "{\n"
@@ -358,15 +329,15 @@ def prompt_template_hf(
         ]
     elif model == "GPTModel":
         formatted_prompt = [
-        {
-            "role": "developer",
-            "content": system_message,
-        },
-        {
-            "role": "user",
-            "content": input_text,
-        },
-    ]
+            {
+                "role": "developer",
+                "content": system_message,
+            },
+            {
+                "role": "user",
+                "content": input_text,
+            },
+        ]
     elif model == "MeditronModel":
         formatted_prompt = [
             f"<|im_start|>system\n{system_message}<|im_end|>\n"
@@ -424,6 +395,9 @@ def extract_dict(output_text: str) -> Optional[Dict[str, str]]:
         "explanation": "No explanation provided.",
     }
 
+    if output_text.count("{") > output_text.count("}"):
+        output_text = output_text + "}"
+
     json_text = extract_last_json_block(output_text)
     if not json_text:
         logger.warning("No JSON object found in assistant output. Returning default.")
@@ -447,6 +421,15 @@ def extract_dict(output_text: str) -> Optional[Dict[str, str]]:
         return re.sub(r'"(.*?)"', repl, s, flags=re.DOTALL)
 
     json_text_clean = escape_newlines_in_strings(json_text)
+
+    # Check if the correct keys are present
+    if not all(
+        key in json_text_clean for key in ["diagnosis", "probability", "explanation"]
+    ):
+        logger.warning(
+            "JSON object does not contain all required keys. Returning default."
+        )
+        return default_json
 
     try:
         return json.loads(json_text_clean)

@@ -22,8 +22,6 @@ from sklearn.metrics import (
 
 logger = logging.getLogger("PULSE_logger")
 
-# TODO: maybe implement sub-group AUROC and AUPRC (considering the fairness and biases of models) for different genders, age ranges, etc.
-
 
 class MetricsTracker:
     """
@@ -92,18 +90,12 @@ class MetricsTracker:
             item: Dictionary containing keys such as 'input', 'target', 'prediction',
                   'token_time', 'infer_time', 'num_input_tokens', 'num_output_tokens', etc.
         """
-        # Store predictions and labels for metrics computation
-        if "prediction" in item:
-            self.results["predictions"].append(item["prediction"])
-        if "target" in item:
-            self.results["labels"].append(item["target"])
-
-        # Optionally, store additional metadata if needed
+        # Store additional metadata if needed
         if not hasattr(self, "items"):
             self.items = []
         self.items.append(item)
 
-    def log_metadata(self, save_to_file: bool = False) -> None:
+    def log_metadata(self, save_to_file: bool = True) -> None:
         """
         Print and summarize metadata for the tracked items.
 
@@ -116,8 +108,8 @@ class MetricsTracker:
             means = df.select_dtypes(include=[np.number]).mean().to_dict()
             for k, v in means.items():
                 logger.info(f"Average {k}: {v}")
-                logger.info(f"Max {k}: {df[k].max()}")
-                logger.info(f"Min {k}: {df[k].min()}")
+                logger.debug(f"Max {k}: {df[k].max()}")
+                logger.debug(f"Min {k}: {df[k].min()}")
                 logger.info(f"Total {k}: {df[k].sum()}")
             if save_to_file:
                 summary_path = os.path.join(

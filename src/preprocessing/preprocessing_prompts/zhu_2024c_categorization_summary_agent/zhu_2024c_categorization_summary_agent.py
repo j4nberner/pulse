@@ -1,15 +1,14 @@
+import gc
 import json
 import logging
 import os
-import gc
 from typing import Any, Dict, List, Tuple
 
 import pandas as pd
 import torch
 
-from src.preprocessing.preprocessing_prompts.zhu_2024c_categorization_summary_agent.zhu_2024c_agent_class import (
-    Zhu2024cAgent,
-)
+from src.preprocessing.preprocessing_prompts.zhu_2024c_categorization_summary_agent.zhu_2024c_agent_class import \
+    Zhu2024cAgent
 
 logger = logging.getLogger("PULSE_logger")
 

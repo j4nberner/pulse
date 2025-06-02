@@ -1,7 +1,7 @@
 import logging
 import os
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict
 
 import torch
 import torch.nn as nn
@@ -10,21 +10,20 @@ import torch.optim as optim
 
 import wandb
 from src.eval.metrics import MetricsTracker
-from src.models.pulsetemplate_model import PulseTemplateModel
+from src.models.pulse_model import PulseModel
 from src.util.config_util import set_seeds
 from src.util.model_util import (
     EarlyStopping,
-    calculate_pos_weight,
+    initialize_weights,
     prepare_data_for_model_convdl,
     save_torch_model,
-    initialize_weights,
 )
 
 # Set up logger
 logger = logging.getLogger("PULSE_logger")
 
 
-class InceptionTimeModel(PulseTemplateModel, nn.Module):
+class InceptionTimeModel(PulseModel, nn.Module):
     """
     Implementation of InceptionTime deep learning model for time series classification.
     """
@@ -101,19 +100,14 @@ class InceptionTimeModel(PulseTemplateModel, nn.Module):
         Raises:
             KeyError: If any required parameters are missing from the config.
         """
-        # Validate trainer_name in params
-        if "trainer_name" not in params:
-            raise KeyError("Required parameter 'trainer_name' not found in config")
-
-        # Extract model_name from kwargs if it exists (passed from ModelManager)
-        if "model_name" in kwargs:
-            self.model_name = kwargs.pop("model_name")  # Remove to avoid duplication
-        else:
-            # Fallback to class name if model_name not in kwargs
-            self.model_name = self.__class__.__name__.replace("Model", "")
-
-        self.trainer_name = params["trainer_name"]
-        super().__init__(self.model_name, self.trainer_name, params=params, **kwargs)
+        model_name = kwargs.pop("model_name", "InceptiontimeModel")
+        trainer_name = params["trainer_name"]
+        super().__init__(
+            model_name=model_name,
+            params=params,
+            trainer_name=trainer_name,
+            **kwargs,
+        )
         nn.Module.__init__(self)
 
         # Define required parameters based on InceptionTimeModel.yaml
@@ -135,24 +129,12 @@ class InceptionTimeModel(PulseTemplateModel, nn.Module):
             "min_lr",
         ]
 
-        # Check if all required parameters exist in config
-        missing_params = [param for param in required_params if param not in params]
-        if missing_params:
-            raise KeyError(f"Required parameters missing from config: {missing_params}")
-
-        # Extract parameters from config
-        self.params = params
+        self.check_required_params(params, required_params)
 
         # Log configuration details
         logger.info(
             "Initializing %s model with parameters: %s", self.model_name, self.params
         )
-
-        # Set the model save directory
-        self.save_dir = kwargs.get("output_dir", f"{os.getcwd()}/output")
-
-        # Check if wandb is enabled
-        self.wandb = kwargs.get("wandb", False)
 
         # Network architecture parameters directly from params
         self.depth = self.params["depth"]
@@ -164,6 +146,9 @@ class InceptionTimeModel(PulseTemplateModel, nn.Module):
         self.in_channels = None
         self.out_channels = None
         self.network = None
+        # Store inception and residual modules separately
+        self.inception_modules = nn.ModuleList()
+        self.residual_connections = nn.ModuleDict()
 
         # Initialize early stopping
         self.early_stopping = EarlyStopping(
@@ -223,7 +208,9 @@ class InceptionTimeModel(PulseTemplateModel, nn.Module):
         Args:
             num_channels: Number of input channels from the data
         """
-        set_seeds(self.model.params["random_seed"])
+        # Reset inception and residual modules
+        self.inception_modules = nn.ModuleList()
+        self.residual_connections = nn.ModuleDict()
 
         # Reconfigure channel dimensions using the helper method
         self._configure_channels(num_channels)
@@ -231,10 +218,6 @@ class InceptionTimeModel(PulseTemplateModel, nn.Module):
         # Calculate output channels for each inception block based on kernel sizes
         # Each kernel size contributes one path, plus there's one pooling path
         num_paths_per_block = len(self.kernel_sizes) + 1
-
-        # Store inception and residual modules separately
-        self.inception_modules = nn.ModuleList()
-        self.residual_connections = nn.ModuleDict()
 
         # Build inception modules with residual connections
         for d in range(self.depth):
@@ -306,19 +289,109 @@ class InceptionTimeModel(PulseTemplateModel, nn.Module):
 
         return x
 
-    def set_trainer(self, trainer_name, train_loader, val_loader, test_loader):
+    def evaluate(self, data_loader, save_report=False):
         """
-        Set the trainer for the model.
-
+        Evaluate the model on the specified data loader.
         Args:
-            trainer_name: Name of the trainer.
-            train_loader: DataLoader for training data.
-            val_loader: DataLoader for validation data.
-
-        Returns:
-            None
+            data_loader: DataLoader for evaluation data.
+            save_report: Whether to save the evaluation report.
         """
-        self.trainer = InceptionTimeTrainer(self, train_loader, val_loader, test_loader)
+        metrics_tracker = MetricsTracker(
+            self.model_name,
+            self.task_name,
+            self.dataset_name,
+            self.save_dir,
+        )
+        self.eval()
+
+        # Track both batches and per-batch metrics for logging
+        batch_metrics = []
+
+        # Get the configured converter
+        converter = prepare_data_for_model_convdl(
+            data_loader,
+            self.params,
+            model_name=self.model_name,
+            task_name=self.task_name,
+        )
+
+        # Load model from pretrained state if available and not in training mode
+        if self.pretrained_model_path and self.mode != "train":
+            # Configure the model input size based on the data
+            features, _ = next(iter(data_loader))
+            transformed_features = converter.convert_batch_to_3d(features)
+            input_dim = transformed_features.shape[-1]
+            self.input_size = input_dim
+            self._init_model()
+            self.load_model_weights(self.pretrained_model_path)
+
+        with torch.no_grad():
+            for batch_idx, (features, labels) in enumerate(data_loader):
+                # Convert features for the model
+                features = converter.convert_batch_to_3d(features)
+                features, labels = (
+                    features.to(self.device),
+                    labels.to(self.device).float(),
+                )
+
+                # Forward pass
+                outputs = self(features)
+
+                # Get predictions (sigmoid for binary classification)
+                probs = torch.sigmoid(outputs).squeeze()
+                preds = (probs >= 0.5).int()
+
+                # Calculate batch accuracy for logging
+                batch_accuracy = (preds == labels).sum().item() / labels.size(0)
+                batch_metrics.append(batch_accuracy)
+
+                # Log batch progress if verbose
+                if self.params["verbose"] == 2 or (
+                    self.params["verbose"] == 1 and batch_idx % 100 == 0
+                ):
+                    logger.info(
+                        "Evaluating batch %d/%d: Accuracy = %.4f",
+                        batch_idx + 1,
+                        len(data_loader),
+                        batch_accuracy,
+                    )
+                metadata_dict = {
+                    "batch": batch_idx,
+                    "prediction": outputs.cpu().numpy(),
+                    "label": labels.cpu().numpy(),
+                    "age": features[:, 0, 0].cpu().numpy(),
+                    "sex": features[:, 0, 1].cpu().numpy(),
+                    "height": features[:, 0, 2].cpu().numpy(),
+                    "weight": features[:, 0, 3].cpu().numpy(),
+                }
+                # Append results to metrics tracker
+                metrics_tracker.add_results(outputs.cpu().numpy(), labels.cpu().numpy())
+                metrics_tracker.add_metadata_item(metadata_dict)
+
+        # Calculate and log metrics
+        metrics_tracker.summary = metrics_tracker.compute_overall_metrics()
+        if save_report:
+            # Calculate and log metrics
+            metrics_tracker.log_metadata(True)
+            metrics_tracker.save_report()
+
+        # Log results to console
+        logger.info("Test evaluation completed for %s", self.model_name)
+        logger.info("Test metrics: %s", metrics_tracker.summary)
+        logger.info(
+            "Average batch accuracy: %.4f", sum(batch_metrics) / len(batch_metrics)
+        )
+
+        # Log all metrics to wandb if enabled
+        if self.wandb:
+            # Create a dictionary with all metrics
+            wandb_metrics = {f"test_{k}": v for k, v in metrics_tracker.summary.items()}
+            # Add average batch accuracy
+            wandb_metrics["test_avg_batch_accuracy"] = sum(batch_metrics) / len(
+                batch_metrics
+            )
+            # Log all metrics at once
+            wandb.log(wandb_metrics)
 
 
 class InceptionTimeTrainer:
@@ -329,7 +402,7 @@ class InceptionTimeTrainer:
     including data preparation, training, evaluation and saving.
     """
 
-    def __init__(self, model, train_loader, val_loader, test_loader):
+    def __init__(self, model, train_loader, val_loader):
         """
         Initialize the InceptionTime trainer.
 
@@ -337,14 +410,12 @@ class InceptionTimeTrainer:
             model: The GRU model to train.
             train_loader: DataLoader for training data.
             val_loader: DataLoader for validation data.
-            test_loader: DataLoader for testing data.
         """
         self.model = model
         self.params = model.params
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.train_loader = train_loader
         self.val_loader = val_loader
-        self.test_loader = test_loader
         self.wandb = self.model.wandb
         self.task_name = self.model.task_name
         self.dataset_name = self.model.dataset_name
@@ -365,7 +436,7 @@ class InceptionTimeTrainer:
         self._prepare_data()
 
         # Set criterion after calculating class weights for imbalanced datasets
-        self.pos_weight = calculate_pos_weight(self.train_loader)
+        self.pos_weight = self.train_loader.dataset.pos_weight
         self.criterion = nn.BCEWithLogitsLoss(
             pos_weight=torch.tensor([self.pos_weight]).to(self.device)
         )
@@ -458,6 +529,7 @@ class InceptionTimeTrainer:
         self.criterion.to(self.device)
 
         # Initialize metrics tracking dictionary (not used for earlystopping, logging or wandb)
+        # TODO: @sophiafe self.metrics is not used. Do we need it?
         self.metrics = {"train_loss": [], "val_loss": []}
 
         logger.info("Starting training on device: %s", self.device)
@@ -484,9 +556,6 @@ class InceptionTimeTrainer:
         self.model.early_stopping.load_best_model(self.model)
         model_save_name = f"{self.model.model_name}_{self.task_name}_{self.dataset_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         save_torch_model(model_save_name, self.model, self.model_save_dir)
-
-        # Evaluate the model on the testing set
-        self.evaluate()
 
     def train_epoch(self, epoch: int, verbose: int = 1) -> None:
         """
@@ -600,72 +669,3 @@ class InceptionTimeTrainer:
                 val_loss += loss.item()
 
         return val_loss / len(self.val_loader)
-
-    def evaluate(self):
-        """Evaluate the model on the specified data loader."""
-        metrics_tracker = MetricsTracker(
-            self.model.model_name,
-            self.model.task_name,
-            self.model.dataset_name,
-            self.model.save_dir,
-        )
-        self.model.eval()
-
-        # Track both batches and per-batch metrics for logging
-        batch_metrics = []
-
-        with torch.no_grad():
-            for batch_idx, (features, labels) in enumerate(self.test_loader):
-                # Convert features for the model
-                features = self.converter.convert_batch_to_3d(features)
-                features, labels = (
-                    features.to(self.device),
-                    labels.to(self.device).float(),
-                )
-
-                # Forward pass
-                outputs = self.model(features)
-
-                # Get predictions (sigmoid for binary classification)
-                probs = torch.sigmoid(outputs).squeeze()
-                preds = (probs >= 0.5).int()
-
-                # Calculate batch accuracy for logging
-                batch_accuracy = (preds == labels).sum().item() / labels.size(0)
-                batch_metrics.append(batch_accuracy)
-
-                # Add results to metrics tracker
-                metrics_tracker.add_results(outputs.cpu().numpy(), labels.cpu().numpy())
-
-                # Log batch progress if verbose
-                if self.params["verbose"] == 2 or (
-                    self.params["verbose"] == 1 and batch_idx % 100 == 0
-                ):
-                    logger.info(
-                        "Evaluating batch %d/%d: Accuracy = %.4f",
-                        batch_idx + 1,
-                        len(self.test_loader),
-                        batch_accuracy,
-                    )
-
-        # Calculate and log metrics
-        metrics_tracker.summary = metrics_tracker.compute_overall_metrics()
-        metrics_tracker.save_report()
-
-        # Log results to console
-        logger.info("Test evaluation completed for %s", self.model.model_name)
-        logger.info("Test metrics: %s", metrics_tracker.summary)
-        logger.info(
-            "Average batch accuracy: %.4f", sum(batch_metrics) / len(batch_metrics)
-        )
-
-        # Log all metrics to wandb if enabled
-        if self.wandb:
-            # Create a dictionary with all metrics
-            wandb_metrics = {f"test_{k}": v for k, v in metrics_tracker.summary.items()}
-            # Add average batch accuracy
-            wandb_metrics["test_avg_batch_accuracy"] = sum(batch_metrics) / len(
-                batch_metrics
-            )
-            # Log all metrics at once
-            wandb.log(wandb_metrics)

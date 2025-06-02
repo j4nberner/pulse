@@ -16,7 +16,7 @@ from transformers import (AutoModelForCausalLM, AutoTokenizer,
 
 import wandb
 from src.eval.metrics import MetricsTracker
-from src.models.pulsetemplate_model import PulseTemplateModel
+from src.models.pulse_model import PulseTemplateModel
 from src.util.model_util import extract_dict, prompt_template_hf
 
 warnings.filterwarnings(
@@ -57,9 +57,7 @@ class MeditronModel(PulseTemplateModel):
         self.params: Dict[str, Any] = params
         self.params["save_test_set"] = kwargs.get("save_test_set", False)
 
-        self.model_id: str = self.params.get(
-            "model_id", "epfl-llm/meditron-7b"
-        )
+        self.model_id: str = self.params.get("model_id", "epfl-llm/meditron-7b")
         self.max_length: int = self.params.get("max_length", 5120)
 
         self.tokenizer: Optional[Any] = None
@@ -234,7 +232,6 @@ class MeditronModel(PulseTemplateModel):
         Returns:
             A float representing the predicted probability.
         """
-        # TODO: Implement a more robust parsing method
         try:
             # Extract the floating-point number from the output
             if "not-" in output:

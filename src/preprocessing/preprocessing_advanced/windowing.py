@@ -7,9 +7,8 @@ import pandas as pd
 import torch
 from tqdm import tqdm
 
-from src.preprocessing.preprocessing_baseline.preprocessing_baseline import (
-    PreprocessorBaseline,
-)
+from src.preprocessing.preprocessing_baseline.preprocessing_baseline import \
+    PreprocessorBaseline
 
 # Set up logger
 logger = logging.getLogger("PULSE_logger")
@@ -476,13 +475,15 @@ class WindowedDataTo3D:
         self.task_name = task_name
 
         # Dictionary mapping model names to their types (CNN or RNN)
+        # TODO: @sophiafe - this is prone to errors if model names are not consistent or are changed.
+        # How about using model.type instead?
         self.model_type_mapping = {
             # CNN type models
-            "CNN": "CNN",
-            "InceptionTime": "CNN",
+            "CNNModel": "CNN",
+            "InceptionTimeModel": "CNN",
             # RNN type models
-            "LSTM": "RNN",
-            "GRU": "RNN",
+            "LSTMModel": "RNN",
+            "GRUModel": "RNN",
         }
 
         # Set model type based on provided model name

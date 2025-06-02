@@ -82,7 +82,7 @@ class ModelManager:
 
     def _create_model_from_config(self, config: Dict, for_agent: bool = False) -> Any:
         """
-        Create a fresh model instance from a configuration.
+        Create a updated model instance from a configuration.
 
         Args:
             config: Model configuration dictionary
@@ -167,29 +167,29 @@ class ModelManager:
 
     def get_models_for_task(self, dataset_name: str) -> List[Any]:
         """
-        Create fresh model instances for a specific task/dataset combination.
+        Create updated model instances for a specific task/dataset combination.
 
         Args:
             dataset_name: Name of the dataset being processed
 
         Returns:
-            List[Any]: List of fresh model instances
+            List[Any]: List of updated model instances
         """
-        logger.info("Creating fresh model instances for dataset: %s", dataset_name)
-        fresh_models = []
+        logger.info("Creating updated model instances for dataset: %s", dataset_name)
+        updated_models = []
 
         for _, config in self.model_configs.items():
             try:
                 # Create a new model instance from the saved config
-                fresh_model = self._create_model_from_config(config)
-                fresh_models.append(fresh_model)
+                updated_model = self._create_model_from_config(config)
+                updated_models.append(updated_model)
             except Exception as e:
                 model_name = config.get("name", "unknown")
                 logger.error(
-                    "Failed to create fresh model '%s' for dataset %s: %s",
+                    "Failed to create updated model '%s' for dataset %s: %s",
                     model_name,
                     dataset_name,
                     str(e),
                 )
 
-        return fresh_models
+        return updated_models
