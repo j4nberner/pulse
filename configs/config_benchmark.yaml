@@ -45,7 +45,7 @@ preprocessing_baseline:
     val: 0.1
     test: 0.1
     test_limited: 100 # Number of stay_ids for limited test set, null = test set is not limited
-    samples_per_stayid: null  # Number of samples to keep per stay_id for aki/hirid (null = all samples)
+    samples_per_stayid: null  # Number of samples to keep per stay_id for aki/sepsis (null = all samples)
     print_stats: true # Whether to print set statistics
 
 # _______ Preprocessing Advanced _______
