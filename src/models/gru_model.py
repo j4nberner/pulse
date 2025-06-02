@@ -251,6 +251,7 @@ class GRUModel(PulseModel, nn.Module):
             self.create_network_with_input_shape(num_channels)
             logger.info(self)
             self.load_model_weights(self.pretrained_model_path)
+            self.to(self.device)
 
         # Track both batches and per-batch metrics for logging
         batch_metrics = []

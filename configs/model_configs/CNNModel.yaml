@@ -1,10 +1,9 @@
 name: "CNNModel"
-pretrained_model_path: null # Path to pretrained model (if any)
 params:
   # Basic configuration
   trainer_name: "CNNTrainer"
   type: "convDL" # Type of model (convML for conventional machine learning, convDL for conventional deep learning and LLM for large language models)
-  mode: "train" # Mode of operation (inference, train)
+  mode: "inference" # Mode of operation (inference, train)
   save_checkpoint: 0 # Save checkpoint every n epochs. Set to 0 to disable.
   verbose: 2 # Controls verbosity of output (0 = silent, 1 = log every 100 batches, 2 = log every batch)
 

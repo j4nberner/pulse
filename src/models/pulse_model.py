@@ -115,6 +115,7 @@ class PulseModel:
         if self.type == "convML":
             # Load the sklearn model using joblib
             self.model = joblib.load(model_path)
+            self.is_loaded = True
             logger.info("Sklearn model loaded successfully from %s", model_path)
 
         elif self.type == "convDL":
@@ -127,7 +128,8 @@ class PulseModel:
 
             # Load the weights into the model
             if hasattr(self, "load_state_dict"):
-                self.load_state_dict(state_dict)
+                self.load_state_dict(state_dict, strict=False)
+                self.is_loaded = True
                 logger.info("Model weights loaded successfully")
             else:
                 logger.warning(

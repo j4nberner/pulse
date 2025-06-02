@@ -208,6 +208,9 @@ class LSTMModel(PulseModel, nn.Module):
             self._init_model()
             self.load_model_weights(self.pretrained_model_path)
 
+        # Move model to the appropriate device
+        self.to(self.device)
+
         with torch.no_grad():
             for batch, (inputs, labels) in enumerate(data_loader):
                 inputs = converter.convert_batch_to_3d(inputs)

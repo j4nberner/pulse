@@ -90,6 +90,7 @@ class PulseBenchmark:
                 model.task_name = task_name
                 model.dataset_name = dataset_name
                 model.save_metadata = self.config.general.save_metadata
+                model.pretrained_model_path = get_pretrained_model_path(path_list, model.model_name, model.task_name, model.dataset_name)
 
                 logger.info("--" * 30)
                 logger.info(
@@ -259,6 +260,12 @@ class PulseBenchmark:
                     ):
                         # Estimate number of tokens for LLMs.
                         model.estimate_nr_tokens(test_loader)
+                    elif (
+                        self.config.general.app_mode == "evaluate_sys_msgs"
+                        and model.type == "LLM"
+                    ):
+                        # Evaluate system messages for LLMs.
+                        model.evaluate_sys_msgs(test_loader)
 
                     else:
                         # Train the model if specified in the config

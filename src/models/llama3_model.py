@@ -17,7 +17,7 @@ import wandb
 from src.eval.metrics import MetricsTracker
 from src.models.pulse_model import PulseLLMModel
 from src.util.config_util import set_seeds
-from src.util.model_util import extract_dict, prompt_template_hf
+from src.util.model_util import extract_dict, prompt_template_hf, sys_msg_smpls
 
 warnings.filterwarnings(
     "ignore",
@@ -75,6 +75,106 @@ class Llama3Model(PulseLLMModel):
         self.quantization_config = BitsAndBytesConfig(
             load_in_8bit=True, llm_int8_threshold=6.0, llm_int8_has_fp16_weight=True
         )
+
+    def evaluate_sys_msgs(self, test_loader: Any, save_report: bool = True) -> float:
+        """Evaluates the model on a given test set.
+
+        Args:
+            test_loader: Tuple of (X, y) test data in DataFrame form.
+            save_report: Whether to save the evaluation report.
+
+        Returns:
+            The average validation loss across the test dataset.
+        """
+        criterion = nn.BCELoss()  # Binary Cross Entropy Loss
+
+        # Check if model is already loaded before attempting to load
+        if not self.is_loaded:
+            self.load_model()
+        else:
+            logger.info("Using already loaded model instance for evaluation")
+
+        logger.info("Starting test evaluation...")
+
+        # Set seed for deterministic generation
+        set_seeds(self.random_seed)
+
+        metrics_tracker = MetricsTracker(
+            self.model_name,
+            self.task_name,
+            self.dataset_name,
+            self.save_dir,
+        )
+        verbose: int = self.params.get("verbose", 1)
+        val_loss: list[float] = []
+
+        sys_msgs = sys_msg_smpls()
+
+        self.model.eval()
+
+        for X, y in zip(test_loader[0].iterrows(), test_loader[1].iterrows()):
+            X_input = X[1].iloc[0]  # The input text for standard pipeline
+            y_true = y[1].iloc[0]  # The true label
+
+            for i, sys_msg in enumerate(sys_msgs):
+                # Standard inference for non-agent predictions
+                result_dict = self.generate(input_text=X_input, custom_system_message=sys_msg)
+
+                generated_text = result_dict["generated_text"]
+                token_time = result_dict["token_time"]
+                infer_time = result_dict["infer_time"]
+                num_input_tokens = result_dict["num_input_tokens"]
+                num_output_tokens = result_dict["num_output_tokens"]
+
+                predicted_probability = float(generated_text.get("probability", 0.5))
+
+                logger.info(
+                    "Predicted probability: %s | True label: %s",
+                    predicted_probability,
+                    y_true,
+                )
+                if verbose > 1:
+                    logger.info("Diagnosis for: %s", generated_text["diagnosis"])
+                    logger.info(
+                        "Generated explanation: %s \n", generated_text["explanation"]
+                    )
+                if verbose > 2:
+                    logger.info("Input prompt: %s \n", X_input)
+
+                predicted_label = torch.tensor(
+                    predicted_probability, dtype=torch.float32
+                ).unsqueeze(0)
+                target = torch.tensor(float(y_true), dtype=torch.float32).unsqueeze(0)
+
+                loss = criterion(predicted_label, target)
+                val_loss.append(loss.item())
+
+                metrics_tracker.add_results(predicted_probability, y_true)
+                metrics_tracker.add_metadata_item(
+                    {
+                        "Input Prompt": X_input,
+                        "Target Label": y_true,
+                        "Predicted Probability": predicted_probability,
+                        "Predicted Diagnosis": generated_text.get("diagnosis", ""),
+                        "Predicted Explanation": generated_text.get("explanation", ""),
+                        "Tokenization Time": token_time,
+                        "Inference Time": infer_time,
+                        "Input Tokens": num_input_tokens,
+                        "Output Tokens": num_output_tokens,
+                        "System Message": sys_msg,
+                        "System Message Index": i,
+                    }
+                )
+
+        metrics_tracker.summary = metrics_tracker.compute_overall_metrics()
+        if save_report:
+            metrics_tracker.log_metadata(save_to_file=self.save_metadata)
+            metrics_tracker.save_report()
+
+        logger.info("System Message evaluation completed for %s", self.model_name)
+        logger.info("Test metrics: %s", metrics_tracker.summary)
+
+        return float(np.mean(val_loss))
 
     def set_trainer(
         self,

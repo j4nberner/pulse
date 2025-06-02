@@ -57,7 +57,6 @@ class DatasetManager:
                     "Running in debug mode. Limited data will be used for faster inference. (# of rows: %d)",
                     self.debug_data_length,
                 )
-
             case "count_tokens":
                 self.debug_data_length = config.general.debug_data_length
                 logger.info(

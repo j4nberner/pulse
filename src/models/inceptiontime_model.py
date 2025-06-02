@@ -325,6 +325,9 @@ class InceptionTimeModel(PulseModel, nn.Module):
             self._init_model()
             self.load_model_weights(self.pretrained_model_path)
 
+        # Move model to device
+        self.to(self.device)
+
         with torch.no_grad():
             for batch_idx, (features, labels) in enumerate(data_loader):
                 # Convert features for the model
