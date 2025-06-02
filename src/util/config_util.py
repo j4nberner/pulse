@@ -101,6 +101,43 @@ def check_model_config_validity(model, config: OmegaConf) -> None:
             sys.exit(1)
 
 
+def get_pretrained_model_path(
+    pretrained_model_list: list, task_name: str, dataset_name: str
+) -> str:
+    """
+    Get the path to the pretrained model based on the provided configuration.
+
+    Args:
+        pretrained_model_list (dict): List containing pretrained model paths or parent folder.
+        task_name (str): The name of the task.
+        dataset_name (str): The name of the dataset.
+
+    Returns:
+        str: The path to the pretrained model.
+    """
+    pretrained_model_path = None
+    # Check if the pretrained_model_list is a directory
+    if os.path.isdir(pretrained_model_list[0]):
+        # If it's a directory, assume it contains multiple pretrained models
+        pretrained_model_list = [
+            os.path.join(pretrained_model_list[0], f)
+            for f in os.listdir(pretrained_model_list[0])
+            if os.path.isfile(os.path.join(pretrained_model_list[0], f))
+        ]
+
+    for path in pretrained_model_list:
+        filename = os.path.basename(path)
+        parts = filename.split("_")
+        if len(parts) >= 4:
+            task = parts[1]
+            dataset = parts[2]
+            if task == task_name and dataset == dataset_name:
+                pretrained_model_path = path
+                break
+
+    return pretrained_model_path
+
+
 # ------------------------------------
 # Utilities for setting random seeds
 # ------------------------------------

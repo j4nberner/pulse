@@ -11,13 +11,16 @@ from torch.utils.data import DataLoader
 from src.data.dataloader import DatasetManager, TorchDatasetWrapper
 from src.logger_setup import init_wandb, setup_logger
 from src.models.modelmanager import ModelManager
-from src.util.config_util import (check_model_config_validity,
-                                  get_deterministic_dataloader_args,
-                                  load_config_with_models, save_config_file,
-                                  set_seeds)
+from src.util.config_util import (
+    check_model_config_validity,
+    get_deterministic_dataloader_args,
+    load_config_with_models,
+    get_pretrained_model_path,
+    save_config_file,
+    set_seeds,
+)
 from src.util.env_util import load_environment
-from src.util.slurm_util import (copy_data_to_scratch, get_local_scratch_dir,
-                                 is_on_slurm)
+from src.util.slurm_util import copy_data_to_scratch, get_local_scratch_dir, is_on_slurm
 
 logger, output_dir = setup_logger()
 
@@ -90,7 +93,14 @@ class PulseBenchmark:
                 model.task_name = task_name
                 model.dataset_name = dataset_name
                 model.save_metadata = self.config.general.save_metadata
-                model.pretrained_model_path = get_pretrained_model_path(path_list, model.model_name, model.task_name, model.dataset_name)
+                pretrained_path_list = self.config.models[model.model_name].get(
+                    "pretrained_model_paths", []
+                )
+                model.pretrained_model_path = get_pretrained_model_path(
+                    pretrained_path_list,
+                    model.task_name,
+                    model.dataset_name,
+                )
 
                 logger.info("--" * 30)
                 logger.info(

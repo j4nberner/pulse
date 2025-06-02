@@ -1,4 +1,6 @@
 name: "CNNModel"
+pretrained_model_paths: # list of paths or parent folder
+  - "output/results_benchmark/20250512_164422_CNN/Models"
 params:
   # Basic configuration
   trainer_name: "CNNTrainer"

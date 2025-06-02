@@ -4,7 +4,7 @@
 general:
   app_name: "Pulse"
   app_version: "1.0.1"
-  app_mode: "benchmark" # "debug", "count_tokens", "benchmark"
+  app_mode: "debug" # "debug", "count_tokens", "benchmark"
   debug_data_length: 50 # Number of samples to use for debugging
   logging_level: "DEBUG" # "DEBUG", "INFO", "WARNING", "ERROR"
   use_scratch: true # Whether to use scratch space for temporary files
@@ -21,15 +21,15 @@ base_path: ""
 # Tasks to process
 tasks:
   - "aki"
-  # - "mortality"
-  # - "sepsis"
+  - "mortality"
+  - "sepsis"
 
 # Datasets to process
 dataset_path: "datasets/original_harmonized" #"/path/to/datasets"
 datasets:
   - "eicu"
-  # - "hirid"
-  # - "miiv"
+  - "hirid"
+  - "miiv"
 
 # _______ Preprocessing Baseline _______
 
@@ -98,9 +98,6 @@ load_models:
   # - "configs/model_configs/GPT4oModel.yaml" # use with caution
   # - "configs/model_configs/Gemini2p5flashModel.yaml" # not yet implemented
   # - "configs/model_configs/ClaudeSonnet4Model.yaml" # not yet implemented
-
-
-load_pretrained_models:
-  enable: true # Whether to use pretrained models
-  pretrained_model_paths:
-    - "/output/CNN_aki_eicu_20250512_195730.pth" # Path to pretrained model (if any)
+# load_pretrained_models: true # Whether to use pretrained models
+# pretrained_model_paths:
+#   - "/output/CNN_aki_eicu_20250512_195730.pth" # Path to pretrained model (if any)

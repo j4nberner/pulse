@@ -1,5 +1,5 @@
 name: "ClaudeSonnet4Model"
-pretrained_model_path: null # Path to pretrained model (if any)
+pretrained_model_paths: null # Path to pretrained model (if any)
 params:
   trainer_name: "DummyTrainer"
   mode: "inference" # Mode of operation (inference, training)

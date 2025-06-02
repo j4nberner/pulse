@@ -1,5 +1,5 @@
 name: "GRUModel"
-pretrained_model_path: "/cluster/project/bmds_lab/sepsis_jan/pulse/output/GRU_aki_eicu_20250513_131024.pth" # Path to pretrained model (if any)
+pretrained_model_paths: "/cluster/project/bmds_lab/sepsis_jan/pulse/output/GRU_aki_eicu_20250513_131024.pth" # Path to pretrained model (if any)
 params:
   # Basic configuration
   trainer_name: "GRUTrainer"
