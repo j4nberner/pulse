@@ -7,18 +7,19 @@ from typing import Any, Dict, Optional
 import numpy as np
 import torch
 import torch.nn as nn
-import torch.optim as optim
 import torch.nn.functional as F
+import torch.optim as optim
 from langchain.prompts import PromptTemplate
 from langchain.schema.runnable import Runnable
 from peft import PromptTuningConfig, PromptTuningInit, TaskType, get_peft_model
-from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+from transformers import (AutoModelForCausalLM, AutoTokenizer,
+                          BitsAndBytesConfig)
 
 import wandb
 from src.eval.metrics import MetricsTracker
-from src.models.pulsetemplate_model import PulseTemplateModel
-from src.util.model_util import extract_dict, prompt_template_hf
+from src.models.pulse_model import PulseLLMModel
 from src.util.config_util import set_seeds
+from src.util.model_util import extract_dict, prompt_template_hf
 
 warnings.filterwarnings(
     "ignore",
@@ -28,7 +29,7 @@ warnings.filterwarnings(
 logger = logging.getLogger("PULSE_logger")
 
 
-class DeepseekR1Model(PulseTemplateModel):
+class DeepseekR1Model(PulseLLMModel):
     """DeepseekR1 model wrapper using LangChain for prompt templating and inference."""
 
     def __init__(self, params: Dict[str, Any], **kwargs) -> None:
@@ -38,14 +39,10 @@ class DeepseekR1Model(PulseTemplateModel):
             params: Configuration dictionary with model parameters.
             **kwargs: Additional optional parameters such as `output_dir` and `wandb`.
         """
-        # Add model loading flag
-        self.is_loaded = False
+        model_name = kwargs.pop("model_name", "DeepseekR1Model")
+        super().__init__(model_name, params, **kwargs)
 
-        # Initialize essential properties first
-        self.model_name = kwargs.get("model_name", "DeepseekR1Model")
         self.inference_only = kwargs.get("inference_only", False)
-        self.params = params
-
         if self.inference_only:
             # For inference-only mode (agentic workflow)
             self.trainer_name = params.get("trainer_name", "DeepseekR1Trainer")
@@ -58,17 +55,6 @@ class DeepseekR1Model(PulseTemplateModel):
             self.wandb = kwargs.get("wandb", False)
             self.task_name = kwargs.get("task_name")
             self.dataset_name = kwargs.get("dataset_name")
-        else:
-            # Full model initialization for standard workflow
-            self.trainer_name = params["trainer_name"]
-            super().__init__(self.model_name, self.trainer_name, params=params)
-
-            # Store random seed from params (added by ModelManager)
-            self.random_seed = self.params.get("random_seed", 42)
-            logger.debug("Using random seed: %d", self.random_seed)
-
-            self.save_dir = kwargs.get("output_dir", f"{os.getcwd()}/output")
-            self.wandb = kwargs.get("wandb", False)
 
         required_params = [
             "max_new_tokens",
@@ -80,85 +66,14 @@ class DeepseekR1Model(PulseTemplateModel):
             "do_sample",
             "temperature",
         ]
+        self.check_required_params(params, required_params)
 
-        # Check if all required parameters exist in config
-        missing_params = [param for param in required_params if param not in params]
-        if missing_params:
-            raise KeyError(f"Required parameters missing from config: {missing_params}")
-
-        self.params: Dict[str, Any] = params
-        self.params["save_test_set"] = kwargs.get("save_test_set", False)
-
-        self.model_id: str = self.params.get(
-            "model_id", "deepseek-ai/DeepSeek-R1-Distill-Llama-8B"
-        )
         self.max_length: int = self.params.get("max_length", 5120)
-
-        self.tokenizer: Optional[Any] = None
-        self.deepseek_r1_model: Optional[Any] = None
-        self.lc_llm: Optional[Any] = None
-        self.prompt_template: Optional[PromptTemplate] = None
-        self.lc_chain: Optional[Runnable] = None
-
         self.quantization_config = BitsAndBytesConfig(
             load_in_8bit=True, llm_int8_threshold=6.0, llm_int8_has_fp16_weight=True
         )
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    def _load_model(self) -> None:
-        """Loads the tokenizer and model weights and initializes HF pipeline."""
-        try:
-            # Skip loading if already loaded
-            if (
-                self.tokenizer is not None
-                and self.deepseek_r1_model is not None
-                and self.is_loaded
-            ):
-                logger.info("Model already loaded, reusing existing instance")
-                return
-
-            logger.debug(f"Loading model %s", self.model_id)
-            self.tokenizer = AutoTokenizer.from_pretrained(
-                self.model_id, padding_side="left"
-            )
-            self.deepseek_r1_model = AutoModelForCausalLM.from_pretrained(
-                self.model_id,
-                device_map="auto",
-                torch_dtype=torch.bfloat16,
-            )
-
-            if self.params.get("tuning", False):
-                logger.info("Applying Prompt Tuning")
-                tuning_config = PromptTuningConfig(
-                    task_type=TaskType.CAUSAL_LM,
-                    inference_mode=False,
-                    tokenizer_name_or_path=self.model_id,
-                    num_virtual_tokens=20,
-                    prompt_tuning_init=PromptTuningInit.TEXT,
-                    prompt_tuning_init_text="Classify the diagnosis of following ICU data:",
-                )
-                self.deepseek_r1_model = get_peft_model(
-                    self.deepseek_r1_model, tuning_config
-                )
-                logger.debug(self.deepseek_r1_model.print_trainable_parameters())
-
-            logger.info("Successfully loaded DeepseekR1 model: %s", self.model_id)
-
-            # Only log pipeline initialization in full training mode
-            if not self.inference_only:
-                logger.info(
-                    "Initializing Hugging Face pipeline with parameters: %s",
-                    self.params,
-                )
-
-            # Mark model as loaded after successful loading
-            self.is_loaded = True
-
-        except Exception as e:
-            logger.error("Failed to load DeepseekR1 model: %s", e)
-            raise
-
-    def infer_llm(
+    def generate(
         self,
         input_text: str,
         custom_system_message: str = None,
@@ -175,9 +90,9 @@ class DeepseekR1Model(PulseTemplateModel):
         set_seeds(self.random_seed)
 
         # Ensure model is loaded before trying to use it
-        if self.tokenizer is None or self.deepseek_r1_model is None:
+        if not self.is_loaded:
             logger.debug("Model not loaded yet for inference, loading now...")
-            self._load_model()
+            self.load_model()
 
         logger.info("---------------------------------------------")
 
@@ -206,7 +121,7 @@ class DeepseekR1Model(PulseTemplateModel):
         infer_start = time.perf_counter()
 
         with torch.no_grad():
-            outputs = self.deepseek_r1_model.generate(
+            outputs = self.model.generate(
                 input_ids=input_ids,
                 attention_mask=attention_mask,
                 max_new_tokens=self.params["max_new_tokens"],
@@ -274,396 +189,4 @@ class DeepseekR1Model(PulseTemplateModel):
             "num_input_tokens": num_input_tokens,
             "num_output_tokens": num_output_tokens,
             "thinking_output": thinking_output,
-        }
-
-    def set_trainer(
-        self,
-        trainer_name: str,
-        train_dataloader: Any,
-        val_dataloader: Any,
-        test_dataloader: Any,
-    ) -> None:
-        """Sets the associated trainer instance.
-
-        Args:
-            trainer_name: Name of the trainer class.
-            train_dataloader: DataLoader for training data.
-            val_dataloader: DataLoader for validation data.
-            test_dataloader: DataLoader for test data.
-        """
-        self.trainer = DeepseekR1Trainer(
-            self, train_dataloader, val_dataloader, test_dataloader
-        )
-
-
-class DeepseekR1Trainer:
-    """Trainer class for DeepseekR1Model."""
-
-    def __init__(
-        self, model: DeepseekR1Model, train_loader, val_loader, test_loader
-    ) -> None:
-        """
-        Initialize the DeepseekR1 trainer. Finetruning is not implemented yet.
-        This is a wrapper for inference only.
-
-        Args:
-            model (DeepseekR1Model): The DeepseekR1 model to be trained.
-            train_loader: The DataLoader object for the training dataset.
-            val_loader: The DataLoader object for the validation dataset.
-            test_loader: The DataLoader object for the testing dataset.
-        """
-        # Set seed for deterministic generation
-        set_seeds(model.random_seed)
-
-        # Load the model and tokenizer
-        model._load_model()  # Comment out to only test preprocessing
-
-        self.model = model
-        self.deepseek_r1_model = model.deepseek_r1_model
-        self.params = model.params
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.train_loader = train_loader
-        self.val_loader = val_loader
-        self.test_loader = test_loader
-        self.save_test_set = self.params.get("save_test_set", False)
-
-        self.criterion = nn.BCELoss()  # Binary Cross Entropy Loss
-        self.wandb = self.model.wandb
-        self.model_save_dir = os.path.join(model.save_dir, "Models")
-        self.task_name = self.model.task_name
-        self.dataset_name = self.model.dataset_name
-        self.tuning = self.params.get("tuning", False)
-
-        logger.info("Using criterion: %s", self.criterion.__class__.__name__)
-
-        # Create model save directory if it doesn't exist
-        os.makedirs(self.model_save_dir, exist_ok=True)
-
-    def train(self):
-        """Training loop."""
-        # Set seed for deterministic generation
-        set_seeds(self.model.random_seed)
-
-        verbose = self.params.get("verbose", 1)
-        logger.info("System message: %s", prompt_template_hf("")[0])
-        logger.info("Starting training...")
-
-        if self.tuning:
-            logger.info(
-                "Tuning model with prompt tuning. Model is saved in %s",
-                self.model_save_dir,
-            )
-            optimizer = optim.AdamW(
-                self.deepseek_r1_model.parameters(), lr=self.params.get("lr", 1e-4)
-            )
-            num_epochs = self.params.get("num_epochs", 1)
-
-            self.deepseek_r1_model.train()
-            for epoch in range(num_epochs):
-                epoch_loss = 0.0
-                logger.info(f"Epoch {epoch + 1} started...")
-                for i, (X, y) in enumerate(
-                    zip(
-                        self.train_loader[0].iterrows(), self.train_loader[1].iterrows()
-                    )
-                ):
-                    # Input prompt
-                    X_input = prompt_template_hf(X[1].iloc[0])
-                    inputs = self.model.tokenizer.apply_chat_template(
-                        X_input, tokenize=False, add_generation_prompt=True
-                    )
-
-                    # Build target output label
-                    probability = y[1].iloc[0]  # float
-                    diagnosis = (
-                        "not-" if probability < 0.5 else ""
-                    ) + self.model.task_name
-                    target_output = (
-                        "{\n"
-                        f'  "diagnosis": "{diagnosis}",\n'
-                        f'  "probability": {round(probability, 3)},\n'
-                        '  "explanation": "N/A"\n'
-                        "}\n\n"
-                    )
-
-                    encoded = self.encode_prompt_target(
-                        inputs,
-                        target_output,
-                        max_len=self.model.tokenizer.model_max_length,
-                    )
-
-                    optimizer.zero_grad()
-                    outputs = self.deepseek_r1_model(
-                        input_ids=encoded["input_ids"].to(self.device),
-                        attention_mask=encoded["attention_mask"].to(self.device),
-                        labels=encoded["labels"].to(self.device),
-                    )
-
-                    loss = outputs.loss
-                    loss.backward()
-
-                    optimizer.step()
-                    epoch_loss += loss.item()
-
-                    logger.info(
-                        "Step %d/%d, Loss: %.4f",
-                        i + 1,
-                        len(self.train_loader[0]),
-                        loss.item(),
-                    )
-
-                    if self.wandb:
-                        wandb.log({"train_loss": loss.item()})
-
-                logger.info(
-                    f"Epoch {epoch + 1}/{num_epochs}, Avg Total Loss: {epoch_loss/len(self.train_loader[0]):.4f}"
-                )
-                if self.wandb:
-                    wandb.log(
-                        {f"avg_epoch_loss": epoch_loss / len(self.train_loader[0])}
-                    )
-
-                val_loss = self.evaluate_single(self.val_loader)
-                logger.info("Validation loss: %s", val_loss)
-
-                self.deepseek_r1_model.save_pretrained(self.model_save_dir)
-                self.model.tokenizer.save_pretrained(self.model_save_dir)
-                logger.info("Model saved to %s", self.model_save_dir)
-
-        self.evaluate_single(self.test_loader, save_report=True)
-
-    def evaluate_single(self, test_loader: Any, save_report: bool = False) -> float:
-        """Evaluates the model on a given test set.
-
-        Args:
-            test_loader: Tuple of (X, y) test data in DataFrame form.
-            save_report: Whether to save the evaluation report.
-
-        Returns:
-            The average validation loss across the test dataset.
-        """
-        # Set seed for deterministic generation
-        set_seeds(self.model.random_seed)
-
-        # Check if model is already loaded before attempting to load
-        if not self.model.is_loaded:
-            self.model._load_model()
-        else:
-            logger.info("Using already loaded model instance for evaluation")
-
-        if self.save_test_set:
-            # Save test set to CSV
-            test_loader[0].to_csv(
-                os.path.join(self.model.save_dir, "test_set.csv"), index=False
-            )
-            test_loader[1].to_csv(
-                os.path.join(self.model.save_dir, "test_labels.csv"), index=False
-            )
-            logger.info("Test set saved to %s", self.model.save_dir)
-        logger.info("Starting test evaluation...")
-
-        metrics_tracker = MetricsTracker(
-            self.model.model_name,
-            self.model.task_name,
-            self.model.dataset_name,
-            self.model.save_dir,
-        )
-        verbose: int = self.params.get("verbose", 1)
-        val_loss: list[float] = []
-
-        self.deepseek_r1_model.eval()
-
-        for X, y in zip(test_loader[0].iterrows(), test_loader[1].iterrows()):
-            idx = X[0]  # The index of the current row
-            X_input = X[1].iloc[0]  # The input text for standard pipeline
-            y_true = y[1].iloc[0]  # The true label
-
-            # Check if this row contains an agent prediction
-            is_agent_prediction = False
-            if "is_agent_prediction" in test_loader[0].columns:
-                is_agent_prediction = bool(
-                    test_loader[0].at[idx, "is_agent_prediction"]
-                )
-                logger.debug(
-                    "Sample %s: is_agent_prediction = %s (type: %s)",
-                    idx,
-                    is_agent_prediction,
-                    type(is_agent_prediction),
-                )
-
-            if is_agent_prediction:
-                logger.info(
-                    "Found agent prediction - using directly without additional inference"
-                )
-
-                try:
-                    # Parse the agent's prediction JSON
-                    agent_output = (
-                        json.loads(X_input) if isinstance(X_input, str) else X_input
-                    )
-
-                    # Extract prediction fields
-                    predicted_probability = float(agent_output.get("probability", 0.5))
-                    diagnosis = agent_output.get("diagnosis", "")
-                    explanation = agent_output.get("explanation", "")
-
-                    # Get token metrics if available
-                    token_time = 0.0  # Placeholder values
-                    infer_time = 0.0
-                    num_input_tokens = (
-                        test_loader[0].at[idx, "num_input_tokens"]
-                        if "num_input_tokens" in test_loader[0].columns
-                        else 100
-                    )
-                    num_output_tokens = (
-                        test_loader[0].at[idx, "num_output_tokens"]
-                        if "num_output_tokens" in test_loader[0].columns
-                        else 50
-                    )
-
-                    # Create result structure matching what infer_llm would return
-                    result_dict = {
-                        "generated_text": {
-                            "diagnosis": diagnosis,
-                            "probability": predicted_probability,
-                            "explanation": explanation,
-                        },
-                        "token_time": token_time,
-                        "infer_time": infer_time,
-                        "num_input_tokens": num_input_tokens,
-                        "num_output_tokens": num_output_tokens,
-                    }
-
-                    logger.info(
-                        "Using agent prediction: %s with probability %s",
-                        diagnosis,
-                        predicted_probability,
-                    )
-
-                except Exception as e:
-                    logger.error(
-                        f"Error parsing agent prediction: {e} - Falling back to standard inference"
-                    )
-                    # Run normal inference as fallback
-                    result_dict = self.model.infer_llm(X_input)
-            else:
-                # Standard inference for non-agent predictions
-                result_dict = self.model.infer_llm(X_input)
-
-            generated_text = result_dict["generated_text"]
-            token_time = result_dict["token_time"]
-            infer_time = result_dict["infer_time"]
-            num_input_tokens = result_dict["num_input_tokens"]
-            num_output_tokens = result_dict["num_output_tokens"]
-
-            predicted_probability = float(generated_text.get("probability", 0.5))
-
-            logger.info(
-                "Predicted probability: %s | True label: %s",
-                predicted_probability,
-                y_true,
-            )
-
-            predicted_label = torch.tensor(
-                predicted_probability, dtype=torch.float32
-            ).unsqueeze(0)
-            target = torch.tensor(float(y_true), dtype=torch.float32).unsqueeze(0)
-
-            loss = self.criterion(predicted_label, target)
-            val_loss.append(loss.item())
-
-            if self.wandb:
-                wandb.log(
-                    {
-                        "val_loss": loss.item(),
-                        "token_time": token_time,
-                        "infer_time": infer_time,
-                        "num_input_tokens": num_input_tokens,
-                        "num_output_tokens": num_output_tokens,
-                    }
-                )
-
-            metrics_tracker.add_results(predicted_probability, y_true)
-            metrics_tracker.add_metadata_item(
-                {
-                    "Input Prompt": X_input,
-                    "Target Label": y_true,
-                    "Predicted Probability": predicted_probability,
-                    "Predicted Diagnosis": generated_text["diagnosis"],
-                    "Predicted Explanation": generated_text["explanation"],
-                    "Reasoning": result_dict["thinking_output"],
-                    "Tokenization Time": token_time,
-                    "Inference Time": infer_time,
-                    "Input Tokens": num_input_tokens,
-                    "Output Tokens": num_output_tokens,
-                }
-            )
-
-        metrics_tracker.log_metadata(save_to_file=self.model.save_metadata)
-        metrics_tracker.summary = metrics_tracker.compute_overall_metrics()
-        if save_report:
-            metrics_tracker.save_report()
-
-        logger.info("Test evaluation completed for %s", self.model.model_name)
-        logger.info("Test metrics: %s", metrics_tracker.summary)
-
-        return float(np.mean(val_loss))
-
-    def encode_prompt_target(
-        self,
-        prompt: str,
-        target: str,
-        max_len: int = 512,
-        add_special_tokens: bool = True,
-    ) -> dict:
-        """
-        Tokenize and encode prompt and target into input_ids and labels for causal LM training.
-
-        Args:
-            prompt (str): The input prompt string.
-            target (str): The target output string.
-            max_len (int): The maximum length of the final sequence.
-            add_special_tokens (bool): Whether to add special tokens during tokenization.
-
-        Returns:
-            dict: Dictionary containing input_ids, labels, and attention_mask.
-        """
-        # Tokenize prompt and target
-        prompt_ids = self.model.tokenizer.encode(
-            prompt, add_special_tokens=add_special_tokens
-        )
-        target_ids = self.model.tokenizer.encode(
-            target, add_special_tokens=add_special_tokens
-        )
-
-        # Truncate from the start if too long
-        input_ids = prompt_ids + target_ids
-        if len(input_ids) > max_len:
-            input_ids = input_ids[-max_len:]
-
-        # Recompute where the target starts (after possible truncation of prompt)
-        prompt_len = len(prompt_ids)
-        total_len = len(input_ids)
-        target_start_idx = max(0, total_len - len(target_ids))
-
-        # Create labels: -100 for prompt, real target IDs for target
-        labels = [-100] * target_start_idx + input_ids[target_start_idx:]
-
-        # Create attention mask (1 for real tokens, 0 for padding)
-        attention_mask = [1] * len(input_ids)
-
-        assert len(input_ids) == len(
-            labels
-        ), f"input_ids and labels length mismatch: {len(input_ids)} vs {len(labels)}"
-
-        return {
-            "input_ids": torch.tensor(
-                input_ids, dtype=torch.long, device=self.device
-            ).unsqueeze(0),
-            "labels": torch.tensor(
-                labels, dtype=torch.long, device=self.device
-            ).unsqueeze(0),
-            "attention_mask": torch.tensor(
-                attention_mask, dtype=torch.long, device=self.device
-            ).unsqueeze(0),
         }

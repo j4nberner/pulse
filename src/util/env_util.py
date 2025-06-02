@@ -1,6 +1,7 @@
-from dotenv import load_dotenv
-from pathlib import Path
 import logging
+from pathlib import Path
+
+from dotenv import load_dotenv
 
 logger = logging.getLogger("PULSE_logger")
 

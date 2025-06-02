@@ -1,6 +1,7 @@
 import logging
 import os
 import random
+import sys
 
 import numpy as np
 import torch
@@ -63,9 +64,47 @@ def save_config_file(config: OmegaConf, output_dir: str) -> None:
     OmegaConf.save(config, config_copy_path)
     logger.info("Configuration file copied to %s", config_copy_path)
 
+
+def check_model_config_validity(model, config: OmegaConf) -> None:
+    """
+    This function checks for correct combination of keys and values in the configuration.
+
+    Args:
+        model: The model object to check.
+        config (OmegaConf): The configuration object to validate.
+
+    Raises:
+        ValueError: If any required keys are missing or if the configuration is invalid.
+    """
+    if model.type == "convML":
+        # Sanity check if data standardization was disabled
+        if config.preprocessing_baseline.get("standardize"):
+            logger.error(
+                "Data standardization is enabled for convML models. Please disable it in the config."
+            )
+            sys.exit(1)
+
+    if model.type == "convDL":
+        # Sanity check if data standardization was enabled
+        if not config.preprocessing_baseline.get("standardize"):
+            logger.error(
+                "Data standardization is not enabled for convDL models. Please enable it in the config."
+            )
+            sys.exit(1)
+
+    if model.type == "LLM":
+        # Sanity check if data standardization was disabled
+        if config.preprocessing_baseline.get("standardize"):
+            logger.error(
+                "Data standardization is enabled for LLM models. Please disable it in the config."
+            )
+            sys.exit(1)
+
+
 # ------------------------------------
 # Utilities for setting random seeds
 # ------------------------------------
+
 
 def set_seeds(seed: int) -> None:
     """

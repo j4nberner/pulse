@@ -9,14 +9,13 @@ from sklearn.metrics import confusion_matrix
 
 import wandb
 from src.eval.metrics import MetricsTracker
-from src.models.pulsetemplate_model import PulseTemplateModel
-from src.util.model_util import (prepare_data_for_model_convml,
-                                 save_sklearn_model)
+from src.models.pulse_model import PulseModel
+from src.util.model_util import prepare_data_for_model_convml, save_sklearn_model
 
 logger = logging.getLogger("PULSE_logger")
 
 
-class LightGBMModel(PulseTemplateModel):
+class LightGBMModel(PulseModel):
     """
     Implementation of LightGBM model for classification and regression tasks.
 
@@ -36,24 +35,11 @@ class LightGBMModel(PulseTemplateModel):
         Raises:
             KeyError: If any required parameters are missing from the config.
         """
-        self.params = params
-
-        # For trainer_name we still require it to be explicitly in the params
-        if "trainer_name" not in params:
-            raise KeyError("Required parameter 'trainer_name' not found in config")
-
-        # Use the class name as model_name if not provided in params
-        self.model_name = params.get(
-            "model_name", self.__class__.__name__.replace("Model", "")
+        model_name = kwargs.pop("model_name", "LightGBM")
+        trainer_name = params["trainer_name"]
+        super().__init__(
+            model_name=model_name, params=params, trainer_name=trainer_name, **kwargs
         )
-        self.trainer_name = params["trainer_name"]
-        super().__init__(self.model_name, self.trainer_name, params=params)
-
-        # Set the model save directory
-        self.save_dir = kwargs.get("output_dir", f"{os.getcwd()}/output")
-
-        # Check if wandb is enabled and set up
-        self.wandb = kwargs.get("wandb", False)
 
         # Define all required LightGBM parameters
         required_lgb_params = [
@@ -75,11 +61,7 @@ class LightGBMModel(PulseTemplateModel):
         ]
 
         # Check if all required LightGBM parameters exist in config
-        missing_params = [param for param in required_lgb_params if param not in params]
-        if missing_params:
-            raise KeyError(
-                f"Required LightGBM parameters missing from config: {missing_params}"
-            )
+        self.check_required_params(params, required_lgb_params)
 
         # Store early_stopping_rounds for training
         self.early_stopping_rounds = params["early_stopping_rounds"]
@@ -98,122 +80,66 @@ class LightGBMModel(PulseTemplateModel):
         # Initialize the LightGBM model with parameters from config
         self.model = LGBMClassifier(**model_params)
 
-    def set_trainer(self, trainer_name, train_loader, val_loader, test_loader):
+    def evaluate(self, data_loader, save_report=False):
         """
-        Set the trainer for the model.
+        Evaluate the LightGBM model on the provided data loader.
 
         Args:
-            trainer_name: Name of the trainer.
-            train_loader: DataLoader for training data.
-            val_loader: DataLoader for validation data. (not used)
-            test_loader: DataLoader for testing data.
+            data_loader: DataLoader containing the data to evaluate.
+            save_report: Whether to save the evaluation report.
+
+        Returns:
+            A dictionary containing evaluation metrics.
         """
-        if trainer_name == "LightGBMTrainer":
-            self.trainer = LightGBMTrainer(self, train_loader, val_loader, test_loader)
-        else:
-            raise ValueError(f"Trainer {trainer_name} not supported for LightGBM.")
+        logger.info("Evaluating LightGBM model...")
 
-
-class LightGBMTrainer:
-    """
-    Trainer class for LightGBM models.
-
-    This class handles the training workflow for LightGBM models
-    including data preparation, model training, evaluation and saving.
-    """
-
-    def __init__(self, model, train_loader, val_loader, test_loader) -> None:
-        """
-        Initialize the LightGBM trainer.
-
-        Args:
-            model: The LightGBM model to train.
-            train_loader: DataLoader for training data.
-            val_loader: DataLoader for validation data. (not used)
-            test_loader: DataLoader for testing data.
-        """
-        self.model = model
-        self.train_loader = train_loader
-        self.val_loader = val_loader
-        self.test_loader = test_loader
-        self.task_name = self.model.task_name
-        self.dataset_name = self.model.dataset_name
-        self.wandb = model.wandb
-        self.model_save_dir = os.path.join(model.save_dir, "Models")
-        # Create model save directory if it doesn't exist
-        os.makedirs(self.model_save_dir, exist_ok=True)
-
-    def train(self):
-        """Train the LightGBM model using the provided data loaders."""
-        logger.info("Starting training process for LightGBM model...")
+        # Load model from pretrained state if available and not in training mode
+        if self.pretrained_model_path and self.mode != "train":
+            self.load_model_weights(self.pretrained_model_path)
 
         # Use the utility function to prepare data
-        prepared_data = prepare_data_for_model_convml(
-            self.train_loader,
-            self.val_loader,
-            self.test_loader,
-        )
-
-        # Extract all data from the prepared_data dictionary
-        X_train = prepared_data["X_train"]
-        y_train = prepared_data["y_train"]
-        X_val = prepared_data["X_val"]
-        y_val = prepared_data["y_val"]
-        X_test = prepared_data["X_test"]
-        y_test = prepared_data["y_test"]
-        feature_names = prepared_data["feature_names"]
-
-        # Log training start to wandb
-        if self.wandb:
-            wandb.log(
-                {
-                    "train_samples": len(X_train),
-                    "val_sample": len(X_val),
-                    "test_samples": len(X_test),
-                }
-            )
-
-        # Create early stopping callback with verbose setting based on model configuration
-        early_stopping_callback = early_stopping(
-            stopping_rounds=self.model.early_stopping_rounds,
-            first_metric_only=True,
-            verbose=self.model.params["verbose"],
-        )
-
-        # Train model with explicit feature names
-        self.model.model.fit(
-            X_train,
-            y_train,
-            eval_set=[(X_val, y_val)],
-            callbacks=[early_stopping_callback],
-        )
-        logger.info("LightGBM model trained successfully.")
+        X_test, y_test, feature_names = prepare_data_for_model_convml(data_loader)
 
         # Create DataFrame with feature names for prediction to avoid warnings
         X_test_df = pd.DataFrame(X_test, columns=feature_names)
 
         # Evaluate the model
         metrics_tracker = MetricsTracker(
-            self.model.model_name,
-            self.model.task_name,
-            self.model.dataset_name,
-            self.model.save_dir,
+            self.model_name,
+            self.task_name,
+            self.dataset_name,
+            self.save_dir,
         )
-        y_pred = self.model.model.predict(X_test_df)
-        y_pred_proba = self.model.model.predict_proba(X_test_df)
+        y_pred = self.model.predict(X_test_df)
+        y_pred_proba = self.model.predict_proba(X_test_df)
+
+        metadata_dict = {
+            "prediction": y_pred_proba[:, 1],
+            "label": y_test,
+            "age": X_test_df["age"].values,
+            "sex": X_test_df["sex"].values,
+            "height": X_test_df["height"].values,
+            "weight": X_test_df["weight"].values,
+        }
+
         metrics_tracker.add_results(y_pred_proba[:, 1], y_test)
+        metrics_tracker.add_metadata_item(metadata_dict)
 
         # Calculate and log metrics
         metrics_tracker.summary = metrics_tracker.compute_overall_metrics()
-        metrics_tracker.save_report()
+        if save_report:
+            metrics_tracker.save_report()
+            metrics_tracker.log_metadata()
 
         # Log results to console
-        logger.info("Test evaluation completed for %s", self.model.model_name)
+        logger.info("Test evaluation completed for %s", self.model_name)
         logger.info("Test metrics: %s", metrics_tracker.summary)
 
         # Save the model
-        model_save_name = f"{self.model.model_name}_{self.task_name}_{self.dataset_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-        save_sklearn_model(model_save_name, self.model.model, self.model_save_dir)
+        model_save_name = f"{self.model_name}_{self.task_name}_{self.dataset_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        model_save_dir = os.path.join(self.save_dir, "Models")
+        os.makedirs(model_save_dir, exist_ok=True)
+        save_sklearn_model(model_save_name, self.model, model_save_dir)
 
         # Log metrics to wandb
         if self.wandb:
@@ -273,3 +199,64 @@ class LightGBMTrainer:
                         )
                     }
                 )
+
+
+class LightGBMTrainer:
+    """
+    Trainer class for LightGBM models.
+
+    This class handles the training workflow for LightGBM models
+    including data preparation, model training and saving.
+    """
+
+    def __init__(self, model, train_loader, val_loader) -> None:
+        """
+        Initialize the LightGBM trainer.
+
+        Args:
+            model: The LightGBM model to train.
+            train_loader: DataLoader for training data.
+            val_loader: DataLoader for validation data. (not used)
+        """
+        self.model = model
+        self.train_loader = train_loader
+        self.val_loader = val_loader
+        self.task_name = self.model.task_name
+        self.dataset_name = self.model.dataset_name
+        self.wandb = model.wandb
+        self.model_save_dir = os.path.join(model.save_dir, "Models")
+        # Create model save directory if it doesn't exist
+        os.makedirs(self.model_save_dir, exist_ok=True)
+
+    def train(self):
+        """Train the LightGBM model using the provided data loaders."""
+        logger.info("Starting training process for LightGBM model...")
+
+        # Use the utility function to prepare data
+        X_train, y_train, _ = prepare_data_for_model_convml(self.train_loader)
+        X_val, y_val, _ = prepare_data_for_model_convml(self.val_loader)
+
+        # Log training start to wandb
+        if self.wandb:
+            wandb.log(
+                {
+                    "train_samples": len(X_train),
+                    "val_sample": len(X_val),
+                }
+            )
+
+        # Create early stopping callback with verbose setting based on model configuration
+        early_stopping_callback = early_stopping(
+            stopping_rounds=self.model.early_stopping_rounds,
+            first_metric_only=True,
+            verbose=self.model.params["verbose"],
+        )
+
+        # Train model with explicit feature names
+        self.model.model.fit(
+            X_train,
+            y_train,
+            eval_set=[(X_val, y_val)],
+            callbacks=[early_stopping_callback],
+        )
+        logger.info("LightGBM model trained successfully.")

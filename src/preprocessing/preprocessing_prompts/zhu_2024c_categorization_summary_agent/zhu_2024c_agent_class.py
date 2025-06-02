@@ -6,12 +6,10 @@ import pandas as pd
 import torch
 from langchain.prompts import PromptTemplate
 
-from src.preprocessing.preprocessing_prompts.agents.pulsetemplate_agent import (
-    PulseTemplateAgent,
-)
-from src.preprocessing.preprocessing_advanced.preprocessing_advanced import (
-    PreprocessorAdvanced,
-)
+from src.preprocessing.preprocessing_advanced.preprocessing_advanced import \
+    PreprocessorAdvanced
+from src.preprocessing.preprocessing_prompts.agents.pulsetemplate_agent import \
+    PulseTemplateAgent
 from src.util.data_util import get_feature_name
 from src.util.model_util import extract_dict
 

@@ -4,10 +4,11 @@ params:
   trainer_name: "DeepseekR1Trainer"
   model_id: "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B" # Model ID for Llama3, path to pretrained model (if any)
   type: "LLM" # Type of model (convML for conventional machine learning, convDL for conventional deep learning and LLM for large language models)
+  mode: "inference" # Mode of operation (inference, training)
   verbose: 2
   tuning: false # Whether to use prompt tuning
   num_epochs: 10 # Number of epochs for training
   max_new_tokens: 10000
-  max_length: 100000 # Maximum length of input sequences
+  max_length: 20000 # Maximum length of input sequences
   do_sample: true # Whether to sample new tokens (false -> Use greedy decoding for full determinism)
   temperature: 0.6 # Temperature for sampling (0.0 = greedy sampling -> like do_sample: false)

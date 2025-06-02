@@ -4,27 +4,28 @@ params:
   # Basic configuration
   trainer_name: "XGBoostTrainer" # Class that implements the training process
   type: "convML" # Type of model (convML for conventional machine learning, convDL for conventional deep learning and LLM for large language models)
+  mode: "train" # Mode of operation (train, inference)
   tune_hyperparameters: false # Whether to tune hyperparameters
   verbosity: 0 # Controls the level of logging output (0: silent, 1: warnings, 2: info)
   n_jobs: -1 # Number of parallel threads (-1 to use all CPUs)
-  
+
   # Model Structure
   n_estimators: 100 # Number of boosting rounds/trees to build
   max_depth: 6 # Maximum depth of each tree (prevents overfitting)
   tree_method: "hist" # Algorithm to build trees (hist = faster histogram-based approach)
-  
+
   # Split Criteria
   min_child_weight: 1 # Minimum sum of instance weight needed in a child node
   gamma: 0 # Minimum loss reduction required for a split (min_split_loss)
-  
+
   # Sampling
   subsample: 1.0 # Fraction of samples used for tree building (prevents overfitting)
   colsample_bytree: 1.0 # Fraction of features used for tree building
-  
+
   # Regularization
   reg_alpha: 0 # L1 regularization on weights (0 = no regularization)
   reg_lambda: 1 # L2 regularization on weights (higher = more regularization)
-  
+
   # Optimization
   learning_rate: 0.3 # Controls how much each tree contributes to the final model (eta)
   objective: "binary:logistic" # For binary classification tasks
