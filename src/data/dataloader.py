@@ -595,6 +595,9 @@ class DatasetManager:
         dataset["data"] = self._drop_stay_id_if_present(dataset["data"])
         logger.debug("Dropped stay_id column from all features and labels")
 
+        # Initialize is_agent flag
+        is_agent = False
+
         # Apply advanced preprocessing if needed -> generate prompts
         if model_type == "LLM":
             prompting_id = kwargs["prompting_id"]
@@ -615,10 +618,6 @@ class DatasetManager:
                 "data_window": data_window,
             }
 
-            # Add model instance to info_dict if provided in kwargs (for ModelManager and agent setup)
-            if "model_instance" in kwargs:
-                info_dict["model_instance"] = kwargs["model_instance"]
-
             # Add output directory to info_dict
             info_dict["output_dir"] = getattr(self.config, "output_dir", None)
 
@@ -634,25 +633,17 @@ class DatasetManager:
                 X = [dataset["data"]["X_train"]]
                 y = [dataset["data"]["y_train"]]
                 info_dict["mode"] = "train"
-                dataset["data"]["X_train"], dataset["data"]["y_train"] = (
-                    prompting_preprocessor(X, y, info_dict)
-                )
+                train_result = prompting_preprocessor(X, y, info_dict)
+                dataset["data"]["X_train"] = train_result["X"]
+                dataset["data"]["y_train"] = train_result["y"]
 
                 # Validation data - Uses training data for few-shot learning
                 X = [dataset["data"]["X_val"], dataset["data"]["X_train"]]
                 y = [dataset["data"]["y_val"], dataset["data"]["y_train"]]
                 info_dict["mode"] = "val"
-                dataset["data"]["X_val"], dataset["data"]["y_val"] = (
-                    prompting_preprocessor(X, y, info_dict)
-                )
-
-            # Test data
-            X = [dataset["data"]["X_test"], dataset["data"]["X_train"]]
-            y = [dataset["data"]["y_test"], dataset["data"]["y_train"]]
-            info_dict["mode"] = "test"
-            dataset["data"]["X_test"], dataset["data"]["y_test"] = (
-                prompting_preprocessor(X, y, info_dict)
-            )
+                val_result = prompting_preprocessor(X, y, info_dict)
+                dataset["data"]["X_val"] = val_result["X"]
+                dataset["data"]["y_val"] = val_result["y"]
 
             if fine_tuning is False:
                 # Used only for few shot examples if no fine-tuning. Set to none.
@@ -661,10 +652,19 @@ class DatasetManager:
                 dataset["data"]["X_val"] = pd.DataFrame()
                 dataset["data"]["y_val"] = pd.DataFrame()
 
-            # Pass the loaded model back through the info_dict
-            if "model_instance" in kwargs and "loaded_model" in info_dict:
-                # Store the loaded model back to the benchmark.py flow
-                kwargs["loaded_model"] = info_dict["loaded_model"]
+            # Test data
+            X = [dataset["data"]["X_test"], dataset["data"]["X_train"]]
+            y = [dataset["data"]["y_test"], dataset["data"]["y_train"]]
+            info_dict["mode"] = "test"
+
+            # All preprocessors now return dictionaries
+            test_result = prompting_preprocessor(X, y, info_dict)
+
+            # Extract data from dictionary
+            dataset["data"]["X_test"] = test_result["X"]
+            dataset["data"]["y_test"] = test_result["y"]
+            is_agent = test_result.get("is_agent", False)
+            logger.debug(f"Agent flag from preprocessor: {is_agent}")
 
         # Return the appropriate test set based on availability
         if (
@@ -679,6 +679,7 @@ class DatasetManager:
                 dataset["data"]["y_val"],
                 dataset["data"]["X_test_sampled"],
                 dataset["data"]["y_test_sampled"],
+                is_agent,
             )
 
         return (
@@ -688,6 +689,7 @@ class DatasetManager:
             dataset["data"]["y_val"],
             dataset["data"]["X_test"],
             dataset["data"]["y_test"],
+            is_agent,
         )
 
     def _drop_stay_id_if_present(self, data_dict: dict) -> dict:
@@ -756,8 +758,8 @@ class TorchDatasetWrapper(Dataset):
         # This avoids repeated conversions during __getitem__ calls
         # Comment this out if data is too large
         # TODO: @sophiafe - Can we remove this? Very prone to memory issues. Or check available memory before converting.
-        # self.X_array = X.values.astype(np.float32)
-        # self.y_array = y.values.astype(np.float32)
+        self.X_array = X.values.astype(np.float32)
+        self.y_array = y.values.astype(np.float32)
 
         # Store column dtypes for efficient conversion
         self.dtypes = X.dtypes

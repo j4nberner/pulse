@@ -6,10 +6,10 @@ import pandas as pd
 import torch
 from langchain.prompts import PromptTemplate
 
-from src.preprocessing.preprocessing_advanced.preprocessing_advanced import \
-    PreprocessorAdvanced
-from src.preprocessing.preprocessing_prompts.agents.pulsetemplate_agent import \
-    PulseTemplateAgent
+from src.preprocessing.preprocessing_advanced.preprocessing_advanced import (
+    PreprocessorAdvanced,
+)
+from src.models.agents.pulsetemplate_agent import PulseTemplateAgent
 from src.util.data_util import get_feature_name
 from src.util.model_util import extract_dict
 
@@ -22,7 +22,7 @@ class Zhu2024cAgent(PulseTemplateAgent):
 
     Steps:
     1. Analyze and summarize abnormal patient features
-    2. Use this summary to produce a final diagnosis
+    2. Use this summary to produce a final prediction
     """
 
     def __init__(
@@ -31,6 +31,7 @@ class Zhu2024cAgent(PulseTemplateAgent):
         task_name: Optional[str] = None,
         dataset_name: Optional[str] = None,
         output_dir: Optional[str] = None,
+        metrics_tracker: Optional[Any] = None,
         **kwargs,
     ):
         # Initialize parent class with model
@@ -39,6 +40,7 @@ class Zhu2024cAgent(PulseTemplateAgent):
             task_name=task_name,
             dataset_name=dataset_name,
             output_dir=output_dir,
+            metrics_tracker=metrics_tracker,
             **kwargs,
         )
 
@@ -86,9 +88,9 @@ class Zhu2024cAgent(PulseTemplateAgent):
             parse_json=False,
         )
 
-        # Step 2: Diagnosis
+        # Step 2: Final Prediction
         self.add_step(
-            name="diagnosis",
+            name="final_prediction",
             system_message=(
                 "You are a helpful assistant and experienced medical professional analyzing ICU time-series data "
                 "to determine the presence of a critical condition.\n\n"
@@ -112,7 +114,7 @@ class Zhu2024cAgent(PulseTemplateAgent):
                 "Do not include any other text or explanations outside of the JSON object.\n"
                 "Think about the probability of your prediction carefully before answering.\n"
             ),  # Use default benchmark system message for the prediction step
-            prompt_template=self._create_diagnosis_prompt_template(),
+            prompt_template=self._create_final_prediction_prompt_template(),
             input_formatter=None,
             output_processor=None,
             parse_json=True,
@@ -125,9 +127,7 @@ class Zhu2024cAgent(PulseTemplateAgent):
 
         # Explicitly set the current sample ID
         sample_id = patient_data.name if hasattr(patient_data, "name") else "default"
-        logger.debug(
-            f"Setting current sample ID: {sample_id} (type: {type(sample_id)})"
-        )
+        logger.debug("Setting current sample ID: %s)", sample_id)
         self.memory.set_current_sample(sample_id)
 
         # Initialize state
@@ -153,39 +153,66 @@ class Zhu2024cAgent(PulseTemplateAgent):
             logger.error(f"Error in feature analysis step: {e}", exc_info=True)
             state["feature_analysis_output"] = "Error generating patient summary."
 
-        # Step 2: Diagnosis using the summary from step 1
+        # Step 2: Final Prediction using the summary from step 1
         try:
-            # Get the summary from step 1
             summary = state.get("feature_analysis_output", "No summary available")
+            final_prediction_result = self.run_step("final_prediction", summary, state)
 
-            # Run the diagnosis step with the summary as input
-            diagnosis_result = self.run_step("diagnosis", summary, state)
-
-            # Extract the output properly
-            if isinstance(diagnosis_result["output"], dict):
-                diagnosis_output = diagnosis_result["output"]
+            # Extract and parse the output using shared extract_dict function
+            from src.util.model_util import extract_dict
+            
+            final_prediction_output = final_prediction_result["output"]
+            
+            # Parse using the same logic as standard pipeline
+            if isinstance(final_prediction_output, str):
+                parsed_output = extract_dict(final_prediction_output)
+            elif isinstance(final_prediction_output, dict):
+                parsed_output = final_prediction_output
             else:
-                diagnosis_output = diagnosis_result["output"]
+                parsed_output = {
+                    "diagnosis": "unknown",
+                    "probability": 0.5,
+                    "explanation": str(final_prediction_output),
+                }
 
-            state["diagnosis_output"] = diagnosis_output
-            logger.debug(f"Diagnosis result: {str(diagnosis_output)[:100]}...")
+            # Ensure probability is float (same as standard pipeline)
+            prob = parsed_output.get("probability", 0.5)
+            try:
+                prob = float(prob)
+            except (ValueError, TypeError):
+                logger.warning("Failed to convert probability to float. Defaulting to 0.5")
+                prob = 0.5
+            parsed_output["probability"] = prob
 
-            # Extract JSON if needed
-            if isinstance(diagnosis_output, str):
-                try:
-                    extracted = extract_dict(diagnosis_output)
-                    if extracted:
-                        state["diagnosis_data"] = extracted
-                except Exception as e:
-                    logger.warning(f"Error extracting diagnosis data: {e}")
-            elif isinstance(diagnosis_output, dict):
-                state["diagnosis_data"] = diagnosis_output
+            # Get token metrics from agent memory (aggregated from all steps)
+            all_steps = self.memory.samples.get(str(sample_id), [])
+            total_input_tokens = sum(step.num_input_tokens for step in all_steps)
+            total_output_tokens = sum(step.num_output_tokens for step in all_steps)
+            total_token_time = sum(step.token_time for step in all_steps)
+            total_infer_time = sum(step.infer_time for step in all_steps)
+
+            # Return in same format as standard pipeline
+            return {
+                "generated_text": parsed_output,  # Structured dict, not string
+                "token_time": total_token_time,
+                "infer_time": total_infer_time,
+                "num_input_tokens": total_input_tokens,
+                "num_output_tokens": total_output_tokens,
+            }
+
         except Exception as e:
-            logger.error(f"Error in diagnosis step: {e}", exc_info=True)
-            state["diagnosis_output"] = "Error generating diagnosis."
-
-        # Return final output
-        return self._create_final_output(state)
+            logger.error(f"Error in final_prediction step: {e}", exc_info=True)
+            return {
+                "generated_text": {
+                    "diagnosis": "error",
+                    "probability": 0.5,
+                    "explanation": f"Error: {str(e)}",
+                },
+                "token_time": 0.0,
+                "infer_time": 0.0,
+                "num_input_tokens": 0,
+                "num_output_tokens": 0,
+            }
 
     def _create_summary_prompt_template(self):
         """Create a function that formats the summary prompt."""
@@ -207,10 +234,10 @@ class Zhu2024cAgent(PulseTemplateAgent):
 
         return format_summary_prompt
 
-    def _create_diagnosis_prompt_template(self):
-        """Create a function that formats the diagnosis prompt."""
+    def _create_final_prediction_prompt_template(self):
+        """Create a function that formats the final_prediction prompt."""
 
-        def format_diagnosis_prompt(summary, state):
+        def format_final_prediction_prompt(summary, state):
             # Get summary from previous step
             summary = state.get("feature_analysis_output", "No summary available")
 
@@ -223,7 +250,7 @@ Please provide your assessment following the required format."""
 
             return prompt
 
-        return format_diagnosis_prompt
+        return format_final_prediction_prompt
 
     def _process_patient_features(
         self, state: Dict[str, Any], patient_data: pd.Series
@@ -312,40 +339,3 @@ Please provide your assessment following the required format."""
             patient_features = f"Error processing patient features: {str(e)}"
 
         return patient_features
-
-    def _create_final_output(self, state: Dict[str, Any]) -> Dict[str, Any]:
-        """Create the final output from the agent's state."""
-        # Get the diagnosis output from the second step
-        diagnosis_output = state.get("diagnosis_output", "")
-
-        # Ensure diagnosis_output is a string (crucial fix)
-        if not isinstance(diagnosis_output, str):
-            try:
-                # Convert dict/object to string if needed
-                diagnosis_output = json.dumps(diagnosis_output, indent=2)
-            except:
-                diagnosis_output = str(diagnosis_output)
-
-        # Try to extract structured data if available
-        try:
-            parsed = extract_dict(diagnosis_output)
-            if not parsed:
-                parsed = {
-                    "diagnosis": None,
-                    "probability": 0.5,
-                    "explanation": diagnosis_output,
-                }
-        except Exception as e:
-            logger.warning(f"Failed to parse diagnosis output: {e}")
-            parsed = {
-                "diagnosis": None,
-                "probability": 0.5,
-                "explanation": diagnosis_output,
-            }
-
-        # Return the diagnosis output as the final result
-        return {
-            "output": diagnosis_output,  # Now guaranteed to be a string
-            "parsed": parsed,
-            "state": state,
-        }

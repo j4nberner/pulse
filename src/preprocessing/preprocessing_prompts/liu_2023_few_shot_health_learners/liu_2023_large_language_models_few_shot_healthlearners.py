@@ -13,7 +13,7 @@ logger = logging.getLogger("PULSE_logger")
 
 def liu_2023_few_shot_preprocessor(
     X: List[pd.DataFrame], y: List[pd.DataFrame], info_dict: Dict[str, Any]
-) -> Tuple[pd.DataFrame, pd.DataFrame]:
+) -> Dict[str, pd.DataFrame]:
     """
     Preprocess ICU data into prompts using few-shot format and centralized JSON prompt template.
     According to the paper "Large Language Models are Few-Shot Health Learners"
@@ -25,7 +25,7 @@ def liu_2023_few_shot_preprocessor(
         info_dict (Dict[str, Any]): Task metadata (e.g. task name, model ID, etc).
 
     Returns:
-        Tuple[pd.DataFrame, pd.DataFrame]: Prompt DataFrame and label DataFrame.
+        Dict[str, pd.DataFrame]: Dictionary with keys "X" (prompt DataFrame) and "y" (label DataFrame).
     """
     pp = PreprocessorAdvanced()
     task = info_dict.get("task", "unknown_task")
@@ -83,7 +83,11 @@ def liu_2023_few_shot_preprocessor(
     combined_prompt = _wrap_for_few_shot_template(few_shot_examples, prompts, task=task)
 
     X_processed = pd.DataFrame({"text": combined_prompt})
-    return X_processed, y_input
+
+    return {
+        "X": X_processed,
+        "y": y_input,
+    }
 
 
 def build_liu_query(

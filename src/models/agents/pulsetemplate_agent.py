@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 import pandas as pd
 
-from src.util.agent_util import AgentMemoryManager, ModelAdapter
+from src.util.agent_util import AgentMemoryManager
 
 logger = logging.getLogger("PULSE_logger")
 
@@ -23,6 +23,7 @@ class PulseTemplateAgent(ABC):
         dataset_name: str,
         output_dir: Optional[str] = None,
         steps: Optional[List[Dict[str, Any]]] = None,
+        metrics_tracker: Optional[Any] = None,
         **kwargs,
     ):
         """Initialize the agent template.
@@ -36,10 +37,10 @@ class PulseTemplateAgent(ABC):
             **kwargs: Additional arguments
         """
         # Store model info
+        self.model = model
         self.model_name = getattr(
             model, "model_name", getattr(model, "__class__", type(model)).__name__
         )
-        self.model_adapter = ModelAdapter(model)
 
         # Store task info
         self.task_name = task_name
@@ -50,7 +51,7 @@ class PulseTemplateAgent(ABC):
 
         # Create memory manager
         agent_id = f"{self.__class__.__name__}_{task_name}_{dataset_name}"
-        self.memory = AgentMemoryManager(agent_id, output_dir)
+        self.memory = AgentMemoryManager(agent_id, output_dir, metrics_tracker)
 
     def add_step(self, name: str, **step_params) -> None:
         """Add a reasoning step to the agent."""
@@ -68,85 +69,58 @@ class PulseTemplateAgent(ABC):
         # Track processed prompts
         prompts = []
         processed_indices = []
-        # Store additional metadata for evaluation
-        is_agent_prediction = []
         token_counts_input = []
         token_counts_output = []
 
         logger.info(f"Processing {len(X)} patients with {self.__class__.__name__}")
         logger.debug(f"Input data columns: {X.columns}")
 
-        # Set the total number of samples in the memory manager
-        self.memory.set_total_samples(len(X))
-
         # Process each patient
         for i, (idx, row) in enumerate(X.iterrows()):
             try:
+                # Set target label in memory manager
+                target_label = y.loc[idx].iloc[0] if idx in y.index else 0
+                self.memory.set_current_sample_target(target_label)
+
                 # Process patient data through agent steps
                 result = self.process_single(row)
-                
-                # Get parsed result if available
-                parsed = result.get("parsed", {})
-                
-                if parsed and isinstance(parsed, dict):
-                    # Use parsed structured output
-                    prompts.append(json.dumps(parsed, ensure_ascii=False))
-                    
-                    # Get token metrics from final step - FIX HERE
-                    final_step = self.memory.get_final_step(idx)
-                    if not final_step:
-                        logger.warning(f"Could not find final step for sample {idx} - using default token counts")
-                    
-                    # Use getattr instead of .get() for StepMemory objects
-                    token_counts_input.append(
-                        getattr(final_step, "num_input_tokens", 0) if final_step else 0
-                    )
-                    token_counts_output.append(
-                        getattr(final_step, "num_output_tokens", 0) if final_step else 0
-                    )
-                else:
-                    # Fallback to raw output if no structured data available
-                    if isinstance(result["output"], dict):
-                        prompts.append(json.dumps(result["output"], indent=2))
-                    else:
-                        prompts.append(str(result["output"]))
-                    token_counts_input.append(0)  # Default values for fallback case
-                    token_counts_output.append(0)
 
-                # Mark as agent prediction to avoid second inference
-                is_agent_prediction.append(True)
+                # Now result has the same format as standard pipeline
+                generated_text = result.get("generated_text", {})
+
+                if isinstance(generated_text, dict):
+                    # Use structured output directly
+                    prompts.append(json.dumps(generated_text, ensure_ascii=False))
+                else:
+                    # Fallback to string representation
+                    prompts.append(str(generated_text))
+
+                # Get token counts from result
+                token_counts_input.append(result.get("num_input_tokens", 0))
+                token_counts_output.append(result.get("num_output_tokens", 0))
                 processed_indices.append(idx)
 
             except Exception as e:
-                logger.error(
-                    f"Error processing patient {i+1}/{len(X)}: {e}", exc_info=True
-                )
-                # Add empty prompt or a placeholder for failed processing
+                logger.error(f"Error processing patient {i+1}/{len(X)}: {e}", exc_info=True)
                 prompts.append("Error during agent processing")
-                is_agent_prediction.append(
-                    False
-                )  # Don't flag errors as agent predictions
                 token_counts_input.append(0)
                 token_counts_output.append(0)
                 processed_indices.append(idx)
 
-        # Create DataFrame in SAME format as standard pipeline
+        # Create DataFrame in same format as standard pipeline
         X_processed = pd.DataFrame(
             {
                 "text": prompts,
-                "is_agent_prediction": is_agent_prediction,
                 "num_input_tokens": token_counts_input,
                 "num_output_tokens": token_counts_output,
             },
             index=processed_indices,
         )
 
-        # Debug log to verify structure
         logger.debug(f"Agent produced DataFrame with columns: {X_processed.columns}")
         if len(X_processed) > 0:
             logger.debug(f"Sample agent output: {X_processed['text'].iloc[0][:100]}")
 
-        # Return the processed data and unchanged labels
         return X_processed, y
 
     def run_step(
@@ -184,33 +158,18 @@ class PulseTemplateAgent(ABC):
             "system_message", "You are a helpful assistant."
         )
 
-        # Create step info
-        sample_steps = []
-        if self.memory.current_sample_id in self.memory.samples:
-            sample_steps = self.memory.samples[self.memory.current_sample_id]
-
-        step_info = {
-            "step_number": len(sample_steps) + 1,
-            "step_name": step_name,
-            "system_message": system_message,
-            "input": prompt,
-        }
-
-        # Prepare messages for the model
-        messages = [
-            {"role": "system", "content": system_message},
-            {"role": "user", "content": prompt},
-        ]
-
-        # Call the model
         parse_json = step_config.get("parse_json", False)
         start_time = time.time()
 
         try:
-            # Use the model adapter to call the model
-            result = self.model_adapter.call_with_messages(messages, parse_json)
+            # Call the model's generate method directly
+            result = self.model._generate_standard(
+                input_text=prompt,
+                custom_system_message=system_message,
+                force_raw_text=not parse_json,
+            )
 
-            # Extract output properly - it's in the generated_text field for Llama3Model
+            # Extract output properly
             if "generated_text" in result:
                 if parse_json and isinstance(result["generated_text"], dict):
                     output = result["generated_text"]
