@@ -4,7 +4,7 @@
 general:
   app_name: "Pulse"
   app_version: "1.0.1"
-  app_mode: "debug" # "debug", "count_tokens", "benchmark"
+  app_mode: "benchmark" # "debug", "count_tokens", "benchmark"
   debug_data_length: 50 # Number of samples to use for debugging
   logging_level: "DEBUG" # "DEBUG", "INFO", "WARNING", "ERROR"
   use_scratch: true # Whether to use scratch space for temporary files
@@ -36,7 +36,7 @@ datasets:
 preprocessing_baseline:
   replace_outliers: true # Whether to replace outliers with NaNs
   flag_na: true # Whether to flag NA values with binary indicators
-  standardize: true # Whether to standardize features (yes: convDL, not required: convML, LLM)
+  standardize: false # Whether to standardize features (yes: convDL, not required: convML, LLM)
   static_imputation: true # Whether to perform static feature imputation
   dynamic_imputation: true # Whether to perform dynamic feature imputation
   split_ratios: # Train/Val/Test split ratios
@@ -75,9 +75,9 @@ benchmark_settings:
   random_seed: 42
 
 load_models:
-  - "configs/model_configs/CNNModel.yaml"
+  # - "configs/model_configs/CNNModel.yaml"
   # - "configs/model_configs/RandomForestModel.yaml"
-  # - "configs/model_configs/XGBoost.yaml"
+  - "configs/model_configs/XGBoost.yaml"
   # - "configs/model_configs/InceptionTimeModel.yaml"
   # - "configs/model_configs/LSTMModel.yaml"
   # - "configs/model_configs/LightGBMModel.yaml"
@@ -98,6 +98,3 @@ load_models:
   # - "configs/model_configs/GPT4oModel.yaml" # use with caution
   # - "configs/model_configs/Gemini2p5flashModel.yaml" # not yet implemented
   # - "configs/model_configs/ClaudeSonnet4Model.yaml" # not yet implemented
-# load_pretrained_models: true # Whether to use pretrained models
-# pretrained_model_paths:
-#   - "/output/CNN_aki_eicu_20250512_195730.pth" # Path to pretrained model (if any)

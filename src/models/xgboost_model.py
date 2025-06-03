@@ -96,6 +96,9 @@ class XGBoostModel(PulseModel):
 
         # Load model from pretrained state if available and not in training mode
         if self.pretrained_model_path and self.mode != "train":
+            logger.info(
+                "Loading pretrained model weights from %s", self.pretrained_model_path
+            )
             self.load_model_weights(self.pretrained_model_path)
 
         # Create DataFrame with feature names for prediction to avoid warnings

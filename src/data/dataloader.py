@@ -320,7 +320,7 @@ class DatasetManager:
         return True, dataset
 
     def get_preprocessed_data(
-        self, dataset_id: str, model_name: str, mode: str = "train", **kwargs: Any
+        self, dataset_id: str, model_name: str, model_mode: str = "train", **kwargs: Any
     ) -> Tuple[
         pd.DataFrame,
         pd.DataFrame,
@@ -399,6 +399,21 @@ class DatasetManager:
 
         else:
             logger.debug("Running in benchmark mode.")
+            if model_mode == "inference":
+                # If model is in inference mode, we only need the full test set. 
+                # Using subset of train and val for possible few-shot examples in LLMs.
+                logger.debug(
+                    "Benchmark mode with inference: Taking only %d rows for train and val loader.",
+                    2000,
+                )
+                dataset["data"] = {
+                    "X_train": data["X_train"].iloc[:2000],
+                    "y_train": data["y_train"].iloc[:2000],
+                    "X_val": data["X_val"].iloc[:2000],
+                    "y_val": data["y_val"].iloc[:2000],
+                    "X_test": data["X_test"],
+                    "y_test": data["y_test"],
+                }
 
         if self.test_limited is not None:
             X = dataset["data"]["X_test"]
@@ -521,7 +536,7 @@ class DatasetManager:
                 "dataset_name": dataset["name"],
                 "task": dataset["task"],
                 "model_name": model_name,
-                "mode": mode,
+                "model_mode": model_mode,
                 "num_shots": num_shots,
                 "data_window": data_window,
             }
@@ -544,7 +559,7 @@ class DatasetManager:
                 # Training data
                 X = [dataset["data"]["X_train"]]
                 y = [dataset["data"]["y_train"]]
-                info_dict["mode"] = "train"
+                info_dict["model_mode"] = "train"
                 dataset["data"]["X_train"], dataset["data"]["y_train"] = (
                     prompting_preprocessor(X, y, info_dict)
                 )
@@ -552,7 +567,7 @@ class DatasetManager:
                 # Validation data - Uses training data for few-shot learning
                 X = [dataset["data"]["X_val"], dataset["data"]["X_train"]]
                 y = [dataset["data"]["y_val"], dataset["data"]["y_train"]]
-                info_dict["mode"] = "val"
+                info_dict["model_mode"] = "val"
                 dataset["data"]["X_val"], dataset["data"]["y_val"] = (
                     prompting_preprocessor(X, y, info_dict)
                 )
@@ -560,7 +575,7 @@ class DatasetManager:
             # Test data
             X = [dataset["data"]["X_test"], dataset["data"]["X_train"]]
             y = [dataset["data"]["y_test"], dataset["data"]["y_train"]]
-            info_dict["mode"] = "test"
+            info_dict["model_mode"] = "test"
             dataset["data"]["X_test"], dataset["data"]["y_test"] = (
                 prompting_preprocessor(X, y, info_dict)
             )

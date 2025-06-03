@@ -115,6 +115,9 @@ def get_pretrained_model_path(
     Returns:
         str: The path to the pretrained model.
     """
+    if pretrained_model_list is None:
+        return None
+    
     pretrained_model_path = None
     # Check if the pretrained_model_list is a directory
     if os.path.isdir(pretrained_model_list[0]):
@@ -134,7 +137,7 @@ def get_pretrained_model_path(
             if task == task_name and dataset == dataset_name:
                 pretrained_model_path = path
                 break
-
+    
     return pretrained_model_path
 
 

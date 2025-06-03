@@ -169,7 +169,7 @@ class PulseBenchmark:
                     # Preprocess data for corresponding model
                     X_train, y_train, X_val, y_val, X_test, y_test = (
                         self.dm.get_preprocessed_data(
-                            task_dataset_name, model.model_name, **dm_kwargs
+                            task_dataset_name, model.model_name, model.mode, **dm_kwargs
                         )
                     )
 
@@ -270,12 +270,6 @@ class PulseBenchmark:
                     ):
                         # Estimate number of tokens for LLMs.
                         model.estimate_nr_tokens(test_loader)
-                    elif (
-                        self.config.general.app_mode == "evaluate_sys_msgs"
-                        and model.type == "LLM"
-                    ):
-                        # Evaluate system messages for LLMs.
-                        model.evaluate_sys_msgs(test_loader)
 
                     else:
                         # Train the model if specified in the config
