@@ -189,7 +189,7 @@ class CNNModel(PulseModel, nn.Module):
             self.params["num_channels"] = transformed_features.shape[1]
             self.params["window_size"] = transformed_features.shape[2]
             self._init_model()
-            logger.info(self.model)
+            logger.info(self)
             logger.info(
                 "Input shape to model (after transformation): %s",
                 transformed_features.shape,

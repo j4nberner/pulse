@@ -13,8 +13,7 @@ import torch.nn as nn
 from peft import PromptTuningConfig, PromptTuningInit, TaskType, get_peft_model
 from torch.nn import functional as F
 from torch.utils.data import DataLoader
-from transformers import (AutoModelForCausalLM, AutoTokenizer,
-                          BitsAndBytesConfig)
+from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
 import wandb
 from src.eval.metrics import MetricsTracker
@@ -119,6 +118,7 @@ class PulseModel:
             logger.info("Sklearn model loaded successfully from %s", model_path)
 
         elif self.type == "convDL":
+            logger.info("Loading model weights from %s", model_path)
             # Load the state dictionary
             state_dict = torch.load(model_path, map_location=torch.device("cpu"))
 
@@ -130,7 +130,6 @@ class PulseModel:
             if hasattr(self, "load_state_dict"):
                 self.load_state_dict(state_dict, strict=False)
                 self.is_loaded = True
-                logger.info("Model weights loaded successfully")
             else:
                 logger.warning(
                     "Model does not have load_state_dict method. Cannot load weights."
@@ -395,7 +394,7 @@ class PulseLLMModel(PulseModel):
 
         decoded_output = self.tokenizer.decode(
             generated_token_ids_list,
-            skip_special_tokens=True,
+            skip_special_tokens=False,
             clean_up_tokenization_spaces=True,
         )
 

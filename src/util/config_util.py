@@ -117,15 +117,15 @@ def get_pretrained_model_path(
     """
     if pretrained_model_list is None:
         return None
-    
+
     pretrained_model_path = None
     # Check if the pretrained_model_list is a directory
-    if os.path.isdir(pretrained_model_list[0]):
+    if os.path.isdir(pretrained_model_list):
         # If it's a directory, assume it contains multiple pretrained models
         pretrained_model_list = [
-            os.path.join(pretrained_model_list[0], f)
-            for f in os.listdir(pretrained_model_list[0])
-            if os.path.isfile(os.path.join(pretrained_model_list[0], f))
+            os.path.join(pretrained_model_list, f)
+            for f in os.listdir(pretrained_model_list)
+            if os.path.isfile(os.path.join(pretrained_model_list, f))
         ]
 
     for path in pretrained_model_list:
@@ -137,7 +137,7 @@ def get_pretrained_model_path(
             if task == task_name and dataset == dataset_name:
                 pretrained_model_path = path
                 break
-    
+
     return pretrained_model_path
 
 
