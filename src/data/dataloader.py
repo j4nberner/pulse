@@ -11,8 +11,9 @@ from omegaconf import OmegaConf
 from torch.utils.data import Dataset
 
 from src.preprocessing.preprocessing_advanced.windowing import Windower
-from src.preprocessing.preprocessing_baseline.preprocessing_baseline import \
-    PreprocessorBaseline
+from src.preprocessing.preprocessing_baseline.preprocessing_baseline import (
+    PreprocessorBaseline,
+)
 from src.preprocessing.preprocessing_prompts import get_prompting_preprocessor
 from src.util.config_util import set_seeds
 
@@ -83,9 +84,12 @@ class DatasetManager:
         # Initialize datasets based on config
         self._init_datasets()
 
-        # Extract test_limited parameter from config
+        # Extract test_limited and samples_per_stayid parameter from config
         self.test_limited = getattr(
             self.config.preprocessing_baseline.split_ratios, "test_limited", None
+        )
+        self.samples_per_stayid = getattr(
+            self.config.preprocessing_baseline.split_ratios, "samples_per_stayid", None
         )
 
     def _init_preprocessing_tools(self):
@@ -349,6 +353,7 @@ class DatasetManager:
         Notes:
             - When mode is "test", if test_limited is set in config, only the first X stay_ids will be used
             - If test_limited is None, the full test set is used
+            - If samples_per_stayid is None, the full test_limited set is used
         """
         if dataset_id not in self.datasets:
             logger.error("Dataset %s not found", dataset_id)
@@ -422,6 +427,62 @@ class DatasetManager:
                 dataset_id,
             )
 
+            if self.samples_per_stayid is not None and dataset["task"] in [
+                "aki",
+                "sepsis",
+            ]:
+                X_test_limited = dataset["data"]["X_test"]
+                y_test_limited = dataset["data"]["y_test"]
+
+                # Create empty dataframes to store the sampled data
+                X_limited_sampled = pd.DataFrame(columns=X_test_limited.columns)
+                y_limited_sampled = pd.DataFrame(columns=y_test_limited.columns)
+
+                # Get unique stay_ids
+                unique_limited_stay_ids = X_test_limited["stay_id"].unique()
+
+                # Process each stay_id
+                for stay_id in unique_limited_stay_ids:
+                    # Get all rows for this stay_id
+                    X_stay = X_test_limited[X_test_limited["stay_id"] == stay_id]
+                    y_stay = y_test_limited[y_test_limited["stay_id"] == stay_id]
+
+                    # Get the indices for this stay_id
+                    indices = X_stay.index.tolist()
+                    n_indices = len(indices)
+
+                    if n_indices <= self.samples_per_stayid:
+                        # If we have fewer rows than requested, take all of them
+                        selected_indices = indices
+                    else:
+                        # For even spacing, we need to divide the range into samples_per_stayid-1 segments
+                        step = (n_indices - 1) / (self.samples_per_stayid - 1)
+
+                        # Generate evenly spaced indices
+                        selected_indices = [
+                            indices[min(round(i * step), n_indices - 1)]
+                            for i in range(self.samples_per_stayid)
+                        ]
+
+                    # Add the selected rows to the sampled dataframes
+                    X_limited_sampled = pd.concat(
+                        [X_limited_sampled, X_stay.loc[selected_indices]]
+                    )
+                    y_limited_sampled = pd.concat(
+                        [y_limited_sampled, y_stay.loc[selected_indices]]
+                    )
+
+                # Store the sampled versions in dataset
+                dataset["data"]["X_test_sampled"] = X_limited_sampled
+                dataset["data"]["y_test_sampled"] = y_limited_sampled
+
+                logger.info(
+                    "Created sampled test set with %s samples per stay_id for %s (task: %s)",
+                    self.samples_per_stayid,
+                    dataset_id,
+                    dataset["task"],
+                )
+
         # Applying advanced preprocessing if and not already loaded from presaved files
         logger.debug(
             "Applying advanced preprocessing for %s.",
@@ -462,12 +523,25 @@ class DatasetManager:
         model_type = kwargs["model_type"]
 
         # Convert categorical columns to numerical values for convML models
-        if model_type in ["convML", "convDL"]:
-            # Process gender column in X if it exists
-            for data_set in ["X_train", "X_val", "X_test"]:
-                X = dataset["data"][data_set]
-                X["sex"] = X["sex"].map({"Male": 1, "Female": 0}).fillna(-1)
-                dataset["data"][data_set] = X
+        if model_type in ["convML"]:
+
+            def convert_categorical_columns(df):
+                """Convert categorical columns to numerical values."""
+                if "sex" in df.columns:
+                    df = df.copy()
+                    df["sex"] = df["sex"].map({"Male": 1, "Female": 0}).fillna(-1)
+                return df
+
+            # Process all feature datasets
+            feature_datasets = ["X_train", "X_val", "X_test"]
+            if "X_test_sampled" in dataset["data"]:
+                feature_datasets.append("X_test_sampled")
+
+            for data_set in feature_datasets:
+                dataset["data"][data_set] = convert_categorical_columns(
+                    dataset["data"][data_set]
+                )
+
             logger.debug("Converted gender column to numerical values")
 
         # Print statistics if requested (Print train, val and both original and limited test set statistics to compare distributions)
@@ -494,10 +568,24 @@ class DatasetManager:
                 dataset_name=dataset["name"],
             )
 
+            # Add statistics for sampled test set if available
+            test_sampled_stats = None
+            if (
+                "X_test_sampled" in dataset["data"]
+                and "y_test_sampled" in dataset["data"]
+            ):
+                test_sampled_stats = self.preprocessor.calculate_dataset_statistics(
+                    dataset["data"]["X_test_sampled"],
+                    dataset["data"]["y_test_sampled"],
+                    "test_sampled",
+                    task=dataset["task"],
+                    dataset_name=dataset["name"],
+                )
+
             # Filter out None values before passing to print_statistics
             stats_to_print = [
                 stat
-                for stat in [train_stats, val_stats, test_stats]
+                for stat in [train_stats, val_stats, test_stats, test_sampled_stats]
                 if stat is not None
             ]
             # Print statistics for all datasets
@@ -527,7 +615,7 @@ class DatasetManager:
                 "data_window": data_window,
             }
 
-            # Add model instance to info_dict if provided in kwargs
+            # Add model instance to info_dict if provided in kwargs (for ModelManager and agent setup)
             if "model_instance" in kwargs:
                 info_dict["model_instance"] = kwargs["model_instance"]
 
@@ -578,6 +666,21 @@ class DatasetManager:
                 # Store the loaded model back to the benchmark.py flow
                 kwargs["loaded_model"] = info_dict["loaded_model"]
 
+        # Return the appropriate test set based on availability
+        if (
+            "X_test_sampled" in dataset["data"]
+            and "y_test_sampled" in dataset["data"]
+            and dataset["task"] in ["aki", "sepsis"]
+        ):
+            return (
+                dataset["data"]["X_train"],
+                dataset["data"]["y_train"],
+                dataset["data"]["X_val"],
+                dataset["data"]["y_val"],
+                dataset["data"]["X_test_sampled"],
+                dataset["data"]["y_test_sampled"],
+            )
+
         return (
             dataset["data"]["X_train"],
             dataset["data"]["y_train"],
@@ -602,14 +705,14 @@ class DatasetManager:
             if isinstance(df, pd.DataFrame) and "stay_id" in df.columns:
                 # Remove the stay_id column
                 data_dict[key] = df.drop(columns=["stay_id"])
-                logger.debug(f"Dropped 'stay_id' column from {key}")
+                logger.debug("Dropped 'stay_id' column from %s", key)
 
                 # Debug info for labels
                 if key.startswith("y_"):
                     logger.debug(
-                        f"{key} shape after dropping stay_id: {data_dict[key].shape}"
+                        "%s shape after dropping stay_id: %s", key, data_dict[key].shape
                     )
-                    logger.debug(f"{key} columns: {data_dict[key].columns.tolist()}")
+                    logger.debug("%s columns: %s", key, data_dict[key].columns.tolist())
 
         return data_dict
 
