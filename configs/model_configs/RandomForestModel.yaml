@@ -1,10 +1,10 @@
 name: "RandomForest"
-pretrained_model_paths: "output_to_keep/results_benchmark/20250509_183704_RandomForest_preprocessing_unstandardized_6dw_0pw_1sz/Models" # Path to pretrained model (if any)
+pretrained_model_paths: "/cluster/project/bmds_lab/sepsis_sophia/pulse/output/output_to_keep/20250509_183704_RandomForest_preprocessing_unstandardized_6dw_0pw_1sz/Models" # Path to pretrained model (if any)
 params:
   # Basic configuration
   type: "convML" # Type of model (convML for conventional machine learning, convDL for conventional deep learning and LLM for large language models)
   trainer_name: "RandomForestTrainer" # Class that implements the training process
-  mode: "train" # Mode of operation (train, inference)
+  mode: "inference" # Mode of operation (train, inference)
   verbose: 1 # Controls verbosity of output (0: silent, 1: progress bar, >1: more details)
   tune_hyperparameters: false # Whether to tune hyperparameters (true/false)
   n_jobs: -1 # Number of CPU cores to use (-1 for all available, None for 1 CPU)

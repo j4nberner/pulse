@@ -5,7 +5,7 @@ general:
   app_name: "Pulse"
   app_version: "1.0.1"
   app_mode: "benchmark" # "debug", "count_tokens", "benchmark"
-  debug_data_length: 50 # Number of samples to use for debugging
+  debug_data_length: 1000 # Number of samples to use for debugging
   logging_level: "DEBUG" # "DEBUG", "INFO", "WARNING", "ERROR"
   use_scratch: true # Whether to use scratch space for temporary files
   save_metadata: true # Whether to save the metadata file. Inludes prompts for LLMs
@@ -17,6 +17,7 @@ wandb:
 
 ###### Application specific settings ######
 base_path: ""
+original_base_path: "cluster/project/bmds_lab/sepsis_jan/pulse"
 
 # Tasks to process
 tasks:
@@ -36,7 +37,7 @@ datasets:
 preprocessing_baseline:
   replace_outliers: true # Whether to replace outliers with NaNs
   flag_na: true # Whether to flag NA values with binary indicators
-  standardize: false # Whether to standardize features (yes: convDL, not required: convML, LLM)
+  standardize: true # Whether to standardize features (yes: convDL, not required: convML, LLM)
   static_imputation: true # Whether to perform static feature imputation
   dynamic_imputation: true # Whether to perform dynamic feature imputation
   split_ratios: # Train/Val/Test split ratios
@@ -77,8 +78,8 @@ benchmark_settings:
 load_models:
   # - "configs/model_configs/CNNModel.yaml"
   # - "configs/model_configs/RandomForestModel.yaml"
-  - "configs/model_configs/XGBoost.yaml"
-  # - "configs/model_configs/InceptionTimeModel.yaml"
+  # - "configs/model_configs/XGBoost.yaml"
+  - "configs/model_configs/InceptionTimeModel.yaml"
   # - "configs/model_configs/LSTMModel.yaml"
   # - "configs/model_configs/LightGBMModel.yaml"
   # - "configs/model_configs/GRUModel.yaml"

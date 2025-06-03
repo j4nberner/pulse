@@ -287,7 +287,7 @@ class PulseBenchmark:
 
                 except Exception as e:
                     logger.error(
-                        "Error training %s on %s: %s",
+                        "Error running %s on %s: %s",
                         model.model_name,
                         task_dataset_name,
                         str(e),

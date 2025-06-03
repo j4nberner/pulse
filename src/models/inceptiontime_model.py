@@ -320,9 +320,9 @@ class InceptionTimeModel(PulseModel, nn.Module):
             # Configure the model input size based on the data
             features, _ = next(iter(data_loader))
             transformed_features = converter.convert_batch_to_3d(features)
-            input_dim = transformed_features.shape[-1]
+            input_dim = transformed_features.shape[1]  # num_channels
             self.input_size = input_dim
-            self._init_model()
+            self.create_network_with_input_shape(input_dim)
             self.load_model_weights(self.pretrained_model_path)
 
         # Move model to device
