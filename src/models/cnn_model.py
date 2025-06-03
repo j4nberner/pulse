@@ -85,7 +85,6 @@ class CNNModel(PulseModel, nn.Module):
     def _init_model(self) -> None:
         """
         Initialize the CNN model.
-
         """
         set_seeds(self.params["random_seed"])
         logger.debug(
@@ -195,6 +194,9 @@ class CNNModel(PulseModel, nn.Module):
                 transformed_features.shape,
             )
             self.load_model_weights(self.pretrained_model_path)
+        # Move model to device
+        self.to(self.device)
+
         # Move model to device
         self.to(self.device)
 
