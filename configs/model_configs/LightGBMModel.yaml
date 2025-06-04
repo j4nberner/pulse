@@ -1,5 +1,5 @@
 name: "LightGBM"
-pretrained_model_paths: output_to_keep/results_benchmark/20250510_010444_LightGBM/Models # Path to pretrained model (if any)
+pretrained_model_paths: /cluster/project/bmds_lab/sepsis_sophia/pulse/output/output_to_keep/20250510_010444_LightGBM/Models # Path to pretrained model (if any)
 params:
   # Basic configuration
   trainer_name: "LightGBMTrainer" # Class that implements the training process

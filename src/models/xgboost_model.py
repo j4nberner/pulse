@@ -104,6 +104,10 @@ class XGBoostModel(PulseModel):
         # Create DataFrame with feature names for prediction to avoid warnings
         X_test_df = pd.DataFrame(X_test, columns=feature_names)
 
+        logger.info(X_test_df.head(10))
+        
+        
+
         # Evaluate the model
         metrics_tracker = MetricsTracker(
             self.model_name,

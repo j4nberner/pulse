@@ -1,10 +1,10 @@
 name: "LSTMModel"
-pretrained_model_paths: "/cluster/project/bmds_lab/sepsis_sophia/pulse/output/output_to_keep/20250512_181250_LSTM/Models" # Path to pretrained model (if any)
+pretrained_model_paths: null # "/cluster/project/bmds_lab/sepsis_sophia/pulse/output/output_to_keep/20250525_185834_LSTM/Models" # Path to pretrained model (if any)
 params:
   # Basic configuration
   trainer_name: "LSTMTrainer"
   type: "convDL" # Type of model (convML for conventional machine learning, convDL for conventional deep learning and LLM for large language models)
-  mode: "inference"
+  mode: "train"
   save_checkpoint: 0 # Save checkpoint every n epochs. Set to 0 to disable.
   verbose: 2 # Controls verbosity of output (0 = silent, 1 = log every 100 batches, 2 = log every batch)
 

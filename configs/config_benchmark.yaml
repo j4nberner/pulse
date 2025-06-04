@@ -3,8 +3,8 @@
 # General settings
 general:
   app_name: "Pulse"
-  app_version: "1.0.1"
-  app_mode: "benchmark" # "debug", "count_tokens", "benchmark"
+  app_version: "1.0.2"
+  app_mode: "debug" # "debug", "count_tokens", "benchmark"
   debug_data_length: 100 # Number of samples to use for debugging
   logging_level: "DEBUG" # "DEBUG", "INFO", "WARNING", "ERROR"
   use_scratch: true # Whether to use scratch space for temporary files
@@ -21,16 +21,16 @@ original_base_path: "cluster/project/bmds_lab/sepsis_jan/pulse"
 
 # Tasks to process
 tasks:
-  - "mortality"
+  # - "mortality"
   - "aki"
-  - "sepsis"
+  # - "sepsis"
 
 # Datasets to process
 dataset_path: "datasets/original_harmonized" #"/path/to/datasets"
 datasets:
   - "eicu"
-  - "hirid"
-  - "miiv"
+  # - "hirid"
+  # - "miiv"
 
 # _______ Preprocessing Baseline _______
 
@@ -45,7 +45,7 @@ preprocessing_baseline:
     val: 0.1
     test: 0.1
     test_limited: 100 # Number of stay_ids for limited test set, null = test set is not limited
-    samples_per_stayid: null # Number of samples to keep per stay_id for aki/sepsis (null = all samples)
+    samples_per_stayid: 10 # Number of samples to keep per stay_id for aki/sepsis (null = all samples)
     print_stats: true # Whether to print set statistics
 
 # _______ Preprocessing Advanced _______
@@ -77,8 +77,9 @@ benchmark_settings:
   random_seed: 42
 
 load_models:
-  - "configs/model_configs/RandomForestModel.yaml"
-  # - "configs/model_configs/XGBoost.yaml"
+  # - "configs/model_configs/RandomForestModel.yaml"
+  - "configs/model_configs/XGBoost.yaml"
+  # - "configs/model_configs/LightGBMModel.yaml"
 
   # - "configs/model_configs/CNNModel.yaml"
   # - "configs/model_configs/InceptionTimeModel.yaml"

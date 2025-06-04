@@ -174,10 +174,10 @@ class LightGBMModel(PulseModel):
             )
 
             # Log feature importance
-            if hasattr(self.model.model, "feature_importances_"):
+            if hasattr(self.model, "feature_importances_"):
                 feature_importance = {
                     f"importance_{feature_names[i]}": imp
-                    for i, imp in enumerate(self.model.model.feature_importances_)
+                    for i, imp in enumerate(self.model.feature_importances_)
                 }
                 wandb.log(feature_importance)
 
@@ -185,7 +185,7 @@ class LightGBMModel(PulseModel):
                 importance_df = pd.DataFrame(
                     {
                         "feature": feature_names,
-                        "importance": self.model.model.feature_importances_,
+                        "importance": self.model.feature_importances_,
                     }
                 ).sort_values("importance", ascending=False)
 

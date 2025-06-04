@@ -111,8 +111,9 @@ class DatasetManager:
                 base_path=base_path,
                 random_seed=random_seed,
                 config=preprocessing_config,
-                original_base_path=self.config.original_base_path,
+                original_base_path=self.config["original_base_path"],
             )
+            logger.debug("Preprocessor initialized with original_base_path: %s", self.config["original_base_path"])
         else:
             self.preprocessor = PreprocessorBaseline(
                 base_path=base_path,
@@ -458,8 +459,8 @@ class DatasetManager:
                 # Process each stay_id
                 for stay_id in unique_limited_stay_ids:
                     # Get all rows for this stay_id
-                    X_stay = X_test_limited[X_test_limited["stay_id"] == stay_id]
-                    y_stay = y_test_limited[y_test_limited["stay_id"] == stay_id]
+                    X_stay = X_test_limited[X_test_limited["stay_id"] == stay_id].reset_index(drop=True)
+                    y_stay = y_test_limited[y_test_limited["stay_id"] == stay_id].reset_index(drop=True)
 
                     # Get the indices for this stay_id
                     indices = X_stay.index.tolist()
@@ -487,8 +488,8 @@ class DatasetManager:
                     )
 
                 # Store the sampled versions in dataset
-                dataset["data"]["X_test_sampled"] = X_limited_sampled
-                dataset["data"]["y_test_sampled"] = y_limited_sampled
+                dataset["data"]["X_test"] = X_limited_sampled
+                dataset["data"]["y_test"] = y_limited_sampled
 
                 logger.info(
                     "Created sampled test set with %s samples per stay_id for %s (task: %s)",
@@ -547,14 +548,15 @@ class DatasetManager:
                 return df
 
             # Process all feature datasets
-            feature_datasets = ["X_train", "X_val", "X_test"]
-            if "X_test_sampled" in dataset["data"]:
-                feature_datasets.append("X_test_sampled")
+            # feature_datasets = ["X_train", "X_val", "X_test"]
+            # if "X_test_sampled" in dataset["data"]:
+            #     feature_datasets.append("X_test_sampled")
 
-            for data_set in feature_datasets:
-                dataset["data"][data_set] = convert_categorical_columns(
+            for data_set in ["X_train", "X_val", "X_test"]:
+                df_temp = convert_categorical_columns(
                     dataset["data"][data_set]
                 )
+                dataset["data"][data_set] = df_temp
 
             logger.debug("Converted gender column to numerical values")
 
@@ -582,24 +584,24 @@ class DatasetManager:
                 dataset_name=dataset["name"],
             )
 
-            # Add statistics for sampled test set if available
-            test_sampled_stats = None
-            if (
-                "X_test_sampled" in dataset["data"]
-                and "y_test_sampled" in dataset["data"]
-            ):
-                test_sampled_stats = self.preprocessor.calculate_dataset_statistics(
-                    dataset["data"]["X_test_sampled"],
-                    dataset["data"]["y_test_sampled"],
-                    "test_sampled",
-                    task=dataset["task"],
-                    dataset_name=dataset["name"],
-                )
+            # # Add statistics for sampled test set if available
+            # test_sampled_stats = None
+            # if (
+            #     "X_test_sampled" in dataset["data"]
+            #     and "y_test_sampled" in dataset["data"]
+            # ):
+            #     test_sampled_stats = self.preprocessor.calculate_dataset_statistics(
+            #         dataset["data"]["X_test_sampled"],
+            #         dataset["data"]["y_test_sampled"],
+            #         "test_sampled",
+            #         task=dataset["task"],
+            #         dataset_name=dataset["name"],
+            #     )
 
             # Filter out None values before passing to print_statistics
             stats_to_print = [
                 stat
-                for stat in [train_stats, val_stats, test_stats, test_sampled_stats]
+                for stat in [train_stats, val_stats, test_stats]
                 if stat is not None
             ]
             # Print statistics for all datasets
@@ -681,19 +683,19 @@ class DatasetManager:
                 kwargs["loaded_model"] = info_dict["loaded_model"]
 
         # Return the appropriate test set based on availability
-        if (
-            "X_test_sampled" in dataset["data"]
-            and "y_test_sampled" in dataset["data"]
-            and dataset["task"] in ["aki", "sepsis"]
-        ):
-            return (
-                dataset["data"]["X_train"],
-                dataset["data"]["y_train"],
-                dataset["data"]["X_val"],
-                dataset["data"]["y_val"],
-                dataset["data"]["X_test_sampled"],
-                dataset["data"]["y_test_sampled"],
-            )
+        # if (
+        #     "X_test_sampled" in dataset["data"]
+        #     and "y_test_sampled" in dataset["data"]
+        #     and dataset["task"] in ["aki", "sepsis"]
+        # ):
+        #     return (
+        #         dataset["data"]["X_train"],
+        #         dataset["data"]["y_train"],
+        #         dataset["data"]["X_val"],
+        #         dataset["data"]["y_val"],
+        #         dataset["data"]["X_test_sampled"],
+        #         dataset["data"]["y_test_sampled"],
+        #     )
 
         return (
             dataset["data"]["X_train"],

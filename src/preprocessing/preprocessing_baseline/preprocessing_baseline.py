@@ -56,8 +56,7 @@ class PreprocessorBaseline:
         self.dataset_name = None
 
         # Store original base path if provided (for permanent storage)
-        if original_base_path:
-            self.original_base_path = original_base_path
+        self.original_base_path = original_base_path
 
         # Set default configuration
         self.config = {
