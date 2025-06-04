@@ -78,6 +78,7 @@ class XGBoostModel(PulseModel):
         # Initialize the XGBoost model with parameters from config
         self.model = XGBClassifier(
             **model_params,
+            base_score=0.5,
         )
 
     def evaluate(self, data_loader: Any, save_report: bool = False) -> Dict[str, Any]:
@@ -102,11 +103,7 @@ class XGBoostModel(PulseModel):
             self.load_model_weights(self.pretrained_model_path)
 
         # Create DataFrame with feature names for prediction to avoid warnings
-        X_test_df = pd.DataFrame(X_test, columns=feature_names)
-
-        logger.info(X_test_df.head(10))
-        
-        
+        X_test_df = pd.DataFrame(X_test, columns=feature_names)        
 
         # Evaluate the model
         metrics_tracker = MetricsTracker(

@@ -139,9 +139,10 @@ def prepare_data_for_model_convml(
 
     if isinstance(data_loader[0], pd.DataFrame):
         # If DataLoader is a DataFrame, extract features and labels directly
-        X = np.array(data_loader[0].values)
+        df = data_loader[0].apply(pd.to_numeric, errors="coerce")
+        X = np.array(df.values)
         y = np.array(data_loader[1].values).squeeze()
-        feature_names = list(data_loader[0].columns)
+        feature_names = list(df.columns)
 
     else:
         # Convert lists to numpy arrays
