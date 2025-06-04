@@ -103,7 +103,7 @@ class XGBoostModel(PulseModel):
             self.load_model_weights(self.pretrained_model_path)
 
         # Create DataFrame with feature names for prediction to avoid warnings
-        X_test_df = pd.DataFrame(X_test, columns=feature_names)        
+        X_test_df = pd.DataFrame(X_test, columns=feature_names)
 
         # Evaluate the model
         metrics_tracker = MetricsTracker(
@@ -113,8 +113,8 @@ class XGBoostModel(PulseModel):
             self.save_dir,
         )
 
-        y_pred = self.model.predict(X_test_df)
-        y_pred_proba = self.model.predict_proba(X_test_df)
+        y_pred = self.model.predict(X_test)
+        y_pred_proba = self.model.predict_proba(X_test)
 
         metadata_dict = {
             "prediction": y_pred_proba[:, 1],

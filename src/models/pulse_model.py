@@ -141,96 +141,6 @@ class PulseModel:
         else:
             logger.warning("Model type not recognized. Cannot load model weights.")
 
-    def offload_model_to_cpu(self) -> None:
-        """Offloads the model from GPU memory (if applicable)."""
-        if self.type in ["convDL", "LLM"]:
-            # For PyTorch and LLM models
-            if self.type == "LLM":
-                free_mem = psutil.virtual_memory().available / (1024**2)  # in MB
-                model_size = (
-                    sum(p.numel() for p in self.model.parameters()) * 4 / (1024**2)
-                )  # float32 assumed
-                logger.debug(
-                    "CPU free memory: %.2f MB | Model size: %.2f MB",
-                    free_mem,
-                    model_size,
-                )
-                if free_mem < model_size * 1.2:  # safety margin
-                    logger.warning(
-                        "Not enough CPU memory to offload the model. Free: %.2f MB, Required: %.2f MB. Deleting from GPU only"
-                    )
-                    # Delete from GPU only
-                    del self.model
-                    gc.collect()
-                    torch.cuda.empty_cache()
-
-                else:
-                    # Check if only partially offloaded: if any parameter is still on CUDA, delete the model
-                    if any(p.device.type == "cuda" for p in self.model.parameters()):
-                        logger.warning(
-                            "Model is only partially offloaded. Deleting model from GPU."
-                        )
-                        del self.model
-                        gc.collect()
-                        torch.cuda.empty_cache()
-                    else:
-                        # Fully offload the model to CPU
-                        self.model.to("cpu")
-                        logger.info("LLM model offloaded to CPU memory")
-            else:
-                # TODO: implement for convDL models
-                # self.model.to("cpu")
-                pass
-            torch.cuda.empty_cache()
-            logger.info("Model offloaded from GPU memory")
-            self.is_loaded = False
-
-        elif self.type == "convML":
-            # Sklearn models are always on CPU
-            logger.info("Sklearn model is always on CPU; nothing to offload")
-        else:
-            logger.warning("Unknown model type; cannot offload")
-
-    def load_model_to_gpu(self) -> None:
-        """Loads the model to GPU memory (if applicable)."""
-        if self.type in ["convDL", "LLM"]:
-            # For PyTorch and LLM models
-            if torch.cuda.is_available():
-                device = getattr(self, "device", torch.device("cuda"))
-                if self.type == "LLM":
-                    torch.cuda.empty_cache()
-                    gc.collect()
-                    free_mem = torch.cuda.mem_get_info(device)[0] / (1024**2)  # in MB
-                    model_size = (
-                        sum(p.numel() for p in self.model.parameters()) * 4 / (1024**2)
-                    )  # float32 assumed
-                    logger.debug(
-                        "GPU free memory: %.2f MB | Model size: %.2f MB",
-                        free_mem,
-                        model_size,
-                    )
-                    if free_mem < model_size * 1.2:  # add a safety margin
-                        logger.warning(
-                            "Not enough GPU memory to load the model. Free: %.2f MB, Required: %.2f MB",
-                            free_mem,
-                            model_size,
-                        )
-                    self.model.to(device)
-                else:
-                    # For convDL models, load the model to the specified device
-                    # TODO: implement for confDL models
-                    pass
-                    # self.model.to(device)
-                logger.info("Model loaded to GPU memory")
-                self.is_loaded = True
-            else:
-                logger.warning("CUDA not available.")
-        elif self.type == "convML":
-            # Sklearn models cannot be loaded to GPU
-            pass
-        else:
-            logger.warning("Unknown model type; cannot load to GPU")
-
 
 class PulseLLMModel(PulseModel):
     """
@@ -275,17 +185,30 @@ class PulseLLMModel(PulseModel):
                 logger.info("Model already loaded, reusing existing instance")
                 return
 
-            logger.debug(f"Loading model %s", self.model_id)
+            logger.debug("Loading model %s", self.model_id)
             self.tokenizer = AutoTokenizer.from_pretrained(
                 self.model_id, use_fast=False, padding_side="left"
             )
 
-            # Common model loading configuration
-            self.model = AutoModelForCausalLM.from_pretrained(
-                self.model_id,
-                device_map="auto",
-                torch_dtype=torch.bfloat16,
-            )
+            # Check if model is already loaded on CPU and move to GPU if needed
+            if self.model is not None:
+                # Check if model is on CPU and CUDA is available
+                if torch.cuda.is_available() and all(
+                    p.device.type == "cpu" for p in self.model.parameters()
+                ):
+                    logger.info("Moving model from CPU to GPU")
+                    self.model.to(self.device)
+                else:
+                    logger.info("Model already loaded")
+            else:
+                # Load model from pretrained
+                self.model = AutoModelForCausalLM.from_pretrained(
+                    self.model_id,
+                    device_map="auto" if torch.cuda.is_available() else None,
+                    torch_dtype=(
+                        torch.bfloat16 if torch.cuda.is_available() else torch.float32
+                    ),
+                )
 
             # Apply tuning only in full training mode and if specified
             if not self.inference_only and self.params.get("tuning", False):
@@ -319,9 +242,26 @@ class PulseLLMModel(PulseModel):
             raise e
 
     def offload_model(self) -> None:
-        # TODO: Implement offloading for LLM models
-        logger.error("Offloading not implemented for LLM models.")
-        pass
+        """Offloads the model from GPU memory to CPU."""
+        if self.is_loaded:
+            logger.info("Offloading model %s to CPU", self.model_id)
+            try:
+                self.model.to("cpu")
+                torch.cuda.empty_cache()
+                gc.collect()
+                self.is_loaded = False
+                logger.info("Model offloaded successfully")
+            except RuntimeError as e:
+                logger.warning(
+                    "Failed to offload model to CPU due to insufficient memory: %s. Deleting model from memory.",
+                    e,
+                )
+                del self.model
+                gc.collect()
+                torch.cuda.empty_cache()
+                self.is_loaded = False
+        else:
+            logger.warning("Model is not loaded, nothing to offload")
 
     def generate(
         self,
