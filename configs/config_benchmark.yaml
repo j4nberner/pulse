@@ -5,10 +5,10 @@ general:
   app_name: "Pulse"
   app_version: "1.0.1"
   app_mode: "debug" # "debug", "count_tokens", "benchmark",
-  debug_data_length: 10000 # Number of samples to use for debugging
+  debug_data_length: 500 # Number of samples to use for debugging
   logging_level: "DEBUG" # "DEBUG", "INFO", "WARNING", "ERROR"
   use_scratch: true # Whether to use scratch space for temporary files
-  save_metadata: true # Whether to save the metadata file. Inludes prompts for LLMs
+  save_metadata: true # Whether to save the metadata file. Includes prompts for LLMs
 
 
 # Weight and Biases (wandb) logging configuration
@@ -37,7 +37,7 @@ datasets:
 preprocessing_baseline:
   replace_outliers: true # Whether to replace outliers with NaNs
   flag_na: true # Whether to flag NA values with binary indicators
-  standardize: false # Whether to standardize features (yes: convDL, not required: convML, LLM)
+  standardize: true # Whether to standardize features (yes: convDL, not required: convML, LLM)
   static_imputation: true # Whether to perform static feature imputation
   dynamic_imputation: true # Whether to perform dynamic feature imputation
   split_ratios: # Train/Val/Test split ratios
@@ -67,7 +67,7 @@ prompting:
     # - "sarvari_2024_aggregation_preprocessor"
     # - "zhu_2024a_one_shot_cot_preprocessor"
     # - "zhu_2024b_one_shot_preprocessor"
-    # - "zhu_2024c_categorization_summary_agent_preprocessor"
+    - "zhu_2024c_categorization_summary_agent_preprocessor"
   shots: 0
 
 # _______ Model Training _______
@@ -77,14 +77,14 @@ benchmark_settings:
   random_seed: 42
 
 load_models:
-  - "configs/model_configs/RandomForestModel.yaml"
-  # - "configs/model_configs/XGBoost.yaml"
+  # - "configs/model_configs/RandomForestModel.yaml"
+  # - "configs/model_configs/XGBoostModel.yaml"
   # - "configs/model_configs/LightGBMModel.yaml"
 
   # - "configs/model_configs/CNNModel.yaml"
   # - "configs/model_configs/InceptionTimeModel.yaml"
   # - "configs/model_configs/LSTMModel.yaml"
-  # - "configs/model_configs/GRUModel.yaml"
+  - "configs/model_configs/GRUModel.yaml"
 
   # - "configs/model_configs/MedGemma4bModel.yaml"
   # - "configs/model_configs/Gemma312BModel.yaml"

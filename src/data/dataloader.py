@@ -47,6 +47,7 @@ class DatasetManager:
         self.datasets = {}
         self.preprocessor = None
         self.windower = None
+        self.is_agent = False
 
         self.app_mode = config.general.app_mode
         self.debug_data_length = None
@@ -596,7 +597,7 @@ class DatasetManager:
         logger.debug("Dropped stay_id column from all features and labels")
 
         # Initialize is_agent flag
-        is_agent = False
+        self.is_agent = False
 
         # Apply advanced preprocessing if needed -> generate prompts
         if model_type == "LLM":
@@ -663,8 +664,8 @@ class DatasetManager:
             # Extract data from dictionary
             dataset["data"]["X_test"] = test_result["X"]
             dataset["data"]["y_test"] = test_result["y"]
-            is_agent = test_result.get("is_agent", False)
-            logger.debug(f"Agent flag from preprocessor: {is_agent}")
+            self.is_agent = test_result.get("is_agent", False)
+            logger.debug("Agent flag from preprocessor: %s", self.is_agent)
 
         # Return the appropriate test set based on availability
         if (
@@ -679,7 +680,6 @@ class DatasetManager:
                 dataset["data"]["y_val"],
                 dataset["data"]["X_test_sampled"],
                 dataset["data"]["y_test_sampled"],
-                is_agent,
             )
 
         return (
@@ -689,7 +689,6 @@ class DatasetManager:
             dataset["data"]["y_val"],
             dataset["data"]["X_test"],
             dataset["data"]["y_test"],
-            is_agent,
         )
 
     def _drop_stay_id_if_present(self, data_dict: dict) -> dict:
@@ -758,6 +757,7 @@ class TorchDatasetWrapper(Dataset):
         # This avoids repeated conversions during __getitem__ calls
         # Comment this out if data is too large
         # TODO: @sophiafe - Can we remove this? Very prone to memory issues. Or check available memory before converting.
+        # TODO: @j4nberger - Not sure, whether this had to do with the object type errors for convML models
         self.X_array = X.values.astype(np.float32)
         self.y_array = y.values.astype(np.float32)
 
@@ -809,19 +809,3 @@ class TorchDatasetWrapper(Dataset):
 
         # Convert to PyTorch tensors
         return torch.tensor(X_sample), torch.tensor(y_sample)
-
-    # TODO: @sophiafe Is this still needed?
-    def get_batch(self, indices):
-        """
-        Custom method to get a batch with explicit indices.
-        More efficient than using DataLoader for large datasets.
-
-        Args:
-            indices (list): List of indices to include in batch
-
-        Returns:
-            tuple: (features, labels) for the specified indices
-        """
-        X_batch = self.X.iloc[indices].values.astype(np.float32)
-        y_batch = self.y.iloc[indices].values.astype(np.float32)
-        return X_batch, y_batch

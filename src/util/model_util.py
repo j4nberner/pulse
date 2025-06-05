@@ -160,6 +160,7 @@ def prepare_data_for_model_convdl(
     config: Dict,
     model_name: Optional[str] = None,
     task_name: Optional[str] = None,
+    architecture_type: Optional[str] = None,
 ) -> Any:
     """
     Prepare data for conventional deep learning models by returning a configured data converter.
@@ -169,6 +170,7 @@ def prepare_data_for_model_convdl(
         config: Configuration dictionary with preprocessing settings
         model_name: Name of the model to determine format requirements
         task_name: Name of the current task (e.g., "mortality", "aki")
+        architecture_type: Base architecture of the convDL model ("CNN" or "RNN") to determine array format
 
     Returns:
         WindowedDataTo3D: Configured converter instance ready to transform batches
@@ -179,7 +181,7 @@ def prepare_data_for_model_convdl(
 
     # Create converter with model name and config
     converter = WindowedDataTo3D(
-        model_name=model_name, config=config, task_name=task_name
+        architecture_type=architecture_type, config=config, task_name=task_name
     )
 
     try:
@@ -612,7 +614,8 @@ def parse_llm_output(
     # Check if the required keys are present
     if not all(key in json_text for key in required_keys):
         logger.warning(
-            f"JSON object missing required keys {required_keys}. Returning default."
+            "JSON object missing required keys %s. Returning default.",
+            required_keys,
         )
         return default_values
 
@@ -632,7 +635,7 @@ def parse_llm_output(
         return parsed
 
     except json.JSONDecodeError as e:
-        logger.warning(f"Failed to parse JSON: {e}\nRaw: {json_text}")
+        logger.warning("Failed to parse JSON: %s\nRaw: %s", e, json_text)
         return default_values
 
 
@@ -713,5 +716,5 @@ def extract_dict(output_text: str) -> Optional[Dict[str, str]]:
     try:
         return json.loads(json_text_clean)
     except json.JSONDecodeError as e:
-        logger.warning(f"Failed to parse JSON: {e}\nRaw: {json_text_clean}")
+        logger.warning("Failed to parse JSON: %s\nRaw: %s", e, json_text_clean)
         return default_json

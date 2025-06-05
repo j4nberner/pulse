@@ -82,7 +82,7 @@ class Zhu2024cAgent(PulseAgent):
 
         # Explicitly set the current sample ID
         sample_id = patient_data.name if hasattr(patient_data, "name") else "default"
-        logger.debug("Setting current sample ID: %s)", sample_id)
+        logger.debug("Setting current sample ID: %s", sample_id)
         self.memory.set_current_sample(sample_id)
 
         # Initialize state

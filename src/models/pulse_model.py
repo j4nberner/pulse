@@ -218,7 +218,7 @@ class PulseModel:
                     self.model.to(device)
                 else:
                     # For convDL models, load the model to the specified device
-                    # TODO: implement for confDL models
+                    # TODO: implement for convDL models
                     pass
                     # self.model.to(device)
                 logger.info("Model loaded to GPU memory")
