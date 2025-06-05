@@ -4,6 +4,8 @@ import os
 import sys
 
 import pandas as pd
+import tempfile
+import numpy as np
 import torch
 from omegaconf import OmegaConf
 from torch.utils.data import DataLoader
@@ -211,10 +213,47 @@ class PulseBenchmark:
                         val_loader = (X_val, y_val)
                         test_loader = (X_test, y_test)
                     elif model.type == "convDL":
-                        # Wrap with TorchDatasetWrapper
-                        train_dataset = TorchDatasetWrapper(X_train, y_train)
-                        val_dataset = TorchDatasetWrapper(X_val, y_val)
-                        test_dataset = TorchDatasetWrapper(X_test, y_test)
+
+                        # TODO @Jan - Move to dataloader. 
+                        labels = y_train["label"]
+                        neg = len(labels) - labels.sum()
+                        pos = labels.sum()
+                        if pos == 0:
+                            logger.warning("No positive samples found in the dataset. Setting pos_weight to 1.")
+                            pos_weight = 1.0
+                        elif neg == 0:
+                            logger.warning("No negative samples found in the dataset. Setting pos_weight to 0.")
+                            pos_weight = 0.0
+                        else:
+                            pos_weight = neg / pos
+
+                        X_train_path = save_to_temp_npy(X_train)
+                        y_train_path = save_to_temp_npy(y_train)
+                        X_val_path = save_to_temp_npy(X_val)
+                        y_val_path = save_to_temp_npy(y_val)
+                        X_test_path = save_to_temp_npy(X_test)
+                        y_test_path = save_to_temp_npy(y_test)
+
+                        train_dataset = TorchDatasetWrapper(X_train_path, y_train_path, pos_weight)
+                        val_dataset = TorchDatasetWrapper(X_val_path, y_val_path, pos_weight)
+                        test_dataset = TorchDatasetWrapper(X_test_path, y_test_path, pos_weight)
+
+                        # Calculate pos/neg ratio, avoid division by zero
+                        neg = len(self.y) - self.y["label"].sum()
+                        pos = self.y["label"].sum()
+                        if pos == 0:
+                            logger.warning(
+                                "No positive samples found in the dataset. Setting pos_weight to 1."
+                            )
+                            self.pos_weight = 1.0
+                        elif neg == 0:
+                            logger.warning(
+                                "No negative samples found in the dataset. Setting pos_weight to 0."
+                            )
+                            self.pos_weight = 0.0
+                        else:
+                            self.pos_weight = neg / pos
+
 
                         batch_size = getattr(
                             self.config.benchmark_settings, "batch_size"
@@ -238,6 +277,7 @@ class PulseBenchmark:
                             batch_size=batch_size,
                             shuffle=True,
                             drop_last=False,
+                            num_workers=0,
                             # pin_memory=False,  # Speeds up CPU-to-GPU transfers
                             # prefetch_factor=2,  # Default value, can increase if GPU is idle
                             # persistent_workers=True,  # Keeps workers alive between epochs
@@ -248,6 +288,7 @@ class PulseBenchmark:
                             batch_size=batch_size,
                             shuffle=False,
                             drop_last=False,
+                            num_workers=0,
                             **dataloader_args,
                         )
                         test_loader = DataLoader(
@@ -255,6 +296,7 @@ class PulseBenchmark:
                             batch_size=batch_size,
                             shuffle=False,
                             drop_last=False,
+                            num_workers=0,
                             **dataloader_args,
                         )
 
@@ -284,6 +326,7 @@ class PulseBenchmark:
                             model.trainer.train()
                         # Evaluate the model
                         model.evaluate(test_loader, save_report=True)
+                        # model.evaluate_sys_msgs(test_loader, save_report=True)
 
                 except Exception as e:
                     logger.error(
@@ -294,7 +337,21 @@ class PulseBenchmark:
                         exc_info=True,
                     )
                 finally:
-                    # model.offload_model_to_cpu()
+                    # delete temp files # TODO: Jan - Make nice...only temporary solution
+                    if model.type == "convDL":
+                        # Clean up temporary files created for convDL
+                        if hasattr(train_loader.dataset, "X_path"):
+                            os.remove(train_loader.dataset.X_path)
+                        if hasattr(train_loader.dataset, "y_path"):
+                            os.remove(train_loader.dataset.y_path)
+                        if hasattr(val_loader.dataset, "X_path"):
+                            os.remove(val_loader.dataset.X_path)
+                        if hasattr(val_loader.dataset, "y_path"):
+                            os.remove(val_loader.dataset.y_path)
+                        if hasattr(test_loader.dataset, "X_path"):
+                            os.remove(test_loader.dataset.X_path)
+                        if hasattr(test_loader.dataset, "y_path"):
+                            os.remove(test_loader.dataset.y_path)
 
                     # Memory cleanup after training each model
                     if hasattr(model, "trainer"):
@@ -318,6 +375,12 @@ class PulseBenchmark:
 
         logger.info("Benchmark process completed.")
 
+def save_to_temp_npy(df):
+    arr = df.values.astype(np.float32)
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".npy")
+    np.save(tmp, arr)
+    tmp.close()
+    return tmp.name
 
 def parse_args() -> argparse.Namespace:
     """Parse command line arguments."""

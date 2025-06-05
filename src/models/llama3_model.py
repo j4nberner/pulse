@@ -108,7 +108,7 @@ class Llama3Model(PulseLLMModel):
         verbose: int = self.params.get("verbose", 1)
         val_loss: list[float] = []
 
-        sys_msgs = sys_msg_smpls()
+        sys_msgs = sys_msg_smpls(task=self.task_name)
 
         self.model.eval()
 
@@ -173,6 +173,8 @@ class Llama3Model(PulseLLMModel):
 
         logger.info("System Message evaluation completed for %s", self.model_name)
         logger.info("Test metrics: %s", metrics_tracker.summary)
+
+        self.offload_model()
 
         return float(np.mean(val_loss))
 

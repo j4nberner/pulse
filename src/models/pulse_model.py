@@ -242,7 +242,10 @@ class PulseLLMModel(PulseModel):
             raise e
 
     def offload_model(self) -> None:
-        """Offloads the model from GPU memory to CPU."""
+        """
+        Offloads the model from GPU memory to CPU. Sets is_loaded to False.
+        If CPU memory is insufficient, deletes the model and clears cache.
+        """
         if self.is_loaded:
             logger.info("Offloading model %s to CPU", self.model_id)
             try:
@@ -549,6 +552,7 @@ class PulseLLMModel(PulseModel):
                 }
             )
 
+
         metrics_tracker.log_metadata(save_to_file=self.save_metadata)
         metrics_tracker.summary = metrics_tracker.compute_overall_metrics()
         if save_report:
@@ -556,6 +560,8 @@ class PulseLLMModel(PulseModel):
 
         logger.info("Test evaluation completed for %s", self.model_name)
         logger.info("Test metrics: %s", metrics_tracker.summary)
+
+        self.offload_model()
 
         return float(np.mean(val_loss))
 

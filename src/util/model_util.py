@@ -218,44 +218,6 @@ def prepare_data_for_model_convdl(
     return converter
 
 
-@DeprecationWarning
-def calculate_pos_weight(train_loader):
-    """
-    Calculate positive class weight for imbalanced binary classification data.
-
-    Args:
-        train_loader: DataLoader containing the training data
-
-    Returns:
-        float: Weight for positive class (ratio of negative to positive samples)
-    """
-    try:
-        all_labels = []
-        for _, labels in train_loader:
-            all_labels.extend(labels.cpu().numpy().flatten())
-
-        all_labels = np.array(all_labels)
-        neg_count = np.sum(all_labels == 0)
-        pos_count = np.sum(all_labels == 1)
-
-        if pos_count == 0:
-            logger.warning("No positive samples found, using pos_weight=1.0")
-            return 1.0
-
-        weight = neg_count / pos_count
-        logger.info(
-            "Class imbalance - Neg: %d, Pos: %d, Weight: %f",
-            neg_count,
-            pos_count,
-            weight,
-        )
-        return weight
-
-    except Exception as e:
-        logger.error("Error calculating class weights: %s", e)
-        return 1.0
-
-
 def initialize_weights(module):
     """Apply Xavier initialization to model weights."""
     if isinstance(module, (nn.Conv1d, nn.Linear)):
@@ -440,114 +402,187 @@ def extract_dict(output_text: str) -> Optional[Dict[str, str]]:
 
 def sys_msg_smpls(task: str) -> list[str]:
     """
-    Return a list of sample system messages.
+    Generate a controlled experimental set of system messages for testing prompt engineering techniques.
 
     Args:
-        task: The specific task for which to generate system messages (e.g., "mortality", "aki", "sepsis").
+        task: The specific medical condition to diagnose (e.g., "mortality", "aki", "sepsis").
 
     Returns:
-        A list of formatted system messages tailored to the specified task.
+        A list of 5 system messages with cumulative prompt engineering improvements.
+
+    Experimental Design:
+        This function implements a controlled experiment to isolate the impact of specific system message
+        engineering techniques on LLM performance for medical diagnosis tasks. Each sample builds
+        cumulatively on the previous one, allowing for precise attribution of performance changes.
+
+    System Message Progression (Cumulative):
+        Sample 1: Baseline - Basic instructions only
+            - Tests fundamental instruction following capability
+            - Establishes performance floor without any enhancements
+
+        Sample 2: Sample 1 + Task-specific Examples
+            - Adds positive and negative diagnostic examples with clinical details
+            - Tests impact of few-shot learning and demonstration-based guidance
+            - Uses real clinical parameters (vital signs, lab values, FiO2, urine output)
+
+        Sample 3: Sample 2 + ICU Context Awareness
+            - Adds contextual guidance about ICU patient baseline abnormalities
+            - Tests impact of domain-specific contextual understanding
+            - Helps model account for critically ill patient characteristics
+
+        Sample 4: Sample 3 + Detailed JSON Schema
+            - Adds explicit schema definition with field constraints
+            - Tests impact of structured format specification
+            - Ensures consistent output format compliance
+
+        Sample 5: Sample 4 + Probability Calibration Guidelines
+            - Adds explicit probability range interpretations (0.0-0.2, 0.2-0.4, etc.)
+            - Tests impact of confidence calibration guidance
+            - Improves probability estimation accuracy and consistency
+
+    Experimental Logic:
+        By comparing performance between consecutive samples, researchers can isolate the
+        specific contribution of each prompt engineering technique:
+        - Sample 2 vs 1: Effect of examples
+        - Sample 3 vs 2: Effect of domain context
+        - Sample 4 vs 3: Effect of schema structure
+        - Sample 5 vs 4: Effect of probability calibration
     """
     sys_msg_list = []
-    # No examples
-    sys_msg_list.append(
-        (
-            "You are a helpful assistant and experienced medical professional analyzing ICU time-series data "
-            "to determine the presence of following condition: {task}.\n\n"
-            "Your response must strictly follow this format:\n"
-            "Output a valid JSON object with three keys: 'diagnosis', 'probability' and 'explanation'.\n\n"
-            "1. 'diagnosis' a string with either diagnosis or not-diagnosis\n"
-            "2. 'probability' a value between 0 and 1. where 0 means not diagnosed and 1 means diagnosed.\n"
-            "3. 'explanation' should be a string providing a brief explanation of your diagnosis.\n\n"
-            "Do not include any other text or explanations outside of the JSON object.\n"
-            "Think about the probability of your prediction carefully before answering.\n"
-        ).replace("{task}", task)
+
+    # Define task-specific examples
+    def get_task_examples(task_name):
+        if task_name.lower() == "sepsis":
+            return {
+                "positive": {
+                    "diagnosis": "sepsis",
+                    "probability": "0.82",
+                    "explanation": "Patient shows sepsis criteria: temperature 38.9°C, heart rate 115 bpm, WBC 16,000/μL, lactate 4.1 mmol/L (elevated >2.0), and hypotension with MAP 58 mmHg despite fluid resuscitation.",
+                },
+                "negative": {
+                    "diagnosis": "not-sepsis",
+                    "probability": "0.12",
+                    "explanation": "Patient shows no signs of sepsis: temperature 37.2°C, heart rate 88 bpm, normal WBC 7,200/μL, lactate 1.6 mmol/L (normal <2.0), and adequate blood pressure with MAP 78 mmHg.",
+                },
+            }
+        elif task_name.lower() == "aki":
+            return {
+                "positive": {
+                    "diagnosis": "aki",
+                    "probability": "0.89",
+                    "explanation": "Acute kidney injury evident: serum creatinine increased from baseline 1.1 to 2.7 mg/dL within 24 hours (>2x increase), urine output decreased to 0.3 mL/kg/h over 6 hours, meeting KDIGO Stage 2 criteria.",
+                },
+                "negative": {
+                    "diagnosis": "not-aki",
+                    "probability": "0.08",
+                    "explanation": "Kidney function stable: creatinine 1.3 mg/dL (minimal change from baseline 1.2), adequate urine output at 1.1 mL/kg/h, no signs of acute kidney injury.",
+                },
+            }
+        elif task_name.lower() == "mortality":
+            return {
+                "positive": {
+                    "diagnosis": "mortality",
+                    "probability": "0.91",
+                    "explanation": "Critical condition: multi-organ failure with high lactate 6.2 mmol/L, requiring mechanical ventilation (FiO2 80%), hypotension, and oliguria <0.2 mL/kg/h despite treatment.",
+                },
+                "negative": {
+                    "diagnosis": "not-mortality",
+                    "probability": "0.15",
+                    "explanation": "Improving trajectory: lactate normalizing to 2.1 mmol/L, weaning from ventilator support (FiO2 40%), stable hemodynamics, and adequate urine output 0.8 mL/kg/h.",
+                },
+            }
+        else:
+            return {
+                "positive": {
+                    "diagnosis": task_name,
+                    "probability": "0.78",
+                    "explanation": f"Clinical indicators strongly suggest {task_name} based on abnormal vital signs, laboratory values, and physiological parameters.",
+                },
+                "negative": {
+                    "diagnosis": f"not-{task_name}",
+                    "probability": "0.15",
+                    "explanation": f"Clinical indicators do not support {task_name} diagnosis with stable vital signs and normal laboratory parameters.",
+                },
+            }
+
+    examples = get_task_examples(task)
+
+    # Base components that build up progressively
+    base_instruction = (
+        f"You are a helpful assistant and experienced medical professional analyzing ICU time-series data "
+        f"to determine the presence of following condition: {task}.\n\n"
+        "Your response must strictly follow this format:\n"
+        "Output a valid JSON object with three keys: 'diagnosis', 'probability' and 'explanation'.\n\n"
+        "1. 'diagnosis' a string with either diagnosis or not-diagnosis\n"
+        "2. 'probability' a value between 0 and 1. where 0 means not diagnosed and 1 means diagnosed.\n"
+        "3. 'explanation' should be a string providing a brief explanation of your diagnosis.\n\n"
     )
-    # Pos and neg example
-    sys_msg_list.append(
-        (
-            "You are a helpful assistant and experienced medical professional analyzing ICU time-series data "
-            "to determine the presence of following condition: {task}.\n\n"
-            "Your response must strictly follow this format:\n"
-            "Output a valid JSON object with three keys: 'diagnosis', 'probability' and 'explanation'.\n\n"
-            "1. 'diagnosis' a string with either diagnosis or not-diagnosis\n"
-            "2. 'probability' a value between 0 and 1. where 0 means not diagnosed and 1 means diagnosed.\n"
-            "3. 'explanation' should be a string providing a brief explanation of your diagnosis.\n\n"
-            "Here is a positive example:\n"
-            "{\n"
-            '  "diagnosis": {task},\n'
-            '  "probability": "0.76",\n'
-            '  "explanation": "lactate is 4.2 mmol/L (above normal <2.0); blood pressure is low (MAP 62 mmHg), which are signs of {task}."\n'
-            "}\n\n"
-            "Here is a negative example:\n"
-            "{\n"
-            '  "diagnosis": "not-{task}",\n'
-            '  "probability": "0.01",\n'
-            '  "explanation": "lactate is 1.2 mmol/L (normal <2.0); blood pressure is normal (MAP 80 mmHg), which are not signs of {task}."\n'
-            "}\n\n"
-            "Do not include any other text or explanations outside of the JSON object.\n"
-            "Think about the probability of your prediction carefully before answering.\n"
-        ).replace("{task}", task)
+
+    closing = (
+        "Do not include any other text or explanations outside of the JSON object.\n"
+        "Think about the probability of your prediction carefully before answering.\n"
     )
-    # Pos and neg example with hint to potentially abnormal values
-    sys_msg_list.append(
-        (
-            "You are a helpful assistant and experienced medical professional analyzing ICU time-series data "
-            "to determine the presence of following condition: {task}.\n\n"
-            "Your response must strictly follow this format:\n"
-            "Output a valid JSON object with three keys: 'diagnosis', 'probability' and 'explanation'.\n\n"
-            "1. 'diagnosis' a string with either diagnosis or not-diagnosis\n"
-            "2. 'probability' a value between 0 and 1. where 0 means not diagnosed and 1 means diagnosed.\n"
-            "3. 'explanation' should be a string providing a brief explanation of your diagnosis.\n\n"
-            "Here is a positive example:\n"
-            "{\n"
-            '  "diagnosis": {task},\n'
-            '  "probability": "0.76",\n'
-            '  "explanation": "lactate is 4.2 mmol/L (above normal <2.0); blood pressure is low (MAP 62 mmHg), which are signs of {task}."\n'
-            "}\n\n"
-            "Here is a negative example:\n"
-            "{\n"
-            '  "diagnosis": "not-{task}",\n'
-            '  "probability": "0.01",\n'
-            '  "explanation": "lactate is 1.2 mmol/L (normal <2.0); blood pressure is normal (MAP 80 mmHg), which are not signs of {task}."\n'
-            "}\n\n"
-            "Do not include any other text or explanations outside of the JSON object.\n"
-            "Think about the probability of your prediction carefully before answering.\n"
-            "The provided data is from potentially sick ICU patients, so the values may be abnormal. Take this into consideration when thinkin about the diagnosis.\n"
-        ).replace("{task}", task)
+
+    examples_section = (
+        "Here is a positive example:\n"
+        "{\n"
+        f'  "diagnosis": "{examples["positive"]["diagnosis"]}",\n'
+        f'  "probability": "{examples["positive"]["probability"]}",\n'
+        f'  "explanation": "{examples["positive"]["explanation"]}"\n'
+        "}\n\n"
+        "Here is a negative example:\n"
+        "{\n"
+        f'  "diagnosis": "{examples["negative"]["diagnosis"]}",\n'
+        f'  "probability": "{examples["negative"]["probability"]}",\n'
+        f'  "explanation": "{examples["negative"]["explanation"]}"\n'
+        "}\n\n"
     )
-    # Pos and neg example with more details
-    sys_msg_list.append(
-        "You are a helpful assistant and experienced medical professional analyzing ICU time-series data to identify **Acute Kidney Injury (AKI)**, **Sepsis**, or **In-ICU Mortality**.\n"
-        "Your goal is to provide a specific diagnosis or indicate its absence for the most pertinent condition based on the patient's data.\n\n"
-        "Your response must be a valid JSON object with the following keys and format, with NO additional text:\n\n"
+
+    icu_context = (
+        "Note: ICU patients often present with abnormal baseline values due to their critical condition. "
+        "Consider the clinical context and severity of deviations when assessing for the target condition.\n\n"
+    )
+
+    schema_section = (
         "--- JSON Schema ---\n"
         "{\n"
-        '  "diagnosis": "string"  // Must be one of: "aki", "not-aki", "sepsis", "not-sepsis", "mortality", "not-mortality"\n'
+        f'  "diagnosis": "string"  // Must be either "{task}" or "not-{task}"\n'
         '  "probability": "float" // Value between 0.0 (no diagnosis) and 1.0 (definite diagnosis)\n'
         '  "explanation": "string" // Concise clinical reasoning for the diagnosis and probability\n'
         "}\n\n"
-        "--- Guidance & Examples ---\n"
-        "Prioritize the most impactful or evident condition in your diagnosis. For instance:\n\n"
-        "**Example 1 (AKI):**\n"
-        "{\n"
-        '  "diagnosis": "aki",\n'
-        '  "probability": 0.82,\n'
-        '  "explanation": "Serum creatinine increased from 1.0 to 2.3 mg/dL within 48 hours; urine output is low (0.3 mL/kg/h), indicative of AKI."\n'
-        "}\n\n"
-        "**Example 2 (Not Sepsis):**\n"
-        "{\n"
-        '  "diagnosis": "not-sepsis",\n'
-        '  "probability": 0.01,\n'
-        '  "explanation": "Lactate is 1.2 mmol/L (normal); blood pressure and other vital signs are stable, showing no signs of sepsis."\n'
-        "}\n\n"
-        "**Example 3 (Mortality):**\n"
-        "{\n"
-        '  "diagnosis": "mortality",\n'
-        '  "probability": 0.91,\n'
-        '  "explanation": "Patient displays multi-organ failure and a high SOFA score, suggesting a severe prognosis and high risk of mortality."\n'
-        "}"
-        "Think about the probability of your prediction carefully before answering.\n"
+    )
+
+    probability_guidelines = (
+        "CRITICAL: Probability calibration guidelines:\n"
+        "- 0.0-0.2: Very unlikely, clear absence of condition with normal parameters\n"
+        "- 0.2-0.4: Unlikely, some concerning signs but insufficient evidence\n"
+        "- 0.4-0.6: Uncertain, mixed evidence or borderline findings\n"
+        "- 0.6-0.8: Likely, multiple indicators support diagnosis\n"
+        "- 0.8-1.0: Very likely, strong evidence with clear clinical criteria met\n\n"
+    )
+
+    # Sample 1: Baseline (no examples)
+    sys_msg_list.append(base_instruction + closing)
+
+    # Sample 2: Sample 1 + Examples
+    sys_msg_list.append(base_instruction + examples_section + closing)
+
+    # Sample 3: Sample 2 + ICU Context
+    sys_msg_list.append(base_instruction + examples_section + icu_context + closing)
+
+    # Sample 4: Sample 3 + Detailed Schema
+    sys_msg_list.append(
+        base_instruction + schema_section + examples_section + icu_context + closing
+    )
+
+    # Sample 5: Sample 4 + Probability Calibration
+    sys_msg_list.append(
+        base_instruction
+        + probability_guidelines
+        + schema_section
+        + examples_section
+        + icu_context
+        + "Use the probability guidelines to ensure accurate confidence assessment.\n"
     )
 
     return sys_msg_list

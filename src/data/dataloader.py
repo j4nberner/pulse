@@ -539,6 +539,24 @@ class DatasetManager:
             dataset["preprocessing_advanced"]["windowing"]["loaded"] = True
             logger.info("Successfully windowed data for %s", dataset_id)
 
+            # Save to files if in benchmark mode
+            if self.app_mode == "benchmark":
+                self.windower.save_windowed_data(
+                    results=data,
+                    task=dataset["task"],
+                    dataset=dataset["name"],
+                    data_window=dataset["preprocessing_advanced"]["windowing"][
+                        "data_window"
+                    ],
+                    prediction_window=dataset["preprocessing_advanced"]["windowing"][
+                        "prediction_window"
+                    ],
+                    step_size=dataset["preprocessing_advanced"]["windowing"]["step_size"],
+                )
+                logger.info(
+                    "Saved windowed data for %s to files", dataset_id
+                )
+
         del data  # Clear the data variable to free up memory
 
         # Model specific parameters from kwargs. Throws KeyError if not provided.
@@ -592,6 +610,8 @@ class DatasetManager:
             ]
             # Print statistics for all datasets
             self.preprocessor.print_statistics(stats_to_print)
+
+        
 
         # Drop stay_id column after calculating statistics
         dataset["data"] = self._drop_stay_id_if_present(dataset["data"])
@@ -725,7 +745,7 @@ class TorchDatasetWrapper(Dataset):
     Memory-efficient wrapper class to convert pandas DataFrames to PyTorch Dataset.
     """
 
-    def __init__(self, X: pd.DataFrame, y: pd.DataFrame):
+    def __init__(self, X_path, y_path, pos_weight=1):
         """
         Initialize the TorchDatasetWrapper with options for memory efficiency.
 
@@ -733,41 +753,15 @@ class TorchDatasetWrapper(Dataset):
             X (pd.DataFrame): Feature dataframe
             y (pd.DataFrame): Label dataframe
         """
-        self.X = X
-        self.y = y
+        self.X = np.load(X_path, mmap_mode='r')
+        self.y = np.load(y_path, mmap_mode='r')
+        self.length = self.X.shape[0]
+        self.pos_weight = pos_weight
 
-        # Pre-compute indices for faster access
-        self.indices = list(range(len(X)))
-
-        # Optional: Convert DataFrames to NumPy arrays upfront if they fit in memory
-        # This avoids repeated conversions during __getitem__ calls
-        # Comment this out if data is too large
-        # TODO: @sophiafe - Can we remove this? Very prone to memory issues. Or check available memory before converting.
-        # self.X_array = X.values.astype(np.float32)
-        # self.y_array = y.values.astype(np.float32)
-
-        # Store column dtypes for efficient conversion
-        self.dtypes = X.dtypes
-
-        # Calculate pos/neg ratio, avoid division by zero
-        neg = len(y) - y["label"].sum()
-        pos = y["label"].sum()
-        if pos == 0:
-            logger.warning(
-                "No positive samples found in the dataset. Setting pos_weight to 1."
-            )
-            self.pos_weight = 1.0
-        elif neg == 0:
-            logger.warning(
-                "No negative samples found in the dataset. Setting pos_weight to 0."
-            )
-            self.pos_weight = 0.0
-        else:
-            self.pos_weight = neg / pos
-
+    
     def __len__(self):
         """Return the number of samples in the dataset."""
-        return len(self.X)
+        return self.length
 
     def __getitem__(self, idx):
         """
@@ -779,21 +773,24 @@ class TorchDatasetWrapper(Dataset):
         Returns:
             tuple: (features, label) as torch.Tensor
         """
-        # If we pre-computed arrays, use them
-        if hasattr(self, "X_array") and hasattr(self, "y_array"):
-            X_sample = self.X_array[idx]
-            y_sample = self.y_array[idx]
-        # For single integer index
-        elif isinstance(idx, int):
-            X_sample = self.X.iloc[idx].values.astype(np.float32)
-            y_sample = self.y.iloc[idx].values.astype(np.float32)
-        # For slices or lists of indices (batch access)
-        else:
-            X_sample = self.X.iloc[idx].values.astype(np.float32)
-            y_sample = self.y.iloc[idx].values.astype(np.float32)
+        # # If we pre-computed arrays, use them
+        # if hasattr(self, "X_array") and hasattr(self, "y_array"):
+        #     X_sample = self.X_array[idx]
+        #     y_sample = self.y_array[idx]
+        # # For single integer index
+        # elif isinstance(idx, int):
+        #     X_sample = self.X.iloc[idx].values.astype(np.float32)
+        #     y_sample = self.y.iloc[idx].values.astype(np.float32)
+        # # For slices or lists of indices (batch access)
+        # else:
+        #     X_sample = self.X.iloc[idx].values.astype(np.float32)
+        #     y_sample = self.y.iloc[idx].values.astype(np.float32)
 
-        # Convert to PyTorch tensors
-        return torch.tensor(X_sample), torch.tensor(y_sample)
+        # # Convert to PyTorch tensors
+        # return torch.tensor(X_sample), torch.tensor(y_sample)
+        X_sample = self.X[idx]
+        y_sample = self.y[idx]
+        return torch.tensor(X_sample, dtype=torch.float32), torch.tensor(y_sample, dtype=torch.float32)
 
     # TODO: @sophiafe Is this still needed?
     def get_batch(self, indices):
