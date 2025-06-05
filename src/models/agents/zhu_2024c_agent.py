@@ -1,22 +1,18 @@
-import json
 import logging
 from typing import Any, Dict, List, Optional, Tuple
 
 import pandas as pd
-import torch
-from langchain.prompts import PromptTemplate
 
 from src.preprocessing.preprocessing_advanced.preprocessing_advanced import (
     PreprocessorAdvanced,
 )
-from src.models.agents.pulsetemplate_agent import PulseTemplateAgent
+from src.models.agents.pulse_agent import PulseAgent
 from src.util.data_util import get_feature_name
-from src.util.model_util import extract_dict
 
 logger = logging.getLogger("PULSE_logger")
 
 
-class Zhu2024cAgent(PulseTemplateAgent):
+class Zhu2024cAgent(PulseAgent):
     """
     Implementation of Zhu 2024c agent using multi-step approach.
 
@@ -27,7 +23,7 @@ class Zhu2024cAgent(PulseTemplateAgent):
 
     def __init__(
         self,
-        model: Any,  # Now accepts a model instance
+        model: Any,
         task_name: Optional[str] = None,
         dataset_name: Optional[str] = None,
         output_dir: Optional[str] = None,
@@ -53,35 +49,16 @@ class Zhu2024cAgent(PulseTemplateAgent):
         # Define steps
         self._define_steps()
 
-    def _get_task_specific_content(self) -> Dict[str, str]:
-        """Get task-specific content for prompts."""
-        task = self.task_name
-        if task == "mortality":
-            return {
-                "complication_name": "death",
-                "prediction_description": "the prediction of ICU mortality",
-                "task_info": "Mortality refers to the occurrence of death within a specific population and time period. In the context of ICU patients, the task involves analyzing information from the first 25 hours of a patient's ICU stay to predict whether the patient will survive the remainder of their stay. This prediction task supports early risk assessment and clinical decision-making in critical care settings.",
-            }
-        elif task == "aki":
-            return {
-                "complication_name": "acute kidney injury",
-                "prediction_description": "prediction of the onset of acute kidney injury",
-                "task_info": "Acute kidney injury (AKI) is a subset of acute kidney diseases and disorders (AKD), characterized by a rapid decline in kidney function occurring within 7 days, with health implications. According to KDIGO criteria, AKI is diagnosed when there is an increase in serum creatinine to ≥1.5 times baseline within the prior 7 days, or an increase in serum creatinine by ≥0.3 mg/dL (≥26.5 µmol/L) within 48 hours, or urine output <0.5 mL/kg/h for 6–12 hours. The most common causes of AKI include sepsis, ischemia from hypotension or shock, and nephrotoxic exposures such as certain medications or contrast agents.",
-            }
-        elif task == "sepsis":
-            return {
-                "complication_name": "sepsis",
-                "prediction_description": "prediction of the onset of sepsis",
-                "task_info": "Sepsis is a life-threatening condition characterized by organ dysfunction resulting from a dysregulated host response to infection. It is diagnosed when a suspected or confirmed infection is accompanied by an acute increase of two or more points in the patient's Sequential Organ Failure Assessment (SOFA) score relative to their baseline. The SOFA score evaluates six physiological parameters: the ratio of partial pressure of oxygen to the fraction of inspired oxygen, mean arterial pressure, serum bilirubin concentration, platelet count, serum creatinine level, and the Glasgow Coma Score. A complication of sepsis is septic shock, which is marked by a drop in blood pressure and elevated lactate levels. Indicators of suspected infection may include positive blood cultures or the initiation of antibiotic therapy.",
-            }
-        return {}
+    # ------------------------------------------
+    # Agent Step Methods
+    # ------------------------------------------
 
     def _define_steps(self) -> None:
         """Define the reasoning steps for this agent."""
         # Step 1: Feature Analysis
         self.add_step(
             name="feature_analysis",
-            system_message="You are a helpful assistant and medical professional that analyzes ICU time-series data and predicts whether a patient will develop a specific diagnosis. Descriptions of ICU complications are to be understood as an aid to understand the patient's condition but do not necessarily mean that the patient has developed said complications. Do not give recommendations. Provide your analysis as plain text paragraphs.",
+            system_message="You are an objective medical data analyst. Analyze the provided ICU time-series data patterns without bias toward any particular outcome. Most patients do not develop serious complications. Focus on factual observations and provide balanced analysis as plain text paragraphs.",
             prompt_template=self._create_summary_prompt_template(),
             input_formatter=self._process_patient_features,
             output_processor=None,
@@ -91,29 +68,7 @@ class Zhu2024cAgent(PulseTemplateAgent):
         # Step 2: Final Prediction
         self.add_step(
             name="final_prediction",
-            system_message=(
-                "You are a helpful assistant and experienced medical professional analyzing ICU time-series data "
-                "to determine the presence of a critical condition.\n\n"
-                "Your response must strictly follow this format:\n"
-                "Output a valid JSON object with three keys: 'diagnosis', 'probability' and 'explanation'.\n\n"
-                "1. 'diagnosis' a string with either diganosis or not-diagnosis\n"
-                "2. 'probability' a value between 0 and 1. where 0 means not-diagnosis and 1 means diagnosis.\n"
-                "3. 'explanation' should be a string providing a brief explanation of your diagnosis.\n\n"
-                "Here is a positive example:\n"
-                "{\n"
-                '  "diagnosis": "sepsis",\n'
-                '  "probability": "0.76",\n'
-                '  "explanation": "lactate is 4.2 mmol/L (above normal <2.0); blood pressure is low (MAP 62 mmHg), which are signs of sepsis."\n'
-                "}\n\n"
-                "Here is a negative example:\n"
-                "{\n"
-                '  "diagnosis": "not-sepsis",\n'
-                '  "probability": "0.01",\n'
-                '  "explanation": "lactate is 1.2 mmol/L (normal <2.0); blood pressure is normal (MAP 80 mmHg), which are not signs of sepsis."\n'
-                "}\n\n"
-                "Do not include any other text or explanations outside of the JSON object.\n"
-                "Think about the probability of your prediction carefully before answering.\n"
-            ),  # Use default benchmark system message for the prediction step
+            system_message=None,
             prompt_template=self._create_final_prediction_prompt_template(),
             input_formatter=None,
             output_processor=None,
@@ -158,31 +113,8 @@ class Zhu2024cAgent(PulseTemplateAgent):
             summary = state.get("feature_analysis_output", "No summary available")
             final_prediction_result = self.run_step("final_prediction", summary, state)
 
-            # Extract and parse the output using shared extract_dict function
-            from src.util.model_util import extract_dict
-            
-            final_prediction_output = final_prediction_result["output"]
-            
-            # Parse using the same logic as standard pipeline
-            if isinstance(final_prediction_output, str):
-                parsed_output = extract_dict(final_prediction_output)
-            elif isinstance(final_prediction_output, dict):
-                parsed_output = final_prediction_output
-            else:
-                parsed_output = {
-                    "diagnosis": "unknown",
-                    "probability": 0.5,
-                    "explanation": str(final_prediction_output),
-                }
-
-            # Ensure probability is float (same as standard pipeline)
-            prob = parsed_output.get("probability", 0.5)
-            try:
-                prob = float(prob)
-            except (ValueError, TypeError):
-                logger.warning("Failed to convert probability to float. Defaulting to 0.5")
-                prob = 0.5
-            parsed_output["probability"] = prob
+            # Output is already parsed because parse_json=True in the step definition
+            final_output = final_prediction_result["output"]
 
             # Get token metrics from agent memory (aggregated from all steps)
             all_steps = self.memory.samples.get(str(sample_id), [])
@@ -193,7 +125,7 @@ class Zhu2024cAgent(PulseTemplateAgent):
 
             # Return in same format as standard pipeline
             return {
-                "generated_text": parsed_output,  # Structured dict, not string
+                "generated_text": final_output,
                 "token_time": total_token_time,
                 "infer_time": total_infer_time,
                 "num_input_tokens": total_input_tokens,
@@ -201,18 +133,12 @@ class Zhu2024cAgent(PulseTemplateAgent):
             }
 
         except Exception as e:
-            logger.error(f"Error in final_prediction step: {e}", exc_info=True)
-            return {
-                "generated_text": {
-                    "diagnosis": "error",
-                    "probability": 0.5,
-                    "explanation": f"Error: {str(e)}",
-                },
-                "token_time": 0.0,
-                "infer_time": 0.0,
-                "num_input_tokens": 0,
-                "num_output_tokens": 0,
-            }
+            logger.error(f"Error in final prediction step: {e}", exc_info=True)
+            state["final_output"] = "Error generating final prediction output."
+
+    # ------------------------------------------
+    # Prompt Template and Feature Processing Methods
+    # ------------------------------------------
 
     def _create_summary_prompt_template(self):
         """Create a function that formats the summary prompt."""
@@ -252,40 +178,36 @@ Please provide your assessment following the required format."""
 
         return format_final_prediction_prompt
 
+    def _get_task_specific_content(self) -> Dict[str, str]:
+        """Get task-specific content for prompts."""
+        task = self.task_name
+        if task == "mortality":
+            return {
+                "complication_name": "death",
+                "prediction_description": "the prediction of ICU mortality",
+                "task_info": "Mortality refers to the occurrence of death within a specific population and time period. In the context of ICU patients, the task involves analyzing information from the first 25 hours of a patient's ICU stay to predict whether the patient will survive the remainder of their stay. This prediction task supports early risk assessment and clinical decision-making in critical care settings.",
+            }
+        elif task == "aki":
+            return {
+                "complication_name": "acute kidney injury",
+                "prediction_description": "prediction of the onset of acute kidney injury",
+                "task_info": "Acute kidney injury (AKI) is a subset of acute kidney diseases and disorders (AKD), characterized by a rapid decline in kidney function occurring within 7 days, with health implications. According to KDIGO criteria, AKI is diagnosed when there is an increase in serum creatinine to ≥1.5 times baseline within the prior 7 days, or an increase in serum creatinine by ≥0.3 mg/dL (≥26.5 µmol/L) within 48 hours, or urine output <0.5 mL/kg/h for 6–12 hours. The most common causes of AKI include sepsis, ischemia from hypotension or shock, and nephrotoxic exposures such as certain medications or contrast agents.",
+            }
+        elif task == "sepsis":
+            return {
+                "complication_name": "sepsis",
+                "prediction_description": "prediction of the onset of sepsis",
+                "task_info": "Sepsis is a life-threatening condition characterized by organ dysfunction resulting from a dysregulated host response to infection. It is diagnosed when a suspected or confirmed infection is accompanied by an acute increase of two or more points in the patient's Sequential Organ Failure Assessment (SOFA) score relative to their baseline. The SOFA score evaluates six physiological parameters: the ratio of partial pressure of oxygen to the fraction of inspired oxygen, mean arterial pressure, serum bilirubin concentration, platelet count, serum creatinine level, and the Glasgow Coma Score. A complication of sepsis is septic shock, which is marked by a drop in blood pressure and elevated lactate levels. Indicators of suspected infection may include positive blood cultures or the initiation of antibiotic therapy.",
+            }
+        return {}
+
     def _process_patient_features(
         self, state: Dict[str, Any], patient_data: pd.Series
     ) -> str:
         """Process patient features to extract abnormal values."""
-        # First convert patient_data to the right format if needed
-        if not isinstance(patient_data, pd.Series):
-            logger.debug(f"Patient data type: {type(patient_data)}")
-            if isinstance(patient_data, pd.DataFrame):
-                if not patient_data.empty:
-                    patient_data = patient_data.iloc[0]
-                    logger.debug("Converted DataFrame to Series")
-                else:
-                    return "No patient data available for analysis."
-            elif isinstance(patient_data, dict):
-                patient_data = pd.Series(patient_data)
-                logger.debug("Converted dict to Series")
-            elif hasattr(patient_data, "__iter__") and not isinstance(
-                patient_data, str
-            ):
-                # Try to iterate to debug
-                logger.debug("Iterating patient data:")
-                for item in patient_data:
-                    logger.debug(f"Item: {type(item)}")
-                return "Patient data format not supported"
-            else:
-                logger.error(f"Unsupported patient data type: {type(patient_data)}")
-                return "Error: Patient data format not supported"
 
-        # Now that patient_data should be a Series, create a DataFrame for further processing
         patient_df = pd.DataFrame([patient_data])
         logger.debug(f"Created patient_df with shape: {patient_df.shape}")
-
-        # # Create a DataFrame from the Series to use with categorize_features
-        # patient_df = pd.DataFrame([patient_data])
 
         # Extract base feature names
         base_features = set()

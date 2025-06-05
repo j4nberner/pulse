@@ -1,19 +1,17 @@
-import json
 import logging
-import os
 import time
 from abc import ABC, abstractmethod
-from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import pandas as pd
 
 from src.util.agent_util import AgentMemoryManager
+from src.util.model_util import prompt_template_hf
 
 logger = logging.getLogger("PULSE_logger")
 
 
-class PulseTemplateAgent(ABC):
+class PulseAgent(ABC):
     """Base template for all agents in the PULSE framework."""
 
     def __init__(
@@ -62,67 +60,6 @@ class PulseTemplateAgent(ABC):
         """Process a single patient's data."""
         pass
 
-    def process_batch(
-        self, X: pd.DataFrame, y: pd.DataFrame
-    ) -> Tuple[pd.DataFrame, pd.DataFrame]:
-        """Process a batch of patient data."""
-        # Track processed prompts
-        prompts = []
-        processed_indices = []
-        token_counts_input = []
-        token_counts_output = []
-
-        logger.info(f"Processing {len(X)} patients with {self.__class__.__name__}")
-        logger.debug(f"Input data columns: {X.columns}")
-
-        # Process each patient
-        for i, (idx, row) in enumerate(X.iterrows()):
-            try:
-                # Set target label in memory manager
-                target_label = y.loc[idx].iloc[0] if idx in y.index else 0
-                self.memory.set_current_sample_target(target_label)
-
-                # Process patient data through agent steps
-                result = self.process_single(row)
-
-                # Now result has the same format as standard pipeline
-                generated_text = result.get("generated_text", {})
-
-                if isinstance(generated_text, dict):
-                    # Use structured output directly
-                    prompts.append(json.dumps(generated_text, ensure_ascii=False))
-                else:
-                    # Fallback to string representation
-                    prompts.append(str(generated_text))
-
-                # Get token counts from result
-                token_counts_input.append(result.get("num_input_tokens", 0))
-                token_counts_output.append(result.get("num_output_tokens", 0))
-                processed_indices.append(idx)
-
-            except Exception as e:
-                logger.error(f"Error processing patient {i+1}/{len(X)}: {e}", exc_info=True)
-                prompts.append("Error during agent processing")
-                token_counts_input.append(0)
-                token_counts_output.append(0)
-                processed_indices.append(idx)
-
-        # Create DataFrame in same format as standard pipeline
-        X_processed = pd.DataFrame(
-            {
-                "text": prompts,
-                "num_input_tokens": token_counts_input,
-                "num_output_tokens": token_counts_output,
-            },
-            index=processed_indices,
-        )
-
-        logger.debug(f"Agent produced DataFrame with columns: {X_processed.columns}")
-        if len(X_processed) > 0:
-            logger.debug(f"Sample agent output: {X_processed['text'].iloc[0][:100]}")
-
-        return X_processed, y
-
     def run_step(
         self, step_name: str, input_data: Any, state: Dict[str, Any]
     ) -> Dict[str, Any]:
@@ -154,10 +91,17 @@ class PulseTemplateAgent(ABC):
             prompt = formatted_input
 
         # Get system message
-        system_message = step_config.get(
-            "system_message", "You are a helpful assistant."
-        )
+        system_message = step_config.get("system_message")
 
+        # For logging purposes, get the actual default system message when None
+        log_system_message = system_message
+        if system_message is None:
+            # Get default system message from first message in prompt template
+            default_prompt = prompt_template_hf("")[0]
+            log_system_message = default_prompt["content"]
+
+        # This flag controls whether to parse JSON output from the model
+        # Set to True for the final prediction step
         parse_json = step_config.get("parse_json", False)
         start_time = time.time()
 
@@ -165,18 +109,12 @@ class PulseTemplateAgent(ABC):
             # Call the model's generate method directly
             result = self.model._generate_standard(
                 input_text=prompt,
-                custom_system_message=system_message,
-                force_raw_text=not parse_json,
+                custom_system_message=system_message,  # None means use default
+                parse_json=parse_json,
             )
 
-            # Extract output properly
-            if "generated_text" in result:
-                if parse_json and isinstance(result["generated_text"], dict):
-                    output = result["generated_text"]
-                else:
-                    output = result["generated_text"]
-            else:
-                output = result.get("output", "")
+            # Extract output
+            output = result["generated_text"]
 
             if step_config.get("output_processor") and callable(
                 step_config["output_processor"]
@@ -188,7 +126,7 @@ class PulseTemplateAgent(ABC):
                 step_name=step_name,
                 input_data=prompt,
                 output_data=output,
-                system_message=system_message,
+                system_message=log_system_message,
                 num_input_tokens=result.get("num_input_tokens", 0),
                 num_output_tokens=result.get("num_output_tokens", 0),
                 token_time=result.get("token_time", 0),
@@ -205,7 +143,7 @@ class PulseTemplateAgent(ABC):
                 step_name=step_name,
                 input_data=prompt,
                 output_data=f"Error: {str(e)}",
-                system_message=system_message,
+                system_message=log_system_message,
                 infer_time=time.time() - start_time,
             )
 

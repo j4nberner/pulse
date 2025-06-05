@@ -100,28 +100,16 @@ class AgentMemoryManager:
 
         # Add to MetricsTracker if available
         if self.metrics_tracker:
-            # Extract prediction data for final final_prediction step
+            # Extract metrics from final prediction output if it's parsed
             predicted_probability = None
             predicted_diagnosis = ""
             predicted_explanation = ""
 
+            # For final_prediction steps, output will be a parsed dictionary
             if step_name == "final_prediction" and isinstance(output_data, dict):
                 predicted_probability = output_data.get("probability", None)
                 predicted_diagnosis = output_data.get("diagnosis", "")
                 predicted_explanation = output_data.get("explanation", "")
-            elif step_name == "final_prediction" and isinstance(output_data, str):
-                # Try to extract from string output
-                try:
-                    import json
-                    from src.util.model_util import extract_dict
-
-                    parsed = extract_dict(output_data)
-                    if parsed:
-                        predicted_probability = parsed.get("probability", None)
-                        predicted_diagnosis = parsed.get("diagnosis", "")
-                        predicted_explanation = parsed.get("explanation", "")
-                except:
-                    pass
 
             self.metrics_tracker.add_metadata_item(
                 {
@@ -143,27 +131,7 @@ class AgentMemoryManager:
             )
 
         return step
-
-    # def get_step(self, step_number: int) -> Optional[StepMemory]:
-    #     """Get a specific step by number for the current sample."""
-    #     if self.current_sample_id is None or self.current_sample_id not in self.samples:
-    #         return None
-
-    #     steps = self.samples[self.current_sample_id]
-    #     if 0 <= step_number - 1 < len(steps):
-    #         return steps[step_number - 1]
-    #     return None
-
-    # def get_last_step(self) -> Optional[StepMemory]:
-    #     """Get the last reasoning step for the current sample."""
-    #     if self.current_sample_id is None or self.current_sample_id not in self.samples:
-    #         return None
-
-    #     steps = self.samples[self.current_sample_id]
-    #     if steps:
-    #         return steps[-1]
-    #     return None
-
+    
     def get_final_step(self, sample_id: Any) -> Optional[StepMemory]:
         """Get the final step for a specific sample."""
         # Convert sample_id to string for consistent comparison
@@ -198,36 +166,3 @@ class AgentMemoryManager:
 # ------------------------------------
 # Other Util Functions
 # ------------------------------------
-
-
-def format_as_standard_prompt(
-    system_message: str, reasoning_steps: List[Dict[str, str]], task_question: str
-) -> str:
-    """Format agent reasoning steps as a standard pipeline prompt.
-
-    Args:
-        system_message: System message to use
-        reasoning_steps: List of reasoning steps with name, input, and output
-        task_question: Final question for the task
-
-    Returns:
-        Formatted prompt string
-    """
-    formatted_prompt = f"System: {system_message}\n\nUser: "
-
-    # Add each reasoning step
-    for step in reasoning_steps:
-        formatted_prompt += f"\n{step['name']}:\n{step['output']}\n"
-
-    # Add the final task question
-    formatted_prompt += f"\n{task_question}"
-
-    return formatted_prompt
-
-
-# TODO: This is in data_util?
-def get_feature_name(column_name: str) -> str:
-    """Extract human-readable feature name from column name."""
-    if "_" in column_name and column_name.split("_")[-1].isdigit():
-        return "_".join(column_name.split("_")[:-1])
-    return column_name

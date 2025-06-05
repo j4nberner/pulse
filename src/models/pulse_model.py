@@ -11,17 +11,16 @@ import psutil
 import torch
 import torch.nn as nn
 from peft import PromptTuningConfig, PromptTuningInit, TaskType, get_peft_model
-from torch.nn import functional as F
 from torch.utils.data import DataLoader
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 import wandb
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from src.models.agents.pulsetemplate_agent import PulseTemplateAgent
+    from src.models.agents.pulse_agent import PulseTemplateAgent
 from src.eval.metrics import MetricsTracker
 from src.util.config_util import set_seeds
-from src.util.model_util import extract_dict, prompt_template_hf
+from src.util.model_util import prompt_template_hf, parse_llm_output
 
 logger = logging.getLogger("PULSE_logger")
 
@@ -324,57 +323,36 @@ class PulseLLMModel(PulseModel):
         logger.error("Offloading not implemented for LLM models.")
         pass
 
-    def generate(
-        self,
-        input_text: str,
-        custom_system_message: str = None,
-        force_raw_text: bool = False,
-        use_agent_processing: bool = False,  # Add this new parameter
-    ) -> Dict[str, Any]:
-        """Runs the HF model on the input and extracts diagnosis, explanation, and probability.
+    def generate(self, input_data: Any, **kwargs) -> Dict[str, Any]:
+        """Unified generation method that automatically routes based on model configuration.
 
         Args:
-            input_text: The text to analyze
-            custom_system_message: Optional custom system message
-            force_raw_text: If True, returns raw text output without JSON parsing
-            use_agent_processing: If True, use agent for processing (only for agent models)
+            input_data: Input data (string for standard models, pd.Series for agents)
+            **kwargs: Additional arguments passed to generation methods
+
+        Returns:
+            Dictionary with generated_text and metrics
         """
-        # Lazy agent initialization: only initialize when needed
-        if use_agent_processing and self.is_agent:
-            # Initialize agent if not already done
-            if not self.agent_instance:
-                self._initialize_agent()
+        # Ensure model is loaded
+        if not self.is_loaded:
+            logger.debug("Model not loaded yet for inference, loading now...")
+            self.load_model()
 
-            # If agent initialization was successful, use agent processing
-            if self.agent_instance:
-                return self._generate_with_agent(input_text)
-            else:
-                # If agent initialization failed, fall back to standard processing
-                logger.warning(
-                    f"Agent initialization failed for {self.model_name}, falling back to standard generation"
-                )
-                use_agent_processing = False
-
-        # Existing standard generation logic
-        return self._generate_standard(
-            input_text, custom_system_message, force_raw_text
-        )
+        # Route based on agent flag
+        if self.is_agent:
+            return self._generate_with_agent(input_data, **kwargs)
+        else:
+            return self._generate_standard(input_data, **kwargs)
 
     def _generate_standard(
         self,
         input_text: str,
         custom_system_message: str = None,
-        force_raw_text: bool = False,
+        parse_json: bool = True,
     ) -> Dict[str, Any]:
-        """Standard generation logic (existing code moved here)."""
-        # Move all the existing generate() method code here
+        """Standard generation logic for non-agent models."""
         # Set seed for deterministic generation
         set_seeds(self.random_seed)
-
-        # # Ensure model is loaded before trying to use it
-        # if not self.is_loaded:
-        #     logger.debug("Model not loaded yet for inference, loading now...")
-        #     self.load_model()
 
         logger.info("---------------------------------------------")
 
@@ -434,39 +412,26 @@ class PulseLLMModel(PulseModel):
             # Trim after first <end_of_turn>
             decoded_output = decoded_output.split("<end_of_turn>")[0]
 
+        # Log the decoded output for debugging
         logger.debug("Decoded output:\n %s", decoded_output)
 
-        # Check if we should return raw text or parsed JSON
-        if force_raw_text:
-            return {
-                "generated_text": decoded_output,
-                "token_time": token_time,
-                "infer_time": infer_time,
-                "num_input_tokens": num_input_tokens,
-                "num_output_tokens": num_output_tokens,
-            }
-
-        # Extract dict from the decoded output
-        parsed = extract_dict(decoded_output)
-
-        # Check if probability is a number or string, try to convert, else default to 0.5
-        prob = parsed.get("probability", 0.5)
-        try:
-            prob = float(prob)
-        except (ValueError, TypeError):
-            logger.warning("Failed to convert probability to float. Defaulting to 0.5")
-            prob = 0.5
-        parsed["probability"] = prob
+        # Parse the output if parse_json is True
+        if parse_json:
+            generated_text = parse_llm_output(decoded_output)
+        else:
+            generated_text = decoded_output
 
         logger.info(
-            "Tokenization time: %.4fs | Inference time: %.4fs | Tokens: %d",
+            "Tokenization time: %.4fs | Inference time: %.4fs | Input Tokens: %d | Output Tokens: %d",
             token_time,
             infer_time,
-            num_input_tokens + num_output_tokens,
+            num_input_tokens,
+            num_output_tokens,
         )
 
+        # Return consistent result structure
         return {
-            "generated_text": parsed,
+            "generated_text": generated_text,
             "token_time": token_time,
             "infer_time": infer_time,
             "num_input_tokens": num_input_tokens,
@@ -524,14 +489,12 @@ class PulseLLMModel(PulseModel):
             y_true = y[1].iloc[0]
 
             try:
-                # Use unified generate method that handles both standard and agent processing
-                if self.is_agent:
-                    # For agent models, X_input is raw data (pd Series), the agent will handle conversion to prompts internally
+                # Set target for agent models
+                if self.is_agent and self.agent_instance:
                     self.agent_instance.memory.set_current_sample_target(y_true)
-                    result_dict = self.generate(X_input, use_agent_processing=True)
-                else:
-                    # For standard models, X_input is the text prompt
-                    result_dict = self.generate(X_input, use_agent_processing=False)
+
+                # Get raw result from generation
+                result_dict = self.generate(X_input)
 
             except Exception as e:
                 logger.error(
@@ -682,6 +645,41 @@ class PulseLLMModel(PulseModel):
     # Agent-specific methods
     # -------------------------------
 
+    def _generate_with_agent(self, input_data: Any, **kwargs) -> Dict[str, Any]:
+        """Generate using agent-based multi-step reasoning."""
+        try:
+            # Initialize agent if not already done
+            if not self.agent_instance:
+                self._initialize_agent()
+
+            # If agent initialization failed, fallback to standard
+            if not self.agent_instance:
+                logger.warning(
+                    f"Agent initialization failed for {self.model_name}, using standard generation"
+                )
+                return self._generate_standard(str(input_data), **kwargs)
+
+            # Update agent context
+            self._update_agent_context()
+
+            # Validate input data type
+            if isinstance(input_data, str):
+                logger.warning("Agent received string input instead of structured data")
+                return self._generate_standard(input_data, **kwargs)
+
+            # Set current sample in agent memory for tracking
+            sample_id = getattr(input_data, "name", "default")
+            self.agent_instance.memory.set_current_sample(sample_id)
+
+            # Process through agent - returns raw unparsed output
+            result = self.agent_instance.process_single(input_data)
+            return result
+
+        except Exception as e:
+            logger.error(f"Error in agent processing: {e}", exc_info=True)
+            # Fallback to standard generation
+            return self._generate_standard(str(input_data), **kwargs)
+
     def _initialize_agent(self) -> None:
         """Initialize the agent instance based on prompting_id."""
         try:
@@ -728,38 +726,3 @@ class PulseLLMModel(PulseModel):
         if self.agent_instance:
             self.agent_instance.task_name = getattr(self, "task_name", None)
             self.agent_instance.dataset_name = getattr(self, "dataset_name", None)
-
-    # Add this new method after the generate method
-    def _generate_with_agent(self, input_data: Any) -> Dict[str, Any]:
-        """Generate using agent-based multi-step reasoning."""
-        try:
-            # Ensure agent context is up to date
-            self._update_agent_context()
-
-            # Convert input_data to pandas Series if needed
-            if isinstance(input_data, str):
-                logger.warning("Agent received string input instead of structured data")
-                return self._generate_standard(input_data)
-
-            # Set the current sample in agent memory for proper tracking
-            if hasattr(input_data, "name"):
-                sample_id = input_data.name
-            else:
-                sample_id = "default"
-
-            # Set current sample in agent memory
-            self.agent_instance.memory.set_current_sample(sample_id)
-
-            # The agent.process_single() method handles:
-            # 1. Converting raw patient data to text format
-            # 2. Formatting prompts for each reasoning step
-            # 3. Calling the model for each step
-            # 4. Returning the final structured result
-            result = self.agent_instance.process_single(input_data)
-
-            return result
-
-        except Exception as e:
-            logger.error(f"Error in agent processing: {e}", exc_info=True)
-            # Fallback to standard generation
-            return self._generate_standard(str(input_data))

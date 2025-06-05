@@ -3,7 +3,7 @@ import json
 import logging
 import os
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import joblib
 import numpy as np
@@ -118,7 +118,7 @@ def save_sklearn_model(model_name: str, model: Any, save_dir: str) -> None:
 
 def prepare_data_for_model_convml(
     data_loader: Any,
-) -> tuple[np.ndarray, np.ndarray, List[str]]:
+) -> Tuple[np.ndarray, np.ndarray, List[str]]:
     """
     Prepare data for conventional machine learning models by converting PyTorch tensors
     from dataloaders to numpy arrays while preserving feature names.
@@ -175,8 +175,7 @@ def prepare_data_for_model_convdl(
     """
 
     # Import the converter
-    from src.preprocessing.preprocessing_advanced.windowing import \
-        WindowedDataTo3D
+    from src.preprocessing.preprocessing_advanced.windowing import WindowedDataTo3D
 
     # Create converter with model name and config
     converter = WindowedDataTo3D(
@@ -380,6 +379,98 @@ def extract_last_json_block(text: str) -> Optional[str]:
     return None
 
 
+def parse_llm_output(
+    output_text: str,
+    required_keys: List[str] = ["diagnosis", "probability", "explanation"],
+    default_values: Dict[str, Any] = None,
+) -> Dict[str, Any]:
+    """Extract and parse JSON objects from LLM output with robust error handling.
+
+    Args:
+        output_text: Raw text output from the language model
+        required_keys: Keys that must be present in the output
+        default_values: Default values to use if parsing fails
+
+    Returns:
+        Dictionary with parsed content and normalized values
+    """
+    if default_values is None:
+        default_values = {
+            "diagnosis": "unknown",
+            "probability": 0.5,
+            "explanation": "No explanation provided.",
+        }
+
+    # Handle empty input
+    if not output_text or not isinstance(output_text, str):
+        logger.warning("Empty or non-string output received")
+        return default_values
+
+    # Balance braces if needed
+    if output_text.count("{") > output_text.count("}"):
+        output_text = output_text + "}" * (
+            output_text.count("{") - output_text.count("}")
+        )
+
+    # Extract JSON block
+    json_text = extract_last_json_block(output_text)
+    if not json_text:
+        logger.warning("No JSON object found in output. Returning default.")
+        return default_values
+
+    # Fix common JSON formatting issues
+    json_text = fix_json_formatting(json_text)
+
+    # Check if the required keys are present
+    if not all(key in json_text for key in required_keys):
+        logger.warning(
+            f"JSON object missing required keys {required_keys}. Returning default."
+        )
+        return default_values
+
+    try:
+        parsed = json.loads(json_text)
+
+        # Process specific fields (currently just probability)
+        if "probability" in parsed:
+            try:
+                parsed["probability"] = float(parsed["probability"])
+            except (ValueError, TypeError):
+                logger.warning(
+                    "Failed to convert probability to float. Defaulting to 0.5"
+                )
+                parsed["probability"] = 0.5
+
+        return parsed
+
+    except json.JSONDecodeError as e:
+        logger.warning(f"Failed to parse JSON: {e}\nRaw: {json_text}")
+        return default_values
+
+
+def fix_json_formatting(json_text: str) -> str:
+    """Fix common JSON formatting issues."""
+    # Fix unterminated strings
+    if json_text.count('"') % 2 != 0:
+        json_text += '"'
+        logger.debug("Fixed unterminated string by adding closing quote.")
+
+    # Fix missing final brace
+    if not json_text.endswith("}"):
+        json_text += "}"
+        logger.debug("Fixed unclosed JSON object by adding closing brace.")
+
+    # Escape newlines in quoted strings
+    def escape_newlines_in_strings(s: str) -> str:
+        def repl(m):
+            return m.group(0).replace("\n", "\\n").replace("\r", "\\r")
+
+        return re.sub(r'"(.*?)"', repl, s, flags=re.DOTALL)
+
+    return escape_newlines_in_strings(json_text)
+
+
+@DeprecationWarning
 def extract_dict(output_text: str) -> Optional[Dict[str, str]]:
     """Extract and parse the last JSON-like object from the model's output text and return it as a dictionary.
 
