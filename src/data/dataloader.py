@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
+import tempfile
 import torch
 from omegaconf import OmegaConf
 from torch.utils.data import Dataset
@@ -47,6 +48,7 @@ class DatasetManager:
         self.datasets = {}
         self.preprocessor = None
         self.windower = None
+        self.pos_weight = 1.0
 
         self.app_mode = config.general.app_mode
         self.debug_data_length = None
@@ -369,10 +371,17 @@ class DatasetManager:
 
         if not dataset["loaded"]:
             success, dataset = self.load_dataset(dataset_id)
+            
             if not success:
                 return None, None, None, None, None, None
 
         data = dataset["data"]
+        # Log the size of each data split in MB
+        for split in ["X_train", "y_train", "X_val", "y_val", "X_test", "y_test"]:
+            df = data[split]
+            if isinstance(df, pd.DataFrame):
+                mem_mb = df.memory_usage(deep=True).sum() / (1024 * 1024)
+                logger.debug(f"Size of {split} for {dataset_id}: {mem_mb:.2f} MB")
 
         # Limit the loaded data to only load the necessary parts before processing
         # Take only n rows if in debug
@@ -505,6 +514,10 @@ class DatasetManager:
                     dataset["task"],
                 )
 
+                del X_limited_sampled, y_limited_sampled  # Clear sampled dataframes to free up memory
+
+
+
         # Applying advanced preprocessing if and not already loaded from presaved files
         logger.debug(
             "Applying advanced preprocessing for %s.",
@@ -572,11 +585,11 @@ class DatasetManager:
                     df["sex"] = df["sex"].map({"Male": 1, "Female": 0}).fillna(-1)
                 return df
 
+            logger.debug("Converting gender column to numerical values")
             for data_set in ["X_train", "X_val", "X_test"]:
                 df_temp = convert_categorical_columns(dataset["data"][data_set])
                 dataset["data"][data_set] = df_temp
 
-            logger.debug("Converted gender column to numerical values")
 
         # Print statistics if requested (Print train, val and both original and limited test set statistics to compare distributions)
         if print_stats:
@@ -614,8 +627,9 @@ class DatasetManager:
         
 
         # Drop stay_id column after calculating statistics
+        logger.debug("Dropping stay_id column from all features and labels")
         dataset["data"] = self._drop_stay_id_if_present(dataset["data"])
-        logger.debug("Dropped stay_id column from all features and labels")
+        
 
         # Apply advanced preprocessing if needed -> generate prompts
         if model_type == "LLM":
@@ -687,6 +701,46 @@ class DatasetManager:
             if "model_instance" in kwargs and "loaded_model" in info_dict:
                 # Store the loaded model back to the benchmark.py flow
                 kwargs["loaded_model"] = info_dict["loaded_model"]
+        
+        if model_type == "convDL":
+            self.pos_weight = 1.0  # Default value for pos_weight
+            labels = dataset["data"]["y_train"]["label"]
+            neg = len(labels) - labels.sum()
+            pos = labels.sum()
+            if pos == 0:
+                logger.warning("No positive samples found in the dataset. Setting pos_weight to 1.")
+                self.pos_weight = 1.0
+            elif neg == 0:
+                logger.warning("No negative samples found in the dataset. Setting pos_weight to 0.")
+                self.pos_weight = 0.0
+            else:
+                self.pos_weight = neg / pos
+            # Save the preprocessed data to temporary .npy files for memory efficiency
+            def save_to_temp_npy(df):
+                arr = df.values.astype(np.float32)
+                tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".npy")
+                np.save(tmp, arr)
+                tmp.close()
+                return tmp.name
+
+            # Save each split to a temporary .npy file
+            X_train_path = save_to_temp_npy(dataset["data"]["X_train"])
+            y_train_path = save_to_temp_npy(dataset["data"]["y_train"])
+            X_val_path = save_to_temp_npy(dataset["data"]["X_val"])
+            y_val_path = save_to_temp_npy(dataset["data"]["y_val"])
+            X_test_path = save_to_temp_npy(dataset["data"]["X_test"])
+            y_test_path = save_to_temp_npy(dataset["data"]["y_test"])
+            # Return the paths to the temporary files
+            return (
+                X_train_path,
+                y_train_path,
+                X_val_path,
+                y_val_path,
+                X_test_path,
+                y_test_path,
+            )
+        
+        # For other model types, return the DataFrames directly
 
         return (
             dataset["data"]["X_train"],
