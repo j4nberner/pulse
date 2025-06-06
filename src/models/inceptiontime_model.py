@@ -208,6 +208,7 @@ class InceptionTimeModel(PulseModel, nn.Module):
         Args:
             num_channels: Number of input channels from the data
         """
+        set_seeds(self.params["random_seed"])
         # Reset inception and residual modules
         self.inception_modules = nn.ModuleList()
         self.residual_connections = nn.ModuleDict()
@@ -265,7 +266,7 @@ class InceptionTimeModel(PulseModel, nn.Module):
             x = inception_module(x)
 
             # Apply residual connection if needed
-            if i in self.residual_connections and recent_outputs[0] is not None:
+            if str(i) in self.residual_connections and recent_outputs[0] is not None:
                 # Only use residual connection if we have a valid tensor
                 residual_input = recent_outputs[0]  # first element is oldest
                 residual_module = self.residual_connections[str(i)]
@@ -273,9 +274,7 @@ class InceptionTimeModel(PulseModel, nn.Module):
 
             # Shift outputs window and store current output (circular buffer style)
             recent_outputs.pop(0)  # Remove oldest output
-            recent_outputs.append(
-                x.clone()
-            )  # Add current output (use clone for safety)
+            recent_outputs.append(x.clone())# Add current output
 
         # Apply final layers
         x = self.global_avg_pool(x)

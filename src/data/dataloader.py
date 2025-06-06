@@ -702,6 +702,14 @@ class DatasetManager:
                 # Store the loaded model back to the benchmark.py flow
                 kwargs["loaded_model"] = info_dict["loaded_model"]
         
+        # Log the shapes of the datasets
+        logger.info(
+            "Shapes - Train: %s, Val: %s, Test: %s",
+            dataset["data"]["X_train"].shape,
+            dataset["data"]["X_val"].shape,
+            dataset["data"]["X_test"].shape,
+        )
+        
         if model_type == "convDL":
             self.pos_weight = 1.0  # Default value for pos_weight
             labels = dataset["data"]["y_train"]["label"]

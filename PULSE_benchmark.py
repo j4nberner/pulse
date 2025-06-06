@@ -175,14 +175,6 @@ class PulseBenchmark:
                         )
                     )
 
-                    # Log the shapes of the datasets
-                    logger.info(
-                        "Shapes - Train: %s, Val: %s, Test: %s",
-                        X_train.shape,
-                        X_val.shape,
-                        X_test.shape,
-                    )
-
                     #######################################################################
 
                     # Check if we can reuse an already loaded model from the agent pipeline
