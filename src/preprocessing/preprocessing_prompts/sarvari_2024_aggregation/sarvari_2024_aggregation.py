@@ -9,10 +9,9 @@ from src.util.data_util import get_feature
 
 logger = logging.getLogger("PULSE_logger")
 
-
 def sarvari_aggregation_preprocessor(
     X: List[pd.DataFrame], y: List[pd.DataFrame], info_dict: Dict[str, Any]
-) -> Tuple[pd.DataFrame, pd.DataFrame]:
+) -> Dict[str, pd.DataFrame]:
     """
     Preprocess ICU data into prompts as per the paper
     "A systematic evaluation of the performance of GPT-4 and PaLM2 to diagnose comorbidities in MIMIC-IV patients".
@@ -24,7 +23,7 @@ def sarvari_aggregation_preprocessor(
         info_dict (Dict[str, Any]): Task metadata (e.g. task name, model ID, etc).
 
     Returns:
-        Tuple[pd.DataFrame, pd.DataFrame]: Prompt DataFrame and label DataFrame.
+        Dict[str, pd.DataFrame]: Dictionary with keys "X" (prompt DataFrame) and "y" (label DataFrame).
     """
     pp = PreprocessorAdvanced()
     task = info_dict.get("task", "unknown_task")
@@ -75,7 +74,11 @@ def sarvari_aggregation_preprocessor(
     else:
         # 3. No few-shot examples, just use the main query
         X_processed = pd.DataFrame({"text": wrapped_prompts})
-    return X_processed, y_input
+
+    return {
+       "X": X_processed,
+       "y": y_input,
+    }
 
 
 def build_sarvari_query(

@@ -11,15 +11,16 @@ import psutil
 import torch
 import torch.nn as nn
 from peft import PromptTuningConfig, PromptTuningInit, TaskType, get_peft_model
-from torch.nn import functional as F
 from torch.utils.data import DataLoader
-from transformers import (AutoModelForCausalLM, AutoTokenizer,
-                          BitsAndBytesConfig)
-
+from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 import wandb
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from src.models.agents.pulse_agent import PulseTemplateAgent
 from src.eval.metrics import MetricsTracker
 from src.util.config_util import set_seeds
-from src.util.model_util import extract_dict, prompt_template_hf
+from src.util.model_util import prompt_template_hf, parse_llm_output
 
 logger = logging.getLogger("PULSE_logger")
 
@@ -127,7 +128,7 @@ class PulseModel:
 
             # Load the weights into the model
             if hasattr(self, "load_state_dict"):
-                self.load_state_dict(state_dict)
+                self.load_state_dict(state_dict, strict=False)
                 logger.info("Model weights loaded successfully")
             else:
                 logger.warning(
@@ -217,7 +218,7 @@ class PulseModel:
                     self.model.to(device)
                 else:
                     # For convDL models, load the model to the specified device
-                    # TODO: implement for confDL models
+                    # TODO: implement for convDL models
                     pass
                     # self.model.to(device)
                 logger.info("Model loaded to GPU memory")
@@ -260,11 +261,11 @@ class PulseLLMModel(PulseModel):
 
         self.model_id = params.get("model_id", None)
         self.tokenizer = None
+        self.inference_only = self.mode == "inference"
 
-        self.inference_only = kwargs.get(
-            "inference_only", False
-        )  # TODO: @sophiafe needed?
         self.prompting_id = params.get("prompting_id", None)
+        self.is_agent = False
+        self.agent_instance = None
 
     def load_model(self) -> None:
         """Loads the tokenizer and model weights."""
@@ -322,26 +323,36 @@ class PulseLLMModel(PulseModel):
         logger.error("Offloading not implemented for LLM models.")
         pass
 
-    def generate(
-        self,
-        input_text: str,
-        custom_system_message: str = None,
-        force_raw_text: bool = False,
-    ) -> Dict[str, Any]:
-        """Runs the HF model on the input and extracts diagnosis, explanation, and probability.
+    def generate(self, input_data: Any, **kwargs) -> Dict[str, Any]:
+        """Unified generation method that automatically routes based on model configuration.
 
         Args:
-            input_text: The text to analyze
-            custom_system_message: Optional custom system message
-            force_raw_text: If True, returns raw text output without JSON parsing
-        """
-        # Set seed for deterministic generation
-        set_seeds(self.random_seed)
+            input_data: Input data (string for standard models, pd.Series for agents)
+            **kwargs: Additional arguments passed to generation methods
 
-        # Ensure model is loaded before trying to use it
+        Returns:
+            Dictionary with generated_text and metrics
+        """
+        # Ensure model is loaded
         if not self.is_loaded:
             logger.debug("Model not loaded yet for inference, loading now...")
             self.load_model()
+
+        # Route based on agent flag
+        if self.is_agent:
+            return self._generate_with_agent(input_data, **kwargs)
+        else:
+            return self._generate_standard(input_data, **kwargs)
+
+    def _generate_standard(
+        self,
+        input_text: str,
+        custom_system_message: str = None,
+        parse_json: bool = True,
+    ) -> Dict[str, Any]:
+        """Standard generation logic for non-agent models."""
+        # Set seed for deterministic generation
+        set_seeds(self.random_seed)
 
         logger.info("---------------------------------------------")
 
@@ -401,40 +412,26 @@ class PulseLLMModel(PulseModel):
             # Trim after first <end_of_turn>
             decoded_output = decoded_output.split("<end_of_turn>")[0]
 
+        # Log the decoded output for debugging
         logger.debug("Decoded output:\n %s", decoded_output)
 
-        # Check if we should return raw text or parsed JSON (important for multi-turn conversations)
-        if force_raw_text:
-            # For text-only outputs like summaries
-            return {
-                "generated_text": decoded_output,  # Return raw text
-                "token_time": token_time,
-                "infer_time": infer_time,
-                "num_input_tokens": num_input_tokens,
-                "num_output_tokens": num_output_tokens,
-            }
-
-        # Extract dict from the decoded output (e.g., via regex or JSON parsing)
-        parsed = extract_dict(decoded_output)
-
-        # Check if probability is a number or string, try to convert, else default to 0.5
-        prob = parsed.get("probability", 0.5)
-        try:
-            prob = float(prob)
-        except (ValueError, TypeError):
-            logger.warning("Failed to convert probability to float. Defaulting to 0.5")
-            prob = 0.5
-        parsed["probability"] = prob
+        # Parse the output if parse_json is True
+        if parse_json:
+            generated_text = parse_llm_output(decoded_output)
+        else:
+            generated_text = decoded_output
 
         logger.info(
-            "Tokenization time: %.4fs | Inference time: %.4fs | Tokens: %d",
+            "Tokenization time: %.4fs | Inference time: %.4fs | Input Tokens: %d | Output Tokens: %d",
             token_time,
             infer_time,
-            num_input_tokens + num_output_tokens,
+            num_input_tokens,
+            num_output_tokens,
         )
 
+        # Return consistent result structure
         return {
-            "generated_text": parsed,
+            "generated_text": generated_text,
             "token_time": token_time,
             "infer_time": infer_time,
             "num_input_tokens": num_input_tokens,
@@ -461,98 +458,62 @@ class PulseLLMModel(PulseModel):
 
         logger.info("Starting test evaluation...")
 
-        # Set seed for deterministic generation
-        set_seeds(self.random_seed)
-
         metrics_tracker = MetricsTracker(
             self.model_name,
             self.task_name,
             self.dataset_name,
             self.save_dir,
         )
+
+        # For agents: Initialize agent and set the metrics_tracker in the agent's memory manager
+        if self.is_agent:
+            if not self.agent_instance:
+                self._initialize_agent()
+            if self.agent_instance:
+                self.agent_instance.memory.metrics_tracker = metrics_tracker
+                logger.debug(
+                    "Set MetricsTracker in agent memory manager for %s", self.model_name
+                )
+
         verbose: int = self.params.get("verbose", 1)
         val_loss: list[float] = []
 
         self.model.eval()
 
         for X, y in zip(test_loader[0].iterrows(), test_loader[1].iterrows()):
-            idx = X[0]  # The index of the current row
-            X_input = X[1].iloc[0]  # The input text for standard pipeline
-            y_true = y[1].iloc[0]  # The true label
-
-            # Check if this row contains an agent prediction
-            is_agent_prediction = False
-            if "is_agent_prediction" in test_loader[0].columns:
-                is_agent_prediction = bool(
-                    test_loader[0].at[idx, "is_agent_prediction"]
-                )
-                logger.debug(
-                    "Sample %s: is_agent_prediction = %s (type: %s)",
-                    idx,
-                    is_agent_prediction,
-                    type(is_agent_prediction),
-                )
-
-            if is_agent_prediction:
-                logger.info(
-                    "Found agent prediction - using directly without additional inference"
-                )
-
-                try:
-                    # Parse the agent's prediction JSON
-                    agent_output = (
-                        json.loads(X_input) if isinstance(X_input, str) else X_input
-                    )
-
-                    # Extract prediction fields
-                    predicted_probability = float(agent_output.get("probability", 0.5))
-                    diagnosis = agent_output.get("diagnosis", "")
-                    explanation = agent_output.get("explanation", "")
-
-                    # Get token metrics if available
-                    token_time = 0.0  # Placeholder values
-                    infer_time = 0.0
-                    num_input_tokens = (
-                        test_loader[0].at[idx, "num_input_tokens"]
-                        if "num_input_tokens" in test_loader[0].columns
-                        else 100
-                    )
-                    num_output_tokens = (
-                        test_loader[0].at[idx, "num_output_tokens"]
-                        if "num_output_tokens" in test_loader[0].columns
-                        else 50
-                    )
-
-                    # Create result structure matching what infer_llm would return
-                    result_dict = {
-                        "generated_text": {
-                            "diagnosis": diagnosis,
-                            "probability": predicted_probability,
-                            "explanation": explanation,
-                        },
-                        "token_time": token_time,
-                        "infer_time": infer_time,
-                        "num_input_tokens": num_input_tokens,
-                        "num_output_tokens": num_output_tokens,
-                    }
-
-                    logger.info(
-                        "Using agent prediction: %s with probability %s",
-                        diagnosis,
-                        predicted_probability,
-                    )
-
-                except Exception as e:
-                    logger.error(
-                        "Error parsing agent prediction: %s - Falling back to standard inference",
-                        e,
-                    )
-                    # Run normal inference as fallback
-                    result_dict = self.generate(X_input)
+            idx = X[0]
+            if self.is_agent:
+                X_input = X[1]  # Full pandas Series with all patient features
             else:
-                # Standard inference for non-agent predictions
+                X_input = X[1].iloc[0]  # Single text prompt for standard models
+            y_true = y[1].iloc[0]
+
+            try:
+                # Set target for agent models
+                if self.is_agent and self.agent_instance:
+                    self.agent_instance.memory.set_current_sample_target(y_true)
+
+                # Get raw result from generation
                 result_dict = self.generate(X_input)
 
+            except Exception as e:
+                logger.error(
+                    "Error during inference for sample %s: %s", idx, e, exc_info=True
+                )
+                # Create fallback result
+                result_dict = {
+                    "generated_text": {
+                        "diagnosis": "error",
+                        "probability": 0.5,
+                        "explanation": f"Error: {str(e)}",
+                    },
+                    "token_time": 0.0,
+                    "infer_time": 0.0,
+                    "num_input_tokens": 0,
+                    "num_output_tokens": 0,
+                }
+
+            # Extract results
             generated_text = result_dict["generated_text"]
             token_time = result_dict["token_time"]
             infer_time = result_dict["infer_time"]
@@ -566,6 +527,7 @@ class PulseLLMModel(PulseModel):
                 predicted_probability,
                 y_true,
             )
+
             if verbose > 1:
                 logger.info("Diagnosis for: %s", generated_text["diagnosis"])
                 logger.info(
@@ -594,19 +556,21 @@ class PulseLLMModel(PulseModel):
                 )
 
             metrics_tracker.add_results(predicted_probability, y_true)
-            metrics_tracker.add_metadata_item(
-                {
-                    "Input Prompt": X_input,
-                    "Target Label": y_true,
-                    "Predicted Probability": predicted_probability,
-                    "Predicted Diagnosis": generated_text.get("diagnosis", ""),
-                    "Predicted Explanation": generated_text.get("explanation", ""),
-                    "Tokenization Time": token_time,
-                    "Inference Time": infer_time,
-                    "Input Tokens": num_input_tokens,
-                    "Output Tokens": num_output_tokens,
-                }
-            )
+
+            if not self.is_agent:  # Agent models handle metadata logging in add_step()
+                metrics_tracker.add_metadata_item(
+                    {
+                        "Input Prompt": X_input,
+                        "Target Label": y_true,
+                        "Predicted Probability": predicted_probability,
+                        "Predicted Diagnosis": generated_text.get("diagnosis", ""),
+                        "Predicted Explanation": generated_text.get("explanation", ""),
+                        "Tokenization Time": token_time,
+                        "Inference Time": infer_time,
+                        "Input Tokens": num_input_tokens,
+                        "Output Tokens": num_output_tokens,
+                    }
+                )
 
         metrics_tracker.log_metadata(save_to_file=self.save_metadata)
         metrics_tracker.summary = metrics_tracker.compute_overall_metrics()
@@ -676,3 +640,63 @@ class PulseLLMModel(PulseModel):
 
         metrics_tracker.log_metadata(save_to_file=self.save_metadata)
         return total_tokens
+
+    # -------------------------------
+    # Agent-specific methods
+    # -------------------------------
+
+    def _generate_with_agent(self, input_data: Any, **kwargs) -> Dict[str, Any]:
+        """Generate using agent-based multi-step reasoning."""
+        try:
+            # Initialize agent if not already done
+            if not self.agent_instance:
+                self._initialize_agent()
+
+            # If agent initialization failed, fallback to standard
+            if not self.agent_instance:
+                logger.warning(
+                    "Agent initialization failed for %s, using standard generation",
+                    self.model_name,
+                )
+                return self._generate_standard(str(input_data), **kwargs)
+
+            # Update agent context
+            if self.agent_instance:
+                self.agent_instance.task_name = getattr(self, "task_name", None)
+                self.agent_instance.dataset_name = getattr(self, "dataset_name", None)
+
+            # Validate input data type
+            if isinstance(input_data, str):
+                logger.warning("Agent received string input instead of structured data")
+                return self._generate_standard(input_data, **kwargs)
+
+            # Set current sample in agent memory for tracking
+            sample_id = getattr(input_data, "name", "default")
+            self.agent_instance.memory.set_current_sample(sample_id)
+
+            # Process through agent - returns raw unparsed output
+            result = self.agent_instance.process_single(input_data)
+            return result
+
+        except Exception as e:
+            logger.error("Error in agent processing: %s", e, exc_info=True)
+            # Fallback to standard generation
+            return self._generate_standard(str(input_data), **kwargs)
+
+    def _initialize_agent(self) -> None:
+        """Initialize the agent instance based on prompting_id."""
+        from src.models.agents import create_agent_instance
+        
+        self.agent_instance = create_agent_instance(
+            prompting_id=self.prompting_id,
+            model=self,
+            task_name=getattr(self, "task_name", None),
+            dataset_name=getattr(self, "dataset_name", None),
+            output_dir=getattr(self, "save_dir", None),
+            metrics_tracker=None,  # Will be set in evaluate method
+        )
+        
+        if self.agent_instance:
+            self.is_agent = True
+        else:
+            self.is_agent = False

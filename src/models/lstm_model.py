@@ -194,7 +194,7 @@ class LSTMModel(PulseModel, nn.Module):
         converter = prepare_data_for_model_convdl(
             data_loader,
             self.params,
-            model_name=self.model_name,
+            architecture_type=self.params.get("architecture_type", "RNN"),
             task_name=self.task_name,
         )
 
@@ -314,7 +314,7 @@ class LSTMTrainer:
         self.converter = prepare_data_for_model_convdl(
             self.train_loader,
             self.params,
-            model_name=self.model.model_name,
+            architecture_type=self.params.get("architecture_type", "RNN"),
             task_name=self.task_name,
         )
         # To identify num_channels: Get a sample batch and transform using the converter

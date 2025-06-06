@@ -42,20 +42,6 @@ class Llama3Model(PulseLLMModel):
 
         super().__init__(model_name, params, **kwargs)
 
-        # TODO: @sophiafe needed?
-        if self.inference_only:
-            # For inference-only mode (agentic workflow)
-            self.trainer_name = params.get("trainer_name", "Llama3Trainer")
-            # Skip parent initialization for agentic workflow
-            self.random_seed = self.params.get("random_seed", 42)
-            logger.debug("Using random seed: %d", self.random_seed)
-
-            # Set necessary parameters for inference
-            self.save_dir = kwargs.get("output_dir", f"{os.getcwd()}/output")
-            self.wandb = kwargs.get("wandb", False)
-            self.task_name = kwargs.get("task_name")
-            self.dataset_name = kwargs.get("dataset_name")
-
         # Check if all required parameters exist in config
         required_params = [
             "max_new_tokens",

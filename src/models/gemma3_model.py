@@ -42,20 +42,6 @@ class Gemma3Model(PulseLLMModel):
         trainer_name = kwargs.get("trainer_name", "Llama3Trainer")
         super().__init__(model_name, params, **kwargs)
 
-        self.inference_only = kwargs.get("inference_only", False)
-        if self.inference_only:
-            # For inference-only mode (agentic workflow)
-            self.trainer_name = params.get("trainer_name", "Gemma3Trainer")
-            # Skip parent initialization for agentic workflow
-            self.random_seed = self.params.get("random_seed", 42)
-            logger.debug("Using random seed: %d", self.random_seed)
-
-            # Set necessary parameters for inference
-            self.save_dir = kwargs.get("output_dir", f"{os.getcwd()}/output")
-            self.wandb = kwargs.get("wandb", False)
-            self.task_name = kwargs.get("task_name")
-            self.dataset_name = kwargs.get("dataset_name")
-
         required_params = [
             "max_new_tokens",
             "verbose",
@@ -107,13 +93,6 @@ class Gemma3Model(PulseLLMModel):
                 logger.debug(self.model.print_trainable_parameters())
 
             logger.info("Successfully loaded Gemma3 model: %s", self.model_id)
-
-            # Only log pipeline initialization in full training mode
-            if not self.inference_only:
-                logger.info(
-                    "Initializing Hugging Face pipeline with parameters: %s",
-                    self.params,
-                )
 
             # Mark model as loaded after successful loading
             self.is_loaded = True

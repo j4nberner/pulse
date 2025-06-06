@@ -208,6 +208,8 @@ class InceptionTimeModel(PulseModel, nn.Module):
         Args:
             num_channels: Number of input channels from the data
         """
+        set_seeds(self.params["random_seed"])
+        
         # Reset inception and residual modules
         self.inception_modules = nn.ModuleList()
         self.residual_connections = nn.ModuleDict()
@@ -265,7 +267,7 @@ class InceptionTimeModel(PulseModel, nn.Module):
             x = inception_module(x)
 
             # Apply residual connection if needed
-            if i in self.residual_connections and recent_outputs[0] is not None:
+            if str(i) in self.residual_connections and recent_outputs[0] is not None:
                 # Only use residual connection if we have a valid tensor
                 residual_input = recent_outputs[0]  # first element is oldest
                 residual_module = self.residual_connections[str(i)]
@@ -273,9 +275,7 @@ class InceptionTimeModel(PulseModel, nn.Module):
 
             # Shift outputs window and store current output (circular buffer style)
             recent_outputs.pop(0)  # Remove oldest output
-            recent_outputs.append(
-                x.clone()
-            )  # Add current output (use clone for safety)
+            recent_outputs.append(x.clone())  # Add current output
 
         # Apply final layers
         x = self.global_avg_pool(x)
@@ -311,7 +311,7 @@ class InceptionTimeModel(PulseModel, nn.Module):
         converter = prepare_data_for_model_convdl(
             data_loader,
             self.params,
-            model_name=self.model_name,
+            architecture_type=self.params.get("architecture_type", "CNN"),
             task_name=self.task_name,
         )
 
@@ -496,7 +496,7 @@ class InceptionTimeTrainer:
         self.converter = prepare_data_for_model_convdl(
             self.train_loader,
             self.params,
-            model_name=self.model.model_name,
+            architecture_type=self.params.get("architecture_type", "CNN"),
             task_name=self.task_name,
         )
 
@@ -527,10 +527,6 @@ class InceptionTimeTrainer:
         # Move to GPU if available
         self.model.to(self.device)
         self.criterion.to(self.device)
-
-        # Initialize metrics tracking dictionary (not used for earlystopping, logging or wandb)
-        # TODO: @sophiafe self.metrics is not used. Do we need it?
-        self.metrics = {"train_loss": [], "val_loss": []}
 
         logger.info("Starting training on device: %s", self.device)
 
@@ -615,11 +611,9 @@ class InceptionTimeTrainer:
 
         # Calculate average loss for the epoch
         avg_train_loss = train_loss / len(self.train_loader)
-        self.metrics["train_loss"].append(avg_train_loss)
 
         # Validation phase
         val_loss = self._validate()
-        self.metrics["val_loss"].append(val_loss)
 
         # Update learning rate
         self.scheduler.step(val_loss)

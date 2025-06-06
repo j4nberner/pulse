@@ -29,7 +29,7 @@ class MetricsTracker:
     """
 
     def __init__(
-        self, model_id, task_id, dataset_name, save_dir="output", metrics_to_track=None
+        self, model_id, task_id, dataset_name, save_dir="output", metrics_to_track=None,
     ) -> None:
         """
         Initialize the metrics tracker. All tasks and datasets will be saved to the same model-metrics file.
@@ -41,7 +41,12 @@ class MetricsTracker:
             save_dir: Directory where reports will be saved
             metrics_to_track: List of metrics to track (default is a predefined list)
         """
-        self.model_id = model_id
+        # Strip "Model" suffix from model_id if present
+        if isinstance(model_id, str) and model_id.lower().endswith("model"):
+            self.model_id = model_id[:-5]  # Remove last 5 characters ("Model")
+        else:
+            self.model_id = model_id
+
         self.task_id = task_id
         self.dataset_name = dataset_name
         self.save_dir = save_dir

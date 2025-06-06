@@ -15,7 +15,7 @@ logger = logging.getLogger("PULSE_logger")
 
 def zhu_2024b_one_shot_preprocessor(
     X: List[pd.DataFrame], y: List[pd.DataFrame], info_dict: Dict[str, Any]
-) -> Tuple[pd.DataFrame, pd.DataFrame]:
+) -> Dict[str, pd.DataFrame]:
     """
     Preprocess ICU data into prompts using few-shot format and centralized JSON prompt template.
     According to Zhu et al. 2024, "Is larger always better? Evaluating and prompting large language models for non-generative medical tasks"
@@ -29,7 +29,7 @@ def zhu_2024b_one_shot_preprocessor(
                                         'task', 'dataset', and 'model_name'.
 
         Returns:
-            Tuple[pd.DataFrame, pd.DataFrame]: Prompt DataFrame and label DataFrame.
+            Dict[str, pd.DataFrame]: Dictionary with processed data. Keys are 'X' (prompts DataFrame) and 'y' (labels DataFrame).
     """
     preprocessor_advanced = PreprocessorAdvanced()
 
@@ -227,4 +227,7 @@ def zhu_2024b_one_shot_preprocessor(
         model_id,
     )
 
-    return X_processed, y_in
+    return {
+        "X": X_processed,
+        "y": y_in,
+    }

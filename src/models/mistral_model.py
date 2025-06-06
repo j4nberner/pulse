@@ -41,20 +41,6 @@ class MistralModel(PulseLLMModel):
         model_name = kwargs.get("model_name", "MistralModel")
         super().__init__(model_name, params=params)
 
-        self.inference_only = kwargs.get("inference_only", False)
-        if self.inference_only:
-            # For inference-only mode (agentic workflow)
-            self.trainer_name = params.get("trainer_name", "MistralTrainer")
-            # Skip parent initialization for agentic workflow
-            self.random_seed = self.params.get("random_seed", 42)
-            logger.debug("Using random seed: %d", self.random_seed)
-
-            # Set necessary parameters for inference
-            self.save_dir = kwargs.get("output_dir", f"{os.getcwd()}/output")
-            self.wandb = kwargs.get("wandb", False)
-            self.task_name = kwargs.get("task_name")
-            self.dataset_name = kwargs.get("dataset_name")
-
         required_params = [
             "max_new_tokens",
             "verbose",
