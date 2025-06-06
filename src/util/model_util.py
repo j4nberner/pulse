@@ -387,28 +387,28 @@ def system_message_samples(task: str) -> list[str]:
             - Tests impact of few-shot learning and demonstration-based guidance
             - Uses real clinical parameters (vital signs, lab values, FiO2, urine output)
 
-        Sample 3: Sample 2 + ICU Context Awareness
+        Sample 3: Sample 2 + Probability Calibration Guidelines
+            - Adds explicit probability range interpretations (0-20, 20-40, etc.)
+            - Tests impact of confidence calibration guidance
+            - Improves probability estimation accuracy and consistency
+
+        Sample 4: Sample 3 + ICU Context Awareness
             - Adds contextual guidance about ICU patient baseline abnormalities
             - Tests impact of domain-specific contextual understanding
             - Helps model account for critically ill patient characteristics
 
-        Sample 4: Sample 3 + Detailed JSON Schema
+        Sample 5: Sample 4 + Detailed JSON Schema
             - Adds explicit schema definition with field constraints
             - Tests impact of structured format specification
             - Ensures consistent output format compliance
-
-        Sample 5: Sample 4 + Probability Calibration Guidelines
-            - Adds explicit probability range interpretations (0.0-0.2, 0.2-0.4, etc.)
-            - Tests impact of confidence calibration guidance
-            - Improves probability estimation accuracy and consistency
 
     Experimental Logic:
         By comparing performance between consecutive samples, researchers can isolate the
         specific contribution of each prompt engineering technique:
         - Sample 2 vs 1: Effect of examples
-        - Sample 3 vs 2: Effect of domain context
-        - Sample 4 vs 3: Effect of schema structure
-        - Sample 5 vs 4: Effect of probability calibration
+        - Sample 3 vs 2: Effect of probability calibration
+        - Sample 4 vs 3: Effect of ICU context
+        - Sample 5 vs 4: Effect of schema structure
     """
     sys_msg_list = []
 
@@ -487,7 +487,7 @@ def system_message_samples(task: str) -> list[str]:
         f"for {task_description}.\n\n"
         "Your response must strictly follow this format:\n"
         "Output a valid JSON object with three keys: 'diagnosis', 'probability' and 'explanation'.\n\n"
-        "1. 'diagnosis' a string with either diagnosis or not-diagnosis\n"
+        "1. 'diagnosis' a string with either 'diagnosis' or 'not-diagnosis'\n"
         "2. 'probability' an integer between 0 and 100, where 0 means not diagnosed and 100 means diagnosed.\n"
         "3. 'explanation' should be a string providing a brief explanation of your diagnosis.\n\n"
     )
@@ -541,22 +541,28 @@ def system_message_samples(task: str) -> list[str]:
     # Sample 2: Sample 1 + Examples
     sys_msg_list.append(base_instruction + examples_section + closing)
 
-    # Sample 3: Sample 2 + ICU Context
-    sys_msg_list.append(base_instruction + examples_section + icu_context + closing)
-
-    # Sample 4: Sample 3 + Detailed Schema
+    # Sample 3: Sample 2 + Probability Calibration
     sys_msg_list.append(
-        base_instruction + schema_section + examples_section + icu_context + closing
+        base_instruction + examples_section + probability_guidelines + closing
     )
 
-    # Sample 5: Sample 4 + Probability Calibration
+    # Sample 4: Sample 3 + ICU Context
     sys_msg_list.append(
         base_instruction
+        + examples_section
+        + probability_guidelines
+        + icu_context
+        + closing
+    )
+
+    # Sample 5: Sample 4 + Detailed Schema
+    sys_msg_list.append(
+        base_instruction
+        + examples_section
         + probability_guidelines
         + schema_section
-        + examples_section
         + icu_context
-        + "Use the probability guidelines to ensure accurate confidence assessment.\n"
+        + closing
     )
 
     return sys_msg_list
@@ -638,7 +644,7 @@ def parse_llm_output(
         if "probability" in parsed:
             try:
                 prob_value = float(parsed["probability"])
-                
+
                 # Check if it's in 0-100 range (integer format)
                 if 0 <= prob_value <= 100:
                     # Convert to 0.0-1.0 range
@@ -649,11 +655,11 @@ def parse_llm_output(
                 else:
                     # Out of expected range, clamp and warn
                     logger.warning(
-                        "Probability value %s out of expected range. Clamping to [0,1]", 
-                        prob_value
+                        "Probability value %s out of expected range. Clamping to [0,1]",
+                        prob_value,
                     )
                     parsed["probability"] = max(0.0, min(1.0, prob_value / 100.0))
-                    
+
             except (ValueError, TypeError):
                 logger.warning(
                     "Failed to convert probability to float. Defaulting to 0.5"
@@ -743,7 +749,7 @@ def extract_dict(output_text: str) -> Optional[Dict[str, str]]:
 
     try:
         parsed = json.loads(json_text_clean)
-        
+
         # Convert probability from 0-100 to 0.0-1.0 if needed
         if "probability" in parsed:
             try:
@@ -754,7 +760,7 @@ def extract_dict(output_text: str) -> Optional[Dict[str, str]]:
                     parsed["probability"] = 0.5
             except (ValueError, TypeError):
                 parsed["probability"] = 0.5
-        
+
         return parsed
     except json.JSONDecodeError as e:
         logger.warning("Failed to parse JSON: %s\nRaw: %s", e, json_text_clean)
