@@ -136,17 +136,17 @@ class PulseBenchmark:
                         )
 
                     # Preprocess data for corresponding model
-                    X_train, y_train, X_val, y_val, X_test, y_test, is_agent = (
+                    X_train, y_train, X_val, y_val, X_test, y_test = (
                         self.dm.get_preprocessed_data(
                             task_dataset_name, model.model_name, **dm_kwargs
                         )
                     )
 
                     # Set agent flag (specified in prompting preprocessor, agent initialization will happen lazily)
+                    is_agent = self.dm.is_agent
                     model.is_agent = is_agent
                     if is_agent:
-                        logger.debug(f"Agent flag set for {model.model_name}")
-
+                        logger.debug("Agent flag set for %s", model.model_name)
 
                     # Log the shapes of the datasets
                     logger.info(
@@ -190,15 +190,11 @@ class PulseBenchmark:
                             self.random_seed
                         )
 
-                        # TODO: @sophiafe - Had to comment out. Weird behavior with DataLoader otherwise.
                         train_loader = DataLoader(
                             train_dataset,
                             batch_size=batch_size,
                             shuffle=True,
                             drop_last=False,
-                            # pin_memory=False,  # Speeds up CPU-to-GPU transfers
-                            # prefetch_factor=2,  # Default value, can increase if GPU is idle
-                            # persistent_workers=True,  # Keeps workers alive between epochs
                             **dataloader_args,
                         )
                         val_loader = DataLoader(

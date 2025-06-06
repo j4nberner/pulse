@@ -40,7 +40,6 @@ class MetricsTracker:
             dataset_name: Name of the dataset
             save_dir: Directory where reports will be saved
             metrics_to_track: List of metrics to track (default is a predefined list)
-            is_agent: Boolean indicating if the tracker is for an LLM agent
         """
         # Strip "Model" suffix from model_id if present
         if isinstance(model_id, str) and model_id.lower().endswith("model"):

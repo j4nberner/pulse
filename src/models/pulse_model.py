@@ -472,7 +472,7 @@ class PulseLLMModel(PulseModel):
             if self.agent_instance:
                 self.agent_instance.memory.metrics_tracker = metrics_tracker
                 logger.debug(
-                    f"Set MetricsTracker in agent memory manager for {self.model_name}"
+                    "Set MetricsTracker in agent memory manager for %s", self.model_name
                 )
 
         verbose: int = self.params.get("verbose", 1)
@@ -498,7 +498,7 @@ class PulseLLMModel(PulseModel):
 
             except Exception as e:
                 logger.error(
-                    f"Error during inference for sample {idx}: {e}", exc_info=True
+                    "Error during inference for sample %s: %s", idx, e, exc_info=True
                 )
                 # Create fallback result
                 result_dict = {
@@ -655,12 +655,15 @@ class PulseLLMModel(PulseModel):
             # If agent initialization failed, fallback to standard
             if not self.agent_instance:
                 logger.warning(
-                    f"Agent initialization failed for {self.model_name}, using standard generation"
+                    "Agent initialization failed for %s, using standard generation",
+                    self.model_name,
                 )
                 return self._generate_standard(str(input_data), **kwargs)
 
             # Update agent context
-            self._update_agent_context()
+            if self.agent_instance:
+                self.agent_instance.task_name = getattr(self, "task_name", None)
+                self.agent_instance.dataset_name = getattr(self, "dataset_name", None)
 
             # Validate input data type
             if isinstance(input_data, str):
@@ -676,53 +679,24 @@ class PulseLLMModel(PulseModel):
             return result
 
         except Exception as e:
-            logger.error(f"Error in agent processing: {e}", exc_info=True)
+            logger.error("Error in agent processing: %s", e, exc_info=True)
             # Fallback to standard generation
             return self._generate_standard(str(input_data), **kwargs)
 
     def _initialize_agent(self) -> None:
         """Initialize the agent instance based on prompting_id."""
-        try:
-            # Ensure we have the necessary context
-            if not self.prompting_id:
-                logger.error("Cannot initialize agent: prompting_id is not set")
-                self.is_agent = False
-                return
-
-            # Import the specific agent class based on prompting_id
-            if "zhu_2024c_categorization_summary_agent" in self.prompting_id:
-                from src.models.agents.zhu_2024c_agent import Zhu2024cAgent
-
-                # Create agent instance with this model as the underlying model
-                self.agent_instance = Zhu2024cAgent(
-                    model=self,
-                    task_name=getattr(self, "task_name", None),
-                    dataset_name=getattr(self, "dataset_name", None),
-                    output_dir=getattr(self, "save_dir", None),
-                    metrics_tracker=None,  # Will be set in evaluate method
-                )
-                logger.info(
-                    f"Initialized {Zhu2024cAgent.__name__} for {self.prompting_id}"
-                )
-
-            # Add more agent types here as needed
-            # elif "other_agent" in self.prompting_id:
-            #     from src.models.agents.other_agent import OtherAgent
-            #     self.agent_instance = OtherAgent(model=self, ...)
-
-            else:
-                logger.warning(
-                    f"No agent implementation found for prompting_id: {self.prompting_id}"
-                )
-                self.is_agent = False
-
-        except Exception as e:
-            logger.error(f"Failed to initialize agent for {self.prompting_id}: {e}")
-            self.is_agent = False
-            self.agent_instance = None
-
-    def _update_agent_context(self) -> None:
-        """Update agent context when task/dataset changes."""
+        from src.models.agents import create_agent_instance
+        
+        self.agent_instance = create_agent_instance(
+            prompting_id=self.prompting_id,
+            model=self,
+            task_name=getattr(self, "task_name", None),
+            dataset_name=getattr(self, "dataset_name", None),
+            output_dir=getattr(self, "save_dir", None),
+            metrics_tracker=None,  # Will be set in evaluate method
+        )
+        
         if self.agent_instance:
-            self.agent_instance.task_name = getattr(self, "task_name", None)
-            self.agent_instance.dataset_name = getattr(self, "dataset_name", None)
+            self.is_agent = True
+        else:
+            self.is_agent = False
