@@ -57,18 +57,3 @@ Blood pressure too high, blood urea nitrogen too low, ...
 **[task=aki, source: KDIGO 2012]** Acute kidney injury (AKI) is a subset of acute kidney diseases and disorders (AKD), characterized by a rapid decline in kidney function occurring within 7 days, with health implications. According to KDIGO criteria, AKI is diagnosed when there is an increase in serum creatinine to ≥1.5 times baseline within the prior 7 days, or an increase in serum creatinine by ≥0.3 mg/dL (≥26.5 µmol/L) within 48 hours, or urine output <0.5 mL/kg/h for 6–12 hours. The most common causes of AKI include sepsis, ischemia from hypotension or shock, and nephrotoxic exposures such as certain medications or contrast agents.
 
 **[task=sepsis, source: Singer Sepsis-3 2016]** Sepsis is a life-threatening condition characterized by organ dysfunction resulting from a dysregulated host response to infection. It is diagnosed when a suspected or confirmed infection is accompanied by an acute increase of two or more points in the patient’s Sequential Organ Failure Assessment (SOFA) score relative to their baseline. The SOFA score evaluates six physiological parameters: the ratio of partial pressure of oxygen to the fraction of inspired oxygen, mean arterial pressure, serum bilirubin concentration, platelet count, serum creatinine level, and the Glasgow Coma Score. A complication of sepsis is septic shock, which is marked by a drop in blood pressure and elevated lactate levels. Indicators of suspected infection may include positive blood cultures or the initiation of antibiotic therapy.
-
-
-
-...
-
-## WIP
-- How closely do we need to follow a baseline method in order to be able to include them → e.g. EMERGE: Is it valid to just use the dynamic features with too low/high for the prompt, without RAG/KG and GRU?
-- include demographics?
-- how to implement classification of dynamic features (normal/too high/too low) -> paper uses z-score
-
-**Idea for how we can incorporate this approach:**
-1. Categorize features into too low / normal / too high (based on median value in data window) and only mention abnormal features in the prompt
-2. Give information about the task definition (how we define mortality/aki/sepsis)
-3. Create patient summary
-4. Use summary as input for a prediction (either just as a CoT component or as a separate prompt)
