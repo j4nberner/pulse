@@ -3,7 +3,6 @@ import os
 import sys
 from typing import Any, Dict, List
 
-import torch
 from omegaconf import OmegaConf
 from torch import nn
 
@@ -193,3 +192,4 @@ class ModelManager:
                 )
 
         return updated_models
+

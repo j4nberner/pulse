@@ -85,12 +85,16 @@ class Gemma3Model(PulseLLMModel):
 
             logger.debug(f"Loading model %s", self.model_id)
             self.tokenizer = AutoTokenizer.from_pretrained(
-                self.model_id, padding_side="left"
+                self.model_id, 
+                padding_side="left",
+                padding="longest",
+                pad_to_multiple_of=8, # <-- ensures seq_len % 8 == 0
             )
             self.model = Gemma3ForConditionalGeneration.from_pretrained(
                 self.model_id,
                 device_map="auto",
                 torch_dtype=torch.bfloat16,
+                attn_implementation="eager",
             )
 
             if self.params.get("tuning", False):

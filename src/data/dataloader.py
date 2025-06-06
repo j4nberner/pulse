@@ -175,6 +175,7 @@ class DatasetManager:
                     "preprocessing_baseline": self.config.preprocessing_baseline,
                     "preprocessing_advanced": self.config.preprocessing_advanced,
                     "loaded": False,
+                    "size_mb": None,
                     "data": None,
                 }
                 logger.info("Initialized dataset: %s", dataset_id)
@@ -248,7 +249,17 @@ class DatasetManager:
                 logger.info(
                     "Successfully loaded presaved windowed data for %s", dataset_id
                 )
+                dataset["size_mb"] = (
+                    dataset["data"]["X_train"].memory_usage(deep=True).sum()
+                    + dataset["data"]["y_train"].memory_usage(deep=True).sum()
+                    + dataset["data"]["X_val"].memory_usage(deep=True).sum()
+                    + dataset["data"]["y_val"].memory_usage(deep=True).sum()
+                    + dataset["data"]["X_test"].memory_usage(deep=True).sum()
+                    + dataset["data"]["y_test"].memory_usage(deep=True).sum()
+                ) / (1024 * 1024)
                 return True, dataset
+
+            del windowed_data  # Clear windowed_data to free up memory
 
             logger.debug(
                 "No presaved windowed data found for %s. Checking for baseline preprocessed data.",
@@ -288,6 +299,14 @@ class DatasetManager:
 
             dataset["loaded"] = True
             dataset["preprocessing_advanced"]["windowing"]["loaded"] = False
+            dataset["size_mb"] = (
+                    dataset["data"]["X_train"].memory_usage(deep=True).sum()
+                    + dataset["data"]["y_train"].memory_usage(deep=True).sum()
+                    + dataset["data"]["X_val"].memory_usage(deep=True).sum()
+                    + dataset["data"]["y_val"].memory_usage(deep=True).sum()
+                    + dataset["data"]["X_test"].memory_usage(deep=True).sum()
+                    + dataset["data"]["y_test"].memory_usage(deep=True).sum()
+                ) / (1024 * 1024)
             return True, dataset
 
         # 3. Baseline preprocessing and saving for future use
@@ -324,7 +343,14 @@ class DatasetManager:
             "y_val": data_dict["val"]["y"],
             "y_test": data_dict["test"]["y"],
         }
-
+        dataset["size_mb"] = (
+                    dataset["data"]["X_train"].memory_usage(deep=True).sum()
+                    + dataset["data"]["y_train"].memory_usage(deep=True).sum()
+                    + dataset["data"]["X_val"].memory_usage(deep=True).sum()
+                    + dataset["data"]["y_val"].memory_usage(deep=True).sum()
+                    + dataset["data"]["X_test"].memory_usage(deep=True).sum()
+                    + dataset["data"]["y_test"].memory_usage(deep=True).sum()
+                ) / (1024 * 1024)
         dataset["loaded"] = True
         dataset["preprocessing_advanced"]["windowing"]["loaded"] = False
         return True, dataset
@@ -382,6 +408,7 @@ class DatasetManager:
             if isinstance(df, pd.DataFrame):
                 mem_mb = df.memory_usage(deep=True).sum() / (1024 * 1024)
                 logger.debug(f"Size of {split} for {dataset_id}: {mem_mb:.2f} MB")
+        del df
 
         # Limit the loaded data to only load the necessary parts before processing
         # Take only n rows if in debug

@@ -176,6 +176,7 @@ class PulseLLMModel(PulseModel):
             "inference_only", False
         )  # TODO: @sophiafe needed?
         self.prompting_id = params.get("prompting_id", None)
+        self.model_size_mb = None
 
     def load_model(self) -> None:
         """Loads the tokenizer and model weights."""
@@ -190,25 +191,23 @@ class PulseLLMModel(PulseModel):
                 self.model_id, use_fast=False, padding_side="left"
             )
 
-            # Check if model is already loaded on CPU and move to GPU if needed
-            if self.model is not None:
-                # Check if model is on CPU and CUDA is available
-                if torch.cuda.is_available() and all(
-                    p.device.type == "cpu" for p in self.model.parameters()
-                ):
-                    logger.info("Moving model from CPU to GPU")
-                    self.model.to(self.device)
-                else:
-                    logger.info("Model already loaded")
-            else:
-                # Load model from pretrained
-                self.model = AutoModelForCausalLM.from_pretrained(
-                    self.model_id,
-                    device_map="auto" if torch.cuda.is_available() else None,
-                    torch_dtype=(
-                        torch.bfloat16 if torch.cuda.is_available() else torch.float32
-                    ),
+            # Load model from pretrained
+            self.model = AutoModelForCausalLM.from_pretrained(
+                self.model_id,
+                device_map="auto" if torch.cuda.is_available() else None,
+                torch_dtype=(
+                    torch.bfloat16 if torch.cuda.is_available() else torch.float32
+                ),
+            )
+            self.model_size_mb = (
+                sum(
+                    p.numel() * p.element_size() for p in self.model.parameters()
                 )
+                / (1024 * 1024)
+            )
+            logger.info(
+                "Model size: %.2f MB", self.model_size_mb
+            )
 
             # Apply tuning only in full training mode and if specified
             if not self.inference_only and self.params.get("tuning", False):
@@ -241,30 +240,22 @@ class PulseLLMModel(PulseModel):
             logger.exception(e)
             raise e
 
-    def offload_model(self) -> None:
+    def delete_model(self) -> None:
         """
-        Offloads the model from GPU memory to CPU. Sets is_loaded to False.
+        Delete the model from GPU memory to CPU. Sets is_loaded to False.
         If CPU memory is insufficient, deletes the model and clears cache.
         """
         if self.is_loaded:
-            logger.info("Offloading model %s to CPU", self.model_id)
-            try:
-                self.model.to("cpu")
-                torch.cuda.empty_cache()
-                gc.collect()
-                self.is_loaded = False
-                logger.info("Model offloaded successfully")
-            except RuntimeError as e:
-                logger.warning(
-                    "Failed to offload model to CPU due to insufficient memory: %s. Deleting model from memory.",
-                    e,
-                )
-                del self.model
-                gc.collect()
-                torch.cuda.empty_cache()
-                self.is_loaded = False
+            logger.info("Deleting the model %s", self.model_id)
+
+            del self.model
+            gc.collect()
+            torch.cuda.empty_cache()
+            self.is_loaded = False
+            return
+
         else:
-            logger.warning("Model is not loaded, nothing to offload")
+            logger.warning("Model is not loaded, nothing to delete.")
 
     def generate(
         self,
@@ -337,7 +328,7 @@ class PulseLLMModel(PulseModel):
 
         decoded_output = self.tokenizer.decode(
             generated_token_ids_list,
-            skip_special_tokens=False,
+            skip_special_tokens=True,
             clean_up_tokenization_spaces=True,
         )
 
@@ -561,7 +552,7 @@ class PulseLLMModel(PulseModel):
         logger.info("Test evaluation completed for %s", self.model_name)
         logger.info("Test metrics: %s", metrics_tracker.summary)
 
-        self.offload_model()
+        self.delete_model()
 
         return float(np.mean(val_loss))
 
@@ -663,7 +654,7 @@ class PulseLLMModel(PulseModel):
         logger.info("System Message evaluation completed for %s", self.model_name)
         logger.info("Test metrics: %s", metrics_tracker.summary)
 
-        self.offload_model()
+        self.delete_model()
 
         return float(np.mean(val_loss))
 

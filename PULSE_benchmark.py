@@ -6,6 +6,7 @@ import sys
 import pandas as pd
 import tempfile
 import numpy as np
+import psutil
 import torch
 from omegaconf import OmegaConf
 from torch.utils.data import DataLoader
@@ -91,6 +92,7 @@ class PulseBenchmark:
 
             # Each updated model is used only for this dataset
             for model in updated_models:
+                
                 # Update model attributes for this task and dataset
                 model.task_name = task_name
                 model.dataset_name = dataset_name
@@ -167,6 +169,16 @@ class PulseBenchmark:
                             logger.info(
                                 "Created agent model for %s", model.prompting_id
                             )
+
+                    # If there is less than 30Gb of memory on CPU, delete the cached model
+                    # Use SLURM memory limit if available, else fallback to psutil
+                    
+
+                    # if free_memory_mib < 30000:
+                    #     logger.warning(
+                    #         "Less than 30GB of memory available, clearing cached models"
+                    #     )
+                    #     self.mm.clear_cached_models()
 
                     # Preprocess data for corresponding model
                     X_train, y_train, X_val, y_val, X_test, y_test = (
@@ -276,8 +288,8 @@ class PulseBenchmark:
                             )
                             model.trainer.train()
                         # Evaluate the model
-                        # model.evaluate(test_loader, save_report=True)
-                        model.evaluate_sys_msgs(test_loader, save_report=True)
+                        model.evaluate(test_loader, save_report=True)
+                        # model.evaluate_sys_msgs(test_loader, save_report=True)
 
                 except Exception as e:
                     logger.error(
@@ -301,6 +313,8 @@ class PulseBenchmark:
                     gc.collect()
                     logger.info("Memory cleaned up after running %s", model.model_name)
 
+            
+
             # Memory cleanup after processing each task-dataset combination
             del updated_models
             self.dm.release_dataset_cache(
@@ -308,6 +322,7 @@ class PulseBenchmark:
             )  # Release dataset from cache
             gc.collect()
             logger.info("Memory cleaned up after processing %s", task_dataset_name)
+            
 
         logger.info("Benchmark process completed.")
 
