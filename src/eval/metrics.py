@@ -1,24 +1,15 @@
 import json
 import logging
 import os
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Union
 
 import numpy as np
 import pandas as pd
 import torch
-from sklearn.metrics import (
-    accuracy_score,
-    auc,
-    balanced_accuracy_score,
-    cohen_kappa_score,
-    confusion_matrix,
-    f1_score,
-    matthews_corrcoef,
-    precision_recall_curve,
-    precision_score,
-    recall_score,
-    roc_auc_score,
-)
+from sklearn.metrics import (accuracy_score, auc, balanced_accuracy_score,
+                             cohen_kappa_score, confusion_matrix, f1_score,
+                             matthews_corrcoef, precision_recall_curve,
+                             precision_score, recall_score, roc_auc_score)
 
 logger = logging.getLogger("PULSE_logger")
 
@@ -29,7 +20,7 @@ class MetricsTracker:
     """
 
     def __init__(
-        self, model_id, task_id, dataset_name, save_dir="output", metrics_to_track=None
+        self, model_id, task_id, dataset_name, save_dir="output", metrics_to_track=None,
     ) -> None:
         """
         Initialize the metrics tracker. All tasks and datasets will be saved to the same model-metrics file.
@@ -41,7 +32,12 @@ class MetricsTracker:
             save_dir: Directory where reports will be saved
             metrics_to_track: List of metrics to track (default is a predefined list)
         """
-        self.model_id = model_id
+        # Strip "Model" suffix from model_id if present
+        if isinstance(model_id, str) and model_id.lower().endswith("model"):
+            self.model_id = model_id[:-5]  # Remove last 5 characters ("Model")
+        else:
+            self.model_id = model_id
+
         self.task_id = task_id
         self.dataset_name = dataset_name
         self.save_dir = save_dir

@@ -1,7 +1,7 @@
 import json
 import logging
 import textwrap
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List
 
 import numpy as np
 import pandas as pd
@@ -15,21 +15,21 @@ logger = logging.getLogger("PULSE_logger")
 
 def zhu_2024a_one_shot_cot_preprocessor(
     X: List[pd.DataFrame], y: List[pd.DataFrame], info_dict: Dict[str, Any]
-) -> Tuple[pd.DataFrame, pd.DataFrame]:
+) -> Dict[str, pd.DataFrame]:
     """
     Preprocess ICU data into prompts using few-shot format and centralized JSON prompt template.
     According to Zhu et al. 2024, "Prompting Large Language Models for Zero-Shot Clinical Prediction with Structured Longitudinal Electronic Health Record Data"
-    Paper: https://arxiv.org/pdf/2402.01713"
-    Implements the Chain of Thought prompt template used for mortality prediction on the MIMIC-IV dataset
+    Paper: https://arxiv.org/pdf/2402.01713
+    Implements the Chain of Thought prompt template used for mortality prediction on the MIMIC-IV dataset.
 
-        Args:
-            X (List[pd.DataFrame]): Input features.
-            y (List[pd.DataFrame]): Target labels.
-            info_dict (Dict[str, Any]): Additional task-specific information such as
-                                        'task', 'dataset', and 'model_name'.
+    Args:
+        X (List[pd.DataFrame]): Input features.
+        y (List[pd.DataFrame]): Target labels.
+        info_dict (Dict[str, Any]): Additional task-specific information such as
+                                    'task', 'dataset', and 'model_name'.
 
-        Returns:
-            Tuple[pd.DataFrame, pd.DataFrame]: Prompt DataFrame and label DataFrame.
+    Returns:
+        Dict[str, pd.DataFrame]: Dictionary with processed data. Keys are 'X' (prompts DataFrame) and 'y' (labels DataFrame).
     """
     preprocessor_advanced = PreprocessorAdvanced()
 
@@ -281,4 +281,7 @@ def zhu_2024a_one_shot_cot_preprocessor(
         model_id,
     )
 
-    return X_processed, y_in
+    return {
+        "X": X_processed,
+        "y": y_in,
+    }

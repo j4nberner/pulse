@@ -4,6 +4,7 @@ params:
   # Basic configuration
   trainer_name: "GRUTrainer"
   type: "convDL" # Type of model (convML for conventional machine learning, convDL for conventional deep learning and LLM for large language models)
+  architecture_type: "RNN" # Architecture type (CNN, RNN)
   mode: "train"
   save_checkpoint_freq: 0
   verbose: 2 # Controls verbosity of output (0 = silent, 1 = log every 100 batches, 2 = log every batch)

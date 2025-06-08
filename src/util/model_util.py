@@ -1,9 +1,8 @@
-import ast
 import json
 import logging
 import os
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import joblib
 import numpy as np
@@ -118,7 +117,7 @@ def save_sklearn_model(model_name: str, model: Any, save_dir: str) -> None:
 
 def prepare_data_for_model_convml(
     data_loader: Any,
-) -> tuple[np.ndarray, np.ndarray, List[str]]:
+) -> Tuple[np.ndarray, np.ndarray, List[str]]:
     """
     Prepare data for conventional machine learning models by converting PyTorch tensors
     from dataloaders to numpy arrays while preserving feature names.
@@ -161,6 +160,7 @@ def prepare_data_for_model_convdl(
     config: Dict,
     model_name: Optional[str] = None,
     task_name: Optional[str] = None,
+    architecture_type: Optional[str] = None,
 ) -> Any:
     """
     Prepare data for conventional deep learning models by returning a configured data converter.
@@ -170,17 +170,19 @@ def prepare_data_for_model_convdl(
         config: Configuration dictionary with preprocessing settings
         model_name: Name of the model to determine format requirements
         task_name: Name of the current task (e.g., "mortality", "aki")
+        architecture_type: Base architecture of the convDL model ("CNN" or "RNN") to determine array format
 
     Returns:
         WindowedDataTo3D: Configured converter instance ready to transform batches
     """
 
     # Import the converter
-    from src.preprocessing.preprocessing_advanced.windowing import WindowedDataTo3D
+    from src.preprocessing.preprocessing_advanced.windowing import \
+        WindowedDataTo3D
 
     # Create converter with model name and config
     converter = WindowedDataTo3D(
-        model_name=model_name, config=config, task_name=task_name
+        architecture_type=architecture_type, config=config, task_name=task_name
     )
 
     try:
@@ -262,19 +264,19 @@ def prompt_template_hf(
         "Your response must strictly follow this format:\n"
         "Output a valid JSON object with three keys: 'diagnosis', 'probability' and 'explanation'.\n\n"
         "1. 'diagnosis' a string with either diganosis or not-diagnosis\n"
-        "2. 'probability' a value between 0 and 1. where 0 means not diagnosed and 1 means diagnosed.\n"
+        "2. 'probability' an integer between 0 and 100, where 0 means not diagnosed and 100 means diagnosed.\n"
         "3. 'explanation' should be a string providing a brief explanation of your diagnosis.\n\n"
         "Here is a positive example:\n"
         "{\n"
-        '  "diagnosis": "sepsis",\n'
-        '  "probability": "0.76",\n'
-        '  "explanation": "lactate is 4.2 mmol/L (above normal <2.0); blood pressure is low (MAP 62 mmHg), which are signs of sepsis."\n'
+        '  "diagnosis": "aki",\n'
+        '  "probability": "89",\n'
+        '  "explanation": "Acute kidney injury evident: serum creatinine increased from baseline 1.1 to 2.7 mg/dL within 24 hours (>2x increase), urine output decreased to 0.3 mL/kg/h over 6 hours, meeting KDIGO Stage 2 criteria.",\n'
         "}\n\n"
         "Here is a negative example:\n"
         "{\n"
-        '  "diagnosis": "not-sepsis",\n'
-        '  "probability": "0.01",\n'
-        '  "explanation": "lactate is 1.2 mmol/L (normal <2.0); blood pressure is normal (MAP 80 mmHg), which are not signs of sepsis."\n'
+        '  "diagnosis": "not-aki",\n'
+        '  "probability": "8",\n'
+        '  "explanation": "Kidney function stable: creatinine 1.3 mg/dL (minimal change from baseline 1.2), adequate urine output at 1.1 mL/kg/h, no signs of acute kidney injury."\n'
         "}\n\n"
         "Do not include any other text or explanations outside of the JSON object.\n"
         "Think about the probability of your prediction carefully before answering.\n"
@@ -323,6 +325,212 @@ def prompt_template_hf(
     return formatted_prompt
 
 
+def system_message_samples(task: str) -> list[str]:
+    """
+    Generate a controlled experimental set of system messages for testing prompt engineering techniques.
+
+    Args:
+        task: The specific medical condition to diagnose (e.g., "mortality", "aki", "sepsis").
+
+    Returns:
+        A list of 5 system messages with cumulative prompt engineering improvements.
+
+    Experimental Design:
+        This function implements a controlled experiment to isolate the impact of specific system message
+        engineering techniques on LLM performance for medical diagnosis tasks. Each sample builds
+        cumulatively on the previous one, allowing for precise attribution of performance changes.
+
+    System Message Progression (Cumulative):
+        Sample 1: Baseline - Basic instructions only
+            - Tests fundamental instruction following capability
+            - Establishes performance floor without any enhancements
+
+        Sample 2: Sample 1 + Task-specific Examples
+            - Adds positive and negative diagnostic examples with clinical details
+            - Tests impact of few-shot learning and demonstration-based guidance
+            - Uses real clinical parameters (vital signs, lab values, FiO2, urine output)
+
+        Sample 3: Sample 2 + Probability Calibration Guidelines
+            - Adds explicit probability range interpretations (0-20, 20-40, etc.)
+            - Tests impact of confidence calibration guidance
+            - Improves probability estimation accuracy and consistency
+
+        Sample 4: Sample 3 + ICU Context Awareness
+            - Adds contextual guidance about ICU patient baseline abnormalities
+            - Tests impact of domain-specific contextual understanding
+            - Helps model account for critically ill patient characteristics
+
+        Sample 5: Sample 4 + Detailed JSON Schema
+            - Adds explicit schema definition with field constraints
+            - Tests impact of structured format specification
+            - Ensures consistent output format compliance
+
+    Experimental Logic:
+        By comparing performance between consecutive samples, researchers can isolate the
+        specific contribution of each prompt engineering technique:
+        - Sample 2 vs 1: Effect of examples
+        - Sample 3 vs 2: Effect of probability calibration
+        - Sample 4 vs 3: Effect of ICU context
+        - Sample 5 vs 4: Effect of schema structure
+    """
+    sys_msg_list = []
+
+    # Define task-specific descriptions
+    def get_task_description(task_name):
+        if task_name.lower() == "mortality":
+            return "predicting patient mortality during the ICU stay"
+        elif task_name.lower() == "aki":
+            return "detecting acute kidney injury (AKI) ≥ stage 1 according to KDIGO 2012 criteria"
+        elif task_name.lower() == "sepsis":
+            return "detecting sepsis per Sepsis-3 definition (Singer 2016) with SOFA score increase ≥2 points with suspected infection"
+        else:
+            return f"determining the presence of {task_name}"
+
+    # Define task-specific examples
+    def get_task_examples(task_name):
+        if task_name.lower() == "sepsis":
+            return {
+                "positive": {
+                    "diagnosis": "sepsis",
+                    "probability": "82",
+                    "explanation": "Patient shows sepsis criteria: temperature 38.9°C, heart rate 115 bpm, WBC 16,000/μL, lactate 4.1 mmol/L (elevated >2.0), and hypotension with MAP 58 mmHg despite fluid resuscitation.",
+                },
+                "negative": {
+                    "diagnosis": "not-sepsis",
+                    "probability": "12",
+                    "explanation": "Patient shows no signs of sepsis: temperature 37.2°C, heart rate 88 bpm, normal WBC 7,200/μL, lactate 1.6 mmol/L (normal <2.0), and adequate blood pressure with MAP 78 mmHg.",
+                },
+            }
+        elif task_name.lower() == "aki":
+            return {
+                "positive": {
+                    "diagnosis": "aki",
+                    "probability": "89",
+                    "explanation": "Acute kidney injury evident: serum creatinine increased from baseline 1.1 to 2.7 mg/dL within 24 hours (>2x increase), urine output decreased to 0.3 mL/kg/h over 6 hours, meeting KDIGO Stage 2 criteria.",
+                },
+                "negative": {
+                    "diagnosis": "not-aki",
+                    "probability": "8",
+                    "explanation": "Kidney function stable: creatinine 1.3 mg/dL (minimal change from baseline 1.2), adequate urine output at 1.1 mL/kg/h, no signs of acute kidney injury.",
+                },
+            }
+        elif task_name.lower() == "mortality":
+            return {
+                "positive": {
+                    "diagnosis": "mortality",
+                    "probability": "91",
+                    "explanation": "Critical condition: multi-organ failure with high lactate 6.2 mmol/L, requiring mechanical ventilation (FiO2 80%), hypotension, and oliguria <0.2 mL/kg/h despite treatment.",
+                },
+                "negative": {
+                    "diagnosis": "not-mortality",
+                    "probability": "15",
+                    "explanation": "Improving trajectory: lactate normalizing to 2.1 mmol/L, weaning from ventilator support (FiO2 40%), stable hemodynamics, and adequate urine output 0.8 mL/kg/h.",
+                },
+            }
+        else:
+            return {
+                "positive": {
+                    "diagnosis": task_name,
+                    "probability": "78",
+                    "explanation": f"Clinical indicators strongly suggest {task_name} based on abnormal vital signs, laboratory values, and physiological parameters.",
+                },
+                "negative": {
+                    "diagnosis": f"not-{task_name}",
+                    "probability": "15",
+                    "explanation": f"Clinical indicators do not support {task_name} diagnosis with stable vital signs and normal laboratory parameters.",
+                },
+            }
+
+    examples = get_task_examples(task)
+    task_description = get_task_description(task)
+
+    # Base components that build up progressively
+    base_instruction = (
+        f"You are a helpful assistant and experienced medical professional analyzing ICU time-series data "
+        f"for {task_description}.\n\n"
+        "Your response must strictly follow this format:\n"
+        "Output a valid JSON object with three keys: 'diagnosis', 'probability' and 'explanation'.\n\n"
+        "1. 'diagnosis' a string with either 'diagnosis' or 'not-diagnosis'\n"
+        "2. 'probability' an integer between 0 and 100, where 0 means not diagnosed and 100 means diagnosed.\n"
+        "3. 'explanation' should be a string providing a brief explanation of your diagnosis.\n\n"
+    )
+
+    closing = (
+        "Do not include any other text or explanations outside of the JSON object.\n"
+        "Think about the probability of your prediction carefully before answering.\n"
+    )
+
+    examples_section = (
+        "Here is a positive example:\n"
+        "{\n"
+        f'  "diagnosis": "{examples["positive"]["diagnosis"]}",\n'
+        f'  "probability": "{examples["positive"]["probability"]}",\n'
+        f'  "explanation": "{examples["positive"]["explanation"]}"\n'
+        "}\n\n"
+        "Here is a negative example:\n"
+        "{\n"
+        f'  "diagnosis": "{examples["negative"]["diagnosis"]}",\n'
+        f'  "probability": "{examples["negative"]["probability"]}",\n'
+        f'  "explanation": "{examples["negative"]["explanation"]}"\n'
+        "}\n\n"
+    )
+
+    icu_context = (
+        "Note: ICU patients often present with abnormal baseline values due to their critical condition. "
+        "Consider the clinical context and severity of deviations when assessing for the target condition.\n\n"
+    )
+
+    schema_section = (
+        "--- JSON Schema ---\n"
+        "{\n"
+        f'  "diagnosis": "string"  // Must be either "{task}" or "not-{task}"\n'
+        '  "probability": "integer" // Value between 0 (no diagnosis) and 100 (definite diagnosis)\n'
+        '  "explanation": "string" // Concise clinical reasoning for the diagnosis and probability\n'
+        "}\n\n"
+    )
+
+    probability_guidelines = (
+        "CRITICAL: Probability calibration guidelines:\n"
+        "- 0-20: Very unlikely, clear absence of condition with normal parameters\n"
+        "- 20-40: Unlikely, some concerning signs but insufficient evidence\n"
+        "- 40-60: Uncertain, mixed evidence or borderline findings\n"
+        "- 60-80: Likely, multiple indicators support diagnosis\n"
+        "- 80-100: Very likely, strong evidence with clear clinical criteria met\n\n"
+    )
+
+    # Sample 1: Baseline (no examples)
+    sys_msg_list.append(base_instruction + closing)
+
+    # Sample 2: Sample 1 + Examples
+    sys_msg_list.append(base_instruction + examples_section + closing)
+
+    # Sample 3: Sample 2 + Probability Calibration
+    sys_msg_list.append(
+        base_instruction + examples_section + probability_guidelines + closing
+    )
+
+    # Sample 4: Sample 3 + ICU Context
+    sys_msg_list.append(
+        base_instruction
+        + examples_section
+        + probability_guidelines
+        + icu_context
+        + closing
+    )
+
+    # Sample 5: Sample 4 + Detailed Schema
+    sys_msg_list.append(
+        base_instruction
+        + examples_section
+        + probability_guidelines
+        + schema_section
+        + icu_context
+        + closing
+    )
+
+    return sys_msg_list
+
+
 def extract_last_json_block(text: str) -> Optional[str]:
     """Extract the last balanced JSON object from the input string."""
     stack = []
@@ -342,6 +550,115 @@ def extract_last_json_block(text: str) -> Optional[str]:
     return None
 
 
+def parse_llm_output(
+    output_text: str,
+    required_keys: List[str] = ["diagnosis", "probability", "explanation"],
+    default_values: Dict[str, Any] = None,
+) -> Dict[str, Any]:
+    """Extract and parse JSON objects from LLM output with robust error handling.
+
+    Args:
+        output_text: Raw text output from the language model
+        required_keys: Keys that must be present in the output
+        default_values: Default values to use if parsing fails
+
+    Returns:
+        Dictionary with parsed content and normalized values
+    """
+    if default_values is None:
+        default_values = {
+            "diagnosis": "unknown",
+            "probability": 0.5,  # Keep as 0.5 (0.0-1.0 range)
+            "explanation": "No explanation provided.",
+        }
+
+    # Handle empty input
+    if not output_text or not isinstance(output_text, str):
+        logger.warning("Empty or non-string output received")
+        return default_values
+
+    # Balance braces if needed
+    if output_text.count("{") > output_text.count("}"):
+        output_text = output_text + "}" * (
+            output_text.count("{") - output_text.count("}")
+        )
+
+    # Extract JSON block
+    json_text = extract_last_json_block(output_text)
+    if not json_text:
+        logger.warning("No JSON object found in output. Returning default.")
+        return default_values
+
+    # Fix common JSON formatting issues
+    json_text = fix_json_formatting(json_text)
+
+    # Check if the required keys are present
+    if not all(key in json_text for key in required_keys):
+        logger.warning(
+            "JSON object missing required keys %s. Returning default.",
+            required_keys,
+        )
+        return default_values
+
+    try:
+        parsed = json.loads(json_text)
+
+        # Process probability field - convert from 0-100 integer to 0.0-1.0 float
+        if "probability" in parsed:
+            try:
+                prob_value = float(parsed["probability"])
+
+                # Check if it's in 0-100 range (integer format)
+                if 0 <= prob_value <= 100:
+                    # Convert to 0.0-1.0 range
+                    parsed["probability"] = prob_value / 100.0
+                elif 0 <= prob_value <= 1:
+                    # Already in correct range
+                    parsed["probability"] = prob_value
+                else:
+                    # Out of expected range, clamp and warn
+                    logger.warning(
+                        "Probability value %s out of expected range. Clamping to [0,1]",
+                        prob_value,
+                    )
+                    parsed["probability"] = max(0.0, min(1.0, prob_value / 100.0))
+
+            except (ValueError, TypeError):
+                logger.warning(
+                    "Failed to convert probability to float. Defaulting to 0.5"
+                )
+                parsed["probability"] = 0.5
+
+        return parsed
+
+    except json.JSONDecodeError as e:
+        logger.warning("Failed to parse JSON: %s\nRaw: %s", e, json_text)
+        return default_values
+
+
+def fix_json_formatting(json_text: str) -> str:
+    """Fix common JSON formatting issues."""
+    # Fix unterminated strings
+    if json_text.count('"') % 2 != 0:
+        json_text += '"'
+        logger.debug("Fixed unterminated string by adding closing quote.")
+
+    # Fix missing final brace
+    if not json_text.endswith("}"):
+        json_text += "}"
+        logger.debug("Fixed unclosed JSON object by adding closing brace.")
+
+    # Escape newlines in quoted strings
+    def escape_newlines_in_strings(s: str) -> str:
+        def repl(m):
+            return m.group(0).replace("\n", "\\n").replace("\r", "\\r")
+
+        return re.sub(r'"(.*?)"', repl, s, flags=re.DOTALL)
+
+    return escape_newlines_in_strings(json_text)
+
+
+@DeprecationWarning
 def extract_dict(output_text: str) -> Optional[Dict[str, str]]:
     """Extract and parse the last JSON-like object from the model's output text and return it as a dictionary.
 
@@ -353,7 +670,7 @@ def extract_dict(output_text: str) -> Optional[Dict[str, str]]:
     """
     default_json = {
         "diagnosis": "unknown",
-        "probability": 0.5,
+        "probability": 0.5,  # Keep as 0.5 (0.0-1.0 range)
         "explanation": "No explanation provided.",
     }
 
@@ -394,195 +711,20 @@ def extract_dict(output_text: str) -> Optional[Dict[str, str]]:
         return default_json
 
     try:
-        return json.loads(json_text_clean)
+        parsed = json.loads(json_text_clean)
+
+        # Convert probability from 0-100 to 0.0-1.0 if needed
+        if "probability" in parsed:
+            try:
+                prob_value = float(parsed["probability"])
+                if 0 <= prob_value <= 100:
+                    parsed["probability"] = prob_value / 100.0
+                elif not (0 <= prob_value <= 1):
+                    parsed["probability"] = 0.5
+            except (ValueError, TypeError):
+                parsed["probability"] = 0.5
+
+        return parsed
     except json.JSONDecodeError as e:
-        logger.warning(f"Failed to parse JSON: {e}\nRaw: {json_text_clean}")
+        logger.warning("Failed to parse JSON: %s\nRaw: %s", e, json_text_clean)
         return default_json
-
-
-def sys_msg_smpls(task: str) -> list[str]:
-    """
-    Generate a controlled experimental set of system messages for testing prompt engineering techniques.
-
-    Args:
-        task: The specific medical condition to diagnose (e.g., "mortality", "aki", "sepsis").
-
-    Returns:
-        A list of 5 system messages with cumulative prompt engineering improvements.
-
-    Experimental Design:
-        This function implements a controlled experiment to isolate the impact of specific system message
-        engineering techniques on LLM performance for medical diagnosis tasks. Each sample builds
-        cumulatively on the previous one, allowing for precise attribution of performance changes.
-
-    System Message Progression (Cumulative):
-        Sample 1: Baseline - Basic instructions only
-            - Tests fundamental instruction following capability
-            - Establishes performance floor without any enhancements
-
-        Sample 2: Sample 1 + Task-specific Examples
-            - Adds positive and negative diagnostic examples with clinical details
-            - Tests impact of few-shot learning and demonstration-based guidance
-            - Uses real clinical parameters (vital signs, lab values, FiO2, urine output)
-
-        Sample 3: Sample 2 + ICU Context Awareness
-            - Adds contextual guidance about ICU patient baseline abnormalities
-            - Tests impact of domain-specific contextual understanding
-            - Helps model account for critically ill patient characteristics
-
-        Sample 4: Sample 3 + Detailed JSON Schema
-            - Adds explicit schema definition with field constraints
-            - Tests impact of structured format specification
-            - Ensures consistent output format compliance
-
-        Sample 5: Sample 4 + Probability Calibration Guidelines
-            - Adds explicit probability range interpretations (0.0-0.2, 0.2-0.4, etc.)
-            - Tests impact of confidence calibration guidance
-            - Improves probability estimation accuracy and consistency
-
-    Experimental Logic:
-        By comparing performance between consecutive samples, researchers can isolate the
-        specific contribution of each prompt engineering technique:
-        - Sample 2 vs 1: Effect of examples
-        - Sample 3 vs 2: Effect of domain context
-        - Sample 4 vs 3: Effect of schema structure
-        - Sample 5 vs 4: Effect of probability calibration
-    """
-    sys_msg_list = []
-
-    # Define task-specific examples
-    def get_task_examples(task_name):
-        if task_name.lower() == "sepsis":
-            return {
-                "positive": {
-                    "diagnosis": "sepsis",
-                    "probability": "0.82",
-                    "explanation": "Patient shows sepsis criteria: temperature 38.9°C, heart rate 115 bpm, WBC 16,000/μL, lactate 4.1 mmol/L (elevated >2.0), and hypotension with MAP 58 mmHg despite fluid resuscitation.",
-                },
-                "negative": {
-                    "diagnosis": "not-sepsis",
-                    "probability": "0.12",
-                    "explanation": "Patient shows no signs of sepsis: temperature 37.2°C, heart rate 88 bpm, normal WBC 7,200/μL, lactate 1.6 mmol/L (normal <2.0), and adequate blood pressure with MAP 78 mmHg.",
-                },
-            }
-        elif task_name.lower() == "aki":
-            return {
-                "positive": {
-                    "diagnosis": "aki",
-                    "probability": "0.89",
-                    "explanation": "Acute kidney injury evident: serum creatinine increased from baseline 1.1 to 2.7 mg/dL within 24 hours (>2x increase), urine output decreased to 0.3 mL/kg/h over 6 hours, meeting KDIGO Stage 2 criteria.",
-                },
-                "negative": {
-                    "diagnosis": "not-aki",
-                    "probability": "0.08",
-                    "explanation": "Kidney function stable: creatinine 1.3 mg/dL (minimal change from baseline 1.2), adequate urine output at 1.1 mL/kg/h, no signs of acute kidney injury.",
-                },
-            }
-        elif task_name.lower() == "mortality":
-            return {
-                "positive": {
-                    "diagnosis": "mortality",
-                    "probability": "0.91",
-                    "explanation": "Critical condition: multi-organ failure with high lactate 6.2 mmol/L, requiring mechanical ventilation (FiO2 80%), hypotension, and oliguria <0.2 mL/kg/h despite treatment.",
-                },
-                "negative": {
-                    "diagnosis": "not-mortality",
-                    "probability": "0.15",
-                    "explanation": "Improving trajectory: lactate normalizing to 2.1 mmol/L, weaning from ventilator support (FiO2 40%), stable hemodynamics, and adequate urine output 0.8 mL/kg/h.",
-                },
-            }
-        else:
-            return {
-                "positive": {
-                    "diagnosis": task_name,
-                    "probability": "0.78",
-                    "explanation": f"Clinical indicators strongly suggest {task_name} based on abnormal vital signs, laboratory values, and physiological parameters.",
-                },
-                "negative": {
-                    "diagnosis": f"not-{task_name}",
-                    "probability": "0.15",
-                    "explanation": f"Clinical indicators do not support {task_name} diagnosis with stable vital signs and normal laboratory parameters.",
-                },
-            }
-
-    examples = get_task_examples(task)
-
-    # Base components that build up progressively
-    base_instruction = (
-        f"You are a helpful assistant and experienced medical professional analyzing ICU time-series data "
-        f"to determine the presence of following condition: {task}.\n\n"
-        "Your response must strictly follow this format:\n"
-        "Output a valid JSON object with three keys: 'diagnosis', 'probability' and 'explanation'.\n\n"
-        "1. 'diagnosis' a string with either diagnosis or not-diagnosis\n"
-        "2. 'probability' a value between 0 and 1. where 0 means not diagnosed and 1 means diagnosed.\n"
-        "3. 'explanation' should be a string providing a brief explanation of your diagnosis.\n\n"
-    )
-
-    closing = (
-        "Do not include any other text or explanations outside of the JSON object.\n"
-        "Think about the probability of your prediction carefully before answering.\n"
-    )
-
-    examples_section = (
-        "Here is a positive example:\n"
-        "{\n"
-        f'  "diagnosis": "{examples["positive"]["diagnosis"]}",\n'
-        f'  "probability": "{examples["positive"]["probability"]}",\n'
-        f'  "explanation": "{examples["positive"]["explanation"]}"\n'
-        "}\n\n"
-        "Here is a negative example:\n"
-        "{\n"
-        f'  "diagnosis": "{examples["negative"]["diagnosis"]}",\n'
-        f'  "probability": "{examples["negative"]["probability"]}",\n'
-        f'  "explanation": "{examples["negative"]["explanation"]}"\n'
-        "}\n\n"
-    )
-
-    icu_context = (
-        "Note: ICU patients often present with abnormal baseline values due to their critical condition. "
-        "Consider the clinical context and severity of deviations when assessing for the target condition.\n\n"
-    )
-
-    schema_section = (
-        "--- JSON Schema ---\n"
-        "{\n"
-        f'  "diagnosis": "string"  // Must be either "{task}" or "not-{task}"\n'
-        '  "probability": "float" // Value between 0.0 (no diagnosis) and 1.0 (definite diagnosis)\n'
-        '  "explanation": "string" // Concise clinical reasoning for the diagnosis and probability\n'
-        "}\n\n"
-    )
-
-    probability_guidelines = (
-        "CRITICAL: Probability calibration guidelines:\n"
-        "- 0.0-0.2: Very unlikely, clear absence of condition with normal parameters\n"
-        "- 0.2-0.4: Unlikely, some concerning signs but insufficient evidence\n"
-        "- 0.4-0.6: Uncertain, mixed evidence or borderline findings\n"
-        "- 0.6-0.8: Likely, multiple indicators support diagnosis\n"
-        "- 0.8-1.0: Very likely, strong evidence with clear clinical criteria met\n\n"
-    )
-
-    # Sample 1: Baseline (no examples)
-    sys_msg_list.append(base_instruction + closing)
-
-    # Sample 2: Sample 1 + Examples
-    sys_msg_list.append(base_instruction + examples_section + closing)
-
-    # Sample 3: Sample 2 + ICU Context
-    sys_msg_list.append(base_instruction + examples_section + icu_context + closing)
-
-    # Sample 4: Sample 3 + Detailed Schema
-    sys_msg_list.append(
-        base_instruction + schema_section + examples_section + icu_context + closing
-    )
-
-    # Sample 5: Sample 4 + Probability Calibration
-    sys_msg_list.append(
-        base_instruction
-        + probability_guidelines
-        + schema_section
-        + examples_section
-        + icu_context
-        + "Use the probability guidelines to ensure accurate confidence assessment.\n"
-    )
-
-    return sys_msg_list

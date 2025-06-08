@@ -12,12 +12,9 @@ import wandb
 from src.eval.metrics import MetricsTracker
 from src.models.pulse_model import PulseModel
 from src.util.config_util import set_seeds
-from src.util.model_util import (
-    EarlyStopping,
-    initialize_weights,
-    prepare_data_for_model_convdl,
-    save_torch_model,
-)
+from src.util.model_util import (EarlyStopping, initialize_weights,
+                                 prepare_data_for_model_convdl,
+                                 save_torch_model)
 
 logger = logging.getLogger("PULSE_logger")
 
@@ -171,7 +168,7 @@ class CNNModel(PulseModel, nn.Module):
         converter = prepare_data_for_model_convdl(
             data_loader,
             self.params,
-            model_name=self.model_name,
+            architecture_type=self.params.get("architecture_type", "CNN"),
             task_name=self.task_name,
         )
         criterion = nn.BCEWithLogitsLoss(
@@ -327,7 +324,7 @@ class CNNTrainer:
         self.converter = prepare_data_for_model_convdl(
             self.train_loader,
             self.params,
-            model_name=self.model.model_name,
+            architecture_type=self.params.get("architecture_type", "CNN"),
             task_name=self.task_name,
         )
         # To identify num_channels: Get a sample batch and transform using the converter
@@ -358,6 +355,11 @@ class CNNTrainer:
                     "Failed to load pretrained model weights: %s. Defaulting to random initialization.",
                     str(e),
                 )
+        logger.debug(
+            "Using architecture type: %s for model: %s",
+            self.params.get("architecture_type", "Unknown"),
+            self.model.model_name,
+        )
 
     def train(self):
         """Training loop."""

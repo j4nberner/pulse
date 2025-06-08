@@ -1,10 +1,8 @@
 import logging
-import os
 import sys
 from typing import Any, Dict, List
 
 from omegaconf import OmegaConf
-from torch import nn
 
 from . import get_model_class
 
@@ -37,6 +35,7 @@ class ModelManager:
         self.prompt_configs = config.get("prompting", None)
 
         self._model_cache = {}
+        self._loaded_models = {}  # Track loaded model instances by model_name
 
         self.models = self._prepare_models()
 
@@ -79,7 +78,7 @@ class ModelManager:
             sys.exit(1)
         return prepared_models
 
-    def _create_model_from_config(self, config: Dict, for_agent: bool = False) -> Any:
+    def _create_model_from_config(self, config: Dict) -> Any:
         """
         Create a updated model instance from a configuration.
 
@@ -105,7 +104,7 @@ class ModelManager:
         if "random_seed" not in params:
             params["random_seed"] = self.benchmark_settings.get("random_seed", 42)
 
-        # Set parameters (no need to differentiate for agent)
+        # Set parameters
         kwargs = {
             "params": params,
             "pretrained_model_path": config.get("pretrained_model_path", None),
@@ -152,17 +151,6 @@ class ModelManager:
         #     )
 
         return model
-
-    def create_agent_model(self, model_name: str) -> Any:
-        """Create a model instance specifically for agent use."""
-        # Find the matching config for this model name
-        for _, config in self.model_configs.items():
-            if config.get("name") == model_name:
-                # Create the model with for_agent=True flag
-                return self._create_model_from_config(config, for_agent=True)
-
-        logger.error(f"No configuration found for model {model_name}")
-        return None
 
     def get_models_for_task(self, dataset_name: str) -> List[Any]:
         """

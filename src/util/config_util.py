@@ -84,6 +84,14 @@ def check_model_config_validity(model, config: OmegaConf) -> None:
             )
             sys.exit(1)
 
+        # Check if debug_data_length is bigger than 999, to avoid having only one label in sets.
+        if config.general.get("debug_data_length", 0) < 1000:
+            logger.error(
+                "debug_data_length for convML models should be at least 1000 to ensure proper label distribution. "
+                "Please set it to a higher value in the config."
+            )
+            sys.exit(1)
+
     if model.type == "convDL":
         # Sanity check if data standardization was enabled
         if not config.preprocessing_baseline.get("standardize"):

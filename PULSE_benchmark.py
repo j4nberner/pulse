@@ -4,10 +4,6 @@ import os
 import sys
 
 import pandas as pd
-import tempfile
-import numpy as np
-import psutil
-import torch
 from omegaconf import OmegaConf
 from torch.utils.data import DataLoader
 
@@ -17,8 +13,8 @@ from src.models.modelmanager import ModelManager
 from src.util.config_util import (
     check_model_config_validity,
     get_deterministic_dataloader_args,
-    load_config_with_models,
     get_pretrained_model_path,
+    load_config_with_models,
     save_config_file,
     set_seeds,
 )
@@ -92,7 +88,7 @@ class PulseBenchmark:
 
             # Each updated model is used only for this dataset
             for model in updated_models:
-                
+
                 # Update model attributes for this task and dataset
                 model.task_name = task_name
                 model.dataset_name = dataset_name
@@ -140,7 +136,6 @@ class PulseBenchmark:
                         "model_type": model.type,
                     }
                     if model.type == "LLM":
-                        # For LLMs, we might need to pass additional parameters
                         dm_kwargs.update(
                             {
                                 "fine_tuning": model.params.get("tuning", None),
@@ -149,37 +144,6 @@ class PulseBenchmark:
                             }
                         )
 
-                    # Check if this model requires an agent-based preprocessor
-                    # TODO @sophiafe Can we handle this in the ModelManager and DatasetManager?
-                    if (
-                        model.type == "LLM"
-                        and hasattr(model, "prompting_id")
-                        and "agent" in model.prompting_id
-                    ):
-                        # Create an inference-only model for the agent - use cached instance if possible
-                        agent_model = self.mm.create_agent_model(
-                            model.__class__.__name__
-                        )
-                        if agent_model:
-                            # Store reference to the agent model
-                            model.agent_model = agent_model
-
-                            # Pass to data manager
-                            dm_kwargs["model_instance"] = agent_model
-                            logger.info(
-                                "Created agent model for %s", model.prompting_id
-                            )
-
-                    # If there is less than 30Gb of memory on CPU, delete the cached model
-                    # Use SLURM memory limit if available, else fallback to psutil
-                    
-
-                    # if free_memory_mib < 30000:
-                    #     logger.warning(
-                    #         "Less than 30GB of memory available, clearing cached models"
-                    #     )
-                    #     self.mm.clear_cached_models()
-
                     # Preprocess data for corresponding model
                     X_train, y_train, X_val, y_val, X_test, y_test = (
                         self.dm.get_preprocessed_data(
@@ -187,24 +151,13 @@ class PulseBenchmark:
                         )
                     )
 
-                    #######################################################################
+                    # Set agent flag (specified in prompting preprocessor, agent initialization will happen lazily)
+                    is_agent = self.dm.is_agent
+                    model.is_agent = is_agent
+                    if is_agent:
+                        logger.debug("Agent flag set for %s", model.model_name)
 
-                    # Check if we can reuse an already loaded model from the agent pipeline
-                    # TODO: @sophiafe IMO this should be handled in the ModelManager and not by the DatasetManager kwargs
-                    if "loaded_model" in dm_kwargs:
-                        loaded_model = dm_kwargs["loaded_model"]
-                        if (
-                            loaded_model
-                            and hasattr(loaded_model, "is_loaded")
-                            and loaded_model.is_loaded
-                        ):
-                            logger.info(
-                                "Reusing already loaded model instance for evaluation"
-                            )
-                            model = loaded_model
-                            # Update necessary properties for evaluation
-                            model.task_name = task_name
-                            model.dataset_name = dataset_name
+                    #######################################################################
 
                     # Choose the appropriate DataLoader based on model type
                     if model.type == "convML":
@@ -217,10 +170,15 @@ class PulseBenchmark:
                         val_loader = (X_val, y_val)
                         test_loader = (X_test, y_test)
                     elif model.type == "convDL":
-                        train_dataset = TorchDatasetWrapper(X_train, y_train, self.dm.pos_weight)
-                        val_dataset = TorchDatasetWrapper(X_val, y_val, self.dm.pos_weight)
-                        test_dataset = TorchDatasetWrapper(X_test, y_test, self.dm.pos_weight)
-
+                        train_dataset = TorchDatasetWrapper(
+                            X_train, y_train, self.dm.pos_weight
+                        )
+                        val_dataset = TorchDatasetWrapper(
+                            X_val, y_val, self.dm.pos_weight
+                        )
+                        test_dataset = TorchDatasetWrapper(
+                            X_test, y_test, self.dm.pos_weight
+                        )
 
                         batch_size = getattr(
                             self.config.benchmark_settings, "batch_size"
@@ -243,7 +201,6 @@ class PulseBenchmark:
                             batch_size=batch_size,
                             shuffle=True,
                             drop_last=False,
-                            num_workers=0,
                             **dataloader_args,
                         )
                         val_loader = DataLoader(
@@ -300,7 +257,7 @@ class PulseBenchmark:
                         exc_info=True,
                     )
                 finally:
-                    
+
                     # Memory cleanup after training each model
                     if hasattr(model, "trainer"):
                         del model.trainer
@@ -313,8 +270,6 @@ class PulseBenchmark:
                     gc.collect()
                     logger.info("Memory cleaned up after running %s", model.model_name)
 
-            
-
             # Memory cleanup after processing each task-dataset combination
             del updated_models
             self.dm.release_dataset_cache(
@@ -322,9 +277,9 @@ class PulseBenchmark:
             )  # Release dataset from cache
             gc.collect()
             logger.info("Memory cleaned up after processing %s", task_dataset_name)
-            
 
         logger.info("Benchmark process completed.")
+
 
 def parse_args() -> argparse.Namespace:
     """Parse command line arguments."""

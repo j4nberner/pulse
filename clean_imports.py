@@ -1,14 +1,15 @@
 import os
 import subprocess
 
+#############################
+# pip install autoflake isort
+#############################
 
-def sort_imports_in_directory(directory: str):
+
+def clean_and_sort_imports_in_directory(directory: str):
     """
-    Recursively sort imports in all Python files within the given directory.
-    Might need to pip install isort if this function fails.
-
-    Args:
-        directory (str): The parent directory to process.
+    Recursively sort imports and remove unused imports in all Python files within the given directory.
+    Requires 'isort' and 'autoflake' to be installed.
     """
     for root, dirs, files in os.walk(directory):
         # Exclude .venv or other unwanted directories
@@ -18,10 +19,21 @@ def sort_imports_in_directory(directory: str):
                 file_path = os.path.join(root, file)
                 print(f"Sorting imports in: {file_path}")
                 subprocess.run(["isort", file_path], check=True)
+                print(f"Removing unused imports in: {file_path}")
+                subprocess.run(
+                    [
+                        "autoflake",
+                        "--remove-all-unused-imports",
+                        "--in-place",
+                        "--remove-unused-variables",
+                        file_path,
+                    ],
+                    check=True,
+                )
 
 
 if __name__ == "__main__":
     parent_directory = os.path.abspath(
         os.path.join(os.path.dirname(__file__))
     )  # Adjust to target the parent directory
-    sort_imports_in_directory(parent_directory)
+    clean_and_sort_imports_in_directory(parent_directory)

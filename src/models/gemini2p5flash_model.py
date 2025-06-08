@@ -7,8 +7,6 @@ from typing import Any, Dict
 import numpy as np
 import torch
 from google import genai
-from google.genai import types
-import base64
 
 import wandb
 from src.eval.metrics import MetricsTracker
@@ -44,8 +42,8 @@ class Gemini2p5Model(PulseModel):
         ]
         self.check_required_params(params, required_params)
 
-        api_key = os.environ.get(params["api_key_name"])
-        endpoint_uri = os.environ.get(params["api_uri_name"])
+        os.environ.get(params["api_key_name"])
+        os.environ.get(params["api_uri_name"])
 
         self.client = genai.Client(
             vertexai=True, project=params.get("project_id", None), location="global"

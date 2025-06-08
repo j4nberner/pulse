@@ -2,11 +2,11 @@ import gc
 import logging
 import os
 import sys
-from typing import Any, Dict, List, Optional, Tuple, Union
+import tempfile
+from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 import pandas as pd
-import tempfile
 import torch
 from omegaconf import OmegaConf
 from torch.utils.data import Dataset
@@ -48,6 +48,7 @@ class DatasetManager:
         self.datasets = {}
         self.preprocessor = None
         self.windower = None
+        self.is_agent = False
         self.pos_weight = 1.0
 
         self.app_mode = config.general.app_mode
@@ -300,13 +301,13 @@ class DatasetManager:
             dataset["loaded"] = True
             dataset["preprocessing_advanced"]["windowing"]["loaded"] = False
             dataset["size_mb"] = (
-                    dataset["data"]["X_train"].memory_usage(deep=True).sum()
-                    + dataset["data"]["y_train"].memory_usage(deep=True).sum()
-                    + dataset["data"]["X_val"].memory_usage(deep=True).sum()
-                    + dataset["data"]["y_val"].memory_usage(deep=True).sum()
-                    + dataset["data"]["X_test"].memory_usage(deep=True).sum()
-                    + dataset["data"]["y_test"].memory_usage(deep=True).sum()
-                ) / (1024 * 1024)
+                dataset["data"]["X_train"].memory_usage(deep=True).sum()
+                + dataset["data"]["y_train"].memory_usage(deep=True).sum()
+                + dataset["data"]["X_val"].memory_usage(deep=True).sum()
+                + dataset["data"]["y_val"].memory_usage(deep=True).sum()
+                + dataset["data"]["X_test"].memory_usage(deep=True).sum()
+                + dataset["data"]["y_test"].memory_usage(deep=True).sum()
+            ) / (1024 * 1024)
             return True, dataset
 
         # 3. Baseline preprocessing and saving for future use
@@ -344,13 +345,13 @@ class DatasetManager:
             "y_test": data_dict["test"]["y"],
         }
         dataset["size_mb"] = (
-                    dataset["data"]["X_train"].memory_usage(deep=True).sum()
-                    + dataset["data"]["y_train"].memory_usage(deep=True).sum()
-                    + dataset["data"]["X_val"].memory_usage(deep=True).sum()
-                    + dataset["data"]["y_val"].memory_usage(deep=True).sum()
-                    + dataset["data"]["X_test"].memory_usage(deep=True).sum()
-                    + dataset["data"]["y_test"].memory_usage(deep=True).sum()
-                ) / (1024 * 1024)
+            dataset["data"]["X_train"].memory_usage(deep=True).sum()
+            + dataset["data"]["y_train"].memory_usage(deep=True).sum()
+            + dataset["data"]["X_val"].memory_usage(deep=True).sum()
+            + dataset["data"]["y_val"].memory_usage(deep=True).sum()
+            + dataset["data"]["X_test"].memory_usage(deep=True).sum()
+            + dataset["data"]["y_test"].memory_usage(deep=True).sum()
+        ) / (1024 * 1024)
         dataset["loaded"] = True
         dataset["preprocessing_advanced"]["windowing"]["loaded"] = False
         return True, dataset
@@ -397,7 +398,7 @@ class DatasetManager:
 
         if not dataset["loaded"]:
             success, dataset = self.load_dataset(dataset_id)
-            
+
             if not success:
                 return None, None, None, None, None, None
 
@@ -541,9 +542,10 @@ class DatasetManager:
                     dataset["task"],
                 )
 
-                del X_limited_sampled, y_limited_sampled  # Clear sampled dataframes to free up memory
-
-
+                del (
+                    X_limited_sampled,
+                    y_limited_sampled,
+                )  # Clear sampled dataframes to free up memory
 
         # Applying advanced preprocessing if and not already loaded from presaved files
         logger.debug(
@@ -591,11 +593,11 @@ class DatasetManager:
                     prediction_window=dataset["preprocessing_advanced"]["windowing"][
                         "prediction_window"
                     ],
-                    step_size=dataset["preprocessing_advanced"]["windowing"]["step_size"],
+                    step_size=dataset["preprocessing_advanced"]["windowing"][
+                        "step_size"
+                    ],
                 )
-                logger.info(
-                    "Saved windowed data for %s to files", dataset_id
-                )
+                logger.info("Saved windowed data for %s to files", dataset_id)
 
         del data  # Clear the data variable to free up memory
 
@@ -616,7 +618,6 @@ class DatasetManager:
             for data_set in ["X_train", "X_val", "X_test"]:
                 df_temp = convert_categorical_columns(dataset["data"][data_set])
                 dataset["data"][data_set] = df_temp
-
 
         # Print statistics if requested (Print train, val and both original and limited test set statistics to compare distributions)
         if print_stats:
@@ -651,12 +652,13 @@ class DatasetManager:
             # Print statistics for all datasets
             self.preprocessor.print_statistics(stats_to_print)
 
-        
-
         # Drop stay_id column after calculating statistics
         logger.debug("Dropping stay_id column from all features and labels")
         dataset["data"] = self._drop_stay_id_if_present(dataset["data"])
-        
+        logger.debug("Dropped stay_id column from all features and labels")
+
+        # Initialize is_agent flag
+        self.is_agent = False
 
         # Apply advanced preprocessing if needed -> generate prompts
         if model_type == "LLM":
@@ -678,10 +680,6 @@ class DatasetManager:
                 "data_window": data_window,
             }
 
-            # Add model instance to info_dict if provided in kwargs (for ModelManager and agent setup)
-            if "model_instance" in kwargs:
-                info_dict["model_instance"] = kwargs["model_instance"]
-
             # Add output directory to info_dict
             info_dict["output_dir"] = getattr(self.config, "output_dir", None)
 
@@ -696,26 +694,18 @@ class DatasetManager:
                 # Training data
                 X = [dataset["data"]["X_train"]]
                 y = [dataset["data"]["y_train"]]
-                info_dict["model_mode"] = "train"
-                dataset["data"]["X_train"], dataset["data"]["y_train"] = (
-                    prompting_preprocessor(X, y, info_dict)
-                )
+                info_dict["mode"] = "train"
+                train_result = prompting_preprocessor(X, y, info_dict)
+                dataset["data"]["X_train"] = train_result["X"]
+                dataset["data"]["y_train"] = train_result["y"]
 
                 # Validation data - Uses training data for few-shot learning
                 X = [dataset["data"]["X_val"], dataset["data"]["X_train"]]
                 y = [dataset["data"]["y_val"], dataset["data"]["y_train"]]
-                info_dict["model_mode"] = "val"
-                dataset["data"]["X_val"], dataset["data"]["y_val"] = (
-                    prompting_preprocessor(X, y, info_dict)
-                )
-
-            # Test data
-            X = [dataset["data"]["X_test"], dataset["data"]["X_train"]]
-            y = [dataset["data"]["y_test"], dataset["data"]["y_train"]]
-            info_dict["model_mode"] = "test"
-            dataset["data"]["X_test"], dataset["data"]["y_test"] = (
-                prompting_preprocessor(X, y, info_dict)
-            )
+                info_dict["mode"] = "val"
+                val_result = prompting_preprocessor(X, y, info_dict)
+                dataset["data"]["X_val"] = val_result["X"]
+                dataset["data"]["y_val"] = val_result["y"]
 
             if fine_tuning is False:
                 # Used only for few shot examples if no fine-tuning. Set to none.
@@ -724,11 +714,19 @@ class DatasetManager:
                 dataset["data"]["X_val"] = pd.DataFrame()
                 dataset["data"]["y_val"] = pd.DataFrame()
 
-            # Pass the loaded model back through the info_dict
-            if "model_instance" in kwargs and "loaded_model" in info_dict:
-                # Store the loaded model back to the benchmark.py flow
-                kwargs["loaded_model"] = info_dict["loaded_model"]
-        
+            # Test data
+            X = [dataset["data"]["X_test"], dataset["data"]["X_train"]]
+            y = [dataset["data"]["y_test"], dataset["data"]["y_train"]]
+            info_dict["mode"] = "test"
+
+            test_result = prompting_preprocessor(X, y, info_dict)
+
+            # Extract data from dictionary
+            dataset["data"]["X_test"] = test_result["X"]
+            dataset["data"]["y_test"] = test_result["y"]
+            self.is_agent = test_result.get("is_agent", False)
+            logger.debug("Agent flag from preprocessor: %s", self.is_agent)
+
         # Log the shapes of the datasets
         logger.info(
             "Shapes - Train: %s, Val: %s, Test: %s",
@@ -736,20 +734,25 @@ class DatasetManager:
             dataset["data"]["X_val"].shape,
             dataset["data"]["X_test"].shape,
         )
-        
+
         if model_type == "convDL":
             self.pos_weight = 1.0  # Default value for pos_weight
             labels = dataset["data"]["y_train"]["label"]
             neg = len(labels) - labels.sum()
             pos = labels.sum()
             if pos == 0:
-                logger.warning("No positive samples found in the dataset. Setting pos_weight to 1.")
+                logger.warning(
+                    "No positive samples found in the dataset. Setting pos_weight to 1."
+                )
                 self.pos_weight = 1.0
             elif neg == 0:
-                logger.warning("No negative samples found in the dataset. Setting pos_weight to 0.")
+                logger.warning(
+                    "No negative samples found in the dataset. Setting pos_weight to 0."
+                )
                 self.pos_weight = 0.0
             else:
                 self.pos_weight = neg / pos
+
             # Save the preprocessed data to temporary .npy files for memory efficiency
             def save_to_temp_npy(df):
                 arr = df.values.astype(np.float32)
@@ -774,9 +777,8 @@ class DatasetManager:
                 X_test_path,
                 y_test_path,
             )
-        
-        # For other model types, return the DataFrames directly
 
+        # For other model types, return the DataFrames directly
         return (
             dataset["data"]["X_train"],
             dataset["data"]["y_train"],
@@ -842,12 +844,11 @@ class TorchDatasetWrapper(Dataset):
             X (pd.DataFrame): Feature dataframe
             y (pd.DataFrame): Label dataframe
         """
-        self.X = np.load(X_path, mmap_mode='r')
-        self.y = np.load(y_path, mmap_mode='r')
+        self.X = np.load(X_path, mmap_mode="r")
+        self.y = np.load(y_path, mmap_mode="r")
         self.length = self.X.shape[0]
         self.pos_weight = pos_weight
 
-    
     def __len__(self):
         """Return the number of samples in the dataset."""
         return self.length
@@ -879,7 +880,9 @@ class TorchDatasetWrapper(Dataset):
         # return torch.tensor(X_sample), torch.tensor(y_sample)
         X_sample = self.X[idx]
         y_sample = self.y[idx]
-        return torch.tensor(X_sample, dtype=torch.float32), torch.tensor(y_sample, dtype=torch.float32)
+        return torch.tensor(X_sample, dtype=torch.float32), torch.tensor(
+            y_sample, dtype=torch.float32
+        )
 
     # TODO: @sophiafe Is this still needed?
     def get_batch(self, indices):

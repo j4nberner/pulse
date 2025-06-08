@@ -462,39 +462,24 @@ class WindowedDataTo3D:
     across the time dimension, resulting in a single 3D array output.
     """
 
-    def __init__(self, model_name=None, config=None, task_name=None):
+    def __init__(self, architecture_type=None, config=None, task_name=None):
         """
         Initialize the WindowedDataTo3D converter.
 
         Args:
             logger: Logger instance for logging messages
-            model_name (str, optional): Name of the model to determine array format
+            architecture_type: Base architecture of the convDL model ("CNN" or "RNN") to determine array format
             config (dict, optional): Configuration with windowing parameters
         """
         self.logger = logger or logging.getLogger("PULSE_logger")
         self.task_name = task_name
+        self.architecture_type = architecture_type
 
-        # Dictionary mapping model names to their types (CNN or RNN)
-        # TODO: @sophiafe - this is prone to errors if model names are not consistent or are changed.
-        # How about using model.type instead?
-        self.model_type_mapping = {
-            # CNN type models
-            "CNNModel": "CNN",
-            "InceptionTimeModel": "CNN",
-            # RNN type models
-            "LSTMModel": "RNN",
-            "GRUModel": "RNN",
-        }
-
-        # Set model type based on provided model name
-        self.model_type = None
-        if model_name:
-            self.model_type = self.model_type_mapping.get(model_name)
-            if not self.model_type:
-                self.logger.warning(
-                    f"Unknown model name: {model_name}. Using RNN format as default."
-                )
-                self.model_type = "RNN"
+        if self.architecture_type and self.architecture_type not in ["CNN", "RNN"]:
+            self.logger.warning(
+                f"Unknown architecture type: {architecture_type}. Using RNN format as default."
+            )
+            self.architecture_type = "RNN"
 
         # Extract window size from config if available
         self.window_size = 6  # Default
@@ -584,7 +569,7 @@ class WindowedDataTo3D:
                 window_size = self.window_size
 
             # Determine model type (CNN or RNN)
-            is_cnn = self.model_type == "CNN"
+            is_cnn = self.architecture_type == "CNN"
 
             # Skip the ID column
             if id_column_index is not None:
@@ -646,7 +631,7 @@ class WindowedDataTo3D:
 
         else:
             # Simple reshaping for non-windowed data
-            if self.model_type == "CNN":
+            if self.architecture_type == "CNN":
                 return batch_features.unsqueeze(-1)  # For CNN: (batch, features, 1)
             else:
                 return batch_features.unsqueeze(1)  # For RNN: (batch, 1, features)
