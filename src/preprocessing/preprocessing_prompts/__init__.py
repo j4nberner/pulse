@@ -8,6 +8,7 @@ from .zhu_2024b_one_shot.zhu_2024b_one_shot import \
     zhu_2024b_one_shot_preprocessor
 from .zhu_2024c_categorization_summary_agent.zhu_2024c_categorization_summary_agent import \
     zhu_2024c_categorization_summary_agent_preprocessor
+from .agent_preprocessors.clinical_workflow_agent_preprocessor import (clinical_workflow_agent_preprocessor)
 
 preprocessor_method_dict = {
     "liu_2023_few_shot_preprocessor": liu_2023_few_shot_preprocessor,
@@ -15,6 +16,7 @@ preprocessor_method_dict = {
     "zhu_2024b_one_shot_preprocessor": zhu_2024b_one_shot_preprocessor,
     "zhu_2024c_categorization_summary_agent_preprocessor": zhu_2024c_categorization_summary_agent_preprocessor,
     "sarvari_2024_aggregation_preprocessor": sarvari_aggregation_preprocessor,
+    "clinical_workflow_agent_preprocessor": clinical_workflow_agent_preprocessor,
     # Add other preprocessor methods here as needed
 }
 

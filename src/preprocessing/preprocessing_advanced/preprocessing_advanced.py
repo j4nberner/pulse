@@ -5,8 +5,11 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 import pandas as pd
 
-from src.util.data_util import (get_feature_name, get_feature_reference_range,
-                                get_feature_uom)
+from src.util.data_util import (
+    get_feature_name,
+    get_feature_reference_range,
+    get_feature_uom,
+)
 
 # Set up logger
 logger = logging.getLogger("PULSE_logger")
@@ -191,7 +194,7 @@ class PreprocessorAdvanced:
         return result_df
 
     def categorize_features(
-        self, df, base_features=None, X_cols=None, num_categories=3
+        self, df, base_features=None, X_cols=None, num_categories=3, for_llm=False
     ):
         """
         Categorize features across an entire dataframe based on reference ranges.
@@ -204,9 +207,11 @@ class PreprocessorAdvanced:
                 - 3: -1 (too low), 0 (normal), 1 (too high)
                 - 5: -1 (very low), -0.5 (slightly low), 0 (normal), 0.5 (slightly high), 1 (very high)
                   where "slightly" means within 50% of the reference range
+            for_llm: If True, return descriptive strings instead of numeric categories
 
         Returns:
             DataFrame with the same index as input but with base features as columns and categorized values
+            If for_llm=True, values are descriptive strings, otherwise numeric categories
         """
         # Use provided parameters or extract from dataframe
         if X_cols is None:
@@ -283,7 +288,27 @@ class PreprocessorAdvanced:
                 )
 
             # Add the feature to the result dataframe
-            result_df[feature] = feature_values
+            if for_llm:
+                # Convert numeric categories to descriptive strings for LLM prompts
+                if num_categories == 3:
+                    category_mapping = {-1: "too low", 0: "normal", 1: "too high"}
+                else:  # num_categories == 5
+                    category_mapping = {
+                        -1.0: "very low",
+                        -0.5: "slightly low",
+                        0.0: "normal",
+                        0.5: "slightly high",
+                        1.0: "very high",
+                    }
+
+                # Map numeric values to strings
+                string_values = [
+                    category_mapping.get(val, "unknown range") for val in feature_values
+                ]
+                result_df[feature] = string_values
+            else:
+                # Return numeric categories
+                result_df[feature] = feature_values
 
         return result_df
 

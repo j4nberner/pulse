@@ -105,11 +105,23 @@ class AgentMemoryManager:
             predicted_diagnosis = ""
             predicted_explanation = ""
 
-            # For final_prediction steps, output will be a parsed dictionary
-            if step_name == "final_prediction" and isinstance(output_data, dict):
+            # Additional fields for lab ordering steps
+            requested_tests = ""
+            confidence = None
+
+            # For steps with parsed json output, dict keys will be tracked individually
+            if isinstance(output_data, dict):
                 predicted_probability = output_data.get("probability", None)
                 predicted_diagnosis = output_data.get("diagnosis", "")
                 predicted_explanation = output_data.get("explanation", "")
+                confidence = output_data.get("confidence", None)
+
+                # Extract lab ordering specific information
+                if step_name == "lab_ordering":
+                    requested_tests_list = output_data.get("requested_tests", [])
+                    requested_tests = (
+                        ",".join(requested_tests_list) if requested_tests_list else ""
+                    )
 
             self.metrics_tracker.add_metadata_item(
                 {
@@ -123,6 +135,8 @@ class AgentMemoryManager:
                     "Predicted Probability": predicted_probability,
                     "Predicted Diagnosis": predicted_diagnosis,
                     "Predicted Explanation": predicted_explanation,
+                    "Requested Tests": requested_tests,
+                    "Confidence": confidence,
                     "Tokenization Time": token_time,
                     "Inference Time": infer_time,
                     "Input Tokens": num_input_tokens,
@@ -131,7 +145,7 @@ class AgentMemoryManager:
             )
 
         return step
-    
+
     def get_final_step(self, sample_id: Any) -> Optional[StepMemory]:
         """Get the final step for a specific sample."""
         # Convert sample_id to string for consistent comparison
@@ -161,8 +175,3 @@ class AgentMemoryManager:
             # If no current sample, reset all
             self.samples = {}
             self.current_sample_id = None
-
-
-# ------------------------------------
-# Other Util Functions
-# ------------------------------------

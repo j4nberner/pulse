@@ -62,5 +62,11 @@ try:
 except ImportError as e:
     logger.warning("Could not import Zhu2024cAgent: %s", e)
 
+try:
+    from src.models.agents.clinical_workflow_agent import ClinicalWorkflowAgent
+    register_agent("clinical_workflow_agent", ClinicalWorkflowAgent)
+except ImportError as e:
+    logger.warning("Could not import ClinicalWorkflowAgent: %s", e)
+
 # Add more agent registrations here as needed
 # register_agent("other_agent_pattern", OtherAgentClass)
