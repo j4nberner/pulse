@@ -1,5 +1,5 @@
 name: "MistralModel"
-pretrained_model_path: null # Path to pretrained model (if any)
+pretrained_model_paths: null # Path to pretrained model (if any)
 params:
   trainer_name: "MistralTrainer"
   model_id: "mistralai/Mistral-7B-Instruct-v0.3" # Model ID for Llama3, path to pretrained model (if any)

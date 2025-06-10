@@ -1,24 +1,13 @@
-import json
 import logging
-import os
-import time
 import warnings
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
-import numpy as np
 import torch
-import torch.nn as nn
-import torch.optim as optim
 from peft import PromptTuningConfig, PromptTuningInit, TaskType, get_peft_model
-from torch.nn import functional as F
-from transformers import (AutoModelForCausalLM, AutoTokenizer,
-                          BitsAndBytesConfig, Gemma3ForConditionalGeneration)
+from transformers import (AutoTokenizer, BitsAndBytesConfig,
+                          Gemma3ForConditionalGeneration)
 
-import wandb
-from src.eval.metrics import MetricsTracker
 from src.models.pulse_model import PulseLLMModel
-from src.util.config_util import set_seeds
-from src.util.model_util import extract_dict, prompt_template_hf
 
 warnings.filterwarnings(
     "ignore",
@@ -39,7 +28,7 @@ class Gemma3Model(PulseLLMModel):
             **kwargs: Additional optional parameters such as `output_dir` and `wandb`.
         """
         model_name = kwargs.pop("model_name", "Gemma3Model")
-        trainer_name = kwargs.get("trainer_name", "Llama3Trainer")
+        kwargs.get("trainer_name", "Llama3Trainer")
         super().__init__(model_name, params, **kwargs)
 
         required_params = [
@@ -71,12 +60,16 @@ class Gemma3Model(PulseLLMModel):
 
             logger.debug(f"Loading model %s", self.model_id)
             self.tokenizer = AutoTokenizer.from_pretrained(
-                self.model_id, padding_side="left"
+                self.model_id, 
+                padding_side="left",
+                padding="longest",
+                pad_to_multiple_of=8, # <-- ensures seq_len % 8 == 0
             )
             self.model = Gemma3ForConditionalGeneration.from_pretrained(
                 self.model_id,
                 device_map="auto",
                 torch_dtype=torch.bfloat16,
+                attn_implementation="eager",
             )
 
             if self.params.get("tuning", False):

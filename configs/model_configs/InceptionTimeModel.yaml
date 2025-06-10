@@ -1,5 +1,5 @@
 name: "InceptionTimeModel"
-pretrained_model_path: null # Path to pretrained model (if any)
+pretrained_model_paths: null # "/cluster/project/bmds_lab/sepsis_sophia/pulse/output/output_to_keep/20250530_155747_InceptionTime/Models" # Path to pretrained model (if any)
 params:
   # Basic configuration
   trainer_name: "InceptionTimeTrainer"

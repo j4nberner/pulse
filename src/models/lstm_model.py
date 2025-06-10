@@ -12,13 +12,9 @@ import wandb
 from src.eval.metrics import MetricsTracker
 from src.models.pulse_model import PulseModel
 from src.util.config_util import set_seeds
-from src.util.model_util import (
-    EarlyStopping,
-    calculate_pos_weight,
-    initialize_weights,
-    prepare_data_for_model_convdl,
-    save_torch_model,
-)
+from src.util.model_util import (EarlyStopping, initialize_weights,
+                                 prepare_data_for_model_convdl,
+                                 save_torch_model)
 
 logger = logging.getLogger("PULSE_logger")
 
@@ -207,6 +203,9 @@ class LSTMModel(PulseModel, nn.Module):
             self.input_size = input_dim
             self._init_model()
             self.load_model_weights(self.pretrained_model_path)
+
+        # Move model to the appropriate device
+        self.to(self.device)
 
         with torch.no_grad():
             for batch, (inputs, labels) in enumerate(data_loader):

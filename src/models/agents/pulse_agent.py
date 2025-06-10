@@ -1,7 +1,7 @@
 import logging
 import time
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional
 
 import pandas as pd
 
@@ -58,7 +58,6 @@ class PulseAgent(ABC):
     @abstractmethod
     def process_single(self, patient_data: pd.Series) -> Dict[str, Any]:
         """Process a single patient's data."""
-        pass
 
     def run_step(
         self, step_name: str, input_data: Any, state: Dict[str, Any]

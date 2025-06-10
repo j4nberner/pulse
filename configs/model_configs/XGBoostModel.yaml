@@ -1,5 +1,5 @@
 name: "XGBoost"
-pretrained_model_path: null # Path to pretrained model (if any)
+pretrained_model_paths: null # /cluster/project/bmds_lab/sepsis_sophia/pulse/output/output_to_keep/20250510_011124_XGBoost/Models # Path to pretrained model (if any)
 params:
   # Basic configuration
   trainer_name: "XGBoostTrainer" # Class that implements the training process

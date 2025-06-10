@@ -1,13 +1,16 @@
 import logging
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List
 
 import numpy as np
 import pandas as pd
 
-from src.preprocessing.preprocessing_advanced import PreprocessorAdvanced
+from src.preprocessing.preprocessing_advanced.preprocessing_advanced import (
+    PreprocessorAdvanced,
+)
 from src.util.data_util import get_feature
 
 logger = logging.getLogger("PULSE_logger")
+
 
 def sarvari_aggregation_preprocessor(
     X: List[pd.DataFrame], y: List[pd.DataFrame], info_dict: Dict[str, Any]
@@ -69,15 +72,17 @@ def sarvari_aggregation_preprocessor(
         )
 
         # 3. Combine few-shot + query
-        combined_prompt = _wrap_for_few_shot_template(few_shot_examples, prompts, task=task)
+        combined_prompt = _wrap_for_few_shot_template(
+            few_shot_examples, prompts, task=task
+        )
         X_processed = pd.DataFrame({"text": combined_prompt})
     else:
         # 3. No few-shot examples, just use the main query
         X_processed = pd.DataFrame({"text": wrapped_prompts})
 
     return {
-       "X": X_processed,
-       "y": y_input,
+        "X": X_processed,
+        "y": y_input,
     }
 
 

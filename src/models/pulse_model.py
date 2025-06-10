@@ -1,26 +1,29 @@
 import gc
-import json
 import logging
 import os
 import time
-from typing import Any, Dict, Optional
+from typing import TYPE_CHECKING, Any, Dict, Optional
 
 import joblib
 import numpy as np
-import psutil
 import torch
 import torch.nn as nn
 from peft import PromptTuningConfig, PromptTuningInit, TaskType, get_peft_model
 from torch.utils.data import DataLoader
-from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+from transformers import AutoModelForCausalLM, AutoTokenizer
+
 import wandb
-from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from src.models.agents.pulse_agent import PulseTemplateAgent
+    pass
+
 from src.eval.metrics import MetricsTracker
 from src.util.config_util import set_seeds
-from src.util.model_util import prompt_template_hf, parse_llm_output
+from src.util.model_util import (
+    parse_llm_output,
+    prompt_template_hf,
+    system_message_samples,
+)
 
 logger = logging.getLogger("PULSE_logger")
 
@@ -116,9 +119,11 @@ class PulseModel:
         if self.type == "convML":
             # Load the sklearn model using joblib
             self.model = joblib.load(model_path)
+            self.is_loaded = True
             logger.info("Sklearn model loaded successfully from %s", model_path)
 
         elif self.type == "convDL":
+            logger.info("Loading model weights from %s", model_path)
             # Load the state dictionary
             state_dict = torch.load(model_path, map_location=torch.device("cpu"))
 
@@ -129,7 +134,7 @@ class PulseModel:
             # Load the weights into the model
             if hasattr(self, "load_state_dict"):
                 self.load_state_dict(state_dict, strict=False)
-                logger.info("Model weights loaded successfully")
+                self.is_loaded = True
             else:
                 logger.warning(
                     "Model does not have load_state_dict method. Cannot load weights."
@@ -140,96 +145,6 @@ class PulseModel:
             pass
         else:
             logger.warning("Model type not recognized. Cannot load model weights.")
-
-    def offload_model_to_cpu(self) -> None:
-        """Offloads the model from GPU memory (if applicable)."""
-        if self.type in ["convDL", "LLM"]:
-            # For PyTorch and LLM models
-            if self.type == "LLM":
-                free_mem = psutil.virtual_memory().available / (1024**2)  # in MB
-                model_size = (
-                    sum(p.numel() for p in self.model.parameters()) * 4 / (1024**2)
-                )  # float32 assumed
-                logger.debug(
-                    "CPU free memory: %.2f MB | Model size: %.2f MB",
-                    free_mem,
-                    model_size,
-                )
-                if free_mem < model_size * 1.2:  # safety margin
-                    logger.warning(
-                        "Not enough CPU memory to offload the model. Free: %.2f MB, Required: %.2f MB. Deleting from GPU only"
-                    )
-                    # Delete from GPU only
-                    del self.model
-                    gc.collect()
-                    torch.cuda.empty_cache()
-
-                else:
-                    # Check if only partially offloaded: if any parameter is still on CUDA, delete the model
-                    if any(p.device.type == "cuda" for p in self.model.parameters()):
-                        logger.warning(
-                            "Model is only partially offloaded. Deleting model from GPU."
-                        )
-                        del self.model
-                        gc.collect()
-                        torch.cuda.empty_cache()
-                    else:
-                        # Fully offload the model to CPU
-                        self.model.to("cpu")
-                        logger.info("LLM model offloaded to CPU memory")
-            else:
-                # TODO: implement for convDL models
-                # self.model.to("cpu")
-                pass
-            torch.cuda.empty_cache()
-            logger.info("Model offloaded from GPU memory")
-            self.is_loaded = False
-
-        elif self.type == "convML":
-            # Sklearn models are always on CPU
-            logger.info("Sklearn model is always on CPU; nothing to offload")
-        else:
-            logger.warning("Unknown model type; cannot offload")
-
-    def load_model_to_gpu(self) -> None:
-        """Loads the model to GPU memory (if applicable)."""
-        if self.type in ["convDL", "LLM"]:
-            # For PyTorch and LLM models
-            if torch.cuda.is_available():
-                device = getattr(self, "device", torch.device("cuda"))
-                if self.type == "LLM":
-                    torch.cuda.empty_cache()
-                    gc.collect()
-                    free_mem = torch.cuda.mem_get_info(device)[0] / (1024**2)  # in MB
-                    model_size = (
-                        sum(p.numel() for p in self.model.parameters()) * 4 / (1024**2)
-                    )  # float32 assumed
-                    logger.debug(
-                        "GPU free memory: %.2f MB | Model size: %.2f MB",
-                        free_mem,
-                        model_size,
-                    )
-                    if free_mem < model_size * 1.2:  # add a safety margin
-                        logger.warning(
-                            "Not enough GPU memory to load the model. Free: %.2f MB, Required: %.2f MB",
-                            free_mem,
-                            model_size,
-                        )
-                    self.model.to(device)
-                else:
-                    # For convDL models, load the model to the specified device
-                    # TODO: implement for convDL models
-                    pass
-                    # self.model.to(device)
-                logger.info("Model loaded to GPU memory")
-                self.is_loaded = True
-            else:
-                logger.warning("CUDA not available.")
-        elif self.type == "convML":
-            # Sklearn models cannot be loaded to GPU
-            pass
-        else:
-            logger.warning("Unknown model type; cannot load to GPU")
 
 
 class PulseLLMModel(PulseModel):
@@ -266,6 +181,7 @@ class PulseLLMModel(PulseModel):
         self.prompting_id = params.get("prompting_id", None)
         self.is_agent = False
         self.agent_instance = None
+        self.model_size_mb = None
 
     def load_model(self) -> None:
         """Loads the tokenizer and model weights."""
@@ -275,17 +191,23 @@ class PulseLLMModel(PulseModel):
                 logger.info("Model already loaded, reusing existing instance")
                 return
 
-            logger.debug(f"Loading model %s", self.model_id)
+            logger.debug("Loading model %s", self.model_id)
             self.tokenizer = AutoTokenizer.from_pretrained(
                 self.model_id, use_fast=False, padding_side="left"
             )
 
-            # Common model loading configuration
+            # Load model from pretrained
             self.model = AutoModelForCausalLM.from_pretrained(
                 self.model_id,
-                device_map="auto",
-                torch_dtype=torch.bfloat16,
+                device_map="auto" if torch.cuda.is_available() else None,
+                torch_dtype=(
+                    torch.bfloat16 if torch.cuda.is_available() else torch.float32
+                ),
             )
+            self.model_size_mb = sum(
+                p.numel() * p.element_size() for p in self.model.parameters()
+            ) / (1024 * 1024)
+            logger.info("Model size: %.2f MB", self.model_size_mb)
 
             # Apply tuning only in full training mode and if specified
             if not self.inference_only and self.params.get("tuning", False):
@@ -318,10 +240,22 @@ class PulseLLMModel(PulseModel):
             logger.exception(e)
             raise e
 
-    def offload_model(self) -> None:
-        # TODO: Implement offloading for LLM models
-        logger.error("Offloading not implemented for LLM models.")
-        pass
+    def delete_model(self) -> None:
+        """
+        Delete the model from GPU memory to CPU. Sets is_loaded to False.
+        If CPU memory is insufficient, deletes the model and clears cache.
+        """
+        if self.is_loaded:
+            logger.info("Deleting the model %s", self.model_id)
+
+            del self.model
+            gc.collect()
+            torch.cuda.empty_cache()
+            self.is_loaded = False
+            return
+
+        else:
+            logger.warning("Model is not loaded, nothing to delete.")
 
     def generate(self, input_data: Any, **kwargs) -> Dict[str, Any]:
         """Unified generation method that automatically routes based on model configuration.
@@ -580,6 +514,112 @@ class PulseLLMModel(PulseModel):
         logger.info("Test evaluation completed for %s", self.model_name)
         logger.info("Test metrics: %s", metrics_tracker.summary)
 
+        self.delete_model()
+
+        return float(np.mean(val_loss))
+
+    def evaluate_sys_msgs(self, test_loader: Any, save_report: bool = True) -> float:
+        """Evaluates the model on a given test set.
+
+        Args:
+            test_loader: Tuple of (X, y) test data in DataFrame form.
+            save_report: Whether to save the evaluation report.
+
+        Returns:
+            The average validation loss across the test dataset.
+        """
+        criterion = nn.BCELoss()  # Binary Cross Entropy Loss
+
+        # Check if model is already loaded before attempting to load
+        if not self.is_loaded:
+            self.load_model()
+        else:
+            logger.info("Using already loaded model instance for evaluation")
+
+        logger.info("Starting test evaluation...")
+
+        # Set seed for deterministic generation
+        set_seeds(self.random_seed)
+
+        metrics_tracker = MetricsTracker(
+            self.model_name,
+            self.task_name,
+            self.dataset_name,
+            self.save_dir,
+        )
+        verbose: int = self.params.get("verbose", 1)
+        val_loss: list[float] = []
+
+        sys_msgs = system_message_samples(task=self.task_name)
+
+        self.model.eval()
+
+        for X, y in zip(test_loader[0].iterrows(), test_loader[1].iterrows()):
+            X_input = X[1].iloc[0]  # The input text for standard pipeline
+            y_true = y[1].iloc[0]  # The true label
+
+            for i, sys_msg in enumerate(sys_msgs):
+                # Standard inference for non-agent predictions
+                result_dict = self.generate(
+                    input_data=X_input, custom_system_message=sys_msg
+                )
+
+                generated_text = result_dict["generated_text"]
+                token_time = result_dict["token_time"]
+                infer_time = result_dict["infer_time"]
+                num_input_tokens = result_dict["num_input_tokens"]
+                num_output_tokens = result_dict["num_output_tokens"]
+
+                predicted_probability = float(generated_text.get("probability", 0.5))
+
+                logger.info(
+                    "Predicted probability: %s | True label: %s",
+                    predicted_probability,
+                    y_true,
+                )
+                if verbose > 1:
+                    logger.info("Diagnosis for: %s", generated_text["diagnosis"])
+                    logger.info(
+                        "Generated explanation: %s \n", generated_text["explanation"]
+                    )
+                if verbose > 2:
+                    logger.info("Input prompt: %s \n", X_input)
+
+                predicted_label = torch.tensor(
+                    predicted_probability, dtype=torch.float32
+                ).unsqueeze(0)
+                target = torch.tensor(float(y_true), dtype=torch.float32).unsqueeze(0)
+
+                loss = criterion(predicted_label, target)
+                val_loss.append(loss.item())
+
+                metrics_tracker.add_results(predicted_probability, y_true)
+                metrics_tracker.add_metadata_item(
+                    {
+                        "Input Prompt": X_input,
+                        "Target Label": y_true,
+                        "Predicted Probability": predicted_probability,
+                        "Predicted Diagnosis": generated_text.get("diagnosis", ""),
+                        "Predicted Explanation": generated_text.get("explanation", ""),
+                        "Tokenization Time": token_time,
+                        "Inference Time": infer_time,
+                        "Input Tokens": num_input_tokens,
+                        "Output Tokens": num_output_tokens,
+                        "System Message": sys_msg,
+                        "System Message Index": i,
+                    }
+                )
+
+        metrics_tracker.summary = metrics_tracker.compute_overall_metrics()
+        if save_report:
+            metrics_tracker.log_metadata(save_to_file=self.save_metadata)
+            metrics_tracker.save_report()
+
+        logger.info("System Message evaluation completed for %s", self.model_name)
+        logger.info("Test metrics: %s", metrics_tracker.summary)
+
+        self.delete_model()
+
         return float(np.mean(val_loss))
 
     def estimate_nr_tokens(self, data_loader) -> int:
@@ -686,7 +726,7 @@ class PulseLLMModel(PulseModel):
     def _initialize_agent(self) -> None:
         """Initialize the agent instance based on prompting_id."""
         from src.models.agents import create_agent_instance
-        
+
         self.agent_instance = create_agent_instance(
             prompting_id=self.prompting_id,
             model=self,
@@ -695,7 +735,7 @@ class PulseLLMModel(PulseModel):
             output_dir=getattr(self, "save_dir", None),
             metrics_tracker=None,  # Will be set in evaluate method
         )
-        
+
         if self.agent_instance:
             self.is_agent = True
         else:

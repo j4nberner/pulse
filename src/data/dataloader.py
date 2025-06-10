@@ -2,7 +2,8 @@ import gc
 import logging
 import os
 import sys
-from typing import Any, Dict, List, Optional, Tuple, Union
+import tempfile
+from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -48,6 +49,7 @@ class DatasetManager:
         self.preprocessor = None
         self.windower = None
         self.is_agent = False
+        self.pos_weight = 1.0
 
         self.app_mode = config.general.app_mode
         self.debug_data_length = None
@@ -59,7 +61,6 @@ class DatasetManager:
                     "Running in debug mode. Limited data will be used for faster inference. (# of rows: %d)",
                     self.debug_data_length,
                 )
-
             case "count_tokens":
                 self.debug_data_length = config.general.debug_data_length
                 logger.info(
@@ -113,7 +114,11 @@ class DatasetManager:
                 base_path=base_path,
                 random_seed=random_seed,
                 config=preprocessing_config,
-                original_base_path=self.config.original_base_path,
+                original_base_path=self.config["original_base_path"],
+            )
+            logger.debug(
+                "Preprocessor initialized with original_base_path: %s",
+                self.config["original_base_path"],
             )
         else:
             self.preprocessor = PreprocessorBaseline(
@@ -171,6 +176,7 @@ class DatasetManager:
                     "preprocessing_baseline": self.config.preprocessing_baseline,
                     "preprocessing_advanced": self.config.preprocessing_advanced,
                     "loaded": False,
+                    "size_mb": None,
                     "data": None,
                 }
                 logger.info("Initialized dataset: %s", dataset_id)
@@ -244,7 +250,17 @@ class DatasetManager:
                 logger.info(
                     "Successfully loaded presaved windowed data for %s", dataset_id
                 )
+                dataset["size_mb"] = (
+                    dataset["data"]["X_train"].memory_usage(deep=True).sum()
+                    + dataset["data"]["y_train"].memory_usage(deep=True).sum()
+                    + dataset["data"]["X_val"].memory_usage(deep=True).sum()
+                    + dataset["data"]["y_val"].memory_usage(deep=True).sum()
+                    + dataset["data"]["X_test"].memory_usage(deep=True).sum()
+                    + dataset["data"]["y_test"].memory_usage(deep=True).sum()
+                ) / (1024 * 1024)
                 return True, dataset
+
+            del windowed_data  # Clear windowed_data to free up memory
 
             logger.debug(
                 "No presaved windowed data found for %s. Checking for baseline preprocessed data.",
@@ -284,6 +300,14 @@ class DatasetManager:
 
             dataset["loaded"] = True
             dataset["preprocessing_advanced"]["windowing"]["loaded"] = False
+            dataset["size_mb"] = (
+                dataset["data"]["X_train"].memory_usage(deep=True).sum()
+                + dataset["data"]["y_train"].memory_usage(deep=True).sum()
+                + dataset["data"]["X_val"].memory_usage(deep=True).sum()
+                + dataset["data"]["y_val"].memory_usage(deep=True).sum()
+                + dataset["data"]["X_test"].memory_usage(deep=True).sum()
+                + dataset["data"]["y_test"].memory_usage(deep=True).sum()
+            ) / (1024 * 1024)
             return True, dataset
 
         # 3. Baseline preprocessing and saving for future use
@@ -320,13 +344,20 @@ class DatasetManager:
             "y_val": data_dict["val"]["y"],
             "y_test": data_dict["test"]["y"],
         }
-
+        dataset["size_mb"] = (
+            dataset["data"]["X_train"].memory_usage(deep=True).sum()
+            + dataset["data"]["y_train"].memory_usage(deep=True).sum()
+            + dataset["data"]["X_val"].memory_usage(deep=True).sum()
+            + dataset["data"]["y_val"].memory_usage(deep=True).sum()
+            + dataset["data"]["X_test"].memory_usage(deep=True).sum()
+            + dataset["data"]["y_test"].memory_usage(deep=True).sum()
+        ) / (1024 * 1024)
         dataset["loaded"] = True
         dataset["preprocessing_advanced"]["windowing"]["loaded"] = False
         return True, dataset
 
     def get_preprocessed_data(
-        self, dataset_id: str, model_name: str, mode: str = "train", **kwargs: Any
+        self, dataset_id: str, model_name: str, model_mode: str = "train", **kwargs: Any
     ) -> Tuple[
         pd.DataFrame,
         pd.DataFrame,
@@ -367,10 +398,18 @@ class DatasetManager:
 
         if not dataset["loaded"]:
             success, dataset = self.load_dataset(dataset_id)
+
             if not success:
                 return None, None, None, None, None, None
 
         data = dataset["data"]
+        # Log the size of each data split in MB
+        for split in ["X_train", "y_train", "X_val", "y_val", "X_test", "y_test"]:
+            df = data[split]
+            if isinstance(df, pd.DataFrame):
+                mem_mb = df.memory_usage(deep=True).sum() / (1024 * 1024)
+                logger.debug(f"Size of {split} for {dataset_id}: {mem_mb:.2f} MB")
+        del df
 
         # Limit the loaded data to only load the necessary parts before processing
         # Take only n rows if in debug
@@ -406,6 +445,21 @@ class DatasetManager:
 
         else:
             logger.debug("Running in benchmark mode.")
+            if model_mode == "inference":
+                # If model is in inference mode, we only need the full test set.
+                # Using subset of train and val for possible few-shot examples in LLMs.
+                logger.debug(
+                    "Benchmark mode with inference: Taking only %d rows for train and val loader.",
+                    2000,
+                )
+                dataset["data"] = {
+                    "X_train": data["X_train"].iloc[:2000],
+                    "y_train": data["y_train"].iloc[:2000],
+                    "X_val": data["X_val"].iloc[:2000],
+                    "y_val": data["y_val"].iloc[:2000],
+                    "X_test": data["X_test"],
+                    "y_test": data["y_test"],
+                }
 
         if self.test_limited is not None:
             X = dataset["data"]["X_test"]
@@ -445,8 +499,12 @@ class DatasetManager:
                 # Process each stay_id
                 for stay_id in unique_limited_stay_ids:
                     # Get all rows for this stay_id
-                    X_stay = X_test_limited[X_test_limited["stay_id"] == stay_id]
-                    y_stay = y_test_limited[y_test_limited["stay_id"] == stay_id]
+                    X_stay = X_test_limited[
+                        X_test_limited["stay_id"] == stay_id
+                    ].reset_index(drop=True)
+                    y_stay = y_test_limited[
+                        y_test_limited["stay_id"] == stay_id
+                    ].reset_index(drop=True)
 
                     # Get the indices for this stay_id
                     indices = X_stay.index.tolist()
@@ -474,8 +532,8 @@ class DatasetManager:
                     )
 
                 # Store the sampled versions in dataset
-                dataset["data"]["X_test_sampled"] = X_limited_sampled
-                dataset["data"]["y_test_sampled"] = y_limited_sampled
+                dataset["data"]["X_test"] = X_limited_sampled
+                dataset["data"]["y_test"] = y_limited_sampled
 
                 logger.info(
                     "Created sampled test set with %s samples per stay_id for %s (task: %s)",
@@ -483,6 +541,11 @@ class DatasetManager:
                     dataset_id,
                     dataset["task"],
                 )
+
+                del (
+                    X_limited_sampled,
+                    y_limited_sampled,
+                )  # Clear sampled dataframes to free up memory
 
         # Applying advanced preprocessing if and not already loaded from presaved files
         logger.debug(
@@ -518,6 +581,24 @@ class DatasetManager:
             dataset["preprocessing_advanced"]["windowing"]["loaded"] = True
             logger.info("Successfully windowed data for %s", dataset_id)
 
+            # Save to files if in benchmark mode
+            if self.app_mode == "benchmark":
+                self.windower.save_windowed_data(
+                    results=data,
+                    task=dataset["task"],
+                    dataset=dataset["name"],
+                    data_window=dataset["preprocessing_advanced"]["windowing"][
+                        "data_window"
+                    ],
+                    prediction_window=dataset["preprocessing_advanced"]["windowing"][
+                        "prediction_window"
+                    ],
+                    step_size=dataset["preprocessing_advanced"]["windowing"][
+                        "step_size"
+                    ],
+                )
+                logger.info("Saved windowed data for %s to files", dataset_id)
+
         del data  # Clear the data variable to free up memory
 
         # Model specific parameters from kwargs. Throws KeyError if not provided.
@@ -533,17 +614,10 @@ class DatasetManager:
                     df["sex"] = df["sex"].map({"Male": 1, "Female": 0}).fillna(-1)
                 return df
 
-            # Process all feature datasets
-            feature_datasets = ["X_train", "X_val", "X_test"]
-            if "X_test_sampled" in dataset["data"]:
-                feature_datasets.append("X_test_sampled")
-
-            for data_set in feature_datasets:
-                dataset["data"][data_set] = convert_categorical_columns(
-                    dataset["data"][data_set]
-                )
-
-            logger.debug("Converted gender column to numerical values")
+            logger.debug("Converting gender column to numerical values")
+            for data_set in ["X_train", "X_val", "X_test"]:
+                df_temp = convert_categorical_columns(dataset["data"][data_set])
+                dataset["data"][data_set] = df_temp
 
         # Print statistics if requested (Print train, val and both original and limited test set statistics to compare distributions)
         if print_stats:
@@ -569,30 +643,17 @@ class DatasetManager:
                 dataset_name=dataset["name"],
             )
 
-            # Add statistics for sampled test set if available
-            test_sampled_stats = None
-            if (
-                "X_test_sampled" in dataset["data"]
-                and "y_test_sampled" in dataset["data"]
-            ):
-                test_sampled_stats = self.preprocessor.calculate_dataset_statistics(
-                    dataset["data"]["X_test_sampled"],
-                    dataset["data"]["y_test_sampled"],
-                    "test_sampled",
-                    task=dataset["task"],
-                    dataset_name=dataset["name"],
-                )
-
             # Filter out None values before passing to print_statistics
             stats_to_print = [
                 stat
-                for stat in [train_stats, val_stats, test_stats, test_sampled_stats]
+                for stat in [train_stats, val_stats, test_stats]
                 if stat is not None
             ]
             # Print statistics for all datasets
             self.preprocessor.print_statistics(stats_to_print)
 
         # Drop stay_id column after calculating statistics
+        logger.debug("Dropping stay_id column from all features and labels")
         dataset["data"] = self._drop_stay_id_if_present(dataset["data"])
         logger.debug("Dropped stay_id column from all features and labels")
 
@@ -614,7 +675,7 @@ class DatasetManager:
                 "dataset_name": dataset["name"],
                 "task": dataset["task"],
                 "model_name": model_name,
-                "mode": mode,
+                "model_mode": model_mode,
                 "num_shots": num_shots,
                 "data_window": data_window,
             }
@@ -658,7 +719,6 @@ class DatasetManager:
             y = [dataset["data"]["y_test"], dataset["data"]["y_train"]]
             info_dict["mode"] = "test"
 
-            # All preprocessors now return dictionaries
             test_result = prompting_preprocessor(X, y, info_dict)
 
             # Extract data from dictionary
@@ -667,21 +727,58 @@ class DatasetManager:
             self.is_agent = test_result.get("is_agent", False)
             logger.debug("Agent flag from preprocessor: %s", self.is_agent)
 
-        # Return the appropriate test set based on availability
-        if (
-            "X_test_sampled" in dataset["data"]
-            and "y_test_sampled" in dataset["data"]
-            and dataset["task"] in ["aki", "sepsis"]
-        ):
+        # Log the shapes of the datasets
+        logger.info(
+            "Shapes - Train: %s, Val: %s, Test: %s",
+            dataset["data"]["X_train"].shape,
+            dataset["data"]["X_val"].shape,
+            dataset["data"]["X_test"].shape,
+        )
+
+        if model_type == "convDL":
+            self.pos_weight = 1.0  # Default value for pos_weight
+            labels = dataset["data"]["y_train"]["label"]
+            neg = len(labels) - labels.sum()
+            pos = labels.sum()
+            if pos == 0:
+                logger.warning(
+                    "No positive samples found in the dataset. Setting pos_weight to 1."
+                )
+                self.pos_weight = 1.0
+            elif neg == 0:
+                logger.warning(
+                    "No negative samples found in the dataset. Setting pos_weight to 0."
+                )
+                self.pos_weight = 0.0
+            else:
+                self.pos_weight = neg / pos
+
+            # Save the preprocessed data to temporary .npy files for memory efficiency
+            def save_to_temp_npy(df):
+                arr = df.values.astype(np.float32)
+                tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".npy")
+                np.save(tmp, arr)
+                tmp.close()
+                return tmp.name
+
+            # Save each split to a temporary .npy file
+            X_train_path = save_to_temp_npy(dataset["data"]["X_train"])
+            y_train_path = save_to_temp_npy(dataset["data"]["y_train"])
+            X_val_path = save_to_temp_npy(dataset["data"]["X_val"])
+            y_val_path = save_to_temp_npy(dataset["data"]["y_val"])
+            X_test_path = save_to_temp_npy(dataset["data"]["X_test"])
+            y_test_path = save_to_temp_npy(dataset["data"]["y_test"])
+            # Return the paths to the temporary files
             return (
-                dataset["data"]["X_train"],
-                dataset["data"]["y_train"],
-                dataset["data"]["X_val"],
-                dataset["data"]["y_val"],
-                dataset["data"]["X_test_sampled"],
-                dataset["data"]["y_test_sampled"],
+                X_train_path,
+                y_train_path,
+                X_val_path,
+                y_val_path,
+                X_test_path,
+                y_test_path,
             )
 
+        # For other model types, return the DataFrames directly
         return (
             dataset["data"]["X_train"],
             dataset["data"]["y_train"],
@@ -739,7 +836,7 @@ class TorchDatasetWrapper(Dataset):
     Memory-efficient wrapper class to convert pandas DataFrames to PyTorch Dataset.
     """
 
-    def __init__(self, X: pd.DataFrame, y: pd.DataFrame):
+    def __init__(self, X_path, y_path, pos_weight=1):
         """
         Initialize the TorchDatasetWrapper with options for memory efficiency.
 
@@ -747,42 +844,14 @@ class TorchDatasetWrapper(Dataset):
             X (pd.DataFrame): Feature dataframe
             y (pd.DataFrame): Label dataframe
         """
-        self.X = X
-        self.y = y
-
-        # Pre-compute indices for faster access
-        self.indices = list(range(len(X)))
-
-        # Optional: Convert DataFrames to NumPy arrays upfront if they fit in memory
-        # This avoids repeated conversions during __getitem__ calls
-        # Comment this out if data is too large
-        # TODO: @sophiafe - Can we remove this? Very prone to memory issues. Or check available memory before converting.
-        # TODO: @j4nberger - Not sure, whether this had to do with the object type errors for convML models
-        self.X_array = X.values.astype(np.float32)
-        self.y_array = y.values.astype(np.float32)
-
-        # Store column dtypes for efficient conversion
-        self.dtypes = X.dtypes
-
-        # Calculate pos/neg ratio, avoid division by zero
-        neg = len(y) - y["label"].sum()
-        pos = y["label"].sum()
-        if pos == 0:
-            logger.warning(
-                "No positive samples found in the dataset. Setting pos_weight to 1."
-            )
-            self.pos_weight = 1.0
-        elif neg == 0:
-            logger.warning(
-                "No negative samples found in the dataset. Setting pos_weight to 0."
-            )
-            self.pos_weight = 0.0
-        else:
-            self.pos_weight = neg / pos
+        self.X = np.load(X_path, mmap_mode="r")
+        self.y = np.load(y_path, mmap_mode="r")
+        self.length = self.X.shape[0]
+        self.pos_weight = pos_weight
 
     def __len__(self):
         """Return the number of samples in the dataset."""
-        return len(self.X)
+        return self.length
 
     def __getitem__(self, idx):
         """
@@ -794,18 +863,39 @@ class TorchDatasetWrapper(Dataset):
         Returns:
             tuple: (features, label) as torch.Tensor
         """
-        # If we pre-computed arrays, use them
-        if hasattr(self, "X_array") and hasattr(self, "y_array"):
-            X_sample = self.X_array[idx]
-            y_sample = self.y_array[idx]
-        # For single integer index
-        elif isinstance(idx, int):
-            X_sample = self.X.iloc[idx].values.astype(np.float32)
-            y_sample = self.y.iloc[idx].values.astype(np.float32)
-        # For slices or lists of indices (batch access)
-        else:
-            X_sample = self.X.iloc[idx].values.astype(np.float32)
-            y_sample = self.y.iloc[idx].values.astype(np.float32)
+        # # If we pre-computed arrays, use them
+        # if hasattr(self, "X_array") and hasattr(self, "y_array"):
+        #     X_sample = self.X_array[idx]
+        #     y_sample = self.y_array[idx]
+        # # For single integer index
+        # elif isinstance(idx, int):
+        #     X_sample = self.X.iloc[idx].values.astype(np.float32)
+        #     y_sample = self.y.iloc[idx].values.astype(np.float32)
+        # # For slices or lists of indices (batch access)
+        # else:
+        #     X_sample = self.X.iloc[idx].values.astype(np.float32)
+        #     y_sample = self.y.iloc[idx].values.astype(np.float32)
 
-        # Convert to PyTorch tensors
-        return torch.tensor(X_sample), torch.tensor(y_sample)
+        # # Convert to PyTorch tensors
+        # return torch.tensor(X_sample), torch.tensor(y_sample)
+        X_sample = self.X[idx]
+        y_sample = self.y[idx]
+        return torch.tensor(X_sample, dtype=torch.float32), torch.tensor(
+            y_sample, dtype=torch.float32
+        )
+
+    # TODO: @sophiafe Is this still needed?
+    def get_batch(self, indices):
+        """
+        Custom method to get a batch with explicit indices.
+        More efficient than using DataLoader for large datasets.
+
+        Args:
+            indices (list): List of indices to include in batch
+
+        Returns:
+            tuple: (features, labels) for the specified indices
+        """
+        X_batch = self.X.iloc[indices].values.astype(np.float32)
+        y_batch = self.y.iloc[indices].values.astype(np.float32)
+        return X_batch, y_batch

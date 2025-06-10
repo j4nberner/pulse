@@ -1,5 +1,5 @@
 name: "Llama3Model"
-pretrained_model_path: null # Path to pretrained model (if any)
+pretrained_model_paths: null # Path to pretrained model (if any)
 params:
   model_id: "meta-llama/Llama-3.1-8B-Instruct" # Model ID for Llama3, path to pretrained model (if any)
   type: "LLM" # Type of model (convML for conventional machine learning, convDL for conventional deep learning and LLM for large language models)

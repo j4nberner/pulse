@@ -12,12 +12,9 @@ import wandb
 from src.eval.metrics import MetricsTracker
 from src.models.pulse_model import PulseModel
 from src.util.config_util import set_seeds
-from src.util.model_util import (
-    EarlyStopping,
-    initialize_weights,
-    prepare_data_for_model_convdl,
-    save_torch_model,
-)
+from src.util.model_util import (EarlyStopping, initialize_weights,
+                                 prepare_data_for_model_convdl,
+                                 save_torch_model)
 
 logger = logging.getLogger("PULSE_logger")
 
@@ -174,10 +171,10 @@ class CNNModel(PulseModel, nn.Module):
             architecture_type=self.params.get("architecture_type", "CNN"),
             task_name=self.task_name,
         )
-        self.criterion = nn.BCEWithLogitsLoss(
+        criterion = nn.BCEWithLogitsLoss(
             pos_weight=torch.tensor([data_loader.dataset.pos_weight])
         )
-        self.criterion.to(self.device)
+        criterion.to(self.device)
         # To identify num_channels: Get a sample batch and transform using the converter
         features, _ = next(iter(data_loader))
         transformed_features = converter.convert_batch_to_3d(features)
@@ -188,12 +185,14 @@ class CNNModel(PulseModel, nn.Module):
             self.params["num_channels"] = transformed_features.shape[1]
             self.params["window_size"] = transformed_features.shape[2]
             self._init_model()
-            logger.info(self.model)
+            logger.info(self)
             logger.info(
                 "Input shape to model (after transformation): %s",
                 transformed_features.shape,
             )
             self.load_model_weights(self.pretrained_model_path)
+        # Move model to device
+        self.to(self.device)
 
         # Move model to device
         self.to(self.device)
@@ -207,7 +206,7 @@ class CNNModel(PulseModel, nn.Module):
 
                 outputs = self(inputs)
 
-                loss = self.criterion(outputs, labels).item()
+                loss = criterion(outputs, labels).item()
                 val_loss.append(loss)
 
                 if verbose == 2:  # Verbose level 2: log every batch

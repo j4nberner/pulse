@@ -84,6 +84,14 @@ def check_model_config_validity(model, config: OmegaConf) -> None:
             )
             sys.exit(1)
 
+        # Check if debug_data_length is bigger than 999, to avoid having only one label in sets.
+        if config.general.get("debug_data_length", 0) < 1000:
+            logger.error(
+                "debug_data_length for convML models should be at least 1000 to ensure proper label distribution. "
+                "Please set it to a higher value in the config."
+            )
+            sys.exit(1)
+
     if model.type == "convDL":
         # Sanity check if data standardization was enabled
         if not config.preprocessing_baseline.get("standardize"):
@@ -99,6 +107,46 @@ def check_model_config_validity(model, config: OmegaConf) -> None:
                 "Data standardization is enabled for LLM models. Please disable it in the config."
             )
             sys.exit(1)
+
+
+def get_pretrained_model_path(
+    pretrained_model_list: list, task_name: str, dataset_name: str
+) -> str:
+    """
+    Get the path to the pretrained model based on the provided configuration.
+
+    Args:
+        pretrained_model_list (dict): List containing pretrained model paths or parent folder.
+        task_name (str): The name of the task.
+        dataset_name (str): The name of the dataset.
+
+    Returns:
+        str: The path to the pretrained model.
+    """
+    if pretrained_model_list is None:
+        return None
+
+    pretrained_model_path = None
+    # Check if the pretrained_model_list is a directory
+    if os.path.isdir(pretrained_model_list):
+        # If it's a directory, assume it contains multiple pretrained models
+        pretrained_model_list = [
+            os.path.join(pretrained_model_list, f)
+            for f in os.listdir(pretrained_model_list)
+            if os.path.isfile(os.path.join(pretrained_model_list, f))
+        ]
+
+    for path in pretrained_model_list:
+        filename = os.path.basename(path)
+        parts = filename.split("_")
+        if len(parts) >= 4:
+            task = parts[1]
+            dataset = parts[2]
+            if task == task_name and dataset == dataset_name:
+                pretrained_model_path = path
+                break
+
+    return pretrained_model_path
 
 
 # ------------------------------------

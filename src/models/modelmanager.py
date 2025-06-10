@@ -1,11 +1,8 @@
 import logging
-import os
 import sys
 from typing import Any, Dict, List
 
-import torch
 from omegaconf import OmegaConf
-from torch import nn
 
 from . import get_model_class
 
@@ -123,35 +120,35 @@ class ModelManager:
         self._model_cache[cache_key] = model
         logger.info("Created and cached model instance: %s", cache_key)
 
-        # Load model weights if path is specified
-        if config.get("pretrained_model_path", None):
-            # Only load during initialization for convML models
-            # Deep learning models will be loaded after proper architecture setup
-            model_type = config.get("params", {}).get("type")
+        # # Load model weights if path is specified
+        # if config.get("pretrained_model_path", None):
+        #     # Only load during initialization for convML models
+        #     # Deep learning models will be loaded after proper architecture setup
+        #     model_type = config.get("params", {}).get("type")
 
-            if model_type == "convML":
-                try:
-                    model.load_model_weights(config["pretrained_model_path"])
-                    logger.info(
-                        "Loaded pretrained model weights from %s",
-                        config["pretrained_model_path"],
-                    )
-                except Exception as e:
-                    logger.warning(
-                        "Failed to load pretrained model weights from %s: %s. Defaulting to random initialization.",
-                        config["pretrained_model_path"],
-                        str(e),
-                    )
-            else:
-                logger.debug(
-                    "Deferring loading of pretrained model weights for %s model until after architecture setup",
-                    model_type,
-                )
-        else:
-            logger.debug(
-                "No pretrained model path specified for %s. Using random initialization.",
-                model_name,
-            )
+        #     if model_type == "convML":
+        #         try:
+        #             model.load_model_weights(config["pretrained_model_path"])
+        #             logger.info(
+        #                 "Loaded pretrained model weights from %s",
+        #                 config["pretrained_model_path"],
+        #             )
+        #         except Exception as e:
+        #             logger.warning(
+        #                 "Failed to load pretrained model weights from %s: %s. Defaulting to random initialization.",
+        #                 config["pretrained_model_path"],
+        #                 str(e),
+        #             )
+        #     else:
+        #         logger.debug(
+        #             "Deferring loading of pretrained model weights for %s model until after architecture setup",
+        #             model_type,
+        #         )
+        # else:
+        #     logger.debug(
+        #         "No pretrained model path specified for %s. Using random initialization.",
+        #         model_name,
+        #     )
 
         return model
 
@@ -183,3 +180,4 @@ class ModelManager:
                 )
 
         return updated_models
+

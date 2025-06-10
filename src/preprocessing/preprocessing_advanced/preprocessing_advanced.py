@@ -1,5 +1,4 @@
 import logging
-import re
 from typing import Any, Dict, List, Optional
 
 import numpy as np
@@ -355,7 +354,6 @@ class PreprocessorAdvanced:
                 raise ValueError("target_col must be specified for 'importance' method")
             # Implementation for selecting features based on importance to target
             # [Code would compute feature importance and select top k features]
-            pass
 
         else:
             raise ValueError(f"Unknown feature selection method: {method}")
@@ -394,8 +392,8 @@ class PreprocessorAdvanced:
 
         for op in operations:
             op_type = op.get("type")
-            columns = op.get("columns", [])
-            params = op.get("params", {})
+            op.get("columns", [])
+            op.get("params", {})
 
             if op_type == "blood_draws":
                 # Count frequency of blood draws from lab test features

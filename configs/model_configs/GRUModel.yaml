@@ -1,5 +1,5 @@
 name: "GRUModel"
-pretrained_model_path: null # Path to pretrained model (if any)
+pretrained_model_paths: null # "/cluster/project/bmds_lab/sepsis_sophia/pulse/output/output_to_keep/20250525_073320_GRU/Models" # Path to pretrained model (if any)
 params:
   # Basic configuration
   trainer_name: "GRUTrainer"
