@@ -283,6 +283,7 @@ class PulseLLMModel(PulseModel):
         input_text: str,
         custom_system_message: str = None,
         parse_json: bool = True,
+        force_raw_text: bool = False,
     ) -> Dict[str, Any]:
         """Standard generation logic for non-agent models."""
         # Set seed for deterministic generation
@@ -317,13 +318,16 @@ class PulseLLMModel(PulseModel):
         # Generate output with scores
         infer_start = time.perf_counter()
 
+        # Set model-specific generation parameters
+        output_scores = True if self.model_name == "DeepseekR1Model" else False
+
         with torch.no_grad():
             outputs = self.model.generate(
                 input_ids=input_ids,
                 attention_mask=attention_mask,
                 max_new_tokens=self.params["max_new_tokens"],
                 return_dict_in_generate=True,
-                output_scores=False,
+                output_scores=output_scores,
                 output_hidden_states=False,
                 pad_token_id=self.tokenizer.pad_token_id,
                 eos_token_id=self.tokenizer.eos_token_id,
@@ -342,15 +346,24 @@ class PulseLLMModel(PulseModel):
             clean_up_tokenization_spaces=True,
         )
 
+        # Initialize thinking_output for models that don't use it
+        thinking_output = ""
+
         if self.model_name == "Gemma3Model":
             # Trim after first <end_of_turn>
             decoded_output = decoded_output.split("<end_of_turn>")[0]
+        elif self.model_name == "DeepseekR1Model":
+            # Handle DeepSeek thinking tokens
+            if "</think>" in decoded_output:
+                thinking_output = decoded_output.split("</think>")[0]
+                decoded_output = decoded_output.split("</think>")[1]
+            logger.debug("Answer output:\n %s", decoded_output)
 
         # Log the decoded output for debugging
         logger.debug("Decoded output:\n %s", decoded_output)
 
-        # Parse the output if parse_json is True
-        if parse_json:
+        # Parse the output if parse_json is True and force_raw_text is False
+        if parse_json and not force_raw_text:
             generated_text = parse_llm_output(decoded_output)
         else:
             generated_text = decoded_output
@@ -363,14 +376,20 @@ class PulseLLMModel(PulseModel):
             num_output_tokens,
         )
 
-        # Return consistent result structure
-        return {
+        # Build result structure
+        result = {
             "generated_text": generated_text,
             "token_time": token_time,
             "infer_time": infer_time,
             "num_input_tokens": num_input_tokens,
             "num_output_tokens": num_output_tokens,
         }
+
+        # Add thinking_output for DeepSeek models
+        if self.model_name == "DeepseekR1Model":
+            result["thinking_output"] = thinking_output
+
+        return result
 
     def evaluate(self, test_loader: Any, save_report: bool = False) -> float:
         """Evaluates the model on a given test set.
