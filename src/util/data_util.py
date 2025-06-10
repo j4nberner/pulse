@@ -198,3 +198,149 @@ def get_all_feature_groups() -> dict:
 def get_feature_group_title(group_name: str) -> str:
     """Returns the display title for a specific group."""
     return features_dyn_sets_titles_dict.get(group_name, group_name)
+
+
+# ----------------------------------------
+# Feature validation and mapping utilities
+# ----------------------------------------
+
+
+def get_all_group_names() -> list:
+    """Returns all available group names (both keys and display titles)."""
+    group_names = list(features_dyn_sets_titles_dict.keys())
+    group_titles = [title.lower() for title in features_dyn_sets_titles_dict.values()]
+    return group_names + group_titles
+
+
+def validate_feature_exists(feature_key: str) -> bool:
+    """Check if a feature key exists in the features dictionary."""
+    return feature_key in features_dict
+
+
+def get_common_feature_aliases() -> dict:
+    """Get common aliases for feature names that map to data_util keys."""
+    return {
+        # Full medical names to abbreviations
+        "sodium": "na",
+        "potassium": "k",
+        "chloride": "cl",
+        "calcium": "ca",
+        "ionized calcium": "cai",
+        "magnesium": "mg",
+        "phosphate": "phos",
+        "creatinine": "crea",
+        "glucose": "glu",
+        "lactate": "lact",
+        "hemoglobin": "hgb",
+        "platelets": "plt",
+        "albumin": "alb",
+        "blood urea nitrogen": "bun",
+        "white blood cells": "wbc",
+        "white blood cell count": "wbc",
+        "bicarbonate": "bicar",
+        "hco3": "bicar",  # Common alternative name
+        "base excess": "be",
+        "troponin": "tnt",
+        "troponin t": "tnt",
+        "creatine kinase": "ck",
+        "ck-mb": "ckmb",
+        "c-reactive protein": "crp",
+        "inr": "inr_pt",
+        "pt": "inr_pt",  # Map pt to inr_pt (correct data_util name)
+        "fibrinogen": "fgn",
+        "neutrophils": "neut",
+        "lymphocytes": "lymph",
+        "band neutrophils": "bnd",
+        "bands": "bnd",
+        "methemoglobin": "methb",
+        "alkaline phosphatase": "alp",
+        "alanine aminotransferase": "alt",
+        "aspartate aminotransferase": "ast",
+        "bilirubin": "bili",
+        "total bilirubin": "bili",
+        "direct bilirubin": "bili_dir",
+        "urine output": "urine",
+        # Common clinical blood gas abbreviations
+        "pao2": "po2",  # Partial pressure of oxygen
+        "paco2": "pco2",  # Partial pressure of carbon dioxide
+    }
+
+
+def get_clinical_group_aliases() -> dict:
+    """Get common clinical aliases for feature groups."""
+    # Define subset lists for easier reference
+    liver_subset = [
+        f
+        for f in features_dyn_liver_kidney_list
+        if f in ["alb", "alp", "alt", "ast", "bili", "bili_dir"]
+    ]
+    kidney_subset = [
+        f for f in features_dyn_liver_kidney_list if f in ["bun", "crea", "urine"]
+    ]
+    hematology_basic = [
+        f for f in features_dyn_hematology_immune_list if f not in ["crp", "methb"]
+    ]
+
+    return {
+        # Blood gas variations
+        tuple(features_dyn_bga_list): [
+            "blood gas analysis",
+            "blood_gas",
+            "bloodgas",  # Short form
+            "arterial blood gas",
+            "abg",
+        ],
+        # Metabolic panel variations
+        tuple(features_dyn_electrolytes_met_list): [
+            "metabolic panel & electrolytes",
+            "metabolic_panel",
+            "metabolic panel",
+            "metab",  # Short form
+            "comprehensive metabolic panel",
+            "cmp",
+        ],
+        tuple(features_dyn_electrolytes_met_list[:5]): [  # Basic metabolic panel
+            "basic metabolic panel",
+            "bmp",
+        ],
+        tuple(features_dyn_electrolytes_met_list[:7]): [  # Electrolytes only
+            "electrolytes"
+        ],
+        # Liver/kidney function variations
+        tuple(features_dyn_liver_kidney_list): [
+            "liver & kidney function",
+            "liver_kidney_function",
+            "liver kidney function",
+        ],
+        tuple(liver_subset): [
+            "liver function",
+            "liver_function",
+            "liver",  # Short form
+        ],
+        tuple(kidney_subset): [
+            "kidney function",
+            "kidney_function",
+            "renal function",
+            "renal_function",
+            "kidney",  # Short form
+            "renal",  # Short form
+        ],
+        # Hematology variations
+        tuple(features_dyn_hematology_immune_list): ["hematology & immune response"],
+        tuple(hematology_basic): [
+            "hematology",
+            "heme",  # Short form
+            "cbc",
+            "complete blood count",
+            "blood count",
+        ],
+        # Cardiac variations
+        tuple(features_dyn_cardiac_list): [
+            "cardiac markers",
+            "cardiac_markers",
+            "cardiac",
+            "heart markers",
+        ],
+        # Coagulation variations
+        tuple(features_dyn_coag_list): ["coagulation", "coag", "clotting studies"],
+    }

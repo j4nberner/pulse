@@ -13,6 +13,9 @@ from src.util.data_util import (
     get_all_feature_groups,
     get_feature_group_keys,
     get_feature_group_title,
+    validate_feature_exists,
+    get_common_feature_aliases,
+    get_clinical_group_aliases,
 )
 
 logger = logging.getLogger("PULSE_logger")
@@ -208,6 +211,16 @@ class ClinicalWorkflowAgent(PulseAgent):
                     logger.info("No valid labs requested, stopping iteration")
                     break
 
+                # Additional validation: ensure no already-used features are requested
+                valid_requested_labs = self._validate_lab_request(
+                    valid_requested_labs, state
+                )
+                if not valid_requested_labs:
+                    logger.info(
+                        "No new labs requested (all already analyzed), stopping iteration"
+                    )
+                    break
+
                 logger.info("Valid requested labs: %s", valid_requested_labs)
 
                 # Get available requested labs
@@ -222,6 +235,21 @@ class ClinicalWorkflowAgent(PulseAgent):
                     break
 
                 logger.info("Available labs for analysis: %s", available_labs)
+
+                # Add safety check: ensure we're not re-using already used features
+                already_used = available_labs.intersection(state["used_features"])
+                if already_used:
+                    logger.warning(
+                        "Attempted to re-use already analyzed features: %s",
+                        already_used,
+                    )
+                    available_labs = available_labs - state["used_features"]
+                    if not available_labs:
+                        logger.info(
+                            "No new labs after removing duplicates, stopping iteration"
+                        )
+                        break
+
                 state["used_features"].update(available_labs)
 
                 # Step 3: Updated assessment with new labs
@@ -380,42 +408,98 @@ class ClinicalWorkflowAgent(PulseAgent):
         """Validate that requested features exist in the data_util feature dictionary."""
         valid_features = []
 
-        # Common feature name mappings for when LLM uses full names
-        name_mappings = {
-            "sodium": "na",
-            "potassium": "k",
-            "chloride": "cl",
-            "calcium": "ca",
-            "magnesium": "mg",
-            "phosphate": "phos",
-            "creatinine": "crea",
-            "glucose": "glu",
-            "lactate": "lact",
-            "hemoglobin": "hgb",
-            "platelets": "plt",
-            "albumin": "alb",
-        }
+        # Get mappings from data_util
+        group_mappings = {}
+
+        # Add official group mappings from data_util
+        for group_key in [
+            "bga",
+            "coag",
+            "electrolytes_met",
+            "liver_kidney",
+            "hematology_immune",
+            "cardiac",
+        ]:
+            group_features = get_feature_group_keys(group_key)
+            group_title = get_feature_group_title(group_key).lower()
+
+            # Add both the key and the display title as mappings
+            group_mappings[group_key] = group_features
+            group_mappings[group_title] = group_features
+
+        # Add clinical aliases from data_util
+        clinical_aliases = get_clinical_group_aliases()
+        for feature_tuple, aliases in clinical_aliases.items():
+            feature_list_from_tuple = list(feature_tuple)
+            for alias in aliases:
+                group_mappings[alias] = feature_list_from_tuple
+
+        # Get individual feature name mappings from data_util
+        name_mappings = get_common_feature_aliases()
 
         for feature in feature_list:
-            # Check if feature exists as-is using data_util function
-            if (
-                get_feature_name(feature) != feature
-            ):  # Feature exists if name is different from key
+            feature_lower = feature.lower().strip()
+
+            # First check exact match (highest priority)
+            if validate_feature_exists(feature):
                 valid_features.append(feature)
-            # Check if it needs mapping
-            elif feature.lower() in name_mappings:
-                mapped_feature = name_mappings[feature.lower()]
-                if (
-                    get_feature_name(mapped_feature) != mapped_feature
-                ):  # Check if mapped feature exists
+                continue
+
+            # Check lowercase exact match
+            if validate_feature_exists(feature_lower):
+                valid_features.append(feature_lower)
+                continue
+
+            # Check if it's a group name that needs expansion
+            if feature_lower in group_mappings:
+                group_features = group_mappings[feature_lower]
+                added_features = []
+                for group_feature in group_features:
+                    if validate_feature_exists(group_feature):
+                        valid_features.append(group_feature)
+                        added_features.append(group_feature)
+                if added_features:
+                    logger.info(
+                        "Expanded group '%s' to features: %s", feature, added_features
+                    )
+                continue
+
+            # Check if it needs individual mapping
+            if feature_lower in name_mappings:
+                mapped_feature = name_mappings[feature_lower]
+                if validate_feature_exists(mapped_feature):
                     valid_features.append(mapped_feature)
                     logger.info("Mapped '%s' to '%s'", feature, mapped_feature)
+                    continue
                 else:
                     logger.warning(
                         "Mapped feature '%s' not found in data_util", mapped_feature
                     )
-            else:
+                    continue
+
+            # Check for partial matches in available feature groups
+            found_match = False
+            for group_name, group_dict in self.lab_groups.items():
+                for feature_key in group_dict.keys():
+                    if (
+                        feature_lower in feature_key.lower()
+                        or feature_key.lower() in feature_lower
+                    ):
+                        if validate_feature_exists(feature_key):
+                            valid_features.append(feature_key)
+                            logger.info(
+                                "Partial match: mapped '%s' to '%s'",
+                                feature,
+                                feature_key,
+                            )
+                            found_match = True
+                            break
+                if found_match:
+                    break
+
+            if not found_match:
                 logger.warning("Feature '%s' not found in data_util", feature)
+
         return valid_features
 
     def _format_clinical_data(
@@ -673,16 +757,52 @@ IMPORTANT: With only vital signs available, confidence should typically be 50-70
                 state["available_features"]
             )
 
-            # Filter out already used features
+            # Filter out already used features - CRITICAL for preventing re-ordering
             filtered_available = {}
+            total_unused_features = 0
+
             for group_name, features in available_by_group.items():
                 unused_features = [
                     f for f in features if f not in state["used_features"]
                 ]
                 if unused_features:
                     filtered_available[group_name] = unused_features
+                    total_unused_features += len(unused_features)
 
-            # Format test list showing only abbreviations to simplify selection
+            # Debug logging to track filtering
+            logger.debug("Used features so far: %s", list(state["used_features"]))
+            logger.debug("Total unused features available: %d", total_unused_features)
+            for group_name, features in filtered_available.items():
+                logger.debug(
+                    "Group %s: %d unused features: %s",
+                    group_name,
+                    len(features),
+                    features,
+                )
+
+            # If no unused features available, stop ordering
+            if total_unused_features == 0:
+                logger.info(
+                    "No unused lab features available - all tests already ordered"
+                )
+                return f"""All available laboratory tests have already been ordered and analyzed. 
+
+Previous Assessment:
+- Reasoning: {previous_assessment.get('explanation', previous_assessment.get('reasoning', ''))}
+- Current probability: {previous_assessment['probability']}%
+- Current confidence: {previous_assessment.get('confidence', previous_assessment['probability'])}%
+
+Since no additional tests are available, respond with an empty test list.
+
+Respond in JSON format:
+{{
+    "diagnosis": "lab-ordering-complete",
+    "probability": "{previous_assessment['probability']}",
+    "explanation": "All available laboratory tests have been ordered and analyzed. No additional tests are available.",
+    "requested_tests": []
+}}"""
+
+            # Format test list showing only unused features
             test_list = []
             for group_name, features in filtered_available.items():
                 group_title = get_feature_group_title(group_name)
@@ -698,10 +818,16 @@ Previous Assessment:
 - Current probability: {previous_assessment['probability']}%
 - Current confidence: {previous_assessment.get('confidence', previous_assessment['probability'])}%
 
-Available tests to order:
+Available tests to order (excluding already ordered tests):
 {''.join(test_list)}
 
 Clinical goal: Determine risk of {self.task_content['complication_name']}
+
+Guidelines for test selection:
+- Use only the EXACT abbreviations shown in the list above (e.g., "crea", "bun", "wbc", "ph", "pco2"). Do NOT use full names, group names, or name variations.
+- Select a maximum of 2-6 of the most clinically relevant tests.
+- Focus on tests that will help confirm or rule out your differential diagnosis.
+- Prioritize tests that directly assess organ function relevant to your suspected diagnosis.
 
 Respond in JSON format:
 {{
@@ -710,8 +836,7 @@ Respond in JSON format:
     "explanation": "Why you want these specific tests and how they will help your decision-making",
     "requested_tests": ["test1", "test2", "test3"]
 }}
-
-Request 2-5 most clinically relevant tests. Use the exact abbreviations shown (e.g., "crea", "bun", "wbc", "na", "k", "cl")."""
+REMEMBER: Only use exact abbreviations from the list above."""
 
         return format_prompt
 
@@ -772,9 +897,19 @@ Respond in JSON format:
             # Format assessment progression
             assessment_summary = []
             for i, assessment in enumerate(assessment_history):
+                # Convert probability and confidence to float
+                try:
+                    probability = float(assessment["probability"])
+                    confidence = float(
+                        assessment.get("confidence", assessment["probability"])
+                    )
+                except (ValueError, TypeError):
+                    probability = 50.0
+                    confidence = 50.0
+
                 assessment_summary.append(
-                    f"Step {i+1} ({assessment['step']}): Probability={assessment['probability']:.3f}, "
-                    f"Confidence={assessment['confidence']:.3f}"
+                    f"Step {i+1} ({assessment['step']}): Probability={probability:.1f}%, "
+                    f"Confidence={confidence:.1f}%"
                 )
 
             return f"""Patient Demographics:
@@ -914,3 +1049,34 @@ Clinical Context: {self.task_content['task_info']}"""
                 "Error analyzing temporal pattern for %s: %s", feature_key, e
             )
             return "stable trend"
+
+    def _validate_lab_request(
+        self, requested_labs: List[str], state: Dict[str, Any]
+    ) -> List[str]:
+        """
+        Validate lab requests to ensure no already-used features are requested again.
+
+        Args:
+            requested_labs: List of requested lab abbreviations
+            state: Current workflow state
+
+        Returns:
+            List of valid, unused lab abbreviations
+        """
+        valid_labs = []
+        already_used_requests = []
+
+        for lab in requested_labs:
+            if lab in state["used_features"]:
+                already_used_requests.append(lab)
+            else:
+                valid_labs.append(lab)
+
+        if already_used_requests:
+            logger.warning(
+                "Model requested already analyzed features: %s. These will be ignored.",
+                already_used_requests,
+            )
+            logger.info("Valid new lab requests: %s", valid_labs)
+
+        return valid_labs
