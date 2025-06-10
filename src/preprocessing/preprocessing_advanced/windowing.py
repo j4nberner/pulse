@@ -7,9 +7,8 @@ import pandas as pd
 import torch
 from tqdm import tqdm
 
-from src.preprocessing.preprocessing_baseline.preprocessing_baseline import (
-    PreprocessorBaseline,
-)
+from src.preprocessing.preprocessing_baseline.preprocessing_baseline import \
+    PreprocessorBaseline
 
 # Set up logger
 logger = logging.getLogger("PULSE_logger")

@@ -1,5 +1,5 @@
 name: "DeepseekR1Qwen14bModel"
-pretrained_model_path: null # Path to pretrained model (if any)
+pretrained_model_paths: null # Path to pretrained model (if any)
 params:
   trainer_name: "DeepseekR1Trainer"
   model_id: "deepseek-ai/DeepSeek-R1-Distill-Qwen-14B" # Model ID for Llama3, path to pretrained model (if any)

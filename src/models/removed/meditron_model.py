@@ -288,7 +288,7 @@ class MeditronTrainer:
 
     def train(self):
         """Training loop."""
-        verbose = self.params.get("verbose", 1)
+        self.params.get("verbose", 1)
         logger.info("System message: %s", prompt_template_hf("")[0])
         logger.info("Starting training...")
 
@@ -520,7 +520,7 @@ class MeditronTrainer:
             input_ids = input_ids[-max_len:]
 
         # Recompute where the target starts (after possible truncation of prompt)
-        prompt_len = len(prompt_ids)
+        len(prompt_ids)
         total_len = len(input_ids)
         target_start_idx = max(0, total_len - len(target_ids))
 

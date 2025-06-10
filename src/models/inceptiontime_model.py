@@ -12,12 +12,9 @@ import wandb
 from src.eval.metrics import MetricsTracker
 from src.models.pulse_model import PulseModel
 from src.util.config_util import set_seeds
-from src.util.model_util import (
-    EarlyStopping,
-    initialize_weights,
-    prepare_data_for_model_convdl,
-    save_torch_model,
-)
+from src.util.model_util import (EarlyStopping, initialize_weights,
+                                 prepare_data_for_model_convdl,
+                                 save_torch_model)
 
 # Set up logger
 logger = logging.getLogger("PULSE_logger")
@@ -209,7 +206,6 @@ class InceptionTimeModel(PulseModel, nn.Module):
             num_channels: Number of input channels from the data
         """
         set_seeds(self.params["random_seed"])
-        
         # Reset inception and residual modules
         self.inception_modules = nn.ModuleList()
         self.residual_connections = nn.ModuleDict()
@@ -320,10 +316,13 @@ class InceptionTimeModel(PulseModel, nn.Module):
             # Configure the model input size based on the data
             features, _ = next(iter(data_loader))
             transformed_features = converter.convert_batch_to_3d(features)
-            input_dim = transformed_features.shape[-1]
+            input_dim = transformed_features.shape[1]  # num_channels
             self.input_size = input_dim
-            self._init_model()
+            self.create_network_with_input_shape(input_dim)
             self.load_model_weights(self.pretrained_model_path)
+
+        # Move model to device
+        self.to(self.device)
 
         with torch.no_grad():
             for batch_idx, (features, labels) in enumerate(data_loader):

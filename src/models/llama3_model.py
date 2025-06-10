@@ -1,23 +1,15 @@
 import logging
 import os
-import time
 import warnings
 from typing import Any, Dict
 
-import numpy as np
 import torch
 import torch.nn as nn
-import torch.optim as optim
-from peft import PromptTuningConfig, PromptTuningInit, TaskType, get_peft_model
-from torch.nn import functional as F
-from transformers import (AutoModelForCausalLM, AutoTokenizer,
-                          BitsAndBytesConfig)
+from transformers import BitsAndBytesConfig
 
-import wandb
-from src.eval.metrics import MetricsTracker
 from src.models.pulse_model import PulseLLMModel
 from src.util.config_util import set_seeds
-from src.util.model_util import extract_dict, prompt_template_hf
+from src.util.model_util import prompt_template_hf
 
 warnings.filterwarnings(
     "ignore",
@@ -38,7 +30,7 @@ class Llama3Model(PulseLLMModel):
             **kwargs: Additional optional parameters such as `output_dir` and `wandb`.
         """
         model_name = kwargs.pop("model_name", "Llama3Model")
-        trainer_name = kwargs.get("trainer_name", "Llama3Trainer")
+        kwargs.get("trainer_name", "Llama3Trainer")
 
         super().__init__(model_name, params, **kwargs)
 
@@ -253,7 +245,7 @@ class Llama3Trainer:
             input_ids = input_ids[-max_len:]
 
         # Recompute where the target starts (after possible truncation of prompt)
-        prompt_len = len(prompt_ids)
+        len(prompt_ids)
         total_len = len(input_ids)
         target_start_idx = max(0, total_len - len(target_ids))
 

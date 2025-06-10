@@ -1,5 +1,5 @@
 name: "RandomForest"
-pretrained_model_path: "output/20250601_100130/Models/RandomForest_aki_miiv_20250601_100142.joblib" # Path to pretrained model (if any)
+pretrained_model_paths: "/cluster/project/bmds_lab/sepsis_sophia/pulse/output/output_to_keep/20250509_183704_RandomForest_preprocessing_unstandardized_6dw_0pw_1sz/Models" # Path to pretrained model (if any)
 params:
   # Basic configuration
   type: "convML" # Type of model (convML for conventional machine learning, convDL for conventional deep learning and LLM for large language models)

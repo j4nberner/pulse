@@ -1,5 +1,5 @@
 name: "Gemma3Model"
-pretrained_model_path: null # Path to pretrained model (if any)
+pretrained_model_paths: null # Path to pretrained model (if any)
 params:
   trainer_name: "GemmaTrainer"
   model_id: "google/gemma-3-12b-it" # Model ID for Gemma, path to pretrained model (if any)

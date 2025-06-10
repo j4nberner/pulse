@@ -1,5 +1,5 @@
 name: "LSTMModel"
-pretrained_model_path: output/20250601_104743/Models/LSTMModel_aki_miiv_20250601_104757.pth # Path to pretrained model (if any)
+pretrained_model_paths: null # "/cluster/project/bmds_lab/sepsis_sophia/pulse/output/output_to_keep/20250525_185834_LSTM/Models" # Path to pretrained model (if any)
 params:
   # Basic configuration
   trainer_name: "LSTMTrainer"

@@ -1,11 +1,13 @@
 import logging
 import re
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List
 
 import numpy as np
 import pandas as pd
 
-from src.preprocessing.preprocessing_advanced import PreprocessorAdvanced
+from src.preprocessing.preprocessing_advanced.preprocessing_advanced import (
+    PreprocessorAdvanced,
+)
 from src.util.data_util import get_feature
 
 logger = logging.getLogger("PULSE_logger")
@@ -27,7 +29,6 @@ def liu_2023_few_shot_preprocessor(
     Returns:
         Dict[str, pd.DataFrame]: Dictionary with keys "X" (prompt DataFrame) and "y" (label DataFrame).
     """
-    pp = PreprocessorAdvanced()
     task = info_dict.get("task", "unknown_task")
     dataset = info_dict.get("dataset_name", "unknown_dataset")
     model_id = info_dict.get("model_name", "unknown_model")

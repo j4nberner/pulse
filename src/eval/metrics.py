@@ -1,24 +1,15 @@
 import json
 import logging
 import os
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Union
 
 import numpy as np
 import pandas as pd
 import torch
-from sklearn.metrics import (
-    accuracy_score,
-    auc,
-    balanced_accuracy_score,
-    cohen_kappa_score,
-    confusion_matrix,
-    f1_score,
-    matthews_corrcoef,
-    precision_recall_curve,
-    precision_score,
-    recall_score,
-    roc_auc_score,
-)
+from sklearn.metrics import (accuracy_score, auc, balanced_accuracy_score,
+                             cohen_kappa_score, confusion_matrix, f1_score,
+                             matthews_corrcoef, precision_recall_curve,
+                             precision_score, recall_score, roc_auc_score)
 
 logger = logging.getLogger("PULSE_logger")
 

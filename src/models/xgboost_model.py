@@ -1,7 +1,7 @@
 import logging
 import os
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 import numpy as np
 import pandas as pd
@@ -78,6 +78,7 @@ class XGBoostModel(PulseModel):
         # Initialize the XGBoost model with parameters from config
         self.model = XGBClassifier(
             **model_params,
+            base_score=0.5,
         )
 
     def evaluate(self, data_loader: Any, save_report: bool = False) -> Dict[str, Any]:
@@ -96,6 +97,9 @@ class XGBoostModel(PulseModel):
 
         # Load model from pretrained state if available and not in training mode
         if self.pretrained_model_path and self.mode != "train":
+            logger.info(
+                "Loading pretrained model weights from %s", self.pretrained_model_path
+            )
             self.load_model_weights(self.pretrained_model_path)
 
         # Create DataFrame with feature names for prediction to avoid warnings
@@ -109,8 +113,8 @@ class XGBoostModel(PulseModel):
             self.save_dir,
         )
 
-        y_pred = self.model.predict(X_test_df)
-        y_pred_proba = self.model.predict_proba(X_test_df)
+        y_pred = self.model.predict(X_test)
+        y_pred_proba = self.model.predict_proba(X_test)
 
         metadata_dict = {
             "prediction": y_pred_proba[:, 1],

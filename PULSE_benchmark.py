@@ -4,7 +4,6 @@ import os
 import sys
 
 import pandas as pd
-import torch
 from omegaconf import OmegaConf
 from torch.utils.data import DataLoader
 
@@ -14,6 +13,7 @@ from src.models.modelmanager import ModelManager
 from src.util.config_util import (
     check_model_config_validity,
     get_deterministic_dataloader_args,
+    get_pretrained_model_path,
     load_config_with_models,
     save_config_file,
     set_seeds,
@@ -88,10 +88,19 @@ class PulseBenchmark:
 
             # Each updated model is used only for this dataset
             for model in updated_models:
+
                 # Update model attributes for this task and dataset
                 model.task_name = task_name
                 model.dataset_name = dataset_name
                 model.save_metadata = self.config.general.save_metadata
+                pretrained_path_list = self.config.models[model.model_name].get(
+                    "pretrained_model_paths", []
+                )
+                model.pretrained_model_path = get_pretrained_model_path(
+                    pretrained_path_list,
+                    model.task_name,
+                    model.dataset_name,
+                )
 
                 logger.info("--" * 30)
                 logger.info(
@@ -138,7 +147,7 @@ class PulseBenchmark:
                     # Preprocess data for corresponding model
                     X_train, y_train, X_val, y_val, X_test, y_test = (
                         self.dm.get_preprocessed_data(
-                            task_dataset_name, model.model_name, **dm_kwargs
+                            task_dataset_name, model.model_name, model.mode, **dm_kwargs
                         )
                     )
 
@@ -147,14 +156,6 @@ class PulseBenchmark:
                     model.is_agent = is_agent
                     if is_agent:
                         logger.debug("Agent flag set for %s", model.model_name)
-
-                    # Log the shapes of the datasets
-                    logger.info(
-                        "Shapes - Train: %s, Val: %s, Test: %s",
-                        X_train.shape,
-                        X_val.shape,
-                        X_test.shape,
-                    )
 
                     #######################################################################
 
@@ -169,10 +170,15 @@ class PulseBenchmark:
                         val_loader = (X_val, y_val)
                         test_loader = (X_test, y_test)
                     elif model.type == "convDL":
-                        # Wrap with TorchDatasetWrapper
-                        train_dataset = TorchDatasetWrapper(X_train, y_train)
-                        val_dataset = TorchDatasetWrapper(X_val, y_val)
-                        test_dataset = TorchDatasetWrapper(X_test, y_test)
+                        train_dataset = TorchDatasetWrapper(
+                            X_train, y_train, self.dm.pos_weight
+                        )
+                        val_dataset = TorchDatasetWrapper(
+                            X_val, y_val, self.dm.pos_weight
+                        )
+                        test_dataset = TorchDatasetWrapper(
+                            X_test, y_test, self.dm.pos_weight
+                        )
 
                         batch_size = getattr(
                             self.config.benchmark_settings, "batch_size"
@@ -202,6 +208,7 @@ class PulseBenchmark:
                             batch_size=batch_size,
                             shuffle=False,
                             drop_last=False,
+                            num_workers=0,
                             **dataloader_args,
                         )
                         test_loader = DataLoader(
@@ -209,6 +216,7 @@ class PulseBenchmark:
                             batch_size=batch_size,
                             shuffle=False,
                             drop_last=False,
+                            num_workers=0,
                             **dataloader_args,
                         )
 
@@ -238,17 +246,17 @@ class PulseBenchmark:
                             model.trainer.train()
                         # Evaluate the model
                         model.evaluate(test_loader, save_report=True)
+                        # model.evaluate_sys_msgs(test_loader, save_report=True)
 
                 except Exception as e:
                     logger.error(
-                        "Error training %s on %s: %s",
+                        "Error running %s on %s: %s",
                         model.model_name,
                         task_dataset_name,
                         str(e),
                         exc_info=True,
                     )
                 finally:
-                    # model.offload_model_to_cpu()
 
                     # Memory cleanup after training each model
                     if hasattr(model, "trainer"):

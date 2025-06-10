@@ -1,4 +1,3 @@
-import ast
 import json
 import logging
 import os
@@ -139,9 +138,10 @@ def prepare_data_for_model_convml(
 
     if isinstance(data_loader[0], pd.DataFrame):
         # If DataLoader is a DataFrame, extract features and labels directly
-        X = np.array(data_loader[0].values)
+        df = data_loader[0].apply(pd.to_numeric, errors="coerce")
+        X = np.array(df.values)
         y = np.array(data_loader[1].values).squeeze()
-        feature_names = list(data_loader[0].columns)
+        feature_names = list(df.columns)
 
     else:
         # Convert lists to numpy arrays
@@ -177,7 +177,8 @@ def prepare_data_for_model_convdl(
     """
 
     # Import the converter
-    from src.preprocessing.preprocessing_advanced.windowing import WindowedDataTo3D
+    from src.preprocessing.preprocessing_advanced.windowing import \
+        WindowedDataTo3D
 
     # Create converter with model name and config
     converter = WindowedDataTo3D(
@@ -217,44 +218,6 @@ def prepare_data_for_model_convdl(
         logger.error("Error preparing data converter: %s", e)
 
     return converter
-
-
-@DeprecationWarning
-def calculate_pos_weight(train_loader):
-    """
-    Calculate positive class weight for imbalanced binary classification data.
-
-    Args:
-        train_loader: DataLoader containing the training data
-
-    Returns:
-        float: Weight for positive class (ratio of negative to positive samples)
-    """
-    try:
-        all_labels = []
-        for _, labels in train_loader:
-            all_labels.extend(labels.cpu().numpy().flatten())
-
-        all_labels = np.array(all_labels)
-        neg_count = np.sum(all_labels == 0)
-        pos_count = np.sum(all_labels == 1)
-
-        if pos_count == 0:
-            logger.warning("No positive samples found, using pos_weight=1.0")
-            return 1.0
-
-        weight = neg_count / pos_count
-        logger.info(
-            "Class imbalance - Neg: %d, Pos: %d, Weight: %f",
-            neg_count,
-            pos_count,
-            weight,
-        )
-        return weight
-
-    except Exception as e:
-        logger.error("Error calculating class weights: %s", e)
-        return 1.0
 
 
 def initialize_weights(module):

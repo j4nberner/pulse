@@ -1,5 +1,5 @@
 name: "Llama4Model"
-pretrained_model_path: null # Path to pretrained model (if any)
+pretrained_model_paths: null # Path to pretrained model (if any)
 params:
   trainer_name: "Llama4Trainer"
   model_id: "meta-llama/Llama-4-Scout-17B-16E-Instruct" # Model ID for Llama3, path to pretrained model (if any)
