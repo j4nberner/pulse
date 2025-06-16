@@ -12,9 +12,12 @@ import wandb
 from src.eval.metrics import MetricsTracker
 from src.models.pulse_model import PulseModel
 from src.util.config_util import set_seeds
-from src.util.model_util import (EarlyStopping, initialize_weights,
-                                 prepare_data_for_model_convdl,
-                                 save_torch_model)
+from src.util.model_util import (
+    EarlyStopping,
+    initialize_weights,
+    prepare_data_for_model_convdl,
+    save_torch_model,
+)
 
 # Set up logger
 logger = logging.getLogger("PULSE_logger")
@@ -292,6 +295,7 @@ class InceptionTimeModel(PulseModel, nn.Module):
             data_loader: DataLoader for evaluation data.
             save_report: Whether to save the evaluation report.
         """
+        set_seeds(self.params["random_seed"])
         metrics_tracker = MetricsTracker(
             self.model_name,
             self.task_name,
@@ -548,6 +552,7 @@ class InceptionTimeTrainer:
         logger.info("Training completed.")
 
         # After training loop, load best model weights and save final model
+        # TODO: self.model = self.model.early_stopping.load_best_model(self.model) maybe? need to test
         self.model.early_stopping.load_best_model(self.model)
         model_save_name = f"{self.model.model_name}_{self.task_name}_{self.dataset_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         save_torch_model(model_save_name, self.model, self.model_save_dir)
