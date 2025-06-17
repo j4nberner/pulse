@@ -1,1390 +1,1390 @@
 {
-    "results": [
-        {
-            "model_id": "CNNModel",
-            "task_id": "mortality",
-            "dataset": "eicu",
-            "run_id": "20250603_160304",
-            "metrics_summary": {
-                "overall": {
-                    "auroc": 0.845,
-                    "auprc": 0.452,
-                    "normalized_auprc": 6.457,
-                    "specificity": 0.86,
-                    "f1_score": 0.4,
-                    "accuracy": 0.85,
-                    "balanced_accuracy": 0.787,
-                    "precision": 0.278,
-                    "recall": 0.714,
-                    "mcc": 0.382,
-                    "kappa": 0.333,
-                    "minpse": 0.429
-                }
-            }
-        },
-        {
-            "model_id": "CNNModel",
-            "task_id": "mortality",
-            "dataset": "hirid",
-            "run_id": "20250603_160304",
-            "metrics_summary": {
-                "overall": {
-                    "auroc": 0.844,
-                    "auprc": 0.608,
-                    "normalized_auprc": 5.531,
-                    "specificity": 0.899,
-                    "f1_score": 0.519,
-                    "accuracy": 0.87,
-                    "balanced_accuracy": 0.768,
-                    "precision": 0.438,
-                    "recall": 0.636,
-                    "mcc": 0.457,
-                    "kappa": 0.446,
-                    "minpse": 0.545
-                }
-            }
-        },
-        {
-            "model_id": "CNNModel",
-            "task_id": "mortality",
-            "dataset": "miiv",
-            "run_id": "20250603_160304",
-            "metrics_summary": {
-                "overall": {
-                    "auroc": 0.842,
-                    "auprc": 0.43,
-                    "normalized_auprc": 3.584,
-                    "specificity": 0.841,
-                    "f1_score": 0.471,
-                    "accuracy": 0.82,
-                    "balanced_accuracy": 0.754,
-                    "precision": 0.364,
-                    "recall": 0.667,
-                    "mcc": 0.398,
-                    "kappa": 0.373,
-                    "minpse": 0.462
-                }
-            }
-        },
-        {
-            "model_id": "CNNModel",
-            "task_id": "aki",
-            "dataset": "eicu",
-            "run_id": "20250605_113136",
-            "metrics_summary": {
-                "overall": {
-                    "auroc": 0.78,
-                    "auprc": 0.625,
-                    "normalized_auprc": 2.017,
-                    "specificity": 0.761,
-                    "f1_score": 0.626,
-                    "accuracy": 0.742,
-                    "balanced_accuracy": 0.73,
-                    "precision": 0.568,
-                    "recall": 0.698,
-                    "mcc": 0.438,
-                    "kappa": 0.432,
-                    "minpse": 0.595
-                }
-            }
-        },
-        {
-            "model_id": "CNNModel",
-            "task_id": "aki",
-            "dataset": "hirid",
-            "run_id": "20250605_113136",
-            "metrics_summary": {
-                "overall": {
-                    "auroc": 0.807,
-                    "auprc": 0.418,
-                    "normalized_auprc": 2.582,
-                    "specificity": 0.878,
-                    "f1_score": 0.454,
-                    "accuracy": 0.814,
-                    "balanced_accuracy": 0.678,
-                    "precision": 0.432,
-                    "recall": 0.478,
-                    "mcc": 0.342,
-                    "kappa": 0.342,
-                    "minpse": 0.448
-                }
-            }
-        },
-        {
-            "model_id": "CNNModel",
-            "task_id": "aki",
-            "dataset": "miiv",
-            "run_id": "20250605_113136",
-            "metrics_summary": {
-                "overall": {
-                    "auroc": 0.774,
-                    "auprc": 0.601,
-                    "normalized_auprc": 2.581,
-                    "specificity": 0.846,
-                    "f1_score": 0.516,
-                    "accuracy": 0.771,
-                    "balanced_accuracy": 0.685,
-                    "precision": 0.508,
-                    "recall": 0.524,
-                    "mcc": 0.367,
-                    "kappa": 0.366,
-                    "minpse": 0.511
-                }
-            }
-        },
-        {
-            "model_id": "CNNModel",
-            "task_id": "sepsis",
-            "dataset": "eicu",
-            "run_id": "20250605_113136",
-            "metrics_summary": {
-                "overall": {
-                    "auroc": 0.529,
-                    "auprc": 0.051,
-                    "normalized_auprc": 1.057,
-                    "specificity": 0.979,
-                    "f1_score": 0.0,
-                    "accuracy": 0.932,
-                    "balanced_accuracy": 0.489,
-                    "precision": 0.0,
-                    "recall": 0.0,
-                    "mcc": -0.032,
-                    "kappa": -0.029,
-                    "minpse": 0.085
-                }
-            }
-        },
-        {
-            "model_id": "CNNModel",
-            "task_id": "sepsis",
-            "dataset": "hirid",
-            "run_id": "20250605_113136",
-            "metrics_summary": {
-                "overall": {
-                    "auroc": 0.694,
-                    "auprc": 0.24,
-                    "normalized_auprc": 3.184,
-                    "specificity": 0.973,
-                    "f1_score": 0.268,
-                    "accuracy": 0.915,
-                    "balanced_accuracy": 0.589,
-                    "precision": 0.385,
-                    "recall": 0.205,
-                    "mcc": 0.24,
-                    "kappa": 0.227,
-                    "minpse": 0.222
-                }
-            }
-        },
-        {
-            "model_id": "CNNModel",
-            "task_id": "sepsis",
-            "dataset": "miiv",
-            "run_id": "20250605_113136",
-            "metrics_summary": {
-                "overall": {
-                    "auroc": 0.624,
-                    "auprc": 0.035,
-                    "normalized_auprc": 1.367,
-                    "specificity": 0.987,
-                    "f1_score": 0.051,
-                    "accuracy": 0.963,
-                    "balanced_accuracy": 0.513,
-                    "precision": 0.071,
-                    "recall": 0.04,
-                    "mcc": 0.035,
-                    "kappa": 0.034,
-                    "minpse": 0.05
-                }
-            }
-        },
-        {
-            "model_id": "GRUModel",
-            "task_id": "mortality",
-            "dataset": "eicu",
-            "run_id": "20250603_192812",
-            "metrics_summary": {
-                "overall": {
-                    "auroc": 0.86,
-                    "auprc": 0.386,
-                    "normalized_auprc": 5.519,
-                    "specificity": 0.957,
-                    "f1_score": 0.308,
-                    "accuracy": 0.91,
-                    "balanced_accuracy": 0.621,
-                    "precision": 0.333,
-                    "recall": 0.286,
-                    "mcc": 0.261,
-                    "kappa": 0.26,
-                    "minpse": 0.333
-                }
-            }
-        },
-        {
-            "model_id": "GRUModel",
-            "task_id": "mortality",
-            "dataset": "hirid",
-            "run_id": "20250603_192812",
-            "metrics_summary": {
-                "overall": {
-                    "auroc": 0.74,
-                    "auprc": 0.255,
-                    "normalized_auprc": 2.316,
-                    "specificity": 0.787,
-                    "f1_score": 0.286,
-                    "accuracy": 0.75,
-                    "balanced_accuracy": 0.621,
-                    "precision": 0.208,
-                    "recall": 0.455,
-                    "mcc": 0.177,
-                    "kappa": 0.159,
-                    "minpse": 0.364
-                }
-            }
-        },
-        {
-            "model_id": "GRUModel",
-            "task_id": "mortality",
-            "dataset": "miiv",
-            "run_id": "20250603_192812",
-            "metrics_summary": {
-                "overall": {
-                    "auroc": 0.807,
-                    "auprc": 0.492,
-                    "normalized_auprc": 4.104,
-                    "specificity": 0.682,
-                    "f1_score": 0.367,
-                    "accuracy": 0.69,
-                    "balanced_accuracy": 0.716,
-                    "precision": 0.243,
-                    "recall": 0.75,
-                    "mcc": 0.291,
-                    "kappa": 0.227,
-                    "minpse": 0.5
-                }
-            }
-        },
-        {
-            "model_id": "GRUModel",
-            "task_id": "aki",
-            "dataset": "eicu",
-            "run_id": "20250603_192812",
-            "metrics_summary": {
-                "overall": {
-                    "auroc": 0.756,
-                    "auprc": 0.59,
-                    "normalized_auprc": 1.904,
-                    "specificity": 0.782,
-                    "f1_score": 0.564,
-                    "accuracy": 0.721,
-                    "balanced_accuracy": 0.683,
-                    "precision": 0.546,
-                    "recall": 0.584,
-                    "mcc": 0.359,
-                    "kappa": 0.359,
-                    "minpse": 0.564
-                }
-            }
-        },
-        {
-            "model_id": "GRUModel",
-            "task_id": "aki",
-            "dataset": "hirid",
-            "run_id": "20250603_192812",
-            "metrics_summary": {
-                "overall": {
-                    "auroc": 0.694,
-                    "auprc": 0.352,
-                    "normalized_auprc": 2.177,
-                    "specificity": 0.733,
-                    "f1_score": 0.391,
-                    "accuracy": 0.708,
-                    "balanced_accuracy": 0.656,
-                    "precision": 0.295,
-                    "recall": 0.579,
-                    "mcc": 0.246,
-                    "kappa": 0.224,
-                    "minpse": 0.41
-                }
-            }
-        },
-        {
-            "model_id": "GRUModel",
-            "task_id": "aki",
-            "dataset": "miiv",
-            "run_id": "20250603_192812",
-            "metrics_summary": {
-                "overall": {
-                    "auroc": 0.797,
-                    "auprc": 0.595,
-                    "normalized_auprc": 2.556,
-                    "specificity": 0.841,
-                    "f1_score": 0.584,
-                    "accuracy": 0.792,
-                    "balanced_accuracy": 0.735,
-                    "precision": 0.545,
-                    "recall": 0.629,
-                    "mcc": 0.448,
-                    "kappa": 0.446,
-                    "minpse": 0.576
-                }
-            }
-        },
-        {
-            "model_id": "GRUModel",
-            "task_id": "sepsis",
-            "dataset": "eicu",
-            "run_id": "20250603_192812",
-            "metrics_summary": {
-                "overall": {
-                    "auroc": 0.624,
-                    "auprc": 0.063,
-                    "normalized_auprc": 1.306,
-                    "specificity": 0.61,
-                    "f1_score": 0.123,
-                    "accuracy": 0.608,
-                    "balanced_accuracy": 0.592,
-                    "precision": 0.069,
-                    "recall": 0.574,
-                    "mcc": 0.08,
-                    "kappa": 0.041,
-                    "minpse": 0.083
-                }
-            }
-        },
-        {
-            "model_id": "GRUModel",
-            "task_id": "sepsis",
-            "dataset": "hirid",
-            "run_id": "20250603_192812",
-            "metrics_summary": {
-                "overall": {
-                    "auroc": 0.382,
-                    "auprc": 0.056,
-                    "normalized_auprc": 0.749,
-                    "specificity": 0.662,
-                    "f1_score": 0.057,
-                    "accuracy": 0.623,
-                    "balanced_accuracy": 0.406,
-                    "precision": 0.035,
-                    "recall": 0.151,
-                    "mcc": -0.106,
-                    "kappa": -0.075,
-                    "minpse": 0.076
-                }
-            }
-        },
-        {
-            "model_id": "GRUModel",
-            "task_id": "sepsis",
-            "dataset": "miiv",
-            "run_id": "20250603_192812",
-            "metrics_summary": {
-                "overall": {
-                    "auroc": 0.338,
-                    "auprc": 0.024,
-                    "normalized_auprc": 0.952,
-                    "specificity": 0.777,
-                    "f1_score": 0.049,
-                    "accuracy": 0.764,
-                    "balanced_accuracy": 0.509,
-                    "precision": 0.027,
-                    "recall": 0.24,
-                    "mcc": 0.006,
-                    "kappa": 0.004,
-                    "minpse": 0.072
-                }
-            }
-        },
-        {
-            "model_id": "InceptionTimeModel",
-            "task_id": "aki",
-            "dataset": "eicu",
-            "run_id": "20250606_140125",
-            "metrics_summary": {
-                "overall": {
-                    "auroc": 0.767,
-                    "auprc": 0.606,
-                    "normalized_auprc": 1.954,
-                    "specificity": 0.772,
-                    "f1_score": 0.614,
-                    "accuracy": 0.74,
-                    "balanced_accuracy": 0.72,
-                    "precision": 0.568,
-                    "recall": 0.669,
-                    "mcc": 0.423,
-                    "kappa": 0.42,
-                    "minpse": 0.584
-                }
-            }
-        },
-        {
-            "model_id": "InceptionTimeModel",
-            "task_id": "aki",
-            "dataset": "hirid",
-            "run_id": "20250606_140125",
-            "metrics_summary": {
-                "overall": {
-                    "auroc": 0.738,
-                    "auprc": 0.344,
-                    "normalized_auprc": 2.122,
-                    "specificity": 0.721,
-                    "f1_score": 0.419,
-                    "accuracy": 0.709,
-                    "balanced_accuracy": 0.684,
-                    "precision": 0.309,
-                    "recall": 0.648,
-                    "mcc": 0.287,
-                    "kappa": 0.256,
-                    "minpse": 0.392
-                }
-            }
-        },
-        {
-            "model_id": "InceptionTimeModel",
-            "task_id": "aki",
-            "dataset": "miiv",
-            "run_id": "20250606_140125",
-            "metrics_summary": {
-                "overall": {
-                    "auroc": 0.771,
-                    "auprc": 0.576,
-                    "normalized_auprc": 2.474,
-                    "specificity": 0.82,
-                    "f1_score": 0.51,
-                    "accuracy": 0.756,
-                    "balanced_accuracy": 0.683,
-                    "precision": 0.479,
-                    "recall": 0.546,
-                    "mcc": 0.35,
-                    "kappa": 0.349,
-                    "minpse": 0.52
-                }
-            }
-        },
-        {
-            "model_id": "InceptionTimeModel",
-            "task_id": "sepsis",
-            "dataset": "eicu",
-            "run_id": "20250606_140125",
-            "metrics_summary": {
-                "overall": {
-                    "auroc": 0.591,
-                    "auprc": 0.064,
-                    "normalized_auprc": 1.332,
-                    "specificity": 0.605,
-                    "f1_score": 0.113,
-                    "accuracy": 0.601,
-                    "balanced_accuracy": 0.568,
-                    "precision": 0.063,
-                    "recall": 0.532,
-                    "mcc": 0.059,
-                    "kappa": 0.03,
-                    "minpse": 0.098
-                }
-            }
-        },
-        {
-            "model_id": "InceptionTimeModel",
-            "task_id": "sepsis",
-            "dataset": "hirid",
-            "run_id": "20250606_140125",
-            "metrics_summary": {
-                "overall": {
-                    "auroc": 0.295,
-                    "auprc": 0.049,
-                    "normalized_auprc": 0.656,
-                    "specificity": 0.647,
-                    "f1_score": 0.05,
-                    "accuracy": 0.609,
-                    "balanced_accuracy": 0.392,
-                    "precision": 0.031,
-                    "recall": 0.137,
-                    "mcc": -0.12,
-                    "kappa": -0.083,
-                    "minpse": 0.076
-                }
-            }
-        },
-        {
-            "model_id": "InceptionTimeModel",
-            "task_id": "sepsis",
-            "dataset": "miiv",
-            "run_id": "20250606_140125",
-            "metrics_summary": {
-                "overall": {
-                    "auroc": 0.596,
-                    "auprc": 0.034,
-                    "normalized_auprc": 1.339,
-                    "specificity": 0.781,
-                    "f1_score": 0.058,
-                    "accuracy": 0.769,
-                    "balanced_accuracy": 0.531,
-                    "precision": 0.032,
-                    "recall": 0.28,
-                    "mcc": 0.023,
-                    "kappa": 0.013,
-                    "minpse": 0.067
-                }
-            }
-        },
-        {
-            "model_id": "InceptionTimeModel",
-            "task_id": "mortality",
-            "dataset": "eicu",
-            "run_id": "20250606_140125",
-            "metrics_summary": {
-                "overall": {
-                    "auroc": 0.403,
-                    "auprc": 0.083,
-                    "normalized_auprc": 1.186,
-                    "specificity": 0.645,
-                    "f1_score": 0.095,
-                    "accuracy": 0.62,
-                    "balanced_accuracy": 0.465,
-                    "precision": 0.057,
-                    "recall": 0.286,
-                    "mcc": -0.037,
-                    "kappa": -0.024,
-                    "minpse": 0.182
-                }
-            }
-        },
-        {
-            "model_id": "InceptionTimeModel",
-            "task_id": "mortality",
-            "dataset": "hirid",
-            "run_id": "20250606_140125",
-            "metrics_summary": {
-                "overall": {
-                    "auroc": 0.662,
-                    "auprc": 0.251,
-                    "normalized_auprc": 2.282,
-                    "specificity": 0.539,
-                    "f1_score": 0.237,
-                    "accuracy": 0.55,
-                    "balanced_accuracy": 0.588,
-                    "precision": 0.146,
-                    "recall": 0.636,
-                    "mcc": 0.11,
-                    "kappa": 0.071,
-                    "minpse": 0.364
-                }
-            }
-        },
-        {
-            "model_id": "InceptionTimeModel",
-            "task_id": "mortality",
-            "dataset": "miiv",
-            "run_id": "20250606_140125",
-            "metrics_summary": {
-                "overall": {
-                    "auroc": 0.75,
-                    "auprc": 0.489,
-                    "normalized_auprc": 4.073,
-                    "specificity": 0.716,
-                    "f1_score": 0.318,
-                    "accuracy": 0.7,
-                    "balanced_accuracy": 0.65,
-                    "precision": 0.219,
-                    "recall": 0.583,
-                    "mcc": 0.208,
-                    "kappa": 0.174,
-                    "minpse": 0.462
-                }
-            }
-        },
-        {
-            "model_id": "LSTMModel",
-            "task_id": "mortality",
-            "dataset": "eicu",
-            "run_id": "20250604_094650",
-            "metrics_summary": {
-                "overall": {
-                    "auroc": 0.845,
-                    "auprc": 0.507,
-                    "normalized_auprc": 7.241,
-                    "specificity": 0.989,
-                    "f1_score": 0.4,
-                    "accuracy": 0.94,
-                    "balanced_accuracy": 0.637,
-                    "precision": 0.667,
-                    "recall": 0.286,
-                    "mcc": 0.411,
-                    "kappa": 0.374,
-                    "minpse": 0.429
-                }
-            }
-        },
-        {
-            "model_id": "LSTMModel",
-            "task_id": "mortality",
-            "dataset": "hirid",
-            "run_id": "20250604_094650",
-            "metrics_summary": {
-                "overall": {
-                    "auroc": 0.804,
-                    "auprc": 0.454,
-                    "normalized_auprc": 4.124,
-                    "specificity": 0.472,
-                    "f1_score": 0.269,
-                    "accuracy": 0.51,
-                    "balanced_accuracy": 0.645,
-                    "precision": 0.161,
-                    "recall": 0.818,
-                    "mcc": 0.183,
-                    "kappa": 0.104,
-                    "minpse": 0.364
-                }
-            }
-        },
-        {
-            "model_id": "LSTMModel",
-            "task_id": "mortality",
-            "dataset": "miiv",
-            "run_id": "20250604_094650",
-            "metrics_summary": {
-                "overall": {
-                    "auroc": 0.871,
-                    "auprc": 0.465,
-                    "normalized_auprc": 3.877,
-                    "specificity": 0.739,
-                    "f1_score": 0.478,
-                    "accuracy": 0.76,
-                    "balanced_accuracy": 0.828,
-                    "precision": 0.324,
-                    "recall": 0.917,
-                    "mcc": 0.45,
-                    "kappa": 0.366,
-                    "minpse": 0.5
-                }
-            }
-        },
-        {
-            "model_id": "LSTMModel",
-            "task_id": "aki",
-            "dataset": "eicu",
-            "run_id": "20250605_112438",
-            "metrics_summary": {
-                "overall": {
-                    "auroc": 0.41,
-                    "auprc": 0.297,
-                    "normalized_auprc": 0.959,
-                    "specificity": 0.0,
-                    "f1_score": 0.473,
-                    "accuracy": 0.31,
-                    "balanced_accuracy": 0.5,
-                    "precision": 0.31,
-                    "recall": 1.0,
-                    "mcc": 0.0,
-                    "kappa": 0.0,
-                    "minpse": 0.31
-                }
-            }
-        },
-        {
-            "model_id": "LSTMModel",
-            "task_id": "aki",
-            "dataset": "hirid",
-            "run_id": "20250605_112438",
-            "metrics_summary": {
-                "overall": {
-                    "auroc": 0.762,
-                    "auprc": 0.415,
-                    "normalized_auprc": 2.561,
-                    "specificity": 0.892,
-                    "f1_score": 0.44,
-                    "accuracy": 0.819,
-                    "balanced_accuracy": 0.666,
-                    "precision": 0.44,
-                    "recall": 0.44,
-                    "mcc": 0.332,
-                    "kappa": 0.332,
-                    "minpse": 0.44
-                }
-            }
-        },
-        {
-            "model_id": "LSTMModel",
-            "task_id": "aki",
-            "dataset": "miiv",
-            "run_id": "20250605_112438",
-            "metrics_summary": {
-                "overall": {
-                    "auroc": 0.809,
-                    "auprc": 0.639,
-                    "normalized_auprc": 2.744,
-                    "specificity": 0.049,
-                    "f1_score": 0.389,
-                    "accuracy": 0.27,
-                    "balanced_accuracy": 0.525,
-                    "precision": 0.242,
-                    "recall": 1.0,
-                    "mcc": 0.109,
-                    "kappa": 0.023,
-                    "minpse": 0.571
-                }
-            }
-        },
-        {
-            "model_id": "LSTMModel",
-            "task_id": "sepsis",
-            "dataset": "eicu",
-            "run_id": "20250605_112438",
-            "metrics_summary": {
-                "overall": {
-                    "auroc": 0.698,
-                    "auprc": 0.076,
-                    "normalized_auprc": 1.587,
-                    "specificity": 0.0,
-                    "f1_score": 0.092,
-                    "accuracy": 0.048,
-                    "balanced_accuracy": 0.5,
-                    "precision": 0.048,
-                    "recall": 1.0,
-                    "mcc": 0.0,
-                    "kappa": 0.0,
-                    "minpse": 0.1
-                }
-            }
-        },
-        {
-            "model_id": "LSTMModel",
-            "task_id": "sepsis",
-            "dataset": "hirid",
-            "run_id": "20250605_112438",
-            "metrics_summary": {
-                "overall": {
-                    "auroc": 0.615,
-                    "auprc": 0.183,
-                    "normalized_auprc": 2.424,
-                    "specificity": 0.789,
-                    "f1_score": 0.212,
-                    "accuracy": 0.762,
-                    "balanced_accuracy": 0.607,
-                    "precision": 0.141,
-                    "recall": 0.425,
-                    "mcc": 0.135,
-                    "kappa": 0.111,
-                    "minpse": 0.185
-                }
-            }
-        },
-        {
-            "model_id": "LSTMModel",
-            "task_id": "sepsis",
-            "dataset": "miiv",
-            "run_id": "20250605_112438",
-            "metrics_summary": {
-                "overall": {
-                    "auroc": 0.705,
-                    "auprc": 0.095,
-                    "normalized_auprc": 3.75,
-                    "specificity": 0.976,
-                    "f1_score": 0.08,
-                    "accuracy": 0.954,
-                    "balanced_accuracy": 0.528,
-                    "precision": 0.08,
-                    "recall": 0.08,
-                    "mcc": 0.056,
-                    "kappa": 0.056,
-                    "minpse": 0.148
-                }
-            }
-        },
-        {
-            "model_id": "XGBoost",
-            "task_id": "mortality",
-            "dataset": "eicu",
-            "run_id": "20250604_145501",
-            "metrics_summary": {
-                "overall": {
-                    "auroc": 0.817,
-                    "auprc": 0.45,
-                    "normalized_auprc": 6.43,
-                    "specificity": 1.0,
-                    "f1_score": 0.444,
-                    "accuracy": 0.95,
-                    "balanced_accuracy": 0.643,
-                    "precision": 1.0,
-                    "recall": 0.286,
-                    "mcc": 0.521,
-                    "kappa": 0.427,
-                    "minpse": 0.429
-                }
-            }
-        },
-        {
-            "model_id": "XGBoost",
-            "task_id": "mortality",
-            "dataset": "hirid",
-            "run_id": "20250604_145501",
-            "metrics_summary": {
-                "overall": {
-                    "auroc": 0.806,
-                    "auprc": 0.531,
-                    "normalized_auprc": 4.831,
-                    "specificity": 1.0,
-                    "f1_score": 0.429,
-                    "accuracy": 0.92,
-                    "balanced_accuracy": 0.636,
-                    "precision": 1.0,
-                    "recall": 0.273,
-                    "mcc": 0.5,
-                    "kappa": 0.4,
-                    "minpse": 0.455
-                }
-            }
-        },
-        {
-            "model_id": "XGBoost",
-            "task_id": "mortality",
-            "dataset": "miiv",
-            "run_id": "20250604_145501",
-            "metrics_summary": {
-                "overall": {
-                    "auroc": 0.865,
-                    "auprc": 0.454,
-                    "normalized_auprc": 3.782,
-                    "specificity": 0.989,
-                    "f1_score": 0.0,
-                    "accuracy": 0.87,
-                    "balanced_accuracy": 0.494,
-                    "precision": 0.0,
-                    "recall": 0.0,
-                    "mcc": -0.037,
-                    "kappa": -0.019,
-                    "minpse": 0.583
-                }
-            }
-        },
-        {
-            "model_id": "XGBoost",
-            "task_id": "aki",
-            "dataset": "eicu",
-            "run_id": "20250604_145501",
-            "metrics_summary": {
-                "overall": {
-                    "auroc": 0.805,
-                    "auprc": 0.764,
-                    "normalized_auprc": 1.845,
-                    "specificity": 0.959,
-                    "f1_score": 0.407,
-                    "accuracy": 0.674,
-                    "balanced_accuracy": 0.615,
-                    "precision": 0.824,
-                    "recall": 0.271,
-                    "mcc": 0.33,
-                    "kappa": 0.255,
-                    "minpse": 0.681
-                }
-            }
-        },
-        {
-            "model_id": "XGBoost",
-            "task_id": "aki",
-            "dataset": "hirid",
-            "run_id": "20250604_145501",
-            "metrics_summary": {
-                "overall": {
-                    "auroc": 0.85,
-                    "auprc": 0.621,
-                    "normalized_auprc": 3.267,
-                    "specificity": 0.998,
-                    "f1_score": 0.189,
-                    "accuracy": 0.828,
-                    "balanced_accuracy": 0.551,
-                    "precision": 0.909,
-                    "recall": 0.105,
-                    "mcc": 0.275,
-                    "kappa": 0.155,
-                    "minpse": 0.621
-                }
-            }
-        },
-        {
-            "model_id": "XGBoost",
-            "task_id": "aki",
-            "dataset": "miiv",
-            "run_id": "20250604_145501",
-            "metrics_summary": {
-                "overall": {
-                    "auroc": 0.786,
-                    "auprc": 0.66,
-                    "normalized_auprc": 2.076,
-                    "specificity": 0.982,
-                    "f1_score": 0.39,
-                    "accuracy": 0.75,
-                    "balanced_accuracy": 0.617,
-                    "precision": 0.87,
-                    "recall": 0.252,
-                    "mcc": 0.377,
-                    "kappa": 0.289,
-                    "minpse": 0.571
-                }
-            }
-        },
-        {
-            "model_id": "XGBoost",
-            "task_id": "sepsis",
-            "dataset": "eicu",
-            "run_id": "20250604_145501",
-            "metrics_summary": {
-                "overall": {
-                    "auroc": 0.703,
-                    "auprc": 0.108,
-                    "normalized_auprc": 1.931,
-                    "specificity": 0.992,
-                    "f1_score": 0.0,
-                    "accuracy": 0.936,
-                    "balanced_accuracy": 0.496,
-                    "precision": 0.0,
-                    "recall": 0.0,
-                    "mcc": -0.022,
-                    "kappa": -0.014,
-                    "minpse": 0.189
-                }
-            }
-        },
-        {
-            "model_id": "XGBoost",
-            "task_id": "sepsis",
-            "dataset": "hirid",
-            "run_id": "20250604_145501",
-            "metrics_summary": {
-                "overall": {
-                    "auroc": 0.872,
-                    "auprc": 0.355,
-                    "normalized_auprc": 3.903,
-                    "specificity": 1.0,
-                    "f1_score": 0.043,
-                    "accuracy": 0.911,
-                    "balanced_accuracy": 0.511,
-                    "precision": 1.0,
-                    "recall": 0.022,
-                    "mcc": 0.142,
-                    "kappa": 0.04,
-                    "minpse": 0.412
-                }
-            }
-        },
-        {
-            "model_id": "XGBoost",
-            "task_id": "sepsis",
-            "dataset": "miiv",
-            "run_id": "20250604_145501",
-            "metrics_summary": {
-                "overall": {
-                    "auroc": 0.635,
-                    "auprc": 0.074,
-                    "normalized_auprc": 2.06,
-                    "specificity": 1.0,
-                    "f1_score": 0.0,
-                    "accuracy": 0.964,
-                    "balanced_accuracy": 0.5,
-                    "precision": 0.0,
-                    "recall": 0.0,
-                    "mcc": 0.0,
-                    "kappa": 0.0,
-                    "minpse": 0.182
-                }
-            }
-        },
-        {
-            "model_id": "LightGBM",
-            "task_id": "mortality",
-            "dataset": "eicu",
-            "run_id": "20250604_151243",
-            "metrics_summary": {
-                "overall": {
-                    "auroc": 0.857,
-                    "auprc": 0.473,
-                    "normalized_auprc": 6.751,
-                    "specificity": 1.0,
-                    "f1_score": 0.25,
-                    "accuracy": 0.94,
-                    "balanced_accuracy": 0.571,
-                    "precision": 1.0,
-                    "recall": 0.143,
-                    "mcc": 0.366,
-                    "kappa": 0.237,
-                    "minpse": 0.429
-                }
-            }
-        },
-        {
-            "model_id": "LightGBM",
-            "task_id": "mortality",
-            "dataset": "hirid",
-            "run_id": "20250604_151243",
-            "metrics_summary": {
-                "overall": {
-                    "auroc": 0.906,
-                    "auprc": 0.637,
-                    "normalized_auprc": 5.793,
-                    "specificity": 1.0,
-                    "f1_score": 0.429,
-                    "accuracy": 0.92,
-                    "balanced_accuracy": 0.636,
-                    "precision": 1.0,
-                    "recall": 0.273,
-                    "mcc": 0.5,
-                    "kappa": 0.4,
-                    "minpse": 0.545
-                }
-            }
-        },
-        {
-            "model_id": "LightGBM",
-            "task_id": "mortality",
-            "dataset": "miiv",
-            "run_id": "20250604_151243",
-            "metrics_summary": {
-                "overall": {
-                    "auroc": 0.879,
-                    "auprc": 0.464,
-                    "normalized_auprc": 3.863,
-                    "specificity": 0.989,
-                    "f1_score": 0.0,
-                    "accuracy": 0.87,
-                    "balanced_accuracy": 0.494,
-                    "precision": 0.0,
-                    "recall": 0.0,
-                    "mcc": -0.037,
-                    "kappa": -0.019,
-                    "minpse": 0.5
-                }
-            }
-        },
-        {
-            "model_id": "LightGBM",
-            "task_id": "aki",
-            "dataset": "eicu",
-            "run_id": "20250604_151243",
-            "metrics_summary": {
-                "overall": {
-                    "auroc": 0.802,
-                    "auprc": 0.761,
-                    "normalized_auprc": 1.838,
-                    "specificity": 0.983,
-                    "f1_score": 0.4,
-                    "accuracy": 0.682,
-                    "balanced_accuracy": 0.619,
-                    "precision": 0.914,
-                    "recall": 0.256,
-                    "mcc": 0.368,
-                    "kappa": 0.267,
-                    "minpse": 0.686
-                }
-            }
-        },
-        {
-            "model_id": "LightGBM",
-            "task_id": "aki",
-            "dataset": "hirid",
-            "run_id": "20250604_151243",
-            "metrics_summary": {
-                "overall": {
-                    "auroc": 0.853,
-                    "auprc": 0.645,
-                    "normalized_auprc": 3.395,
-                    "specificity": 1.0,
-                    "f1_score": 0.208,
-                    "accuracy": 0.832,
-                    "balanced_accuracy": 0.558,
-                    "precision": 1.0,
-                    "recall": 0.116,
-                    "mcc": 0.31,
-                    "kappa": 0.175,
-                    "minpse": 0.611
-                }
-            }
-        },
-        {
-            "model_id": "LightGBM",
-            "task_id": "aki",
-            "dataset": "miiv",
-            "run_id": "20250604_151243",
-            "metrics_summary": {
-                "overall": {
-                    "auroc": 0.772,
-                    "auprc": 0.649,
-                    "normalized_auprc": 2.04,
-                    "specificity": 0.979,
-                    "f1_score": 0.38,
-                    "accuracy": 0.746,
-                    "balanced_accuracy": 0.612,
-                    "precision": 0.848,
-                    "recall": 0.245,
-                    "mcc": 0.362,
-                    "kappa": 0.277,
-                    "minpse": 0.56
-                }
-            }
-        },
-        {
-            "model_id": "LightGBM",
-            "task_id": "sepsis",
-            "dataset": "eicu",
-            "run_id": "20250604_151243",
-            "metrics_summary": {
-                "overall": {
-                    "auroc": 0.663,
-                    "auprc": 0.117,
-                    "normalized_auprc": 2.084,
-                    "specificity": 1.0,
-                    "f1_score": 0.0,
-                    "accuracy": 0.944,
-                    "balanced_accuracy": 0.5,
-                    "precision": 0.0,
-                    "recall": 0.0,
-                    "mcc": 0.0,
-                    "kappa": 0.0,
-                    "minpse": 0.241
-                }
-            }
-        },
-        {
-            "model_id": "LightGBM",
-            "task_id": "sepsis",
-            "dataset": "hirid",
-            "run_id": "20250604_151243",
-            "metrics_summary": {
-                "overall": {
-                    "auroc": 0.887,
-                    "auprc": 0.34,
-                    "normalized_auprc": 3.742,
-                    "specificity": 0.996,
-                    "f1_score": 0.0,
-                    "accuracy": 0.905,
-                    "balanced_accuracy": 0.498,
-                    "precision": 0.0,
-                    "recall": 0.0,
-                    "mcc": -0.02,
-                    "kappa": -0.008,
-                    "minpse": 0.378
-                }
-            }
-        },
-        {
-            "model_id": "LightGBM",
-            "task_id": "sepsis",
-            "dataset": "miiv",
-            "run_id": "20250604_151243",
-            "metrics_summary": {
-                "overall": {
-                    "auroc": 0.627,
-                    "auprc": 0.067,
-                    "normalized_auprc": 1.868,
-                    "specificity": 1.0,
-                    "f1_score": 0.0,
-                    "accuracy": 0.964,
-                    "balanced_accuracy": 0.5,
-                    "precision": 0.0,
-                    "recall": 0.0,
-                    "mcc": 0.0,
-                    "kappa": 0.0,
-                    "minpse": 0.139
-                }
-            }
-        },
-        {
-            "model_id": "RandomForest",
-            "task_id": "mortality",
-            "dataset": "eicu",
-            "run_id": "20250604_151406",
-            "metrics_summary": {
-                "overall": {
-                    "auroc": 0.773,
-                    "auprc": 0.469,
-                    "normalized_auprc": 6.705,
-                    "specificity": 1.0,
-                    "f1_score": 0.25,
-                    "accuracy": 0.94,
-                    "balanced_accuracy": 0.571,
-                    "precision": 1.0,
-                    "recall": 0.143,
-                    "mcc": 0.366,
-                    "kappa": 0.237,
-                    "minpse": 0.429
-                }
-            }
-        },
-        {
-            "model_id": "RandomForest",
-            "task_id": "mortality",
-            "dataset": "hirid",
-            "run_id": "20250604_151406",
-            "metrics_summary": {
-                "overall": {
-                    "auroc": 0.902,
-                    "auprc": 0.614,
-                    "normalized_auprc": 5.58,
-                    "specificity": 1.0,
-                    "f1_score": 0.308,
-                    "accuracy": 0.91,
-                    "balanced_accuracy": 0.591,
-                    "precision": 1.0,
-                    "recall": 0.182,
-                    "mcc": 0.406,
-                    "kappa": 0.283,
-                    "minpse": 0.5
-                }
-            }
-        },
-        {
-            "model_id": "RandomForest",
-            "task_id": "mortality",
-            "dataset": "miiv",
-            "run_id": "20250604_151406",
-            "metrics_summary": {
-                "overall": {
-                    "auroc": 0.823,
-                    "auprc": 0.652,
-                    "normalized_auprc": 5.434,
-                    "specificity": 1.0,
-                    "f1_score": 0.0,
-                    "accuracy": 0.88,
-                    "balanced_accuracy": 0.5,
-                    "precision": 0.0,
-                    "recall": 0.0,
-                    "mcc": 0.0,
-                    "kappa": 0.0,
-                    "minpse": 0.667
-                }
-            }
-        },
-        {
-            "model_id": "RandomForest",
-            "task_id": "aki",
-            "dataset": "eicu",
-            "run_id": "20250604_151406",
-            "metrics_summary": {
-                "overall": {
-                    "auroc": 0.757,
-                    "auprc": 0.71,
-                    "normalized_auprc": 1.714,
-                    "specificity": 0.969,
-                    "f1_score": 0.345,
-                    "accuracy": 0.658,
-                    "balanced_accuracy": 0.593,
-                    "precision": 0.833,
-                    "recall": 0.217,
-                    "mcc": 0.296,
-                    "kappa": 0.209,
-                    "minpse": 0.638
-                }
-            }
-        },
-        {
-            "model_id": "RandomForest",
-            "task_id": "aki",
-            "dataset": "hirid",
-            "run_id": "20250604_151406",
-            "metrics_summary": {
-                "overall": {
-                    "auroc": 0.729,
-                    "auprc": 0.5,
-                    "normalized_auprc": 2.63,
-                    "specificity": 1.0,
-                    "f1_score": 0.0,
-                    "accuracy": 0.81,
-                    "balanced_accuracy": 0.5,
-                    "precision": 0.0,
-                    "recall": 0.0,
-                    "mcc": 0.0,
-                    "kappa": 0.0,
-                    "minpse": 0.406
-                }
-            }
-        },
-        {
-            "model_id": "RandomForest",
-            "task_id": "aki",
-            "dataset": "miiv",
-            "run_id": "20250604_151406",
-            "metrics_summary": {
-                "overall": {
-                    "auroc": 0.755,
-                    "auprc": 0.603,
-                    "normalized_auprc": 1.896,
-                    "specificity": 0.994,
-                    "f1_score": 0.221,
-                    "accuracy": 0.718,
-                    "balanced_accuracy": 0.56,
-                    "precision": 0.909,
-                    "recall": 0.126,
-                    "mcc": 0.272,
-                    "kappa": 0.156,
-                    "minpse": 0.523
-                }
-            }
-        },
-        {
-            "model_id": "RandomForest",
-            "task_id": "sepsis",
-            "dataset": "eicu",
-            "run_id": "20250604_151406",
-            "metrics_summary": {
-                "overall": {
-                    "auroc": 0.583,
-                    "auprc": 0.094,
-                    "normalized_auprc": 1.674,
-                    "specificity": 1.0,
-                    "f1_score": 0.0,
-                    "accuracy": 0.944,
-                    "balanced_accuracy": 0.5,
-                    "precision": 0.0,
-                    "recall": 0.0,
-                    "mcc": 0.0,
-                    "kappa": 0.0,
-                    "minpse": 0.214
-                }
-            }
-        },
-        {
-            "model_id": "RandomForest",
-            "task_id": "sepsis",
-            "dataset": "hirid",
-            "run_id": "20250604_151406",
-            "metrics_summary": {
-                "overall": {
-                    "auroc": 0.839,
-                    "auprc": 0.309,
-                    "normalized_auprc": 3.399,
-                    "specificity": 1.0,
-                    "f1_score": 0.0,
-                    "accuracy": 0.909,
-                    "balanced_accuracy": 0.5,
-                    "precision": 0.0,
-                    "recall": 0.0,
-                    "mcc": 0.0,
-                    "kappa": 0.0,
-                    "minpse": 0.365
-                }
-            }
-        },
-        {
-            "model_id": "RandomForest",
-            "task_id": "sepsis",
-            "dataset": "miiv",
-            "run_id": "20250604_151406",
-            "metrics_summary": {
-                "overall": {
-                    "auroc": 0.62,
-                    "auprc": 0.046,
-                    "normalized_auprc": 1.291,
-                    "specificity": 1.0,
-                    "f1_score": 0.0,
-                    "accuracy": 0.964,
-                    "balanced_accuracy": 0.5,
-                    "precision": 0.0,
-                    "recall": 0.0,
-                    "mcc": 0.0,
-                    "kappa": 0.0,
-                    "minpse": 0.059
-                }
-            }
+  "results": [
+    {
+      "model_id": "CNNModel",
+      "task_id": "mortality",
+      "dataset": "eicu",
+      "run_id": "20250603_160304",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.845,
+          "auprc": 0.452,
+          "normalized_auprc": 6.457,
+          "specificity": 0.86,
+          "f1_score": 0.4,
+          "accuracy": 0.85,
+          "balanced_accuracy": 0.787,
+          "precision": 0.278,
+          "recall": 0.714,
+          "mcc": 0.382,
+          "kappa": 0.333,
+          "minpse": 0.429
         }
-    ]
+      }
+    },
+    {
+      "model_id": "CNNModel",
+      "task_id": "mortality",
+      "dataset": "hirid",
+      "run_id": "20250603_160304",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.844,
+          "auprc": 0.608,
+          "normalized_auprc": 5.531,
+          "specificity": 0.899,
+          "f1_score": 0.519,
+          "accuracy": 0.87,
+          "balanced_accuracy": 0.768,
+          "precision": 0.438,
+          "recall": 0.636,
+          "mcc": 0.457,
+          "kappa": 0.446,
+          "minpse": 0.545
+        }
+      }
+    },
+    {
+      "model_id": "CNNModel",
+      "task_id": "mortality",
+      "dataset": "miiv",
+      "run_id": "20250603_160304",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.842,
+          "auprc": 0.43,
+          "normalized_auprc": 3.584,
+          "specificity": 0.841,
+          "f1_score": 0.471,
+          "accuracy": 0.82,
+          "balanced_accuracy": 0.754,
+          "precision": 0.364,
+          "recall": 0.667,
+          "mcc": 0.398,
+          "kappa": 0.373,
+          "minpse": 0.462
+        }
+      }
+    },
+    {
+      "model_id": "CNNModel",
+      "task_id": "aki",
+      "dataset": "eicu",
+      "run_id": "20250605_113136",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.78,
+          "auprc": 0.625,
+          "normalized_auprc": 2.017,
+          "specificity": 0.761,
+          "f1_score": 0.626,
+          "accuracy": 0.742,
+          "balanced_accuracy": 0.73,
+          "precision": 0.568,
+          "recall": 0.698,
+          "mcc": 0.438,
+          "kappa": 0.432,
+          "minpse": 0.595
+        }
+      }
+    },
+    {
+      "model_id": "CNNModel",
+      "task_id": "aki",
+      "dataset": "hirid",
+      "run_id": "20250605_113136",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.807,
+          "auprc": 0.418,
+          "normalized_auprc": 2.582,
+          "specificity": 0.878,
+          "f1_score": 0.454,
+          "accuracy": 0.814,
+          "balanced_accuracy": 0.678,
+          "precision": 0.432,
+          "recall": 0.478,
+          "mcc": 0.342,
+          "kappa": 0.342,
+          "minpse": 0.448
+        }
+      }
+    },
+    {
+      "model_id": "CNNModel",
+      "task_id": "aki",
+      "dataset": "miiv",
+      "run_id": "20250605_113136",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.774,
+          "auprc": 0.601,
+          "normalized_auprc": 2.581,
+          "specificity": 0.846,
+          "f1_score": 0.516,
+          "accuracy": 0.771,
+          "balanced_accuracy": 0.685,
+          "precision": 0.508,
+          "recall": 0.524,
+          "mcc": 0.367,
+          "kappa": 0.366,
+          "minpse": 0.511
+        }
+      }
+    },
+    {
+      "model_id": "CNNModel",
+      "task_id": "sepsis",
+      "dataset": "eicu",
+      "run_id": "20250605_113136",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.529,
+          "auprc": 0.051,
+          "normalized_auprc": 1.057,
+          "specificity": 0.979,
+          "f1_score": 0.0,
+          "accuracy": 0.932,
+          "balanced_accuracy": 0.489,
+          "precision": 0.0,
+          "recall": 0.0,
+          "mcc": -0.032,
+          "kappa": -0.029,
+          "minpse": 0.085
+        }
+      }
+    },
+    {
+      "model_id": "CNNModel",
+      "task_id": "sepsis",
+      "dataset": "hirid",
+      "run_id": "20250605_113136",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.694,
+          "auprc": 0.24,
+          "normalized_auprc": 3.184,
+          "specificity": 0.973,
+          "f1_score": 0.268,
+          "accuracy": 0.915,
+          "balanced_accuracy": 0.589,
+          "precision": 0.385,
+          "recall": 0.205,
+          "mcc": 0.24,
+          "kappa": 0.227,
+          "minpse": 0.222
+        }
+      }
+    },
+    {
+      "model_id": "CNNModel",
+      "task_id": "sepsis",
+      "dataset": "miiv",
+      "run_id": "20250605_113136",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.624,
+          "auprc": 0.035,
+          "normalized_auprc": 1.367,
+          "specificity": 0.987,
+          "f1_score": 0.051,
+          "accuracy": 0.963,
+          "balanced_accuracy": 0.513,
+          "precision": 0.071,
+          "recall": 0.04,
+          "mcc": 0.035,
+          "kappa": 0.034,
+          "minpse": 0.05
+        }
+      }
+    },
+    {
+      "model_id": "GRUModel",
+      "task_id": "mortality",
+      "dataset": "eicu",
+      "run_id": "20250603_192812",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.86,
+          "auprc": 0.386,
+          "normalized_auprc": 5.519,
+          "specificity": 0.957,
+          "f1_score": 0.308,
+          "accuracy": 0.91,
+          "balanced_accuracy": 0.621,
+          "precision": 0.333,
+          "recall": 0.286,
+          "mcc": 0.261,
+          "kappa": 0.26,
+          "minpse": 0.333
+        }
+      }
+    },
+    {
+      "model_id": "GRUModel",
+      "task_id": "mortality",
+      "dataset": "hirid",
+      "run_id": "20250603_192812",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.74,
+          "auprc": 0.255,
+          "normalized_auprc": 2.316,
+          "specificity": 0.787,
+          "f1_score": 0.286,
+          "accuracy": 0.75,
+          "balanced_accuracy": 0.621,
+          "precision": 0.208,
+          "recall": 0.455,
+          "mcc": 0.177,
+          "kappa": 0.159,
+          "minpse": 0.364
+        }
+      }
+    },
+    {
+      "model_id": "GRUModel",
+      "task_id": "mortality",
+      "dataset": "miiv",
+      "run_id": "20250603_192812",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.807,
+          "auprc": 0.492,
+          "normalized_auprc": 4.104,
+          "specificity": 0.682,
+          "f1_score": 0.367,
+          "accuracy": 0.69,
+          "balanced_accuracy": 0.716,
+          "precision": 0.243,
+          "recall": 0.75,
+          "mcc": 0.291,
+          "kappa": 0.227,
+          "minpse": 0.5
+        }
+      }
+    },
+    {
+      "model_id": "GRUModel",
+      "task_id": "aki",
+      "dataset": "eicu",
+      "run_id": "20250603_192812",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.756,
+          "auprc": 0.59,
+          "normalized_auprc": 1.904,
+          "specificity": 0.782,
+          "f1_score": 0.564,
+          "accuracy": 0.721,
+          "balanced_accuracy": 0.683,
+          "precision": 0.546,
+          "recall": 0.584,
+          "mcc": 0.359,
+          "kappa": 0.359,
+          "minpse": 0.564
+        }
+      }
+    },
+    {
+      "model_id": "GRUModel",
+      "task_id": "aki",
+      "dataset": "hirid",
+      "run_id": "20250603_192812",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.694,
+          "auprc": 0.352,
+          "normalized_auprc": 2.177,
+          "specificity": 0.733,
+          "f1_score": 0.391,
+          "accuracy": 0.708,
+          "balanced_accuracy": 0.656,
+          "precision": 0.295,
+          "recall": 0.579,
+          "mcc": 0.246,
+          "kappa": 0.224,
+          "minpse": 0.41
+        }
+      }
+    },
+    {
+      "model_id": "GRUModel",
+      "task_id": "aki",
+      "dataset": "miiv",
+      "run_id": "20250603_192812",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.797,
+          "auprc": 0.595,
+          "normalized_auprc": 2.556,
+          "specificity": 0.841,
+          "f1_score": 0.584,
+          "accuracy": 0.792,
+          "balanced_accuracy": 0.735,
+          "precision": 0.545,
+          "recall": 0.629,
+          "mcc": 0.448,
+          "kappa": 0.446,
+          "minpse": 0.576
+        }
+      }
+    },
+    {
+      "model_id": "GRUModel",
+      "task_id": "sepsis",
+      "dataset": "eicu",
+      "run_id": "20250603_192812",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.624,
+          "auprc": 0.063,
+          "normalized_auprc": 1.306,
+          "specificity": 0.61,
+          "f1_score": 0.123,
+          "accuracy": 0.608,
+          "balanced_accuracy": 0.592,
+          "precision": 0.069,
+          "recall": 0.574,
+          "mcc": 0.08,
+          "kappa": 0.041,
+          "minpse": 0.083
+        }
+      }
+    },
+    {
+      "model_id": "GRUModel",
+      "task_id": "sepsis",
+      "dataset": "hirid",
+      "run_id": "20250603_192812",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.382,
+          "auprc": 0.056,
+          "normalized_auprc": 0.749,
+          "specificity": 0.662,
+          "f1_score": 0.057,
+          "accuracy": 0.623,
+          "balanced_accuracy": 0.406,
+          "precision": 0.035,
+          "recall": 0.151,
+          "mcc": -0.106,
+          "kappa": -0.075,
+          "minpse": 0.076
+        }
+      }
+    },
+    {
+      "model_id": "GRUModel",
+      "task_id": "sepsis",
+      "dataset": "miiv",
+      "run_id": "20250603_192812",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.338,
+          "auprc": 0.024,
+          "normalized_auprc": 0.952,
+          "specificity": 0.777,
+          "f1_score": 0.049,
+          "accuracy": 0.764,
+          "balanced_accuracy": 0.509,
+          "precision": 0.027,
+          "recall": 0.24,
+          "mcc": 0.006,
+          "kappa": 0.004,
+          "minpse": 0.072
+        }
+      }
+    },
+    {
+      "model_id": "InceptionTime",
+      "task_id": "mortality",
+      "dataset": "eicu",
+      "run_id": "20250617_131406",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.851,
+          "auprc": 0.462,
+          "normalized_auprc": 6.595,
+          "specificity": 0.839,
+          "f1_score": 0.37,
+          "accuracy": 0.83,
+          "balanced_accuracy": 0.776,
+          "precision": 0.25,
+          "recall": 0.714,
+          "mcc": 0.353,
+          "kappa": 0.298,
+          "minpse": 0.429
+        }
+      }
+    },
+    {
+      "model_id": "InceptionTime",
+      "task_id": "mortality",
+      "dataset": "hirid",
+      "run_id": "20250617_131406",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.769,
+          "auprc": 0.378,
+          "normalized_auprc": 3.434,
+          "specificity": 0.854,
+          "f1_score": 0.286,
+          "accuracy": 0.8,
+          "balanced_accuracy": 0.609,
+          "precision": 0.235,
+          "recall": 0.364,
+          "mcc": 0.181,
+          "kappa": 0.176,
+          "minpse": 0.364
+        }
+      }
+    },
+    {
+      "model_id": "InceptionTime",
+      "task_id": "mortality",
+      "dataset": "miiv",
+      "run_id": "20250617_131406",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.77,
+          "auprc": 0.465,
+          "normalized_auprc": 3.872,
+          "specificity": 0.739,
+          "f1_score": 0.333,
+          "accuracy": 0.72,
+          "balanced_accuracy": 0.661,
+          "precision": 0.233,
+          "recall": 0.583,
+          "mcc": 0.228,
+          "kappa": 0.195,
+          "minpse": 0.417
+        }
+      }
+    },
+    {
+      "model_id": "InceptionTime",
+      "task_id": "aki",
+      "dataset": "eicu",
+      "run_id": "20250617_131406",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.631,
+          "auprc": 0.429,
+          "normalized_auprc": 1.385,
+          "specificity": 0.779,
+          "f1_score": 0.439,
+          "accuracy": 0.668,
+          "balanced_accuracy": 0.599,
+          "precision": 0.46,
+          "recall": 0.42,
+          "mcc": 0.204,
+          "kappa": 0.204,
+          "minpse": 0.449
+        }
+      }
+    },
+    {
+      "model_id": "InceptionTime",
+      "task_id": "aki",
+      "dataset": "hirid",
+      "run_id": "20250617_131406",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.8,
+          "auprc": 0.393,
+          "normalized_auprc": 2.429,
+          "specificity": 0.764,
+          "f1_score": 0.465,
+          "accuracy": 0.749,
+          "balanced_accuracy": 0.719,
+          "precision": 0.355,
+          "recall": 0.673,
+          "mcc": 0.349,
+          "kappa": 0.321,
+          "minpse": 0.376
+        }
+      }
+    },
+    {
+      "model_id": "InceptionTime",
+      "task_id": "aki",
+      "dataset": "miiv",
+      "run_id": "20250617_131406",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.581,
+          "auprc": 0.333,
+          "normalized_auprc": 1.432,
+          "specificity": 0.75,
+          "f1_score": 0.364,
+          "accuracy": 0.67,
+          "balanced_accuracy": 0.578,
+          "precision": 0.33,
+          "recall": 0.406,
+          "mcc": 0.146,
+          "kappa": 0.144,
+          "minpse": 0.354
+        }
+      }
+    },
+    {
+      "model_id": "InceptionTime",
+      "task_id": "sepsis",
+      "dataset": "eicu",
+      "run_id": "20250617_131406",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.559,
+          "auprc": 0.052,
+          "normalized_auprc": 1.092,
+          "specificity": 0.738,
+          "f1_score": 0.11,
+          "accuracy": 0.72,
+          "balanced_accuracy": 0.55,
+          "precision": 0.065,
+          "recall": 0.362,
+          "mcc": 0.048,
+          "kappa": 0.032,
+          "minpse": 0.067
+        }
+      }
+    },
+    {
+      "model_id": "InceptionTime",
+      "task_id": "sepsis",
+      "dataset": "hirid",
+      "run_id": "20250617_131406",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.444,
+          "auprc": 0.064,
+          "normalized_auprc": 0.856,
+          "specificity": 0.691,
+          "f1_score": 0.118,
+          "accuracy": 0.662,
+          "balanced_accuracy": 0.496,
+          "precision": 0.074,
+          "recall": 0.301,
+          "mcc": -0.004,
+          "kappa": -0.003,
+          "minpse": 0.077
+        }
+      }
+    },
+    {
+      "model_id": "InceptionTime",
+      "task_id": "sepsis",
+      "dataset": "miiv",
+      "run_id": "20250617_131406",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.556,
+          "auprc": 0.051,
+          "normalized_auprc": 2.014,
+          "specificity": 0.682,
+          "f1_score": 0.064,
+          "accuracy": 0.676,
+          "balanced_accuracy": 0.561,
+          "precision": 0.035,
+          "recall": 0.44,
+          "mcc": 0.041,
+          "kappa": 0.018,
+          "minpse": 0.133
+        }
+      }
+    },
+    {
+      "model_id": "LSTMModel",
+      "task_id": "mortality",
+      "dataset": "eicu",
+      "run_id": "20250604_094650",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.845,
+          "auprc": 0.507,
+          "normalized_auprc": 7.241,
+          "specificity": 0.989,
+          "f1_score": 0.4,
+          "accuracy": 0.94,
+          "balanced_accuracy": 0.637,
+          "precision": 0.667,
+          "recall": 0.286,
+          "mcc": 0.411,
+          "kappa": 0.374,
+          "minpse": 0.429
+        }
+      }
+    },
+    {
+      "model_id": "LSTMModel",
+      "task_id": "mortality",
+      "dataset": "hirid",
+      "run_id": "20250604_094650",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.804,
+          "auprc": 0.454,
+          "normalized_auprc": 4.124,
+          "specificity": 0.472,
+          "f1_score": 0.269,
+          "accuracy": 0.51,
+          "balanced_accuracy": 0.645,
+          "precision": 0.161,
+          "recall": 0.818,
+          "mcc": 0.183,
+          "kappa": 0.104,
+          "minpse": 0.364
+        }
+      }
+    },
+    {
+      "model_id": "LSTMModel",
+      "task_id": "mortality",
+      "dataset": "miiv",
+      "run_id": "20250604_094650",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.871,
+          "auprc": 0.465,
+          "normalized_auprc": 3.877,
+          "specificity": 0.739,
+          "f1_score": 0.478,
+          "accuracy": 0.76,
+          "balanced_accuracy": 0.828,
+          "precision": 0.324,
+          "recall": 0.917,
+          "mcc": 0.45,
+          "kappa": 0.366,
+          "minpse": 0.5
+        }
+      }
+    },
+    {
+      "model_id": "LSTMModel",
+      "task_id": "aki",
+      "dataset": "eicu",
+      "run_id": "20250605_112438",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.41,
+          "auprc": 0.297,
+          "normalized_auprc": 0.959,
+          "specificity": 0.0,
+          "f1_score": 0.473,
+          "accuracy": 0.31,
+          "balanced_accuracy": 0.5,
+          "precision": 0.31,
+          "recall": 1.0,
+          "mcc": 0.0,
+          "kappa": 0.0,
+          "minpse": 0.31
+        }
+      }
+    },
+    {
+      "model_id": "LSTMModel",
+      "task_id": "aki",
+      "dataset": "hirid",
+      "run_id": "20250605_112438",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.762,
+          "auprc": 0.415,
+          "normalized_auprc": 2.561,
+          "specificity": 0.892,
+          "f1_score": 0.44,
+          "accuracy": 0.819,
+          "balanced_accuracy": 0.666,
+          "precision": 0.44,
+          "recall": 0.44,
+          "mcc": 0.332,
+          "kappa": 0.332,
+          "minpse": 0.44
+        }
+      }
+    },
+    {
+      "model_id": "LSTMModel",
+      "task_id": "aki",
+      "dataset": "miiv",
+      "run_id": "20250605_112438",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.809,
+          "auprc": 0.639,
+          "normalized_auprc": 2.744,
+          "specificity": 0.049,
+          "f1_score": 0.389,
+          "accuracy": 0.27,
+          "balanced_accuracy": 0.525,
+          "precision": 0.242,
+          "recall": 1.0,
+          "mcc": 0.109,
+          "kappa": 0.023,
+          "minpse": 0.571
+        }
+      }
+    },
+    {
+      "model_id": "LSTMModel",
+      "task_id": "sepsis",
+      "dataset": "eicu",
+      "run_id": "20250605_112438",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.698,
+          "auprc": 0.076,
+          "normalized_auprc": 1.587,
+          "specificity": 0.0,
+          "f1_score": 0.092,
+          "accuracy": 0.048,
+          "balanced_accuracy": 0.5,
+          "precision": 0.048,
+          "recall": 1.0,
+          "mcc": 0.0,
+          "kappa": 0.0,
+          "minpse": 0.1
+        }
+      }
+    },
+    {
+      "model_id": "LSTMModel",
+      "task_id": "sepsis",
+      "dataset": "hirid",
+      "run_id": "20250605_112438",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.615,
+          "auprc": 0.183,
+          "normalized_auprc": 2.424,
+          "specificity": 0.789,
+          "f1_score": 0.212,
+          "accuracy": 0.762,
+          "balanced_accuracy": 0.607,
+          "precision": 0.141,
+          "recall": 0.425,
+          "mcc": 0.135,
+          "kappa": 0.111,
+          "minpse": 0.185
+        }
+      }
+    },
+    {
+      "model_id": "LSTMModel",
+      "task_id": "sepsis",
+      "dataset": "miiv",
+      "run_id": "20250605_112438",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.705,
+          "auprc": 0.095,
+          "normalized_auprc": 3.75,
+          "specificity": 0.976,
+          "f1_score": 0.08,
+          "accuracy": 0.954,
+          "balanced_accuracy": 0.528,
+          "precision": 0.08,
+          "recall": 0.08,
+          "mcc": 0.056,
+          "kappa": 0.056,
+          "minpse": 0.148
+        }
+      }
+    },
+    {
+      "model_id": "XGBoost",
+      "task_id": "mortality",
+      "dataset": "eicu",
+      "run_id": "20250604_145501",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.817,
+          "auprc": 0.45,
+          "normalized_auprc": 6.43,
+          "specificity": 1.0,
+          "f1_score": 0.444,
+          "accuracy": 0.95,
+          "balanced_accuracy": 0.643,
+          "precision": 1.0,
+          "recall": 0.286,
+          "mcc": 0.521,
+          "kappa": 0.427,
+          "minpse": 0.429
+        }
+      }
+    },
+    {
+      "model_id": "XGBoost",
+      "task_id": "mortality",
+      "dataset": "hirid",
+      "run_id": "20250604_145501",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.806,
+          "auprc": 0.531,
+          "normalized_auprc": 4.831,
+          "specificity": 1.0,
+          "f1_score": 0.429,
+          "accuracy": 0.92,
+          "balanced_accuracy": 0.636,
+          "precision": 1.0,
+          "recall": 0.273,
+          "mcc": 0.5,
+          "kappa": 0.4,
+          "minpse": 0.455
+        }
+      }
+    },
+    {
+      "model_id": "XGBoost",
+      "task_id": "mortality",
+      "dataset": "miiv",
+      "run_id": "20250604_145501",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.865,
+          "auprc": 0.454,
+          "normalized_auprc": 3.782,
+          "specificity": 0.989,
+          "f1_score": 0.0,
+          "accuracy": 0.87,
+          "balanced_accuracy": 0.494,
+          "precision": 0.0,
+          "recall": 0.0,
+          "mcc": -0.037,
+          "kappa": -0.019,
+          "minpse": 0.583
+        }
+      }
+    },
+    {
+      "model_id": "XGBoost",
+      "task_id": "aki",
+      "dataset": "eicu",
+      "run_id": "20250604_145501",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.805,
+          "auprc": 0.764,
+          "normalized_auprc": 1.845,
+          "specificity": 0.959,
+          "f1_score": 0.407,
+          "accuracy": 0.674,
+          "balanced_accuracy": 0.615,
+          "precision": 0.824,
+          "recall": 0.271,
+          "mcc": 0.33,
+          "kappa": 0.255,
+          "minpse": 0.681
+        }
+      }
+    },
+    {
+      "model_id": "XGBoost",
+      "task_id": "aki",
+      "dataset": "hirid",
+      "run_id": "20250604_145501",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.85,
+          "auprc": 0.621,
+          "normalized_auprc": 3.267,
+          "specificity": 0.998,
+          "f1_score": 0.189,
+          "accuracy": 0.828,
+          "balanced_accuracy": 0.551,
+          "precision": 0.909,
+          "recall": 0.105,
+          "mcc": 0.275,
+          "kappa": 0.155,
+          "minpse": 0.621
+        }
+      }
+    },
+    {
+      "model_id": "XGBoost",
+      "task_id": "aki",
+      "dataset": "miiv",
+      "run_id": "20250604_145501",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.786,
+          "auprc": 0.66,
+          "normalized_auprc": 2.076,
+          "specificity": 0.982,
+          "f1_score": 0.39,
+          "accuracy": 0.75,
+          "balanced_accuracy": 0.617,
+          "precision": 0.87,
+          "recall": 0.252,
+          "mcc": 0.377,
+          "kappa": 0.289,
+          "minpse": 0.571
+        }
+      }
+    },
+    {
+      "model_id": "XGBoost",
+      "task_id": "sepsis",
+      "dataset": "eicu",
+      "run_id": "20250604_145501",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.703,
+          "auprc": 0.108,
+          "normalized_auprc": 1.931,
+          "specificity": 0.992,
+          "f1_score": 0.0,
+          "accuracy": 0.936,
+          "balanced_accuracy": 0.496,
+          "precision": 0.0,
+          "recall": 0.0,
+          "mcc": -0.022,
+          "kappa": -0.014,
+          "minpse": 0.189
+        }
+      }
+    },
+    {
+      "model_id": "XGBoost",
+      "task_id": "sepsis",
+      "dataset": "hirid",
+      "run_id": "20250604_145501",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.872,
+          "auprc": 0.355,
+          "normalized_auprc": 3.903,
+          "specificity": 1.0,
+          "f1_score": 0.043,
+          "accuracy": 0.911,
+          "balanced_accuracy": 0.511,
+          "precision": 1.0,
+          "recall": 0.022,
+          "mcc": 0.142,
+          "kappa": 0.04,
+          "minpse": 0.412
+        }
+      }
+    },
+    {
+      "model_id": "XGBoost",
+      "task_id": "sepsis",
+      "dataset": "miiv",
+      "run_id": "20250604_145501",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.635,
+          "auprc": 0.074,
+          "normalized_auprc": 2.06,
+          "specificity": 1.0,
+          "f1_score": 0.0,
+          "accuracy": 0.964,
+          "balanced_accuracy": 0.5,
+          "precision": 0.0,
+          "recall": 0.0,
+          "mcc": 0.0,
+          "kappa": 0.0,
+          "minpse": 0.182
+        }
+      }
+    },
+    {
+      "model_id": "LightGBM",
+      "task_id": "mortality",
+      "dataset": "eicu",
+      "run_id": "20250604_151243",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.857,
+          "auprc": 0.473,
+          "normalized_auprc": 6.751,
+          "specificity": 1.0,
+          "f1_score": 0.25,
+          "accuracy": 0.94,
+          "balanced_accuracy": 0.571,
+          "precision": 1.0,
+          "recall": 0.143,
+          "mcc": 0.366,
+          "kappa": 0.237,
+          "minpse": 0.429
+        }
+      }
+    },
+    {
+      "model_id": "LightGBM",
+      "task_id": "mortality",
+      "dataset": "hirid",
+      "run_id": "20250604_151243",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.906,
+          "auprc": 0.637,
+          "normalized_auprc": 5.793,
+          "specificity": 1.0,
+          "f1_score": 0.429,
+          "accuracy": 0.92,
+          "balanced_accuracy": 0.636,
+          "precision": 1.0,
+          "recall": 0.273,
+          "mcc": 0.5,
+          "kappa": 0.4,
+          "minpse": 0.545
+        }
+      }
+    },
+    {
+      "model_id": "LightGBM",
+      "task_id": "mortality",
+      "dataset": "miiv",
+      "run_id": "20250604_151243",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.879,
+          "auprc": 0.464,
+          "normalized_auprc": 3.863,
+          "specificity": 0.989,
+          "f1_score": 0.0,
+          "accuracy": 0.87,
+          "balanced_accuracy": 0.494,
+          "precision": 0.0,
+          "recall": 0.0,
+          "mcc": -0.037,
+          "kappa": -0.019,
+          "minpse": 0.5
+        }
+      }
+    },
+    {
+      "model_id": "LightGBM",
+      "task_id": "aki",
+      "dataset": "eicu",
+      "run_id": "20250604_151243",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.802,
+          "auprc": 0.761,
+          "normalized_auprc": 1.838,
+          "specificity": 0.983,
+          "f1_score": 0.4,
+          "accuracy": 0.682,
+          "balanced_accuracy": 0.619,
+          "precision": 0.914,
+          "recall": 0.256,
+          "mcc": 0.368,
+          "kappa": 0.267,
+          "minpse": 0.686
+        }
+      }
+    },
+    {
+      "model_id": "LightGBM",
+      "task_id": "aki",
+      "dataset": "hirid",
+      "run_id": "20250604_151243",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.853,
+          "auprc": 0.645,
+          "normalized_auprc": 3.395,
+          "specificity": 1.0,
+          "f1_score": 0.208,
+          "accuracy": 0.832,
+          "balanced_accuracy": 0.558,
+          "precision": 1.0,
+          "recall": 0.116,
+          "mcc": 0.31,
+          "kappa": 0.175,
+          "minpse": 0.611
+        }
+      }
+    },
+    {
+      "model_id": "LightGBM",
+      "task_id": "aki",
+      "dataset": "miiv",
+      "run_id": "20250604_151243",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.772,
+          "auprc": 0.649,
+          "normalized_auprc": 2.04,
+          "specificity": 0.979,
+          "f1_score": 0.38,
+          "accuracy": 0.746,
+          "balanced_accuracy": 0.612,
+          "precision": 0.848,
+          "recall": 0.245,
+          "mcc": 0.362,
+          "kappa": 0.277,
+          "minpse": 0.56
+        }
+      }
+    },
+    {
+      "model_id": "LightGBM",
+      "task_id": "sepsis",
+      "dataset": "eicu",
+      "run_id": "20250604_151243",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.663,
+          "auprc": 0.117,
+          "normalized_auprc": 2.084,
+          "specificity": 1.0,
+          "f1_score": 0.0,
+          "accuracy": 0.944,
+          "balanced_accuracy": 0.5,
+          "precision": 0.0,
+          "recall": 0.0,
+          "mcc": 0.0,
+          "kappa": 0.0,
+          "minpse": 0.241
+        }
+      }
+    },
+    {
+      "model_id": "LightGBM",
+      "task_id": "sepsis",
+      "dataset": "hirid",
+      "run_id": "20250604_151243",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.887,
+          "auprc": 0.34,
+          "normalized_auprc": 3.742,
+          "specificity": 0.996,
+          "f1_score": 0.0,
+          "accuracy": 0.905,
+          "balanced_accuracy": 0.498,
+          "precision": 0.0,
+          "recall": 0.0,
+          "mcc": -0.02,
+          "kappa": -0.008,
+          "minpse": 0.378
+        }
+      }
+    },
+    {
+      "model_id": "LightGBM",
+      "task_id": "sepsis",
+      "dataset": "miiv",
+      "run_id": "20250604_151243",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.627,
+          "auprc": 0.067,
+          "normalized_auprc": 1.868,
+          "specificity": 1.0,
+          "f1_score": 0.0,
+          "accuracy": 0.964,
+          "balanced_accuracy": 0.5,
+          "precision": 0.0,
+          "recall": 0.0,
+          "mcc": 0.0,
+          "kappa": 0.0,
+          "minpse": 0.139
+        }
+      }
+    },
+    {
+      "model_id": "RandomForest",
+      "task_id": "mortality",
+      "dataset": "eicu",
+      "run_id": "20250604_151406",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.773,
+          "auprc": 0.469,
+          "normalized_auprc": 6.705,
+          "specificity": 1.0,
+          "f1_score": 0.25,
+          "accuracy": 0.94,
+          "balanced_accuracy": 0.571,
+          "precision": 1.0,
+          "recall": 0.143,
+          "mcc": 0.366,
+          "kappa": 0.237,
+          "minpse": 0.429
+        }
+      }
+    },
+    {
+      "model_id": "RandomForest",
+      "task_id": "mortality",
+      "dataset": "hirid",
+      "run_id": "20250604_151406",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.902,
+          "auprc": 0.614,
+          "normalized_auprc": 5.58,
+          "specificity": 1.0,
+          "f1_score": 0.308,
+          "accuracy": 0.91,
+          "balanced_accuracy": 0.591,
+          "precision": 1.0,
+          "recall": 0.182,
+          "mcc": 0.406,
+          "kappa": 0.283,
+          "minpse": 0.5
+        }
+      }
+    },
+    {
+      "model_id": "RandomForest",
+      "task_id": "mortality",
+      "dataset": "miiv",
+      "run_id": "20250604_151406",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.823,
+          "auprc": 0.652,
+          "normalized_auprc": 5.434,
+          "specificity": 1.0,
+          "f1_score": 0.0,
+          "accuracy": 0.88,
+          "balanced_accuracy": 0.5,
+          "precision": 0.0,
+          "recall": 0.0,
+          "mcc": 0.0,
+          "kappa": 0.0,
+          "minpse": 0.667
+        }
+      }
+    },
+    {
+      "model_id": "RandomForest",
+      "task_id": "aki",
+      "dataset": "eicu",
+      "run_id": "20250604_151406",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.757,
+          "auprc": 0.71,
+          "normalized_auprc": 1.714,
+          "specificity": 0.969,
+          "f1_score": 0.345,
+          "accuracy": 0.658,
+          "balanced_accuracy": 0.593,
+          "precision": 0.833,
+          "recall": 0.217,
+          "mcc": 0.296,
+          "kappa": 0.209,
+          "minpse": 0.638
+        }
+      }
+    },
+    {
+      "model_id": "RandomForest",
+      "task_id": "aki",
+      "dataset": "hirid",
+      "run_id": "20250604_151406",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.729,
+          "auprc": 0.5,
+          "normalized_auprc": 2.63,
+          "specificity": 1.0,
+          "f1_score": 0.0,
+          "accuracy": 0.81,
+          "balanced_accuracy": 0.5,
+          "precision": 0.0,
+          "recall": 0.0,
+          "mcc": 0.0,
+          "kappa": 0.0,
+          "minpse": 0.406
+        }
+      }
+    },
+    {
+      "model_id": "RandomForest",
+      "task_id": "aki",
+      "dataset": "miiv",
+      "run_id": "20250604_151406",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.755,
+          "auprc": 0.603,
+          "normalized_auprc": 1.896,
+          "specificity": 0.994,
+          "f1_score": 0.221,
+          "accuracy": 0.718,
+          "balanced_accuracy": 0.56,
+          "precision": 0.909,
+          "recall": 0.126,
+          "mcc": 0.272,
+          "kappa": 0.156,
+          "minpse": 0.523
+        }
+      }
+    },
+    {
+      "model_id": "RandomForest",
+      "task_id": "sepsis",
+      "dataset": "eicu",
+      "run_id": "20250604_151406",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.583,
+          "auprc": 0.094,
+          "normalized_auprc": 1.674,
+          "specificity": 1.0,
+          "f1_score": 0.0,
+          "accuracy": 0.944,
+          "balanced_accuracy": 0.5,
+          "precision": 0.0,
+          "recall": 0.0,
+          "mcc": 0.0,
+          "kappa": 0.0,
+          "minpse": 0.214
+        }
+      }
+    },
+    {
+      "model_id": "RandomForest",
+      "task_id": "sepsis",
+      "dataset": "hirid",
+      "run_id": "20250604_151406",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.839,
+          "auprc": 0.309,
+          "normalized_auprc": 3.399,
+          "specificity": 1.0,
+          "f1_score": 0.0,
+          "accuracy": 0.909,
+          "balanced_accuracy": 0.5,
+          "precision": 0.0,
+          "recall": 0.0,
+          "mcc": 0.0,
+          "kappa": 0.0,
+          "minpse": 0.365
+        }
+      }
+    },
+    {
+      "model_id": "RandomForest",
+      "task_id": "sepsis",
+      "dataset": "miiv",
+      "run_id": "20250604_151406",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.62,
+          "auprc": 0.046,
+          "normalized_auprc": 1.291,
+          "specificity": 1.0,
+          "f1_score": 0.0,
+          "accuracy": 0.964,
+          "balanced_accuracy": 0.5,
+          "precision": 0.0,
+          "recall": 0.0,
+          "mcc": 0.0,
+          "kappa": 0.0,
+          "minpse": 0.059
+        }
+      }
+    }
+  ]
 }

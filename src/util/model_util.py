@@ -70,7 +70,7 @@ class EarlyStopping:
             model.load_state_dict(self.best_model_state)
             if self.verbose:
                 logger.info("Loaded best model state from early stopping")
-        
+
         return model
 
 
@@ -95,7 +95,7 @@ def save_torch_model(model_name: str, model: Any, save_dir: str) -> None:
         logger.info("Model '%s' saved to %s", model_name, model_path)
     except Exception as e:
         logger.error("Failed to save model '%s': %s", model_name, str(e))
-    
+
     return model_path
 
 
@@ -182,8 +182,7 @@ def prepare_data_for_model_convdl(
     """
 
     # Import the converter
-    from src.preprocessing.preprocessing_advanced.windowing import \
-        WindowedDataTo3D
+    from src.preprocessing.preprocessing_advanced.windowing import WindowedDataTo3D
 
     # Create converter with model name and config
     converter = WindowedDataTo3D(
@@ -247,6 +246,7 @@ def initialize_weights(module):
 # ------------------------------------
 # Util functions for LLMs
 # ------------------------------------
+
 
 def normalize_probability(prob_value: float) -> float:
     """Normalize probability to a 0.0-1.0 range."""
@@ -333,6 +333,10 @@ def prompt_template_hf(
                 "role": "user",
                 "content": f"{system_message} Text:\n{input_text} <think>\n",
             },
+        ]
+    elif model == "Gemini2p5flashModel":
+        formatted_prompt = [
+            {"role": "user", "parts": [{"text": f"{system_message} \n\n{input_text}"}]},
         ]
     else:
         formatted_prompt = [
@@ -674,11 +678,11 @@ def extract_dict(output_text: str) -> Optional[Dict[str, str]]:
         A dictionary parsed from the JSON string, or a default JSON object if no JSON was found.
     """
     warnings.warn(
-            "extract_dict is deprecated and will be removed in a future release. "
-            "Use parse_llm_output instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
+        "extract_dict is deprecated and will be removed in a future release. "
+        "Use parse_llm_output instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     default_json = {
         "diagnosis": "unknown",
         "probability": 0.5,  # Keep as 0.5 (0.0-1.0 range)

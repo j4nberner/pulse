@@ -11,6 +11,7 @@ from .lstm_model import LSTMModel, LSTMTrainer
 from .mistral_model import MistralModel
 from .randomforest_model import RandomForestModel, RandomForestTrainer
 from .xgboost_model import XGBoostModel, XGBoostTrainer
+from .gemini2p5flash_model import Gemini2p5Model
 
 model_cls_name_dict = {
     "RandomForest": RandomForestModel,
@@ -26,7 +27,8 @@ model_cls_name_dict = {
     "DeepseekR1Qwen7bModel": DeepseekR1Model,
     "DeepseekR1Llama8bModel": DeepseekR1Model,
     "MistralModel": MistralModel,
-    "GPT4oModel": GPTModel,
+    "Gemini2p5flashModel": Gemini2p5Model,
+    # "GPT4oModel": GPTModel,
 }
 
 trainer_cls_name_dict = {
