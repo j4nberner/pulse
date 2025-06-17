@@ -5,15 +5,17 @@ from typing import Any, Dict, List
 import pandas as pd
 import torch
 
-
 logger = logging.getLogger("PULSE_logger")
 
 
-def zhu_2024c_categorization_summary_agent_preprocessor(
+def generic_agent_preprocessor(
     X: List[pd.DataFrame], y: List[pd.DataFrame], info_dict: Dict[str, Any]
 ) -> Dict[str, Any]:
     """
-    Preprocess input data for agent-based processing.
+    Generic preprocessor for all agent-based processing.
+    
+    This preprocessor handles all agent types since the actual prompt creation
+    and multi-step reasoning logic is implemented within the respective agent classes.
 
     Args:
         X: Input features list
