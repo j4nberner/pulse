@@ -1,21 +1,28 @@
 import logging
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, Optional
 import pandas as pd
-import numpy as np
 from src.models.agents.pulse_agent import PulseAgent
 from src.preprocessing.preprocessing_advanced.preprocessing_advanced import (
     PreprocessorAdvanced,
 )
 from src.util.data_util import (
-    get_feature_name,
-    get_feature_reference_range,
-    get_feature_uom,
     get_all_feature_groups,
     get_feature_group_keys,
+    get_feature_name,
     get_feature_group_title,
-    validate_feature_exists,
-    get_common_feature_aliases,
-    get_clinical_group_aliases,
+)
+from src.util.agent_util import (
+    format_clinical_data,
+    format_clinical_text,
+    filter_na_columns,
+    get_available_vitals,
+    get_available_labs,
+    get_lab_groups_available,
+    validate_features,
+    validate_lab_request,
+    extract_confidence,
+    extract_requested_labs,
+    create_error_response,
 )
 
 logger = logging.getLogger("PULSE_logger")
@@ -119,7 +126,7 @@ class ClinicalWorkflowAgent(PulseAgent):
         self.memory.set_current_sample(sample_id)
 
         # Filter out _na columns
-        patient_data = self._filter_na_columns(patient_data)
+        patient_data = filter_na_columns(patient_data)
 
         # Initialize state
         state = {
@@ -144,7 +151,7 @@ class ClinicalWorkflowAgent(PulseAgent):
                 and "Error formatting input" in initial_output
             ):
                 logger.error("Initial assessment formatting failed: %s", initial_output)
-                return self._create_error_response("Input formatting failed")
+                return create_error_response("Input formatting failed")
 
             # Check if parsing was successful
             if initial_output.get("diagnosis") == "unknown":
@@ -153,7 +160,7 @@ class ClinicalWorkflowAgent(PulseAgent):
                 )
 
             # Extract confidence with fallback logic
-            confidence_normalized = self._extract_confidence(initial_output)
+            confidence_normalized = extract_confidence(initial_output)
 
             state["assessment_history"].append(
                 {
@@ -168,7 +175,7 @@ class ClinicalWorkflowAgent(PulseAgent):
 
             state["current_confidence"] = confidence_normalized
             state["used_features"].update(
-                self._get_available_vitals(state["available_features"])
+                get_available_vitals(state["available_features"])
             )
 
             logger.info(
@@ -195,7 +202,7 @@ class ClinicalWorkflowAgent(PulseAgent):
                 lab_order_output = lab_order_result["output"]
 
                 # Extract requested labs with validation
-                requested_labs = self._extract_requested_labs(lab_order_output)
+                requested_labs = extract_requested_labs(lab_order_output)
                 if requested_labs is None:
                     break
 
@@ -206,15 +213,13 @@ class ClinicalWorkflowAgent(PulseAgent):
                 logger.info("Requested labs: %s", requested_labs)
 
                 # Validate requested labs against data_util
-                valid_requested_labs = self._validate_features(requested_labs)
+                valid_requested_labs = validate_features(requested_labs)
                 if not valid_requested_labs:
                     logger.info("No valid labs requested, stopping iteration")
                     break
 
                 # Additional validation: ensure no already-used features are requested
-                valid_requested_labs = self._validate_lab_request(
-                    valid_requested_labs, state
-                )
+                valid_requested_labs = validate_lab_request(valid_requested_labs, state)
                 if not valid_requested_labs:
                     logger.info(
                         "No new labs requested (all already analyzed), stopping iteration"
@@ -224,7 +229,7 @@ class ClinicalWorkflowAgent(PulseAgent):
                 logger.info("Valid requested labs: %s", valid_requested_labs)
 
                 # Get available requested labs
-                available_labs = self._get_available_labs(
+                available_labs = get_available_labs(
                     valid_requested_labs, state["available_features"]
                 )
 
@@ -271,7 +276,7 @@ class ClinicalWorkflowAgent(PulseAgent):
                 )
 
                 # Extract confidence with fallback logic
-                confidence_normalized = self._extract_confidence(updated_output)
+                confidence_normalized = extract_confidence(updated_output)
                 state["current_confidence"] = confidence_normalized
                 logger.info(
                     "Updated assessment complete. New confidence: %.3f",
@@ -313,277 +318,6 @@ class ClinicalWorkflowAgent(PulseAgent):
                 "num_output_tokens": 0,
             }
 
-    def _extract_confidence(self, output: Dict[str, Any]) -> float:
-        """Extract confidence value from LLM output with fallback logic."""
-        if "confidence" in output:
-            confidence = output.get("confidence", 50)
-            # Handle string values from LLM output
-            if isinstance(confidence, str):
-                try:
-                    confidence = float(confidence)
-                except ValueError:
-                    confidence = 50
-            return confidence / 100.0
-        else:
-            # Use probability as confidence indicator when confidence not provided
-            probability = output.get("probability", 50)
-            # Handle string values from LLM output
-            if isinstance(probability, str):
-                try:
-                    probability = float(probability)
-                except ValueError:
-                    probability = 50
-            return probability / 100.0
-
-    def _extract_requested_labs(
-        self, lab_order_output: Dict[str, Any]
-    ) -> Optional[List[str]]:
-        """Extract requested labs from lab ordering output with validation."""
-        if not isinstance(lab_order_output, dict):
-            logger.info("Lab ordering failed to return dict, stopping iteration")
-            return None
-
-        if "requested_tests" in lab_order_output:
-            return lab_order_output.get("requested_tests", [])
-        elif lab_order_output.get("diagnosis") == "unknown":
-            # This is the fallback dict from failed parsing
-            logger.info("Lab ordering failed to parse JSON, stopping iteration")
-            return None
-        else:
-            # Unexpected dict format
-            logger.info("Lab ordering returned unexpected format, stopping iteration")
-            return None
-
-    def _create_error_response(self, error_message: str) -> Dict[str, Any]:
-        """Create standardized error response."""
-        return {
-            "generated_text": {"error": error_message},
-            "token_time": 0,
-            "infer_time": 0,
-            "num_input_tokens": 0,
-            "num_output_tokens": 0,
-        }
-
-    def _get_available_vitals(self, available_features: Set[str]) -> Set[str]:
-        """Get available vital signs from the data using data_util groups."""
-        available_vitals = set()
-        vitals_keys = get_feature_group_keys("vitals")
-
-        for vital in vitals_keys:
-            if any(feat.startswith(vital) for feat in available_features):
-                available_vitals.add(vital)
-        return available_vitals
-
-    def _get_available_labs(
-        self, requested_labs: List[str], available_features: Set[str]
-    ) -> Set[str]:
-        """Get available requested labs from the data."""
-        available_labs = set()
-        for lab in requested_labs:
-            if any(feat.startswith(lab) for feat in available_features):
-                available_labs.add(lab)
-        return available_labs
-
-    def _get_lab_groups_available(
-        self, available_features: Set[str]
-    ) -> Dict[str, List[str]]:
-        """Get available lab tests organized by clinical groups."""
-        available_by_group = {}
-
-        for group_name, group_dict in self.lab_groups.items():
-            if group_name == "vitals":  # Skip vitals as they're handled separately
-                continue
-
-            available_in_group = []
-            for feature_key in group_dict.keys():
-                if any(feat.startswith(feature_key) for feat in available_features):
-                    available_in_group.append(feature_key)
-
-            if available_in_group:
-                available_by_group[group_name] = available_in_group
-
-        return available_by_group
-
-    def _validate_features(self, feature_list: List[str]) -> List[str]:
-        """Validate that requested features exist in the data_util feature dictionary."""
-        valid_features = []
-
-        # Get mappings from data_util
-        group_mappings = {}
-
-        # Add official group mappings from data_util
-        for group_key in [
-            "bga",
-            "coag",
-            "electrolytes_met",
-            "liver_kidney",
-            "hematology_immune",
-            "cardiac",
-        ]:
-            group_features = get_feature_group_keys(group_key)
-            group_title = get_feature_group_title(group_key).lower()
-
-            # Add both the key and the display title as mappings
-            group_mappings[group_key] = group_features
-            group_mappings[group_title] = group_features
-
-        # Add clinical aliases from data_util
-        clinical_aliases = get_clinical_group_aliases()
-        for feature_tuple, aliases in clinical_aliases.items():
-            feature_list_from_tuple = list(feature_tuple)
-            for alias in aliases:
-                group_mappings[alias] = feature_list_from_tuple
-
-        # Get individual feature name mappings from data_util
-        name_mappings = get_common_feature_aliases()
-
-        for feature in feature_list:
-            feature_lower = feature.lower().strip()
-
-            # First check exact match (highest priority)
-            if validate_feature_exists(feature):
-                valid_features.append(feature)
-                continue
-
-            # Check lowercase exact match
-            if validate_feature_exists(feature_lower):
-                valid_features.append(feature_lower)
-                continue
-
-            # Check if it's a group name that needs expansion
-            if feature_lower in group_mappings:
-                group_features = group_mappings[feature_lower]
-                added_features = []
-                for group_feature in group_features:
-                    if validate_feature_exists(group_feature):
-                        valid_features.append(group_feature)
-                        added_features.append(group_feature)
-                if added_features:
-                    logger.info(
-                        "Expanded group '%s' to features: %s", feature, added_features
-                    )
-                continue
-
-            # Check if it needs individual mapping
-            if feature_lower in name_mappings:
-                mapped_feature = name_mappings[feature_lower]
-                if validate_feature_exists(mapped_feature):
-                    valid_features.append(mapped_feature)
-                    logger.info("Mapped '%s' to '%s'", feature, mapped_feature)
-                    continue
-                else:
-                    logger.warning(
-                        "Mapped feature '%s' not found in data_util", mapped_feature
-                    )
-                    continue
-
-            # Check for partial matches in available feature groups
-            found_match = False
-            for group_name, group_dict in self.lab_groups.items():
-                for feature_key in group_dict.keys():
-                    if (
-                        feature_lower in feature_key.lower()
-                        or feature_key.lower() in feature_lower
-                    ):
-                        if validate_feature_exists(feature_key):
-                            valid_features.append(feature_key)
-                            logger.info(
-                                "Partial match: mapped '%s' to '%s'",
-                                feature,
-                                feature_key,
-                            )
-                            found_match = True
-                            break
-                if found_match:
-                    break
-
-            if not found_match:
-                logger.warning("Feature '%s' not found in data_util", feature)
-
-        return valid_features
-
-    def _format_clinical_data(
-        self,
-        patient_data: pd.Series,
-        feature_keys: Set[str],
-        include_demographics: bool = False,
-        include_temporal_patterns: bool = False,
-    ) -> Dict[str, Any]:
-        """
-        Format clinical data (vital signs or lab results) using aggregate_feature_windows.
-
-        Args:
-            patient_data: Patient data series
-            feature_keys: Set of feature keys to format
-            include_demographics: Whether to include demographics in output
-            include_temporal_patterns: Whether to include temporal trend analysis
-
-        Returns:
-            Dictionary with formatted clinical data
-        """
-        # Convert patient data to DataFrame for preprocessing
-        patient_df = pd.DataFrame([patient_data])
-
-        # Use aggregate_feature_windows to get min, max, mean for each feature
-        aggregated_df = self.preprocessor_advanced.aggregate_feature_windows(patient_df)
-        aggregated_row = aggregated_df.iloc[0]
-
-        # Prepare result dictionary
-        result = {}
-
-        # Extract patient demographics if requested
-        if include_demographics:
-            patient_demographics = {}
-            if "age" in patient_data.index:
-                patient_demographics["age"] = patient_data["age"]
-            if "sex" in patient_data.index:
-                patient_demographics["sex"] = patient_data["sex"]
-            if "weight" in patient_data.index:
-                patient_demographics["weight"] = patient_data["weight"]
-            result["demographics"] = patient_demographics
-
-        # Format clinical features with aggregated values using data_util
-        clinical_data = {}
-
-        for feature_key in feature_keys:
-            # Check if this feature has aggregated columns in the data
-            if any(col.startswith(f"{feature_key}_") for col in aggregated_row.index):
-                min_val = aggregated_row.get(f"{feature_key}_min", None)
-                max_val = aggregated_row.get(f"{feature_key}_max", None)
-                mean_val = aggregated_row.get(f"{feature_key}_mean", None)
-
-                # Only include features with non-NaN mean values
-                if not pd.isna(mean_val):
-                    feature_name = get_feature_name(feature_key)
-                    unit = get_feature_uom(feature_key)
-                    normal_range = get_feature_reference_range(feature_key)
-
-                    clinical_data[feature_key] = {
-                        "name": feature_name,
-                        "min": min_val if not pd.isna(min_val) else mean_val,
-                        "max": max_val if not pd.isna(max_val) else mean_val,
-                        "mean": mean_val,
-                        "unit": unit,
-                        "normal_range": normal_range,
-                    }
-
-                    # Add temporal pattern analysis if requested
-                    if include_temporal_patterns:
-                        temporal_pattern = self._analyze_temporal_pattern(
-                            patient_data, feature_key, min_val, max_val, mean_val
-                        )
-                        clinical_data[feature_key][
-                            "temporal_pattern"
-                        ] = temporal_pattern
-
-        # Store clinical data under appropriate key
-        if include_demographics:
-            result["vital_signs"] = clinical_data
-        else:
-            result = clinical_data
-
-        return result
-
     def _format_state_only(self, input_data: Any, state: Dict[str, Any]) -> None:
         """Input formatter for lab ordering - returns None since template uses only state."""
         return None
@@ -600,9 +334,10 @@ class ClinicalWorkflowAgent(PulseAgent):
             if any(feat.startswith(vital) for feat in patient_data.index)
         }
 
-        return self._format_clinical_data(
+        return format_clinical_data(
             patient_data=patient_data,
             feature_keys=available_vitals,
+            preprocessor_advanced=self.preprocessor_advanced,
             include_demographics=True,
             include_temporal_patterns=True,
         )
@@ -613,9 +348,10 @@ class ClinicalWorkflowAgent(PulseAgent):
         """Format lab data for updated assessment."""
         available_labs = input_data
         patient_data = state["patient_data"]
-        return self._format_clinical_data(
+        return format_clinical_data(
             patient_data=patient_data,
             feature_keys=available_labs,
+            preprocessor_advanced=self.preprocessor_advanced,
             include_demographics=False,
             include_temporal_patterns=True,
         )
@@ -636,9 +372,10 @@ class ClinicalWorkflowAgent(PulseAgent):
             demographics["weight"] = patient_data["weight"]
 
         # Get all used clinical data with temporal patterns
-        all_clinical_data = self._format_clinical_data(
+        all_clinical_data = format_clinical_data(
             patient_data=patient_data,
             feature_keys=state["used_features"],
+            preprocessor_advanced=self.preprocessor_advanced,
             include_demographics=False,
             include_temporal_patterns=True,
         )
@@ -648,49 +385,6 @@ class ClinicalWorkflowAgent(PulseAgent):
             "clinical_data": all_clinical_data,
             "assessment_history": state["assessment_history"],
         }
-
-    def _format_clinical_text(self, clinical_data: Dict[str, Dict]) -> List[str]:
-        """
-        Format clinical data dictionary into human-readable text lines.
-
-        Args:
-            clinical_data: Dictionary with feature data containing name, min, max, mean, unit, normal_range
-
-        Returns:
-            List of formatted text lines
-        """
-        formatted_lines = []
-
-        for feature_key, data in clinical_data.items():
-            name = data["name"]
-            min_val = data["min"]
-            max_val = data["max"]
-            mean_val = data["mean"]
-            unit = data["unit"]
-            normal_range = data["normal_range"]
-
-            # Format value range or single value
-            if abs(min_val - max_val) < 0.01:  # Essentially the same value
-                value_str = f"{mean_val:.2f}"
-            else:
-                value_str = f"{min_val:.2f}-{max_val:.2f} (avg: {mean_val:.2f})"
-
-            # Add normal range if available
-            if unit and normal_range != (0, 0):
-                normal_str = f" [normal: {normal_range[0]}-{normal_range[1]} {unit}]"
-                base_text = f"- {name}: {value_str} {unit}{normal_str}"
-            else:
-                unit_str = f" {unit}" if unit else ""
-                base_text = f"- {name}: {value_str}{unit_str}"
-
-            # Add temporal pattern information if available
-            if "temporal_pattern" in data:
-                temporal_pattern = data["temporal_pattern"]
-                base_text += f" ({temporal_pattern})"
-
-            formatted_lines.append(base_text)
-
-        return formatted_lines
 
     def _create_initial_assessment_template(self):
         """Template for initial vital signs assessment."""
@@ -713,7 +407,7 @@ class ClinicalWorkflowAgent(PulseAgent):
             )
 
             # Format vital signs using helper method
-            vitals_text = self._format_clinical_text(vital_signs)
+            vitals_text = format_clinical_text(vital_signs)
             vitals_str = "\n".join(vitals_text)
 
             return f"""You are evaluating an ICU patient for risk of {self.task_content['complication_name']}.
@@ -753,9 +447,7 @@ IMPORTANT: With only vital signs available, confidence should typically be 50-70
             previous_assessment = state["assessment_history"][-1]
 
             # Get available tests by clinical group using data_util
-            available_by_group = self._get_lab_groups_available(
-                state["available_features"]
-            )
+            available_by_group = get_lab_groups_available(state["available_features"])
 
             # Filter out already used features - CRITICAL for preventing re-ordering
             filtered_available = {}
@@ -845,7 +537,7 @@ REMEMBER: Only use exact abbreviations from the list above."""
 
         def format_prompt(formatted_lab_data, state):
             # Format lab results using helper method
-            formatted_labs = self._format_clinical_text(formatted_lab_data)
+            formatted_labs = format_clinical_text(formatted_lab_data)
             labs_str = "\n".join(formatted_labs)
 
             previous_assessment = state["assessment_history"][-1]
@@ -891,7 +583,7 @@ Respond in JSON format:
             )
 
             # Format all clinical data using helper method
-            clinical_text = self._format_clinical_text(clinical_data)
+            clinical_text = format_clinical_text(clinical_data)
             clinical_str = "\n".join(clinical_text)
 
             # Format assessment progression
@@ -949,134 +641,3 @@ Clinical Context: {self.task_content['task_info']}"""
             "complication_name": "complications",
             "task_info": "General ICU complications assessment.",
         }
-
-    def _filter_na_columns(self, patient_data: pd.Series) -> pd.Series:
-        """Filter out columns with '_na' suffixes like Sarvari preprocessor does."""
-        # Convert to DataFrame for regex filtering, then back to Series
-        temp_df = pd.DataFrame([patient_data])
-        filtered_df = temp_df.filter(regex=r"^(?!.*_na(_\d+)?$)")
-        return filtered_df.iloc[0]
-
-    def _analyze_temporal_pattern(
-        self,
-        patient_data: pd.Series,
-        feature_key: str,
-        min_val: float,
-        max_val: float,
-        mean_val: float,
-    ) -> str:
-        """
-        Simple temporal pattern analysis returning brief text assessment.
-
-        Args:
-            patient_data: Full patient data series
-            feature_key: The feature to analyze (e.g., 'hr', 'sbp')
-            min_val: Minimum value over monitoring period
-            max_val: Maximum value over monitoring period
-            mean_val: Mean value over monitoring period
-
-        Returns:
-            Brief text description of trend and normality
-        """
-        try:
-            # Extract time-windowed values for this feature
-            time_series_values = []
-            for col in patient_data.index:
-                if col.startswith(f"{feature_key}_") and col.split("_")[-1].isdigit():
-                    val = patient_data[col]
-                    if not pd.isna(val):
-                        time_series_values.append(val)
-
-            if len(time_series_values) < 3:
-                return "stable trend"
-
-            # Linear regression for trend analysis
-            n = len(time_series_values)
-            x = np.arange(n)  # Time points
-            y = np.array(time_series_values)
-
-            # Calculate linear regression slope
-            x_mean = np.mean(x)
-            y_mean = np.mean(y)
-
-            numerator = np.sum((x - x_mean) * (y - y_mean))
-            denominator = np.sum((x - x_mean) ** 2)
-
-            if denominator == 0:
-                slope = 0
-            else:
-                slope = numerator / denominator
-
-            # Normalize slope by mean value to get relative change rate
-            relative_slope = (slope / y_mean * 100) if y_mean != 0 else 0
-
-            # Determine trend direction and strength
-            if abs(relative_slope) < 2:  # Less than 2% change per time unit
-                trend = "stable"
-            elif relative_slope >= 8:  # Strong increase (>=8% per time unit)
-                trend = "rapidly increasing"
-            elif relative_slope >= 4:  # Moderate increase (4-8% per time unit)
-                trend = "moderately increasing"
-            elif relative_slope > 0:  # Mild increase (2-4% per time unit)
-                trend = "slowly increasing"
-            elif relative_slope <= -8:  # Strong decrease (<=-8% per time unit)
-                trend = "rapidly decreasing"
-            elif relative_slope <= -4:  # Moderate decrease (-8 to -4% per time unit)
-                trend = "moderately decreasing"
-            else:  # Mild decrease (-4 to -2% per time unit)
-                trend = "slowly decreasing"
-
-            # Use categorize_features for abnormality assessment
-            patient_df = pd.DataFrame([patient_data])
-            categorized_df = self.preprocessor_advanced.categorize_features(
-                df=patient_df,
-                base_features={feature_key},
-                X_cols=patient_data.index,
-                num_categories=5,
-                for_llm=True,
-            )
-
-            status = (
-                categorized_df[feature_key].iloc[0]
-                if feature_key in categorized_df.columns
-                else "unknown range"
-            )
-
-            return f"{trend}, {status}"
-
-        except Exception as e:
-            logger.warning(
-                "Error analyzing temporal pattern for %s: %s", feature_key, e
-            )
-            return "stable trend"
-
-    def _validate_lab_request(
-        self, requested_labs: List[str], state: Dict[str, Any]
-    ) -> List[str]:
-        """
-        Validate lab requests to ensure no already-used features are requested again.
-
-        Args:
-            requested_labs: List of requested lab abbreviations
-            state: Current workflow state
-
-        Returns:
-            List of valid, unused lab abbreviations
-        """
-        valid_labs = []
-        already_used_requests = []
-
-        for lab in requested_labs:
-            if lab in state["used_features"]:
-                already_used_requests.append(lab)
-            else:
-                valid_labs.append(lab)
-
-        if already_used_requests:
-            logger.warning(
-                "Model requested already analyzed features: %s. These will be ignored.",
-                already_used_requests,
-            )
-            logger.info("Valid new lab requests: %s", valid_labs)
-
-        return valid_labs

@@ -1,174 +1,633 @@
 import logging
-from datetime import datetime
-from typing import Any, Dict, Optional
-
+from typing import Any, Dict, List, Optional, Set, Tuple
+import pandas as pd
+import numpy as np
+from src.preprocessing.preprocessing_advanced.preprocessing_advanced import (
+    PreprocessorAdvanced,
+)
+from src.util.data_util import (
+    get_feature_name,
+    get_feature_reference_range,
+    get_feature_uom,
+    get_all_feature_groups,
+    get_feature_group_keys,
+    get_feature_group_title,
+    validate_feature_exists,
+    get_common_feature_aliases,
+    get_clinical_group_aliases,
+)
 
 logger = logging.getLogger("PULSE_logger")
 
-# ------------------------------------
-# Memory Management for Agent Reasoning Steps
-# ------------------------------------
+# ===========================
+# FORMATTING FUNCTIONS
+# ===========================
 
 
-class StepMemory:
-    """Memory of a single reasoning step."""
+def format_clinical_data(
+    patient_data: pd.Series,
+    feature_keys: Set[str],
+    preprocessor_advanced: PreprocessorAdvanced,
+    include_demographics: bool = False,
+    include_temporal_patterns: bool = False,
+    include_uncertainty: bool = False,
+    original_patient_data: Optional[pd.Series] = None,
+) -> Dict[str, Any]:
+    """
+    Format clinical data (vital signs or lab results) using aggregate_feature_windows.
 
-    def __init__(self, step_number: int, step_name: str):
-        self.step_number = step_number
-        self.step_name = step_name
-        self.system_message = None
-        self.input = None
-        self.output = None
-        self.num_input_tokens = 0
-        self.num_output_tokens = 0
-        self.token_time = 0.0
-        self.infer_time = 0.0
-        self.timestamp = datetime.now().isoformat()
+    Args:
+        patient_data: Patient data series
+        feature_keys: Set of feature keys to format
+        preprocessor_advanced: Instance of PreprocessorAdvanced for data processing
+        include_demographics: Whether to include demographics in output
+        include_temporal_patterns: Whether to include temporal trend analysis
 
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert memory to dictionary for serialization."""
-        return {
-            "step_number": self.step_number,
-            "step_name": self.step_name,
-            "system_message": self.system_message,
-            "input": self.input,
-            "output": self.output,
-            "num_input_tokens": self.num_input_tokens,
-            "num_output_tokens": self.num_output_tokens,
-            "token_time": self.token_time,
-            "infer_time": self.infer_time,
-            "timestamp": self.timestamp,
-        }
+    Returns:
+        Dictionary with formatted clinical data
+    """
+    # Convert patient data to DataFrame for preprocessing
+    patient_df = pd.DataFrame([patient_data])
 
+    # Use aggregate_feature_windows to get min, max, mean for each feature
+    aggregated_df = preprocessor_advanced.aggregate_feature_windows(patient_df)
+    aggregated_row = aggregated_df.iloc[0]
 
-class AgentMemoryManager:
-    """Manager for agent reasoning steps."""
+    # Prepare result dictionary
+    result = {}
 
-    def __init__(
-        self,
-        agent_id: str,
-        output_dir: Optional[str] = None,
-        metrics_tracker: Optional[Any] = None,
-    ):
-        self.agent_id = agent_id
-        self.samples = {}  # Change from steps to samples dictionary
-        self.current_sample_id = None  # Track current sample being processed
-        self.total_samples = 0  # Track total expected samples
-        self.metrics_tracker = metrics_tracker  # Store reference
-        self.current_target_label = None  # Store current sample's target
+    # Extract patient demographics if requested
+    if include_demographics:
+        patient_demographics = {}
+        if "age" in patient_data.index:
+            patient_demographics["age"] = patient_data["age"]
+        if "sex" in patient_data.index:
+            patient_demographics["sex"] = patient_data["sex"]
+        if "weight" in patient_data.index:
+            patient_demographics["weight"] = patient_data["weight"]
+        result["demographics"] = patient_demographics
 
-    def set_current_sample(self, sample_id: Any) -> None:
-        """Set the current sample being processed."""
-        self.current_sample_id = str(sample_id)
-        if self.current_sample_id not in self.samples:
-            self.samples[self.current_sample_id] = []
+    # Format clinical features with aggregated values using data_util
+    clinical_data = {}
 
-    def set_current_sample_target(self, target_label: float) -> None:
-        """Set the target label for the current sample."""
-        self.current_target_label = target_label
+    for feature_key in feature_keys:
+        # Check if this feature has aggregated columns in the data
+        if any(col.startswith(f"{feature_key}_") for col in aggregated_row.index):
+            min_val = aggregated_row.get(f"{feature_key}_min", None)
+            max_val = aggregated_row.get(f"{feature_key}_max", None)
+            mean_val = aggregated_row.get(f"{feature_key}_mean", None)
 
-    def add_step(
-        self,
-        step_name: str,
-        input_data: Any,
-        output_data: Any,
-        system_message: str = None,
-        num_input_tokens: int = 0,
-        num_output_tokens: int = 0,
-        token_time: float = 0.0,
-        infer_time: float = 0.0,
-    ) -> StepMemory:
-        """Add a reasoning step to memory and MetricsTracker."""
-        if self.current_sample_id is None:
-            logger.warning("No current sample set, using default")
-            self.set_current_sample("default")
+            # Only include features with non-NaN mean values
+            if not pd.isna(mean_val):
+                feature_name = get_feature_name(feature_key)
+                unit = get_feature_uom(feature_key)
+                normal_range = get_feature_reference_range(feature_key)
 
-        steps = self.samples[self.current_sample_id]
-        step = StepMemory(len(steps) + 1, step_name)
-        step.input = input_data
-        step.output = output_data
-        step.system_message = system_message
-        step.num_input_tokens = num_input_tokens
-        step.num_output_tokens = num_output_tokens
-        step.token_time = token_time
-        step.infer_time = infer_time
-
-        steps.append(step)
-
-        # Add to MetricsTracker if available
-        if self.metrics_tracker:
-            # Extract metrics from final prediction output if it's parsed
-            predicted_probability = None
-            predicted_diagnosis = ""
-            predicted_explanation = ""
-
-            # Additional fields for lab ordering steps
-            requested_tests = ""
-            confidence = None
-
-            # For steps with parsed json output, dict keys will be tracked individually
-            if isinstance(output_data, dict):
-                predicted_probability = output_data.get("probability", None)
-                predicted_diagnosis = output_data.get("diagnosis", "")
-                predicted_explanation = output_data.get("explanation", "")
-                confidence = output_data.get("confidence", None)
-
-                # Extract lab ordering specific information
-                if step_name == "lab_ordering":
-                    requested_tests_list = output_data.get("requested_tests", [])
-                    requested_tests = (
-                        ",".join(requested_tests_list) if requested_tests_list else ""
-                    )
-
-            self.metrics_tracker.add_metadata_item(
-                {
-                    "Sample ID": str(self.current_sample_id),
-                    "Step Number": step.step_number,
-                    "Step Name": step_name,
-                    "System Message": system_message or "",
-                    "Input Prompt": str(input_data),
-                    "Output": str(output_data),
-                    "Target Label": self.current_target_label or 0,
-                    "Predicted Probability": predicted_probability,
-                    "Predicted Diagnosis": predicted_diagnosis,
-                    "Predicted Explanation": predicted_explanation,
-                    "Requested Tests": requested_tests,
-                    "Confidence": confidence,
-                    "Tokenization Time": token_time,
-                    "Inference Time": infer_time,
-                    "Input Tokens": num_input_tokens,
-                    "Output Tokens": num_output_tokens,
+                clinical_data[feature_key] = {
+                    "name": feature_name,
+                    "min": min_val if not pd.isna(min_val) else mean_val,
+                    "max": max_val if not pd.isna(max_val) else mean_val,
+                    "mean": mean_val,
+                    "unit": unit,
+                    "normal_range": normal_range,
                 }
-            )
 
-        return step
+                # Add temporal pattern analysis if requested
+                if include_temporal_patterns:
+                    temporal_pattern = analyze_temporal_pattern(
+                        patient_data,
+                        feature_key,
+                        min_val,
+                        max_val,
+                        mean_val,
+                        preprocessor_advanced,
+                    )
+                    clinical_data[feature_key]["temporal_pattern"] = temporal_pattern
 
-    def get_final_step(self, sample_id: Any) -> Optional[StepMemory]:
-        """Get the final step for a specific sample."""
-        # Convert sample_id to string for consistent comparison
-        str_sample_id = str(sample_id)
+                # Add uncertainty analysis if requested
+                if include_uncertainty:
+                    # Use original_patient_data (with _na columns) if available, otherwise fall back to patient_data
+                    data_for_uncertainty = (
+                        original_patient_data
+                        if original_patient_data is not None
+                        else patient_data
+                    )
+                    uncertainty_pattern = analyze_uncertainty_pattern(
+                        data_for_uncertainty,
+                        feature_key,
+                    )
+                    clinical_data[feature_key]["uncertainty"] = uncertainty_pattern
 
-        if str_sample_id not in self.samples:
-            logger.warning(
-                f"Sample ID {sample_id} not found in samples dict. Available samples: {list(self.samples.keys())}"
-            )
-            return None
+    # Store clinical data under appropriate key
+    if include_demographics:
+        result["vital_signs"] = clinical_data
+    else:
+        result = clinical_data
 
-        if not self.samples[str_sample_id]:
-            logger.warning(f"No steps found for sample ID {sample_id}")
-            return None
+    return result
 
-        return self.samples[str_sample_id][-1]
 
-    def reset(self) -> None:
-        """Reset memory for the current sample."""
-        if (
-            self.current_sample_id is not None
-            and self.current_sample_id in self.samples
-        ):
-            # Clear just the current sample's steps
-            self.samples[self.current_sample_id] = []
+def format_clinical_text(clinical_data: Dict[str, Dict]) -> List[str]:
+    """
+    Format clinical data dictionary into human-readable text lines.
+
+    Args:
+        clinical_data: Dictionary with feature data containing name, min, max, mean, unit, normal_range
+
+    Returns:
+        List of formatted text lines
+    """
+    formatted_lines = []
+
+    for feature_key, data in clinical_data.items():
+        name = data["name"]
+        min_val = data["min"]
+        max_val = data["max"]
+        mean_val = data["mean"]
+        unit = data["unit"]
+        normal_range = data["normal_range"]
+
+        # Format value range or single value
+        if abs(min_val - max_val) < 0.01:  # Essentially the same value
+            value_str = f"{mean_val:.2f}"
         else:
-            # If no current sample, reset all
-            self.samples = {}
-            self.current_sample_id = None
+            value_str = f"{min_val:.2f}-{max_val:.2f} (avg: {mean_val:.2f})"
+
+        # Add normal range if available
+        if unit and normal_range != (0, 0):
+            normal_str = f" [normal: {normal_range[0]}-{normal_range[1]} {unit}]"
+            base_text = f"- {name}: {value_str} {unit}{normal_str}"
+        else:
+            unit_str = f" {unit}" if unit else ""
+            base_text = f"- {name}: {value_str}{unit_str}"
+
+        # Add temporal pattern information if available
+        pattern_info = []
+        if "temporal_pattern" in data:
+            pattern_info.append(data["temporal_pattern"])
+
+        # Add uncertainty information if available
+        if "uncertainty" in data:
+            pattern_info.append(data["uncertainty"])
+
+        if pattern_info:
+            base_text += f" ({', '.join(pattern_info)})"
+
+        formatted_lines.append(base_text)
+
+    return formatted_lines
+
+
+def filter_na_columns(patient_data: pd.Series) -> pd.Series:
+    """Filter out columns with '_na' suffixes like Sarvari preprocessor does."""
+    # Convert to DataFrame for regex filtering, then back to Series
+    temp_df = pd.DataFrame([patient_data])
+    filtered_df = temp_df.filter(regex=r"^(?!.*_na(_\d+)?$)")
+    return filtered_df.iloc[0]
+
+
+# ===========================
+# TOOLS FUNCTIONS
+# ===========================
+
+
+def analyze_temporal_pattern(
+    patient_data: pd.Series,
+    feature_key: str,
+    min_val: float,
+    max_val: float,
+    mean_val: float,
+    preprocessor_advanced: PreprocessorAdvanced,
+) -> str:
+    """
+    Simple temporal pattern analysis returning brief text assessment.
+
+    Args:
+        patient_data: Full patient data series
+        feature_key: The feature to analyze (e.g., 'hr', 'sbp')
+        min_val: Minimum value over monitoring period
+        max_val: Maximum value over monitoring period
+        mean_val: Mean value over monitoring period
+        preprocessor_advanced: Instance of PreprocessorAdvanced for categorization
+
+    Returns:
+        Brief text description of trend and normality
+    """
+    try:
+        # Extract time-windowed values for this feature
+        time_series_values = []
+        for col in patient_data.index:
+            if col.startswith(f"{feature_key}_") and col.split("_")[-1].isdigit():
+                val = patient_data[col]
+                if not pd.isna(val):
+                    time_series_values.append(val)
+
+        if len(time_series_values) < 3:
+            return "stable trend"
+
+        # Linear regression for trend analysis
+        n = len(time_series_values)
+        x = np.arange(n)  # Time points
+        y = np.array(time_series_values)
+
+        # Calculate linear regression slope
+        x_mean = np.mean(x)
+        y_mean = np.mean(y)
+
+        numerator = np.sum((x - x_mean) * (y - y_mean))
+        denominator = np.sum((x - x_mean) ** 2)
+
+        if denominator == 0:
+            slope = 0
+        else:
+            slope = numerator / denominator
+
+        # Normalize slope by mean value to get relative change rate
+        relative_slope = (slope / y_mean * 100) if y_mean != 0 else 0
+
+        # Determine trend direction and strength
+        if abs(relative_slope) < 2:  # Less than 2% change per time unit
+            trend = "stable"
+        elif relative_slope >= 8:  # Strong increase (>=8% per time unit)
+            trend = "rapidly increasing"
+        elif relative_slope >= 4:  # Moderate increase (4-8% per time unit)
+            trend = "moderately increasing"
+        elif relative_slope > 0:  # Mild increase (2-4% per time unit)
+            trend = "slowly increasing"
+        elif relative_slope <= -8:  # Strong decrease (<=-8% per time unit)
+            trend = "rapidly decreasing"
+        elif relative_slope <= -4:  # Moderate decrease (-8 to -4% per time unit)
+            trend = "moderately decreasing"
+        else:  # Mild decrease (-4 to -2% per time unit)
+            trend = "slowly decreasing"
+
+        # Use categorize_features for abnormality assessment
+        patient_df = pd.DataFrame([patient_data])
+        categorized_df = preprocessor_advanced.categorize_features(
+            df=patient_df,
+            base_features={feature_key},
+            X_cols=patient_data.index,
+            num_categories=5,
+            for_llm=True,
+        )
+
+        status = (
+            categorized_df[feature_key].iloc[0]
+            if feature_key in categorized_df.columns
+            else "unknown range"
+        )
+
+        return f"values {status}, temporal trend {trend}"
+
+    except Exception as e:
+        logger.warning("Error analyzing temporal pattern for %s: %s", feature_key, e)
+        return "stable trend"
+
+
+def analyze_uncertainty_pattern(
+    patient_data: pd.Series,
+    feature_key: str,
+) -> str:
+    """
+    Analyze missingness/imputation uncertainty for a feature using _na indicators.
+
+    Args:
+        patient_data: Full patient data series (with _na columns preserved)
+        feature_key: The feature to analyze (e.g., 'hr', 'sbp')
+
+    Returns:
+        Brief text description of data completeness and uncertainty
+    """
+    try:
+        # Look for windowed _na indicator columns (feature_na_0, feature_na_1, etc.)
+        na_indicator_pattern = f"{feature_key}_na_"
+        na_indicator_cols = [
+            col
+            for col in patient_data.index
+            if col.startswith(na_indicator_pattern) and col.split("_")[-1].isdigit()
+        ]
+
+        # Debug: Check what _na columns are available
+        if not na_indicator_cols:
+            logger.debug("No windowed _na columns found for %s", feature_key)
+            # No _na indicator found, check if base feature exists
+            if any(col.startswith(f"{feature_key}_") for col in patient_data.index):
+                return "complete data"
+            else:
+                return "feature not available"
+
+        # Count total number of time windows for this feature
+        time_window_cols = [
+            col
+            for col in patient_data.index
+            if col.startswith(f"{feature_key}_")
+            and col.split("_")[-1].isdigit()
+            and not "_na_" in col
+        ]
+        total_windows = len(time_window_cols)
+
+        if total_windows == 0:
+            return "feature not available"
+
+        # Calculate how many windows were imputed by checking _na indicators
+        imputed_windows = 0
+        for na_col in na_indicator_cols:
+            na_value = patient_data[na_col]
+            if not pd.isna(na_value):
+                try:
+                    # If _na indicator is 1, this window was imputed
+                    if float(na_value) == 1.0:
+                        imputed_windows += 1
+                except (ValueError, TypeError):
+                    continue
+
+        # Create detailed uncertainty description
+        if imputed_windows == 0:
+            completeness = "complete data"
+        elif imputed_windows == total_windows:
+            completeness = f"fully imputed ({imputed_windows}/{total_windows})"
+        else:
+            completeness = f"partially imputed ({imputed_windows}/{total_windows})"
+
+        return completeness
+
+    except Exception as e:
+        logger.warning("Error analyzing uncertainty for %s: %s", feature_key, e)
+        return "unknown completeness"
+
+
+# ===========================
+# DATA COLLECTION UTILS
+# ===========================
+
+
+def get_available_vitals(available_features: Set[str]) -> Set[str]:
+    """Get available vital signs from the data using data_util groups."""
+    available_vitals = set()
+    vitals_keys = get_feature_group_keys("vitals")
+
+    for vital in vitals_keys:
+        if any(feat.startswith(vital) for feat in available_features):
+            available_vitals.add(vital)
+    return available_vitals
+
+
+def get_available_labs(
+    requested_labs: List[str], available_features: Set[str]
+) -> Set[str]:
+    """Get available requested labs from the data."""
+    available_labs = set()
+    for lab in requested_labs:
+        if any(feat.startswith(lab) for feat in available_features):
+            available_labs.add(lab)
+    return available_labs
+
+
+def get_lab_groups_available(available_features: Set[str]) -> Dict[str, List[str]]:
+    """Get available lab tests organized by clinical groups."""
+    available_by_group = {}
+    lab_groups = get_all_feature_groups()
+
+    for group_name, group_dict in lab_groups.items():
+        if group_name == "vitals":  # Skip vitals as they're handled separately
+            continue
+
+        available_in_group = []
+        for feature_key in group_dict.keys():
+            if any(feat.startswith(feature_key) for feat in available_features):
+                available_in_group.append(feature_key)
+
+        if available_in_group:
+            available_by_group[group_name] = available_in_group
+
+    return available_by_group
+
+
+def validate_features(feature_list: List[str]) -> List[str]:
+    """Validate that requested features exist in the data_util feature dictionary."""
+    valid_features = []
+    lab_groups = get_all_feature_groups()
+
+    # Get mappings from data_util
+    group_mappings = {}
+
+    # Add official group mappings from data_util
+    for group_key in [
+        "bga",
+        "coag",
+        "electrolytes_met",
+        "liver_kidney",
+        "hematology_immune",
+        "cardiac",
+    ]:
+        group_features = get_feature_group_keys(group_key)
+        group_title = get_feature_group_title(group_key).lower()
+
+        # Add both the key and the display title as mappings
+        group_mappings[group_key] = group_features
+        group_mappings[group_title] = group_features
+
+    # Add clinical aliases from data_util
+    clinical_aliases = get_clinical_group_aliases()
+    for feature_tuple, aliases in clinical_aliases.items():
+        feature_list_from_tuple = list(feature_tuple)
+        for alias in aliases:
+            group_mappings[alias] = feature_list_from_tuple
+
+    # Get individual feature name mappings from data_util
+    name_mappings = get_common_feature_aliases()
+
+    for feature in feature_list:
+        feature_lower = feature.lower().strip()
+
+        # First check exact match (highest priority)
+        if validate_feature_exists(feature):
+            valid_features.append(feature)
+            continue
+
+        # Check lowercase exact match
+        if validate_feature_exists(feature_lower):
+            valid_features.append(feature_lower)
+            continue
+
+        # Check if it's a group name that needs expansion
+        if feature_lower in group_mappings:
+            group_features = group_mappings[feature_lower]
+            added_features = []
+            for group_feature in group_features:
+                if validate_feature_exists(group_feature):
+                    valid_features.append(group_feature)
+                    added_features.append(group_feature)
+            if added_features:
+                logger.info(
+                    "Expanded group '%s' to features: %s", feature, added_features
+                )
+            continue
+
+        # Check if it needs individual mapping
+        if feature_lower in name_mappings:
+            mapped_feature = name_mappings[feature_lower]
+            if validate_feature_exists(mapped_feature):
+                valid_features.append(mapped_feature)
+                logger.info("Mapped '%s' to '%s'", feature, mapped_feature)
+                continue
+            else:
+                logger.warning(
+                    "Mapped feature '%s' not found in data_util", mapped_feature
+                )
+                continue
+
+        # Check for partial matches in available feature groups
+        found_match = False
+        for group_name, group_dict in lab_groups.items():
+            for feature_key in group_dict.keys():
+                if (
+                    feature_lower in feature_key.lower()
+                    or feature_key.lower() in feature_lower
+                ):
+                    if validate_feature_exists(feature_key):
+                        valid_features.append(feature_key)
+                        logger.info(
+                            "Partial match: mapped '%s' to '%s'",
+                            feature,
+                            feature_key,
+                        )
+                        found_match = True
+                        break
+            if found_match:
+                break
+
+        if not found_match:
+            logger.warning("Feature '%s' not found in data_util", feature)
+
+    return valid_features
+
+
+def validate_lab_request(requested_labs: List[str], state: Dict[str, Any]) -> List[str]:
+    """
+    Validate lab requests to ensure no already-used features are requested again.
+
+    Args:
+        requested_labs: List of requested lab abbreviations
+        state: Current workflow state
+
+    Returns:
+        List of valid, unused lab abbreviations
+    """
+    valid_labs = []
+    already_used_requests = []
+
+    for lab in requested_labs:
+        if lab in state["used_features"]:
+            already_used_requests.append(lab)
+        else:
+            valid_labs.append(lab)
+
+    if already_used_requests:
+        logger.warning(
+            "Model requested already analyzed features: %s. These will be ignored.",
+            already_used_requests,
+        )
+        logger.info("Valid new lab requests: %s", valid_labs)
+
+    return valid_labs
+
+
+def extract_requested_labs(lab_order_output: Dict[str, Any]) -> Optional[List[str]]:
+    """Extract requested labs from lab ordering output with validation."""
+    if not isinstance(lab_order_output, dict):
+        logger.info("Lab ordering failed to return dict, stopping iteration")
+        return None
+
+    if "requested_tests" in lab_order_output:
+        return lab_order_output.get("requested_tests", [])
+    elif lab_order_output.get("diagnosis") == "unknown":
+        # This is the fallback dict from failed parsing
+        logger.info("Lab ordering failed to parse JSON, stopping iteration")
+        return None
+    else:
+        # Unexpected dict format
+        logger.info("Lab ordering returned unexpected format, stopping iteration")
+        return None
+
+
+# ===========================
+# SPECIALIST AGENT UTILS
+# ===========================
+
+
+def get_specialist_features(
+    specialist_type: str, available_features: Set[str]
+) -> Set[str]:
+    """Get available features for a specific specialist agent type."""
+    specialist_config = {
+        "hemodynamic": ["vitals", "cardiac"],
+        "metabolic": ["bga", "electrolytes_met", "liver_kidney"],
+        "hematologic": ["hematology_immune", "coag"],
+    }
+
+    if specialist_type not in specialist_config:
+        return set()
+
+    specialist_features = set()
+    for group_name in specialist_config[specialist_type]:
+        group_keys = get_feature_group_keys(group_name)
+        for feature_key in group_keys:
+            if any(feat.startswith(feature_key) for feat in available_features):
+                specialist_features.add(feature_key)
+
+    return specialist_features
+
+
+def get_specialist_system_message(specialist_type: str, task_name: str) -> str:
+    """Get system message for specialist agents."""
+
+    specialist_descriptions = {
+        "hemodynamic": "You are a hemodynamic specialist analyzing cardiovascular stability, perfusion status, and cardiac function to assess {task_name} risk. Focus on vital signs patterns, cardiac markers, and circulatory indicators. Provide concise, focused assessments.",
+        "metabolic": "You are a metabolic specialist analyzing acid-base balance, electrolyte status, and organ function to assess {task_name} risk. Focus on blood gas analysis, metabolic markers, and organ dysfunction indicators. Provide concise, focused assessments.",
+        "hematologic": "You are a hematology specialist analyzing blood counts, immune response, and coagulation status to assess {task_name} risk. Focus on hematologic parameters, inflammatory markers, and bleeding risk indicators. Provide concise, focused assessments.",
+    }
+
+    return specialist_descriptions.get(
+        specialist_type,
+        f"You are a {specialist_type} specialist analyzing clinical data to assess {task_name} risk.",
+    ).format(task_name=task_name)
+
+
+# ===========================
+# OTHER UTILS
+# ===========================
+
+
+def extract_confidence(output: Dict[str, Any]) -> float:
+    """Extract confidence value from LLM output with fallback logic."""
+    if "confidence" in output:
+        confidence = output.get("confidence", 50)
+        # Handle string values from LLM output
+        if isinstance(confidence, str):
+            try:
+                confidence = float(confidence)
+            except ValueError:
+                confidence = 50
+        return confidence / 100.0
+    else:
+        # Use probability as confidence indicator when confidence not provided
+        probability = output.get("probability", 50)
+        # Handle string values from LLM output
+        if isinstance(probability, str):
+            try:
+                probability = float(probability)
+            except ValueError:
+                probability = 50
+        return probability / 100.0
+
+
+def create_error_response(error_message: str) -> Dict[str, Any]:
+    """Create standardized error response."""
+    return {
+        "generated_text": {"error": error_message},
+        "token_time": 0,
+        "infer_time": 0,
+        "num_input_tokens": 0,
+        "num_output_tokens": 0,
+    }
