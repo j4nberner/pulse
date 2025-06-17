@@ -100,6 +100,8 @@ class MetricsTracker:
         """
         if hasattr(self, "items") and self.items:
             df = pd.DataFrame(self.items)
+            self.items = []  # Clear items after logging
+
             # Compute mean for numeric columns only
             means = df.select_dtypes(include=[np.number]).mean().to_dict()
             for k, v in means.items():
@@ -113,7 +115,11 @@ class MetricsTracker:
                     f"{self.model_id}_{self.task_id}_{self.dataset_name}_{self.run_id}_metadata.csv",
                 )
                 logger.info(f"Saving Metadata to {summary_path}")
-                df.to_csv(summary_path, index=False)
+                # If file exists, append without header; else, write with header
+                if os.path.exists(summary_path):
+                    df.to_csv(summary_path, mode='a', header=False, index=False)
+                else:
+                    df.to_csv(summary_path, index=False)
 
         else:
             logger.warning("No metadata items to print.")

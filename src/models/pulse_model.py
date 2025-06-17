@@ -438,7 +438,7 @@ class PulseLLMModel(PulseModel):
                 result_dict = {
                     "generated_text": {
                         "diagnosis": "error",
-                        "probability": 0.5,
+                        "probability": np.nan,
                         "explanation": f"Error: {str(e)}",
                     },
                     "token_time": 0.0,
@@ -454,7 +454,7 @@ class PulseLLMModel(PulseModel):
             num_input_tokens = result_dict["num_input_tokens"]
             num_output_tokens = result_dict["num_output_tokens"]
 
-            predicted_probability = float(generated_text.get("probability", 0.5))
+            predicted_probability = float(generated_text.get("probability", np.nan))
 
             logger.info(
                 "Predicted probability: %s | True label: %s",
@@ -552,6 +552,18 @@ class PulseLLMModel(PulseModel):
 
         sys_msgs = system_message_samples(task=self.task_name)
 
+        # Skip first n samples if specified
+        skip_samples = self.params.get("skip_samples", 666)
+        if skip_samples > 0:
+            logger.info(
+                "Skipping first %d samples in the test set for system message evaluation",
+                skip_samples,
+            )
+            X_test, y_test = test_loader
+            X_test = X_test.iloc[skip_samples:]
+            y_test = y_test.iloc[skip_samples:]
+            test_loader = (X_test, y_test)
+
         self.model.eval()
 
         for X, y in zip(test_loader[0].iterrows(), test_loader[1].iterrows()):
@@ -570,7 +582,7 @@ class PulseLLMModel(PulseModel):
                 num_input_tokens = result_dict["num_input_tokens"]
                 num_output_tokens = result_dict["num_output_tokens"]
 
-                predicted_probability = float(generated_text.get("probability", 0.5))
+                predicted_probability = float(generated_text.get("probability", np.nan))
 
                 logger.info(
                     "Predicted probability: %s | True label: %s",
@@ -609,16 +621,19 @@ class PulseLLMModel(PulseModel):
                         "System Message Index": i,
                     }
                 )
+                if len(metrics_tracker.items) > 100:
+                    # Log metadata periodically to avoid memory issues
+                    metrics_tracker.log_metadata()
 
         metrics_tracker.summary = metrics_tracker.compute_overall_metrics()
         if save_report:
-            metrics_tracker.log_metadata(save_to_file=self.save_metadata)
+            metrics_tracker.log_metadata()
             metrics_tracker.save_report()
 
         logger.info("System Message evaluation completed for %s", self.model_name)
         logger.info("Test metrics: %s", metrics_tracker.summary)
 
-        self.delete_model()
+        # self.delete_model()
 
         return float(np.mean(val_loss))
 

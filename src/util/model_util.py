@@ -3,6 +3,7 @@ import logging
 import os
 import re
 from typing import Any, Dict, List, Optional, Tuple
+import warnings
 
 import joblib
 import numpy as np
@@ -69,6 +70,8 @@ class EarlyStopping:
             model.load_state_dict(self.best_model_state)
             if self.verbose:
                 logger.info("Loaded best model state from early stopping")
+        
+        return model
 
 
 def save_torch_model(model_name: str, model: Any, save_dir: str) -> None:
@@ -92,6 +95,8 @@ def save_torch_model(model_name: str, model: Any, save_dir: str) -> None:
         logger.info("Model '%s' saved to %s", model_name, model_path)
     except Exception as e:
         logger.error("Failed to save model '%s': %s", model_name, str(e))
+    
+    return model_path
 
 
 def save_sklearn_model(model_name: str, model: Any, save_dir: str) -> None:
@@ -242,6 +247,19 @@ def initialize_weights(module):
 # ------------------------------------
 # Util functions for LLMs
 # ------------------------------------
+
+def normalize_probability(prob_value: float) -> float:
+    """Normalize probability to a 0.0-1.0 range."""
+    if 0 <= prob_value <= 100:
+        return prob_value / 100.0
+    elif 0 <= prob_value <= 1:
+        return prob_value
+    else:
+        logger.warning(
+            "Probability value %s out of expected range. Clamping to [0,1]",
+            prob_value,
+        )
+        return max(0.0, min(1.0, prob_value / 100.0))
 
 
 def prompt_template_hf(
@@ -609,19 +627,7 @@ def parse_llm_output(
                 prob_value = float(parsed["probability"])
 
                 # Check if it's in 0-100 range (integer format)
-                if 0 <= prob_value <= 100:
-                    # Convert to 0.0-1.0 range
-                    parsed["probability"] = prob_value / 100.0
-                elif 0 <= prob_value <= 1:
-                    # Already in correct range
-                    parsed["probability"] = prob_value
-                else:
-                    # Out of expected range, clamp and warn
-                    logger.warning(
-                        "Probability value %s out of expected range. Clamping to [0,1]",
-                        prob_value,
-                    )
-                    parsed["probability"] = max(0.0, min(1.0, prob_value / 100.0))
+                parsed["probability"] = normalize_probability(prob_value)
 
             except (ValueError, TypeError):
                 logger.warning(
@@ -658,7 +664,6 @@ def fix_json_formatting(json_text: str) -> str:
     return escape_newlines_in_strings(json_text)
 
 
-@DeprecationWarning
 def extract_dict(output_text: str) -> Optional[Dict[str, str]]:
     """Extract and parse the last JSON-like object from the model's output text and return it as a dictionary.
 
@@ -668,6 +673,12 @@ def extract_dict(output_text: str) -> Optional[Dict[str, str]]:
     Returns:
         A dictionary parsed from the JSON string, or a default JSON object if no JSON was found.
     """
+    warnings.warn(
+            "extract_dict is deprecated and will be removed in a future release. "
+            "Use parse_llm_output instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
     default_json = {
         "diagnosis": "unknown",
         "probability": 0.5,  # Keep as 0.5 (0.0-1.0 range)
@@ -713,14 +724,11 @@ def extract_dict(output_text: str) -> Optional[Dict[str, str]]:
     try:
         parsed = json.loads(json_text_clean)
 
-        # Convert probability from 0-100 to 0.0-1.0 if needed
+        # Convert probability using helper function
         if "probability" in parsed:
             try:
                 prob_value = float(parsed["probability"])
-                if 0 <= prob_value <= 100:
-                    parsed["probability"] = prob_value / 100.0
-                elif not (0 <= prob_value <= 1):
-                    parsed["probability"] = 0.5
+                parsed["probability"] = normalize_probability(prob_value)
             except (ValueError, TypeError):
                 parsed["probability"] = 0.5
 

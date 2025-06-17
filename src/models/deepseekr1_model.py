@@ -3,12 +3,13 @@ import time
 import warnings
 from typing import Any, Dict
 
+import numpy as np
 import torch
 from transformers import BitsAndBytesConfig
 
 from src.models.pulse_model import PulseLLMModel
 from src.util.config_util import set_seeds
-from src.util.model_util import extract_dict, prompt_template_hf
+from src.util.model_util import extract_dict, parse_llm_output, prompt_template_hf
 
 warnings.filterwarnings(
     "ignore",
@@ -50,14 +51,14 @@ class DeepseekR1Model(PulseLLMModel):
 
     def generate(
         self,
-        input_text: str,
+        input_data: str,
         custom_system_message: str = None,
         force_raw_text: bool = False,
     ) -> Dict[str, Any]:
         """Runs the HF model on the input and extracts diagnosis, explanation, and probability.
 
         Args:
-            input_text: The text to analyze
+            input_data: The text to analyze
             custom_system_message: Optional custom system message
             force_raw_text: If True, returns raw text output without JSON parsing
         """
@@ -71,16 +72,16 @@ class DeepseekR1Model(PulseLLMModel):
 
         logger.info("---------------------------------------------")
 
-        if not isinstance(input_text, str):
-            input_text = str(input_text)
+        if not isinstance(input_data, str):
+            input_data = str(input_data)
 
         # Format input using prompt template
-        input_text = prompt_template_hf(
-            input_text, custom_system_message, self.model_name
+        input_data = prompt_template_hf(
+            input_data, custom_system_message, self.model_name
         )
 
         chat_prompt = self.tokenizer.apply_chat_template(
-            input_text, tokenize=False, add_generation_prompt=True
+            input_data, tokenize=False, add_generation_prompt=True
         )
         token_start = time.perf_counter()
         tokenized_inputs = self.tokenizer(
@@ -141,13 +142,13 @@ class DeepseekR1Model(PulseLLMModel):
 
         # Extract dict from the decoded output
         try:
-            parsed = extract_dict(answer_output)
+            parsed = parse_llm_output(decoded_output)
             # logger.debug("Parsed output: %s", parsed)
         except Exception as e:
             logger.warning(f"Failed to parse output: {decoded_output}")
             parsed = {
                 "diagnosis": None,
-                "probability": 0.5,
+                "probability": np.nan,
                 "explanation": decoded_output,
             }
 

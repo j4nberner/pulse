@@ -36,7 +36,7 @@ def zhu_2024b_one_shot_preprocessor(
     task = info_dict.get("task")
     dataset = info_dict.get("dataset_name")
     model_id = info_dict.get("model_name")
-    num_shots = 1  # Fixed value of num_shots=1 for this specific implementation
+    num_shots = 0  # Fixed value of num_shots=1 for this specific implementation
     mode = info_dict.get("mode")  # train/val/test
 
     # Set the data window based on task
