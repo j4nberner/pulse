@@ -242,8 +242,7 @@ class PulseLLMModel(PulseModel):
 
     def delete_model(self) -> None:
         """
-        Delete the model from GPU memory to CPU. Sets is_loaded to False.
-        If CPU memory is insufficient, deletes the model and clears cache.
+        Delete the model from GPU memory. Sets is_loaded to False.
         """
         if self.is_loaded:
             logger.info("Deleting the model %s", self.model_id)
@@ -533,7 +532,7 @@ class PulseLLMModel(PulseModel):
         logger.info("Test evaluation completed for %s", self.model_name)
         logger.info("Test metrics: %s", metrics_tracker.summary)
 
-        self.delete_model()
+        # self.delete_model()
 
         return float(np.mean(val_loss))
 
@@ -637,7 +636,7 @@ class PulseLLMModel(PulseModel):
         logger.info("System Message evaluation completed for %s", self.model_name)
         logger.info("Test metrics: %s", metrics_tracker.summary)
 
-        self.delete_model()
+        # self.delete_model()
 
         return float(np.mean(val_loss))
 

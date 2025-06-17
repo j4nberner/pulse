@@ -126,7 +126,7 @@ class Llama3Trainer:
 
         if self.tuning:
             raise NotImplementedError(
-                "Prompt tuning is not implemented for MistralModel yet. Set tuning parameter to false."
+                "Prompt tuning is not implemented for Llama3Model yet. Set tuning parameter to false."
             )
             # logger.info(
             #     "Tuning model with prompt tuning. Model is saved in %s",

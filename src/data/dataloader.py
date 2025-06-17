@@ -883,19 +883,3 @@ class TorchDatasetWrapper(Dataset):
         return torch.tensor(X_sample, dtype=torch.float32), torch.tensor(
             y_sample, dtype=torch.float32
         )
-
-    # TODO: @sophiafe Is this still needed?
-    def get_batch(self, indices):
-        """
-        Custom method to get a batch with explicit indices.
-        More efficient than using DataLoader for large datasets.
-
-        Args:
-            indices (list): List of indices to include in batch
-
-        Returns:
-            tuple: (features, labels) for the specified indices
-        """
-        X_batch = self.X.iloc[indices].values.astype(np.float32)
-        y_batch = self.y.iloc[indices].values.astype(np.float32)
-        return X_batch, y_batch
