@@ -2,8 +2,8 @@ import json
 import logging
 import os
 import re
-from typing import Any, Dict, List, Optional, Tuple
 import warnings
+from typing import Any, Dict, List, Optional, Tuple
 
 import joblib
 import numpy as np
@@ -182,7 +182,8 @@ def prepare_data_for_model_convdl(
     """
 
     # Import the converter
-    from src.preprocessing.preprocessing_advanced.windowing import WindowedDataTo3D
+    from src.preprocessing.preprocessing_advanced.windowing import \
+        WindowedDataTo3D
 
     # Create converter with model name and config
     converter = WindowedDataTo3D(

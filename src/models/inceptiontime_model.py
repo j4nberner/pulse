@@ -12,12 +12,9 @@ import wandb
 from src.eval.metrics import MetricsTracker
 from src.models.pulse_model import PulseModel
 from src.util.config_util import set_seeds
-from src.util.model_util import (
-    EarlyStopping,
-    initialize_weights,
-    prepare_data_for_model_convdl,
-    save_torch_model,
-)
+from src.util.model_util import (EarlyStopping, initialize_weights,
+                                 prepare_data_for_model_convdl,
+                                 save_torch_model)
 
 # Set up logger
 logger = logging.getLogger("PULSE_logger")

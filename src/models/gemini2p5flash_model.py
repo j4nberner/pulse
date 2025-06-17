@@ -1,3 +1,4 @@
+# https://github.com/GoogleCloudPlatform/generative-ai/blob/main/gemini/getting-started/intro_gemini_2_5_flash.ipynb
 import logging
 import os
 import time
@@ -5,20 +6,15 @@ import warnings
 from typing import Any, Dict
 
 import numpy as np
+# import vertexai
 from google import genai
+from google.genai.types import (ThinkingConfig, GenerateContentConfig)
+# from vertexai.generative_models import (GenerationConfig, GenerativeModel, ThinkingConfig)
 
-import vertexai
-from vertexai.generative_models import (
-    GenerativeModel,
-    Part,
-    HarmCategory,
-    HarmBlockThreshold,
-)
-import wandb
 from src.eval.metrics import MetricsTracker
 from src.models.pulse_model import PulseModel
 from src.util.config_util import set_seeds
-from src.util.model_util import extract_dict, parse_llm_output, prompt_template_hf
+from src.util.model_util import (parse_llm_output, prompt_template_hf)
 
 warnings.filterwarnings(
     "ignore",
@@ -62,7 +58,7 @@ class Gemini2p5Model(PulseModel):
             f"Initializing Vertex AI for project: {project_id}, location: {location}"
         )
         # Initialize Vertex AI. The SDK will automatically use the credentials from GOOGLE_APPLICATION_CREDENTIALS.
-        vertexai.init(project=project_id, location=location)
+        # vertexai.init(project=project_id, location=location)
 
         self.client = genai.Client(
             vertexai=True, project=params.get("project_id", None), location="global"
@@ -71,7 +67,7 @@ class Gemini2p5Model(PulseModel):
         self.prompting_id = params.get("prompting_id", None)
         self.max_new_tokens = params["max_new_tokens"]
 
-        self.model = GenerativeModel(self.model_id)
+        # self.model = GenerativeModel(self.model_id)
         self.is_agent = False
         self.agent_instance = None
 
@@ -97,14 +93,26 @@ class Gemini2p5Model(PulseModel):
 
         # Generate output with scores
         infer_start = time.perf_counter()
-        response = self.model.generate_content(
+        # response = self.model.generate_content(
+        #     contents=input_text,
+        #     generation_config=GenerationConfig( # Use GenerativeConfig object
+        #         max_output_tokens=self.max_new_tokens,
+        #         temperature=self.params["temperature"],
+        #         top_p=1.0,
+        #         top_k=32,
+        #         thinking_config=ThinkingConfig(thinking_budget=0) # Add this line to disable thinking
+        #     ),
+        # )
+        response = self.client.models.generate_content(
+            model=self.model_id,
             contents=input_text,
-            generation_config={
-                "max_output_tokens": self.max_new_tokens,  # Max tokens for 1.5 Flash
-                "temperature": self.params["temperature"],
-                "top_p": 1.0,
-                "top_k": 32,
-            },
+            config=GenerateContentConfig(
+                max_output_tokens=self.max_new_tokens,
+                temperature=self.params.get("temperature", 0.4),
+                top_p=1.0,
+                top_k=32,
+                thinking_config=ThinkingConfig(thinking_budget=0),  # Disable thinking
+            ),
         )
         infer_time = time.perf_counter() - infer_start
 

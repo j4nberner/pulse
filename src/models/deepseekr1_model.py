@@ -9,7 +9,7 @@ from transformers import BitsAndBytesConfig
 
 from src.models.pulse_model import PulseLLMModel
 from src.util.config_util import set_seeds
-from src.util.model_util import extract_dict, parse_llm_output, prompt_template_hf
+from src.util.model_util import (parse_llm_output, prompt_template_hf)
 
 warnings.filterwarnings(
     "ignore",
@@ -144,7 +144,7 @@ class DeepseekR1Model(PulseLLMModel):
         try:
             parsed = parse_llm_output(decoded_output)
             # logger.debug("Parsed output: %s", parsed)
-        except Exception as e:
+        except Exception:
             logger.warning(f"Failed to parse output: {decoded_output}")
             parsed = {
                 "diagnosis": None,

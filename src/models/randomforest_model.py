@@ -14,7 +14,8 @@ from sklearn.model_selection import GridSearchCV
 import wandb
 from src.eval.metrics import MetricsTracker
 from src.models.pulse_model import PulseModel
-from src.util.model_util import prepare_data_for_model_convml, save_sklearn_model
+from src.util.model_util import (prepare_data_for_model_convml,
+                                 save_sklearn_model)
 
 # Filter the specific warning about feature names
 # (This is because training is done with np arrays and prediction with pd dataframe to preserve feature names for feature importance etc.)

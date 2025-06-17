@@ -19,11 +19,8 @@ if TYPE_CHECKING:
 
 from src.eval.metrics import MetricsTracker
 from src.util.config_util import set_seeds
-from src.util.model_util import (
-    parse_llm_output,
-    prompt_template_hf,
-    system_message_samples,
-)
+from src.util.model_util import (parse_llm_output, prompt_template_hf,
+                                 system_message_samples)
 
 logger = logging.getLogger("PULSE_logger")
 

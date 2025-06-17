@@ -12,9 +12,8 @@ from omegaconf import OmegaConf
 from torch.utils.data import Dataset
 
 from src.preprocessing.preprocessing_advanced.windowing import Windower
-from src.preprocessing.preprocessing_baseline.preprocessing_baseline import (
-    PreprocessorBaseline,
-)
+from src.preprocessing.preprocessing_baseline.preprocessing_baseline import \
+    PreprocessorBaseline
 from src.preprocessing.preprocessing_prompts import get_prompting_preprocessor
 from src.util.config_util import set_seeds
 

@@ -1,7 +1,7 @@
 from .cnn_model import CNNModel, CNNTrainer
 from .deepseekr1_model import DeepseekR1Model
+from .gemini2p5flash_model import Gemini2p5Model
 from .gemma3_model import Gemma3Model
-from .gpt_model import GPTModel
 from .gru_model import GRUModel, GRUTrainer
 from .inceptiontime_model import InceptionTimeModel, InceptionTimeTrainer
 from .lightgbm_model import LightGBMModel, LightGBMTrainer
@@ -11,7 +11,6 @@ from .lstm_model import LSTMModel, LSTMTrainer
 from .mistral_model import MistralModel
 from .randomforest_model import RandomForestModel, RandomForestTrainer
 from .xgboost_model import XGBoostModel, XGBoostTrainer
-from .gemini2p5flash_model import Gemini2p5Model
 
 model_cls_name_dict = {
     "RandomForest": RandomForestModel,
