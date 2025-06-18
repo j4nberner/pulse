@@ -443,9 +443,9 @@ class PreprocessorBaseline:
                 X_train (pd.DataFrame): Training features with imputed static values
                 X_val (pd.DataFrame): Validation features with imputed static values
                 X_test (pd.DataFrame): Testing features with imputed static values
-                global_means_static_dict (Dict): Dictionary of global medians used for imputation
+                global_means_static_dict (Dict): Dictionary of global means used for imputation
         """
-        global_medians_static_dict = {}
+        global_means_static_dict = {}
 
         # Forward and backward fill within each stay_id for all sets
         for col in self.static_columns:
@@ -458,15 +458,15 @@ class PreprocessorBaseline:
         # Calculate medians from training data only for numeric columns
         for col in self.static_numeric_columns:
             if col in X_train.columns:
-                global_median = X_train.groupby("stay_id")[col].mean().mean().round(2)
+                global_mean = X_train.groupby("stay_id")[col].mean().mean().round(2)
                 for df in [X_train, X_val, X_test]:
-                    df[col] = df[col].fillna(global_median)
-                global_medians_static_dict[col] = global_median
+                    df[col] = df[col].fillna(global_mean)
+                global_means_static_dict[col] = global_mean
 
         # Debug log for global medians
         logger.debug(
-            "Global medians used as imputation fallback for static features: %s",
-            global_medians_static_dict,
+            "Global means used as imputation fallback for static features: %s",
+            global_means_static_dict,
         )
 
         # Calculate mode from training data only for sex
@@ -475,7 +475,7 @@ class PreprocessorBaseline:
             for df in [X_train, X_val, X_test]:
                 df["sex"] = df["sex"].fillna(mode_sex)
 
-        return X_train, X_val, X_test, global_medians_static_dict
+        return X_train, X_val, X_test, global_means_static_dict
 
     def median_before_imputation(self, X_train: pd.DataFrame) -> pd.Series:
         """

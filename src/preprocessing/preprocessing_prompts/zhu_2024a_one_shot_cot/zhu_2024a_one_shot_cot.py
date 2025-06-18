@@ -7,8 +7,9 @@ import numpy as np
 import pandas as pd
 from langchain.prompts import PromptTemplate
 
-from src.preprocessing.preprocessing_advanced.preprocessing_advanced import \
-    PreprocessorAdvanced
+from src.preprocessing.preprocessing_advanced.preprocessing_advanced import (
+    PreprocessorAdvanced,
+)
 
 logger = logging.getLogger("PULSE_logger")
 
@@ -122,8 +123,7 @@ def zhu_2024a_one_shot_cot_preprocessor(
     
     4. Final Assessment:
         - Conclude with an assessment of the {task_description}.
-        - Follow the instructions to provide output. The probability should be provided as a floating-point number between 0 and 1, where a higher number suggests a greater {task_description}.
-        {{'diagnosis': '{task}' or 'not-{task}', 'probability': 0.XX, 'explanation': 'This is a brief summary of aggregated findings.'}}
+        - Follow the instructions to provide output.
 
     Example Chain-of-Thought Analysis:
 
@@ -146,7 +146,7 @@ def zhu_2024a_one_shot_cot_preprocessor(
         - Considering the downward trend in blood pressure, stable heart rate, signs of infection, and electrolyte imbalance, the patient’s overall health status seems to be moderately compromised.
     
     4. Final Assessment:
-        {{'diagnosis': '{task}' or 'not-{task}', 'probability': 0.65, 'explanation': 'Moderately compromised condition due to decreasing blood pressure, stable heart rate, signs of infection and electrolyte imbalance.'}}
+        {{'diagnosis': '{task}' or 'not-{task}', 'probability': 65, 'explanation': 'Moderately compromised condition due to decreasing blood pressure, stable heart rate, signs of infection and electrolyte imbalance.'}}
 
     RESPONSE:
     """
@@ -230,7 +230,7 @@ def zhu_2024a_one_shot_cot_preprocessor(
             result_json = json.dumps(
                 {
                     "diagnosis": label_text,
-                    "probability": "<the probability of your estimation as a float (1.0 is very sure)>",
+                    "probability": "<the likelihood of your estimation as an integer (0 = not-diagnosis, 100 = diagnosis)>",
                     "explanation": "<a brief explanation for the prediction.>",
                 },
                 indent=2,

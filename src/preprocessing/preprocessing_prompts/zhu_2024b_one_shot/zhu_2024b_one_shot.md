@@ -146,7 +146,7 @@ Details of the features for each visit are as follows:
 - …
 
 RESPONSE:  
-<span style="color:red;">{'diagnosis': 'not-aki', 'probability':</span> 0.0<span style="color:red;">, 'explanation': 'This is a known example explanation.'}</span>
+<span style="color:red;">{'diagnosis': 'not-aki', 'probability': 2, 'explanation': 'This is a known example explanation.'}</span>
 
 Input information of a patient:  
 The patient is a male, aged 50.0 years. 

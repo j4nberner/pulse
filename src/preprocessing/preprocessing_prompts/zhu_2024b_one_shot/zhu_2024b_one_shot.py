@@ -7,8 +7,9 @@ import numpy as np
 import pandas as pd
 from langchain.prompts import PromptTemplate
 
-from src.preprocessing.preprocessing_advanced.preprocessing_advanced import \
-    PreprocessorAdvanced
+from src.preprocessing.preprocessing_advanced.preprocessing_advanced import (
+    PreprocessorAdvanced,
+)
 
 logger = logging.getLogger("PULSE_logger")
 
@@ -177,7 +178,7 @@ def zhu_2024b_one_shot_preprocessor(
             result_json = json.dumps(
                 {
                     "diagnosis": label_text,
-                    "probability": "<the probability of your estimation as a float (1.0 is very sure)>",
+                    "probability": "<the likelihood of your estimation as an integer (0 = not-diagnosis, 100 = diagnosis)>",
                     "explanation": "<a brief explanation for the prediction.>",
                 },
                 indent=2,

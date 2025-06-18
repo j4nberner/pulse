@@ -213,7 +213,7 @@ Details of the features for each visit are as follows:
 - …
 
 RESPONSE:  
-<span style="color:red;">{'diagnosis': 'not-aki', 'probability':</span> 0.0<span style="color:red;">, 'explanation': 'This is a known example explanation.'}</span>
+<span style="color:red;">{'diagnosis': 'not-aki', 'probability': 2, 'explanation': 'This is a known example explanation.'}</span>
 
 Input information of a patient:  
 The patient is a male, aged 50.0 years. 
@@ -292,9 +292,7 @@ Please follow the Chain-of-Thought Analysis Process:
 
 4. Final Assessment:
     - Conclude with an assessment of the likelihood of the patient not surviving their hospital stay<span style="color:red;">/having acute kidney injury/sepsis at the end of the data batch</span>.
-    - <span style="color:red;">Follow the instructions to provide output. The probability should be provided as</span> a floating-point number between 0 and 1, where a higher number suggests a greater likelihood of <span style="color:red;">the patient not surviving their hospital stay/having acute kidney injury/sepsis at the end of the data batch</span>.
-
-    <span style="color:red;">{'diagnosis': 'diagnosis' or 'not-diagnosis', 'probability':</span> 0.65<span style="color:red;">, 'explanation': 'This is a brief summary of aggregated findings.'}</span>
+    - <span style="color:red;">Follow the instructions to provide output.</span> 
 
 Example Chain-of-Thought Analysis:
 
@@ -318,6 +316,6 @@ Example Chain-of-Thought Analysis:
 
 4. Final Assessment:  
 
-    <span style="color:red;">{'diagnosis': 'diagnosis' or 'not-diagnosis', 'probability':</span> 0.<span style="color:red;">XX, 'explanation': 'Moderately compromised condition due to decreasing blood pressure, stable heart rate, signs of infection and electrolyte imbalance.'}</span>
+    <span style="color:red;">{'diagnosis': 'diagnosis' or 'not-diagnosis', 'probability': 65, 'explanation': 'Moderately compromised condition due to decreasing blood pressure, stable heart rate, signs of infection and electrolyte imbalance.'}</span>
 
 RESPONSE:
