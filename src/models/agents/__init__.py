@@ -6,10 +6,11 @@ logger = logging.getLogger("PULSE_logger")
 # Agent registry mapping prompting_id patterns to agent classes
 AGENT_REGISTRY = {}
 
+
 def register_agent(prompting_pattern: str, agent_class):
     """Register an agent class for a specific prompting pattern."""
     AGENT_REGISTRY[prompting_pattern] = agent_class
-    logger.debug("Registered agent %s for pattern '%s'", agent_class.__name__, prompting_pattern)
+
 
 def get_agent_class(prompting_id: str):
     """Get the appropriate agent class based on prompting_id."""
@@ -17,6 +18,7 @@ def get_agent_class(prompting_id: str):
         if pattern in prompting_id:
             return agent_class
     return None
+
 
 def create_agent_instance(
     prompting_id: str,
@@ -35,7 +37,9 @@ def create_agent_instance(
 
         agent_class = get_agent_class(prompting_id)
         if not agent_class:
-            logger.warning("No agent implementation found for prompting_id: %s", prompting_id)
+            logger.warning(
+                "No agent implementation found for prompting_id: %s", prompting_id
+            )
             return None
 
         # Create agent instance
@@ -47,7 +51,7 @@ def create_agent_instance(
             metrics_tracker=metrics_tracker,
             **kwargs
         )
-        
+
         logger.info("Initialized %s for %s", agent_class.__name__, prompting_id)
         return agent_instance
 
@@ -55,18 +59,44 @@ def create_agent_instance(
         logger.error("Failed to create agent for %s: %s", prompting_id, e)
         return None
 
+
 # Register available agents
 try:
     from src.models.agents.zhu_2024c_agent import Zhu2024cAgent
+
     register_agent("zhu_2024c_categorization_summary_agent", Zhu2024cAgent)
 except ImportError as e:
     logger.warning("Could not import Zhu2024cAgent: %s", e)
 
 try:
     from src.models.agents.clinical_workflow_agent import ClinicalWorkflowAgent
+
     register_agent("clinical_workflow_agent", ClinicalWorkflowAgent)
 except ImportError as e:
     logger.warning("Could not import ClinicalWorkflowAgent: %s", e)
+
+try:
+    from src.models.agents.guided_autonomous_agent import GuidedAutonomousAgent
+
+    register_agent("guided_autonomous_agent", GuidedAutonomousAgent)
+except ImportError as e:
+    logger.warning("Could not import GuidedAutonomousAgent: %s", e)
+
+try:
+    from src.models.agents.collaborative_reasoning_agent import (
+        CollaborativeReasoningAgent,
+    )
+
+    register_agent("collaborative_reasoning_agent", CollaborativeReasoningAgent)
+except ImportError as e:
+    logger.warning("Could not import CollaborativeReasoningAgent: %s", e)
+
+try:
+    from src.models.agents.hybrid_reasoning_agent import HybridReasoningAgent
+
+    register_agent("hybrid_reasoning_agent", HybridReasoningAgent)
+except ImportError as e:
+    logger.warning("Could not import HybridReasoningAgent: %s", e)
 
 # Add more agent registrations here as needed
 # register_agent("other_agent_pattern", OtherAgentClass)
