@@ -4,7 +4,7 @@ Paper: https://arxiv.org/abs/2407.18525
 
 ## Original best performing prompt template for mortality prediction on the MIMIC-IV dataset
 
-<div style="color:darkblue;">
+<div style="color:blue;">
 
 You are an experienced doctor in Intensive Care Unit (ICU) treatment.
 
@@ -81,7 +81,7 @@ You are an experienced doctor in Intensive Care Unit (ICU) treatment.
 
 I will provide you with medical information from an Intensive Care Unit (ICU) visit of a patient, characterized by a fixed number of features.
 
-Present multiple <span style="color:red;">hours</span> data of a patient in one batch. Represent each feature within this data as a string of values, separated by commas.
+<span style="color:red;">The data for multiple hours of the patient’s ICU stay will be presented in a one batch. Each feature within this data is represented</span> as a string of values separated by commas.
 
 Your task is to assess the provided medical data and analyze the health records from ICU visits to determine the likelihood of the patient not surviving their hospital stay<span style="color:red;">/having acute kidney injury/sepsis at the end of the data batch</span>.
 
@@ -146,7 +146,11 @@ Details of the features for each visit are as follows:
 - …
 
 RESPONSE:  
-<span style="color:red;">{'diagnosis': 'not-aki', 'probability': 2, 'explanation': 'This is a known example explanation.'}</span>
+<span style="color:red;">{
+    "diagnosis": label_text,
+    "probability": "an integer (0 to 100) indicating how likely the risk of mortality/aki/sepsis",
+    "explanation": "a brief explanation for the prediction",
+}</span>
 
 Input information of a patient:  
 The patient is a male, aged 50.0 years. 

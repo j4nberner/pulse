@@ -668,7 +668,15 @@ class DatasetManager:
             prompting_preprocessor = get_prompting_preprocessor(
                 prompting_id=prompting_id
             )
-            num_shots = kwargs.get("num_shots", 0)
+
+            # Set num_shots based on prompting_id for zhu_2024b preprocessors
+            if prompting_id == "zhu_2024b_zero_shot_preprocessor":
+                num_shots = 0
+            elif prompting_id == "zhu_2024b_one_shot_preprocessor":
+                num_shots = 1
+            else:
+                num_shots = kwargs.get("num_shots", 0)
+
             data_window = self.config.preprocessing_advanced.windowing.data_window
 
             info_dict = {
@@ -708,9 +716,22 @@ class DatasetManager:
                 dataset["data"]["y_val"] = val_result["y"]
 
             if fine_tuning is False:
-                # Used only for few shot examples if no fine-tuning. Set to none.
-                dataset["data"]["X_train"] = pd.DataFrame()
-                dataset["data"]["y_train"] = pd.DataFrame()
+                # Keep a small subset of training data for few-shot examples
+                # Randomly sample up to 25 samples for few-shot learning
+                max_few_shot_samples = min(25, len(dataset["data"]["X_train"]))
+                sampled_indices = (
+                    dataset["data"]["X_train"]
+                    .sample(n=max_few_shot_samples, random_state=42)
+                    .index
+                )
+                dataset["data"]["X_train"] = dataset["data"]["X_train"].loc[
+                    sampled_indices
+                ]
+                dataset["data"]["y_train"] = dataset["data"]["y_train"].loc[
+                    sampled_indices
+                ]
+                dataset["data"]["X_val"] = pd.DataFrame()
+                dataset["data"]["y_val"] = pd.DataFrame()
                 dataset["data"]["X_val"] = pd.DataFrame()
                 dataset["data"]["y_val"] = pd.DataFrame()
 
