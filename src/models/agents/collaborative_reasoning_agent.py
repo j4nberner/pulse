@@ -305,9 +305,9 @@ Pay attention to:
 Respond in JSON format:
 {{
     "diagnosis": "specialist-{self.task_content['complication_name']}-assessment",
-    "probability": "XX (integer between 0 and 100, where 0 means {self.task_content['complication_name']} will not occur and 100 means {self.task_content['complication_name']} will definitely occur)",
+    "probability": XX (integer between 0 and 100, where 0 means {self.task_content['complication_name']} will not occur and 100 means {self.task_content['complication_name']} will definitely occur),
     "explanation": "Your concise {specialist_type} specialist assessment including key findings, temporal patterns, and clinical significance (MAX 150 words)",
-    "confidence": "XX (integer between 0 and 100, where 0 means not confident at all and 100 means very confident in your {specialist_type} assessment)"
+    "confidence": XX (integer between 0 and 100, where 0 means not confident at all and 100 means very confident in your {specialist_type} assessment)
 }}
 
 IMPORTANT: Base your confidence on data completeness, clarity of findings, and strength of evidence in your domain."""

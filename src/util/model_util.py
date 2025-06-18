@@ -177,8 +177,7 @@ def prepare_data_for_model_convdl(
     """
 
     # Import the converter
-    from src.preprocessing.preprocessing_advanced.windowing import \
-        WindowedDataTo3D
+    from src.preprocessing.preprocessing_advanced.windowing import WindowedDataTo3D
 
     # Create converter with model name and config
     converter = WindowedDataTo3D(
@@ -269,13 +268,13 @@ def prompt_template_hf(
         "Here is a positive example:\n"
         "{\n"
         '  "diagnosis": "aki",\n'
-        '  "probability": "89",\n'
+        '  "probability": 89,\n'
         '  "explanation": "Acute kidney injury evident: serum creatinine increased from baseline 1.1 to 2.7 mg/dL within 24 hours (>2x increase), urine output decreased to 0.3 mL/kg/h over 6 hours, meeting KDIGO Stage 2 criteria.",\n'
         "}\n\n"
         "Here is a negative example:\n"
         "{\n"
         '  "diagnosis": "not-aki",\n'
-        '  "probability": "8",\n'
+        '  "probability": 8,\n'
         '  "explanation": "Kidney function stable: creatinine 1.3 mg/dL (minimal change from baseline 1.2), adequate urine output at 1.1 mL/kg/h, no signs of acute kidney injury."\n'
         "}\n\n"
         "Do not include any other text or explanations outside of the JSON object.\n"
@@ -392,12 +391,12 @@ def system_message_samples(task: str) -> list[str]:
             return {
                 "positive": {
                     "diagnosis": "sepsis",
-                    "probability": "82",
+                    "probability": 82,
                     "explanation": "Patient shows sepsis criteria: temperature 38.9°C, heart rate 115 bpm, WBC 16,000/μL, lactate 4.1 mmol/L (elevated >2.0), and hypotension with MAP 58 mmHg despite fluid resuscitation.",
                 },
                 "negative": {
                     "diagnosis": "not-sepsis",
-                    "probability": "12",
+                    "probability": 12,
                     "explanation": "Patient shows no signs of sepsis: temperature 37.2°C, heart rate 88 bpm, normal WBC 7,200/μL, lactate 1.6 mmol/L (normal <2.0), and adequate blood pressure with MAP 78 mmHg.",
                 },
             }
@@ -405,12 +404,12 @@ def system_message_samples(task: str) -> list[str]:
             return {
                 "positive": {
                     "diagnosis": "aki",
-                    "probability": "89",
+                    "probability": 89,
                     "explanation": "Acute kidney injury evident: serum creatinine increased from baseline 1.1 to 2.7 mg/dL within 24 hours (>2x increase), urine output decreased to 0.3 mL/kg/h over 6 hours, meeting KDIGO Stage 2 criteria.",
                 },
                 "negative": {
                     "diagnosis": "not-aki",
-                    "probability": "8",
+                    "probability": 8,
                     "explanation": "Kidney function stable: creatinine 1.3 mg/dL (minimal change from baseline 1.2), adequate urine output at 1.1 mL/kg/h, no signs of acute kidney injury.",
                 },
             }
@@ -418,12 +417,12 @@ def system_message_samples(task: str) -> list[str]:
             return {
                 "positive": {
                     "diagnosis": "mortality",
-                    "probability": "91",
+                    "probability": 91,
                     "explanation": "Critical condition: multi-organ failure with high lactate 6.2 mmol/L, requiring mechanical ventilation (FiO2 80%), hypotension, and oliguria <0.2 mL/kg/h despite treatment.",
                 },
                 "negative": {
                     "diagnosis": "not-mortality",
-                    "probability": "15",
+                    "probability": 15,
                     "explanation": "Improving trajectory: lactate normalizing to 2.1 mmol/L, weaning from ventilator support (FiO2 40%), stable hemodynamics, and adequate urine output 0.8 mL/kg/h.",
                 },
             }
@@ -431,12 +430,12 @@ def system_message_samples(task: str) -> list[str]:
             return {
                 "positive": {
                     "diagnosis": task_name,
-                    "probability": "78",
+                    "probability": 78,
                     "explanation": f"Clinical indicators strongly suggest {task_name} based on abnormal vital signs, laboratory values, and physiological parameters.",
                 },
                 "negative": {
                     "diagnosis": f"not-{task_name}",
-                    "probability": "15",
+                    "probability": 15,
                     "explanation": f"Clinical indicators do not support {task_name} diagnosis with stable vital signs and normal laboratory parameters.",
                 },
             }
@@ -484,7 +483,7 @@ def system_message_samples(task: str) -> list[str]:
         "--- JSON Schema ---\n"
         "{\n"
         f'  "diagnosis": "string"  // Must be either "{task}" or "not-{task}"\n'
-        '  "probability": "integer" // Value between 0 (no diagnosis) and 100 (definite diagnosis)\n'
+        '  "probability": integer // Value between 0 (no diagnosis) and 100 (definite diagnosis)\n'
         '  "explanation": "string" // Concise clinical reasoning for the diagnosis and probability\n'
         "}\n\n"
     )
@@ -549,6 +548,26 @@ def extract_last_json_block(text: str) -> Optional[str]:
                     return text[idx : start_idx + 1]
     return None
 
+def fix_json_formatting(json_text: str) -> str:
+    """Fix common JSON formatting issues."""
+    # Fix unterminated strings
+    if json_text.count('"') % 2 != 0:
+        json_text += '"'
+        logger.debug("Fixed unterminated string by adding closing quote.")
+
+    # Fix missing final brace
+    if not json_text.endswith("}"):
+        json_text += "}"
+        logger.debug("Fixed unclosed JSON object by adding closing brace.")
+
+    # Escape newlines in quoted strings
+    def escape_newlines_in_strings(s: str) -> str:
+        def repl(m):
+            return m.group(0).replace("\n", "\\n").replace("\r", "\\r")
+
+        return re.sub(r'"(.*?)"', repl, s, flags=re.DOTALL)
+
+    return escape_newlines_in_strings(json_text)
 
 def parse_llm_output(
     output_text: str,
@@ -568,7 +587,7 @@ def parse_llm_output(
     if default_values is None:
         default_values = {
             "diagnosis": "unknown",
-            "probability": 0.5,  # Keep as 0.5 (0.0-1.0 range)
+            "probability": 0.5,
             "explanation": "No explanation provided.",
         }
 
@@ -603,29 +622,52 @@ def parse_llm_output(
     try:
         parsed = json.loads(json_text)
 
-        # Process probability field - convert from 0-100 integer to 0.0-1.0 float
+        # Process probability field - convert from various formats to 0.0-1.0 float
         if "probability" in parsed:
             try:
-                prob_value = float(parsed["probability"])
+                prob_raw = parsed["probability"]
+                
+                # Handle string values (strip quotes and convert)
+                if isinstance(prob_raw, str):
+                    # Remove any surrounding quotes and whitespace
+                    prob_raw = prob_raw.strip().strip('"\'')
+                    # Try to extract numeric value from string
+                    import re
+                    numeric_match = re.search(r'(\d+\.?\d*)', prob_raw)
+                    if numeric_match:
+                        prob_raw = numeric_match.group(1)
+                    else:
+                        logger.warning("No numeric value found in probability string: %s", prob_raw)
+                        parsed["probability"] = 0.5
+                        return parsed
+                
+                # Convert to float
+                prob_value = float(prob_raw)
 
-                # Check if it's in 0-100 range (integer format)
-                if 0 <= prob_value <= 100:
-                    # Convert to 0.0-1.0 range
-                    parsed["probability"] = prob_value / 100.0
-                elif 0 <= prob_value <= 1:
+                # Normalize to 0.0-1.0 range
+                if 0 <= prob_value <= 1:
                     # Already in correct range
                     parsed["probability"] = prob_value
+                elif 0 <= prob_value <= 100:
+                    # Convert from 0-100 range to 0.0-1.0 range
+                    parsed["probability"] = prob_value / 100.0
                 else:
                     # Out of expected range, clamp and warn
                     logger.warning(
                         "Probability value %s out of expected range. Clamping to [0,1]",
                         prob_value,
                     )
-                    parsed["probability"] = max(0.0, min(1.0, prob_value / 100.0))
+                    if prob_value > 100:
+                        # Assume it was meant to be 0-100 range
+                        parsed["probability"] = min(1.0, prob_value / 100.0)
+                    else:
+                        # Negative or very small, clamp to 0
+                        parsed["probability"] = max(0.0, prob_value)
 
-            except (ValueError, TypeError):
+            except (ValueError, TypeError) as e:
                 logger.warning(
-                    "Failed to convert probability to float. Defaulting to 0.5"
+                    "Failed to convert probability '%s' to float: %s. Defaulting to 0.5",
+                    parsed.get("probability", "None"), e
                 )
                 parsed["probability"] = 0.5
 
@@ -636,30 +678,8 @@ def parse_llm_output(
         return default_values
 
 
-def fix_json_formatting(json_text: str) -> str:
-    """Fix common JSON formatting issues."""
-    # Fix unterminated strings
-    if json_text.count('"') % 2 != 0:
-        json_text += '"'
-        logger.debug("Fixed unterminated string by adding closing quote.")
-
-    # Fix missing final brace
-    if not json_text.endswith("}"):
-        json_text += "}"
-        logger.debug("Fixed unclosed JSON object by adding closing brace.")
-
-    # Escape newlines in quoted strings
-    def escape_newlines_in_strings(s: str) -> str:
-        def repl(m):
-            return m.group(0).replace("\n", "\\n").replace("\r", "\\r")
-
-        return re.sub(r'"(.*?)"', repl, s, flags=re.DOTALL)
-
-    return escape_newlines_in_strings(json_text)
-
-
 @DeprecationWarning
-def extract_dict(output_text: str) -> Optional[Dict[str, str]]:
+def extract_dict(output_text: str) -> Optional[Dict[str, Any]]:
     """Extract and parse the last JSON-like object from the model's output text and return it as a dictionary.
 
     Args:
@@ -670,7 +690,7 @@ def extract_dict(output_text: str) -> Optional[Dict[str, str]]:
     """
     default_json = {
         "diagnosis": "unknown",
-        "probability": 0.5,  # Keep as 0.5 (0.0-1.0 range)
+        "probability": 0.5,
         "explanation": "No explanation provided.",
     }
 

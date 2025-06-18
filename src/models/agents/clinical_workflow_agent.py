@@ -431,9 +431,9 @@ Pay attention to temporal patterns in the data:
 Respond in JSON format:
 {{
     "diagnosis": "preliminary-{self.task_content['complication_name']}-risk",
-    "probability": "XX (integer between 0 and 100, where 0 means {self.task_content['complication_name']} will not occur and 100 means {self.task_content['complication_name']} will definitely occur)",
+    "probability": XX (integer between 0 and 100, where 0 means {self.task_content['complication_name']} will not occur and 100 means {self.task_content['complication_name']} will definitely occur),
     "explanation": "Your detailed clinical reasoning including differential diagnosis and temporal pattern assessment",
-    "confidence": "XX (integer between 0 and 100, where 0 means not confident at all and 100 means very confident in your assessment)"
+    "confidence": XX (integer between 0 and 100, where 0 means not confident at all and 100 means very confident in your assessment)
 }}
 
 IMPORTANT: With only vital signs available, confidence should typically be 50-70. Higher confidence (>75) should only be used when clinical picture is very clear."""
@@ -489,7 +489,7 @@ Since no additional tests are available, respond with an empty test list.
 Respond in JSON format:
 {{
     "diagnosis": "lab-ordering-complete",
-    "probability": "{previous_assessment['probability']}",
+    "probability": {previous_assessment['probability']},
     "explanation": "All available laboratory tests have been ordered and analyzed. No additional tests are available.",
     "requested_tests": []
 }}"""
@@ -524,7 +524,7 @@ Guidelines for test selection:
 Respond in JSON format:
 {{
     "diagnosis": "lab-ordering-decision",
-    "probability": "XX (integer between 0 and 100, where 0 means {self.task_content['complication_name']} will not occur and 100 means {self.task_content['complication_name']} will definitely occur)",
+    "probability": XX (integer between 0 and 100, where 0 means {self.task_content['complication_name']} will not occur and 100 means {self.task_content['complication_name']} will definitely occur),
     "explanation": "Why you want these specific tests and how they will help your decision-making",
     "requested_tests": ["test1", "test2", "test3"]
 }}
@@ -555,9 +555,9 @@ New Laboratory Results (over monitoring period):
 Respond in JSON format:
 {{
     "diagnosis": "updated-{self.task_content['complication_name']}-assessment",
-    "probability": "XX (integer between 0 and 100, where 0 means {self.task_content['complication_name']} will not occur and 100 means {self.task_content['complication_name']} will definitely occur)",
+    "probability": XX (integer between 0 and 100, where 0 means {self.task_content['complication_name']} will not occur and 100 means {self.task_content['complication_name']} will definitely occur),
     "explanation": "How the new labs change your assessment and interpretation of abnormal values",
-    "confidence": "XX (integer between 0 and 100, where 0 means not confident at all and 100 means very confident in your assessment)"
+    "confidence": XX (integer between 0 and 100, where 0 means not confident at all and 100 means very confident in your assessment)
 }}"""
 
         return format_prompt

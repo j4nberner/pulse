@@ -1,4 +1,5 @@
 import logging
+import time
 from datetime import datetime
 from typing import Any, Dict, Optional, List
 
@@ -159,8 +160,6 @@ class AgentMemoryManager:
         if self.current_sample_id is None:
             self.set_current_sample("default")
 
-        import time
-
         decision_data = {
             "step": step,
             "timestamp": time.time(),
@@ -202,8 +201,6 @@ class AgentMemoryManager:
         """Log when agent adapts its approach."""
         if self.current_sample_id is None:
             self.set_current_sample("default")
-
-        import time
 
         adaptation_data = {
             "trigger": trigger,
