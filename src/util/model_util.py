@@ -182,7 +182,8 @@ def prepare_data_for_model_convdl(
     """
 
     # Import the converter
-    from src.preprocessing.preprocessing_advanced.windowing import WindowedDataTo3D
+    from src.preprocessing.preprocessing_advanced.windowing import \
+        WindowedDataTo3D
 
     # Create converter with model name and config
     converter = WindowedDataTo3D(

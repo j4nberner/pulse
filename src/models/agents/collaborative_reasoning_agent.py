@@ -1,25 +1,14 @@
 import logging
 from typing import Any, Dict, Optional
+
 import pandas as pd
+
 from src.models.agents.pulse_agent import PulseAgent
-from src.preprocessing.preprocessing_advanced.preprocessing_advanced import (
-    PreprocessorAdvanced,
-)
-from src.util.data_util import (
-    get_all_feature_groups,
-    get_feature_group_keys,
-    get_feature_name,
-    get_feature_group_title,
-)
-from src.util.agent_util import (
-    format_clinical_data,
-    format_clinical_text,
-    filter_na_columns,
-    get_specialist_features,
-    get_specialist_system_message,
-    extract_confidence,
-    create_error_response,
-)
+from src.preprocessing.preprocessing_advanced.preprocessing_advanced import \
+    PreprocessorAdvanced
+from src.util.agent_util import (create_error_response, filter_na_columns,
+                                 format_clinical_data, format_clinical_text,
+                                 get_specialist_features, get_specialist_system_message)
 
 logger = logging.getLogger("PULSE_logger")
 

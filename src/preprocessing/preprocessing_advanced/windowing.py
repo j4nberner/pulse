@@ -7,8 +7,9 @@ import pandas as pd
 import torch
 from tqdm import tqdm
 
-from src.preprocessing.preprocessing_baseline.preprocessing_baseline import \
-    PreprocessorBaseline
+from src.preprocessing.preprocessing_baseline.preprocessing_baseline import (
+    PreprocessorBaseline,
+)
 
 # Set up logger
 logger = logging.getLogger("PULSE_logger")
@@ -262,12 +263,25 @@ class Windower:
         # Save to current base_path (might be scratch)
         for set_type in ["train", "val", "test"]:
             # Save files
-            results[set_type]["X"].to_parquet(
-                os.path.join(self.base_path, save_directory, f"X_{set_type}.parquet")
+            x_path = os.path.join(
+                self.base_path, save_directory, f"X_{set_type}.parquet"
             )
-            results[set_type]["y"].to_parquet(
-                os.path.join(self.base_path, save_directory, f"y_{set_type}.parquet")
+            y_path = os.path.join(
+                self.base_path, save_directory, f"y_{set_type}.parquet"
             )
+            if not os.path.exists(x_path):
+                results[set_type]["X"].to_parquet(x_path)
+            else:
+                logger.warning(
+                    "File %s already exists, skipping save for X_%s", x_path, set_type
+                )
+
+            if not os.path.exists(y_path):
+                results[set_type]["y"].to_parquet(y_path)
+            else:
+                logger.warning(
+                    "File %s already exists, skipping save for y_%s", y_path, set_type
+                )
 
         logger.info(
             "Windowed data saved to %s", os.path.join(self.base_path, save_directory)
@@ -279,17 +293,32 @@ class Windower:
             os.makedirs(permanent_directory, exist_ok=True)
 
             for set_type in ["train", "val", "test"]:
-                # Save files to permanent storage
-                results[set_type]["X"].to_parquet(
-                    os.path.join(permanent_directory, f"X_{set_type}.parquet")
+                # Save files
+                x_path = os.path.join(
+                    self.base_path, save_directory, f"X_{set_type}.parquet"
                 )
-                results[set_type]["y"].to_parquet(
-                    os.path.join(permanent_directory, f"y_{set_type}.parquet")
+                y_path = os.path.join(
+                    self.base_path, save_directory, f"y_{set_type}.parquet"
                 )
+                if not os.path.exists(x_path):
+                    results[set_type]["X"].to_parquet(x_path)
+                else:
+                    logger.warning(
+                        "File %s already exists, skipping save for X_%s",
+                        x_path,
+                        set_type,
+                    )
 
-            logger.info(
-                "Windowed data also saved to permanent storage: %s", permanent_directory
-            )
+                if not os.path.exists(y_path):
+                    results[set_type]["y"].to_parquet(y_path)
+                else:
+                    logger.warning(
+                        "File %s already exists, skipping save for y_%s",
+                        y_path,
+                        set_type,
+                    )
+
+            logger.info("Windowed data in permanent storage: %s", permanent_directory)
 
     def load_windowed_data(
         self, task, dataset, data_window, prediction_window, step_size

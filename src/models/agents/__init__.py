@@ -83,9 +83,8 @@ except ImportError as e:
     logger.warning("Could not import GuidedAutonomousAgent: %s", e)
 
 try:
-    from src.models.agents.collaborative_reasoning_agent import (
-        CollaborativeReasoningAgent,
-    )
+    from src.models.agents.collaborative_reasoning_agent import \
+        CollaborativeReasoningAgent
 
     register_agent("collaborative_reasoning_agent", CollaborativeReasoningAgent)
 except ImportError as e:
