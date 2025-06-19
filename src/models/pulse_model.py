@@ -295,7 +295,7 @@ class PulseLLMModel(PulseModel):
 
         # Format input using prompt template
         input_text = prompt_template_hf(
-            input_text, custom_system_message, self.model_name
+            input_text, custom_system_message=custom_system_message, model=self.model_name, task=self.task_name
         )
 
         # Tokenize with chat template
@@ -430,9 +430,6 @@ class PulseLLMModel(PulseModel):
         verbose: int = self.params.get("verbose", 1)
         val_loss: list[float] = []
 
-        sys_msg = system_message_samples(task=self.task_name)[1]
-        logger.info("System Message:\n\n %s", sys_msg)
-
         self.model.eval()
 
         for X, y in zip(test_loader[0].iterrows(), test_loader[1].iterrows()):
@@ -449,7 +446,7 @@ class PulseLLMModel(PulseModel):
                     self.agent_instance.memory.set_current_sample_target(y_true)
 
                 # Get raw result from generation
-                result_dict = self.generate(X_input, custom_system_message=sys_msg)
+                result_dict = self.generate(X_input)
 
             except Exception as e:
                 logger.error(

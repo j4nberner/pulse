@@ -96,7 +96,7 @@ class PulseAgent(ABC):
         log_system_message = system_message
         if system_message is None:
             # Get default system message from first message in prompt template
-            default_prompt = prompt_template_hf("")[0]
+            default_prompt = prompt_template_hf("", task=self.task_name)[0]
             log_system_message = default_prompt["content"]
 
         # This flag controls whether to parse JSON output from the model

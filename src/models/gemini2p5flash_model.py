@@ -6,6 +6,7 @@ import warnings
 from typing import Any, Dict
 
 import numpy as np
+
 # import vertexai
 from google import genai
 from google.genai.types import GenerateContentConfig, ThinkingConfig
@@ -13,8 +14,11 @@ from google.genai.types import GenerateContentConfig, ThinkingConfig
 from src.eval.metrics import MetricsTracker
 from src.models.pulse_model import PulseModel
 from src.util.config_util import set_seeds
-from src.util.model_util import (parse_llm_output, prompt_template_hf,
-                                 system_message_samples)
+from src.util.model_util import (
+    parse_llm_output,
+    prompt_template_hf,
+    system_message_samples,
+)
 
 # from vertexai.generative_models import (GenerationConfig, GenerativeModel, ThinkingConfig)
 
@@ -77,7 +81,7 @@ class Gemini2p5Model(PulseModel):
         self.is_agent = False
         self.agent_instance = None
 
-    # Rename to generate_standard
+    # TODO: Rename to generate_standard
     def generate(
         self,
         input_text: str,
@@ -95,7 +99,7 @@ class Gemini2p5Model(PulseModel):
 
         # Format input using prompt template
         input_text = prompt_template_hf(
-            input_text, custom_system_message, self.model_name
+            input_text, custom_system_message, self.model_name, task=self.task_name
         )
 
         max_output_tokens = (

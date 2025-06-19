@@ -254,7 +254,7 @@ def normalize_probability(prob_value: float) -> float:
 
 
 def prompt_template_hf(
-    input_text: str, custom_system_message=None, model=None
+    input_text: str, custom_system_message=None, model=None, task=None
 ) -> List[Dict[str, str]]:
     """
     Create a chat-based prompt compatible with Hugging Face's apply_chat_template.
@@ -263,33 +263,20 @@ def prompt_template_hf(
         input_text: The text to analyze.
         model: Optional model name for specific formatting.
         custom_system_message: Optional custom system message to override the default.
+        task: The medical task/condition (e.g., "mortality", "aki", "sepsis") for dynamic system message generation.
 
     Returns:
         A list of chat messages (dicts) for the LLM.
     """
-    system_message = custom_system_message or (
-        "You are a helpful assistant and experienced medical professional analyzing ICU time-series data "
-        "to determine the presence of a critical condition.\n\n"
-        "Your response must strictly follow this format:\n"
-        "Output a valid JSON object with three keys: 'diagnosis', 'probability' and 'explanation'.\n\n"
-        "1. 'diagnosis' a string with either diganosis or not-diagnosis\n"
-        "2. 'probability' an integer between 0 and 100, where 0 means not diagnosed and 100 means diagnosed.\n"
-        "3. 'explanation' should be a string providing a brief explanation of your diagnosis.\n\n"
-        "Here is a positive example:\n"
-        "{\n"
-        '  "diagnosis": "aki",\n'
-        '  "probability": 89,\n'
-        '  "explanation": "Acute kidney injury evident: serum creatinine increased from baseline 1.1 to 2.7 mg/dL within 24 hours (>2x increase), urine output decreased to 0.3 mL/kg/h over 6 hours, meeting KDIGO Stage 2 criteria.",\n'
-        "}\n\n"
-        "Here is a negative example:\n"
-        "{\n"
-        '  "diagnosis": "not-aki",\n'
-        '  "probability": 8,\n'
-        '  "explanation": "Kidney function stable: creatinine 1.3 mg/dL (minimal change from baseline 1.2), adequate urine output at 1.1 mL/kg/h, no signs of acute kidney injury."\n'
-        "}\n\n"
-        "Do not include any other text or explanations outside of the JSON object.\n"
-        "Think about the probability of your prediction carefully before answering.\n"
-    )
+    if custom_system_message:
+        system_message = custom_system_message
+    elif task:
+        # Use sample 2 (index 1) from system_message_samples which includes task-specific examples
+        system_message = system_message_samples(task, sample_index=1)[0]
+    else:
+        raise ValueError(
+            "Either 'custom_system_message' or 'task' parameter must be provided"
+        )
 
     # Apply model-specific formatting if needed
     if model == "Gemma3Model":
@@ -338,15 +325,16 @@ def prompt_template_hf(
     return formatted_prompt
 
 
-def system_message_samples(task: str) -> list[str]:
+def system_message_samples(task: str, sample_index: int = None) -> list[str]:
     """
     Generate a controlled experimental set of system messages for testing prompt engineering techniques.
 
     Args:
         task: The specific medical condition to diagnose (e.g., "mortality", "aki", "sepsis").
+        sample_index: If specified (0-4), returns only that specific sample. If None, returns all samples.
 
     Returns:
-        A list of 5 system messages with cumulative prompt engineering improvements.
+        A list of system messages (all 5 if sample_index is None, or single item list if sample_index specified).
 
     Experimental Design:
         This function implements a controlled experiment to isolate the impact of specific system message
@@ -510,6 +498,41 @@ def system_message_samples(task: str) -> list[str]:
         "- 60-80: Likely, multiple indicators support diagnosis\n"
         "- 80-100: Very likely, strong evidence with clear clinical criteria met\n\n"
     )
+
+    # Build the specific sample or all samples based on sample_index
+    if sample_index is not None:
+        if sample_index == 0:
+            return [base_instruction + closing]
+        elif sample_index == 1:
+            return [base_instruction + examples_section + closing]
+        elif sample_index == 2:
+            return [
+                base_instruction + examples_section + probability_guidelines + closing
+            ]
+        elif sample_index == 3:
+            return [
+                base_instruction
+                + examples_section
+                + probability_guidelines
+                + icu_context
+                + closing
+            ]
+        elif sample_index == 4:
+            return [
+                base_instruction
+                + examples_section
+                + probability_guidelines
+                + schema_section
+                + icu_context
+                + closing
+            ]
+        else:
+            raise ValueError(
+                f"sample_index must be between 0 and 4, got {sample_index}"
+            )
+
+    # If no specific index requested, build all samples (for backward compatibility)
+    sys_msg_list = []
 
     # Sample 1: Baseline (no examples)
     sys_msg_list.append(base_instruction + closing)
