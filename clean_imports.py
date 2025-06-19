@@ -13,7 +13,7 @@ def clean_and_sort_imports_in_directory(directory: str):
     """
     for root, dirs, files in os.walk(directory):
         # Exclude .venv or other unwanted directories
-        dirs[:] = [d for d in dirs if d not in {".venv", "__pycache__"}]
+        dirs[:] = [d for d in dirs if d not in {".venv", "__pycache__", "pulse"}]
         for file in files:
             if file.endswith(".py"):
                 file_path = os.path.join(root, file)

@@ -1,8 +1,7 @@
 import logging
 import time
 from datetime import datetime
-from typing import Any, Dict, Optional, List
-
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger("PULSE_logger")
 

@@ -292,6 +292,7 @@ class InceptionTimeModel(PulseModel, nn.Module):
             data_loader: DataLoader for evaluation data.
             save_report: Whether to save the evaluation report.
         """
+        set_seeds(self.params["random_seed"])
         metrics_tracker = MetricsTracker(
             self.model_name,
             self.task_name,
@@ -312,7 +313,7 @@ class InceptionTimeModel(PulseModel, nn.Module):
         )
 
         # Load model from pretrained state if available and not in training mode
-        if self.pretrained_model_path and self.mode != "train":
+        if self.pretrained_model_path:
             # Configure the model input size based on the data
             features, _ = next(iter(data_loader))
             transformed_features = converter.convert_batch_to_3d(features)
@@ -548,9 +549,9 @@ class InceptionTimeTrainer:
         logger.info("Training completed.")
 
         # After training loop, load best model weights and save final model
-        self.model.early_stopping.load_best_model(self.model)
+        self.model = self.model.early_stopping.load_best_model(self.model)
         model_save_name = f"{self.model.model_name}_{self.task_name}_{self.dataset_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-        save_torch_model(model_save_name, self.model, self.model_save_dir)
+        self.model.pretrained_model_path = save_torch_model(model_save_name, self.model, self.model_save_dir)
 
     def train_epoch(self, epoch: int, verbose: int = 1) -> None:
         """

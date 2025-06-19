@@ -4,11 +4,8 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 import pandas as pd
 
-from src.util.data_util import (
-    get_feature_name,
-    get_feature_reference_range,
-    get_feature_uom,
-)
+from src.util.data_util import (get_feature_name, get_feature_reference_range,
+                                get_feature_uom)
 
 # Set up logger
 logger = logging.getLogger("PULSE_logger")

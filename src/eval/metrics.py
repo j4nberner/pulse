@@ -6,10 +6,19 @@ from typing import Any, Dict, List, Union
 import numpy as np
 import pandas as pd
 import torch
-from sklearn.metrics import (accuracy_score, auc, balanced_accuracy_score,
-                             cohen_kappa_score, confusion_matrix, f1_score,
-                             matthews_corrcoef, precision_recall_curve,
-                             precision_score, recall_score, roc_auc_score)
+from sklearn.metrics import (
+    accuracy_score,
+    auc,
+    balanced_accuracy_score,
+    cohen_kappa_score,
+    confusion_matrix,
+    f1_score,
+    matthews_corrcoef,
+    precision_recall_curve,
+    precision_score,
+    recall_score,
+    roc_auc_score,
+)
 
 logger = logging.getLogger("PULSE_logger")
 
@@ -20,7 +29,12 @@ class MetricsTracker:
     """
 
     def __init__(
-        self, model_id, task_id, dataset_name, save_dir="output", metrics_to_track=None,
+        self,
+        model_id,
+        task_id,
+        dataset_name,
+        save_dir="output",
+        metrics_to_track=None,
     ) -> None:
         """
         Initialize the metrics tracker. All tasks and datasets will be saved to the same model-metrics file.
@@ -100,6 +114,8 @@ class MetricsTracker:
         """
         if hasattr(self, "items") and self.items:
             df = pd.DataFrame(self.items)
+            self.items = []  # Clear items after logging
+
             # Compute mean for numeric columns only
             means = df.select_dtypes(include=[np.number]).mean().to_dict()
             for k, v in means.items():
@@ -113,7 +129,11 @@ class MetricsTracker:
                     f"{self.model_id}_{self.task_id}_{self.dataset_name}_{self.run_id}_metadata.csv",
                 )
                 logger.info(f"Saving Metadata to {summary_path}")
-                df.to_csv(summary_path, index=False)
+                # If file exists, append without header; else, write with header
+                if os.path.exists(summary_path):
+                    df.to_csv(summary_path, mode="a", header=False, index=False)
+                else:
+                    df.to_csv(summary_path, index=False)
 
         else:
             logger.warning("No metadata items to print.")
@@ -145,7 +165,7 @@ class MetricsTracker:
 
         return summary
 
-    def save_report(self) -> str:
+    def save_report(self, **kwargs) -> str:
         """
         Generate and save a report of the tracked metrics.
 
@@ -160,6 +180,7 @@ class MetricsTracker:
             "task_id": self.task_id,
             "dataset": self.dataset_name,
             "run_id": self.run_id,
+            "prompting_id": kwargs.get("prompting_id", ""),
             "metrics_summary": self.summary,
         }
 

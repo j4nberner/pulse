@@ -1,3 +1,4 @@
+# https://github.com/GoogleCloudPlatform/generative-ai/blob/main/gemini/getting-started/intro_gemini_2_5_flash.ipynb
 import logging
 import os
 import time
@@ -5,13 +6,18 @@ import warnings
 from typing import Any, Dict
 
 import numpy as np
-import torch
+# import vertexai
 from google import genai
+from google.genai.types import GenerateContentConfig, ThinkingConfig
 
-import wandb
 from src.eval.metrics import MetricsTracker
 from src.models.pulse_model import PulseModel
-from src.util.model_util import extract_dict, prompt_template_hf
+from src.util.config_util import set_seeds
+from src.util.model_util import (parse_llm_output, prompt_template_hf,
+                                 system_message_samples)
+
+# from vertexai.generative_models import (GenerationConfig, GenerativeModel, ThinkingConfig)
+
 
 warnings.filterwarnings(
     "ignore",
@@ -31,39 +37,57 @@ class Gemini2p5Model(PulseModel):
             params: Configuration dictionary with model parameters.
             **kwargs: Additional optional parameters such as `output_dir` and `wandb`.
         """
-        raise NotImplementedError("Gemini2p5Model is not supported yet.")
         model_name = kwargs.pop("model_name", "Gemini2p5Model")
         super().__init__(model_name, params, **kwargs)
 
         required_params = [
             "max_new_tokens",
-            "project_id",
             "model_id",
+            "thinking_budget",
+            "temperature",
         ]
         self.check_required_params(params, required_params)
 
-        os.environ.get(params["api_key_name"])
-        os.environ.get(params["api_uri_name"])
+        project_id = os.getenv("GOOGLE_CLOUD_PROJECT")
+        location = os.getenv("GOOGLE_CLOUD_LOCATION")
+        if not project_id or not location:
+            raise ValueError(
+                "GOOGLE_CLOUD_PROJECT and GOOGLE_CLOUD_LOCATION must be set in your .env file."
+            )
+        if not os.getenv("GOOGLE_APPLICATION_CREDENTIALS"):
+            raise ValueError(
+                "GOOGLE_APPLICATION_CREDENTIALS must be set in your .env file to the path of your service account key."
+            )
+
+        logger.info(
+            f"Initializing Vertex AI for project: {project_id}, location: {location}"
+        )
+        # Initialize Vertex AI. The SDK will automatically use the credentials from GOOGLE_APPLICATION_CREDENTIALS.
+        # vertexai.init(project=project_id, location=location)
 
         self.client = genai.Client(
             vertexai=True, project=params.get("project_id", None), location="global"
         )
         self.model_id = params["model_id"]
         self.prompting_id = params.get("prompting_id", None)
+        self.max_new_tokens = params["max_new_tokens"]
+        self.thinking_budget = params["thinking_budget"]
 
+        # self.model = GenerativeModel(self.model_id)
+        self.is_agent = False
+        self.agent_instance = None
+
+    # Rename to generate_standard
     def generate(
         self,
         input_text: str,
         custom_system_message: str = None,
-        force_raw_text: bool = False,
+        parse_json: bool = True,
     ) -> Dict[str, Any]:
-        """Runs the model on the input and extracts diagnosis, explanation, and probability.
+        """Standard generation logic for non-agent models."""
+        # Set seed for deterministic generation
+        set_seeds(self.random_seed)
 
-        Args:
-            input_text: The text to analyze
-            custom_system_message: Optional custom system message
-            force_raw_text: If True, returns raw text output without JSON parsing
-        """
         logger.info("---------------------------------------------")
 
         if not isinstance(input_text, str):
@@ -71,51 +95,77 @@ class Gemini2p5Model(PulseModel):
 
         # Format input using prompt template
         input_text = prompt_template_hf(
-            input_text, custom_system_message, model="Gemini2p5Model"
+            input_text, custom_system_message, self.model_name
         )
 
-        # Generate output with scores
+        max_output_tokens = (
+            self.max_new_tokens + self.thinking_budget
+            if self.thinking_budget != -1
+            else 10000
+        )
+
+        incl_thought = True if self.thinking_budget > 0 else False
+
         infer_start = time.perf_counter()
-        outputs = self.client.chat.completions.create(
-            messages=input_text,
-            max_tokens=10000,
-            temperature=0.4,
-            model=self.deployment,
+        response = self.client.models.generate_content(
+            model=self.model_id,
+            contents=input_text,
+            config=GenerateContentConfig(
+                max_output_tokens=max_output_tokens,
+                temperature=self.params.get("temperature", 0.4),
+                top_p=1.0,
+                top_k=32,
+                thinking_config=ThinkingConfig(
+                    thinking_budget=self.thinking_budget, include_thoughts=incl_thought
+                ),
+            ),
         )
         infer_time = time.perf_counter() - infer_start
 
-        # For Azure OpenAI, usage is in outputs.usage
-        num_input_tokens = (
-            outputs.usage.prompt_tokens if hasattr(outputs, "usage") else None
-        )
-        num_output_tokens = (
-            outputs.usage.completion_tokens if hasattr(outputs, "usage") else None
-        )
+        usage_metadata = response.usage_metadata
+        num_input_tokens = usage_metadata.prompt_token_count
+        num_output_tokens = usage_metadata.candidates_token_count
 
-        decoded_output = outputs.choices[0].message.content
-        logger.debug("Decoded output:\n %s", decoded_output)
+        if incl_thought:
+            num_thinking_tokens = usage_metadata.thoughts_token_count
+        else:
+            num_thinking_tokens = 0
 
-        # Extract dict from the decoded output (e.g., via regex or JSON parsing)
-        parsed = extract_dict(decoded_output)
+        thinking_output = ""
+        answer_output = ""
 
-        # Check if probability is a number or string, try to convert, else default to 0.5
-        prob = parsed.get("probability", 0.5)
-        try:
-            prob = float(prob)
-        except (ValueError, TypeError):
-            logger.warning("Failed to convert probability to float. Defaulting to 0.5")
-            prob = 0.5
-        parsed["probability"] = prob
+        for part in response.candidates[0].content.parts:
+            if not part.text:
+                continue
+            if part.thought:
+                thinking_output = part.text
+            else:
+                answer_output = part.text
+                logger.debug("Decoded output:\n %s", answer_output)
+
+        # Parse the output if parse_json is True
+        if parse_json:
+            generated_text = parse_llm_output(answer_output)
+        else:
+            generated_text = response
 
         logger.info(
-            f"Inference time: {infer_time:.4f}s | Tokens: {num_input_tokens + num_output_tokens}"
+            "Inference time: %.4fs | Input Tokens: %d | Output Tokens: %d | Thinking Budget: %d",
+            infer_time,
+            num_input_tokens,
+            num_output_tokens,
+            num_thinking_tokens,
         )
 
+        # Return consistent result structure
         return {
-            "generated_text": parsed,
+            "generated_text": generated_text,
+            "thinking_output": thinking_output,
+            "token_time": 0.0,
             "infer_time": infer_time,
             "num_input_tokens": num_input_tokens,
             "num_output_tokens": num_output_tokens,
+            "num_thinking_tokens": num_thinking_tokens,
         }
 
     def evaluate(self, test_loader: Any, save_report: bool = False) -> float:
@@ -136,28 +186,74 @@ class Gemini2p5Model(PulseModel):
             self.dataset_name,
             self.save_dir,
         )
-        criterion = torch.nn.BCELoss()
+
+        # For agents: Initialize agent and set the metrics_tracker in the agent's memory manager
+        if self.is_agent:
+            if not self.agent_instance:
+                self._initialize_agent()
+            if self.agent_instance:
+                self.agent_instance.memory.metrics_tracker = metrics_tracker
+                logger.debug(
+                    "Set MetricsTracker in agent memory manager for %s", self.model_name
+                )
+
         verbose: int = self.params.get("verbose", 1)
-        val_loss: list[float] = []
+
+        sys_msg = system_message_samples(task=self.task_name)[1]
+        logger.info("System Message:\n\n %s", sys_msg)
 
         for X, y in zip(test_loader[0].iterrows(), test_loader[1].iterrows()):
-            X_input = X[1].iloc[0]
+            idx = X[0]
+            if self.is_agent:
+                X_input = X[1]  # Full pandas Series with all patient features
+            else:
+                X_input = X[1].iloc[0]  # Single text prompt for standard models
             y_true = y[1].iloc[0]
 
-            result_dict = self.generate(X_input)
+            try:
+                # Set target for agent models
+                if self.is_agent and self.agent_instance:
+                    self.agent_instance.memory.set_current_sample_target(y_true)
 
+                # Get raw result from generation
+                result_dict = self.generate(X_input, custom_system_message=sys_msg)
+
+            except Exception as e:
+                logger.error(
+                    "Error during inference for sample %s: %s", idx, e, exc_info=True
+                )
+                # Create fallback result
+                result_dict = {
+                    "generated_text": {
+                        "diagnosis": "error",
+                        "probability": np.nan,
+                        "explanation": f"Error: {str(e)}",
+                    },
+                    "token_time": 0.0,
+                    "infer_time": 0.0,
+                    "num_input_tokens": 0,
+                    "num_output_tokens": 0,
+                    "num_thinking_tokens": 0,
+                    "thinking_output": "",
+                }
+
+            # Extract results
             generated_text = result_dict["generated_text"]
+            token_time = result_dict["token_time"]
             infer_time = result_dict["infer_time"]
             num_input_tokens = result_dict["num_input_tokens"]
             num_output_tokens = result_dict["num_output_tokens"]
+            num_thinking_tokens = result_dict["num_thinking_tokens"]
+            thinking_output = result_dict["thinking_output"]
 
-            predicted_probability = float(generated_text.get("probability", 0.5))
+            predicted_probability = float(generated_text.get("probability", np.nan))
 
             logger.info(
                 "Predicted probability: %s | True label: %s",
                 predicted_probability,
                 y_true,
             )
+
             if verbose > 1:
                 logger.info("Diagnosis for: %s", generated_text["diagnosis"])
                 logger.info(
@@ -166,37 +262,27 @@ class Gemini2p5Model(PulseModel):
             if verbose > 2:
                 logger.info("Input prompt: %s \n", X_input)
 
-            predicted_label = torch.tensor(
-                predicted_probability, dtype=torch.float32
-            ).unsqueeze(0)
-            target = torch.tensor(float(y_true), dtype=torch.float32).unsqueeze(0)
+            metrics_tracker.add_results(predicted_probability, y_true)
 
-            loss = criterion(predicted_label, target)
-            val_loss.append(loss.item())
-
-            if self.wandb:
-                wandb.log(
+            if not self.is_agent:  # Agent models handle metadata logging in add_step()
+                metrics_tracker.add_metadata_item(
                     {
-                        "val_loss": loss.item(),
-                        "infer_time": infer_time,
-                        "num_input_tokens": num_input_tokens,
-                        "num_output_tokens": num_output_tokens,
+                        "Input Prompt": X_input,
+                        "Target Label": y_true,
+                        "Predicted Probability": predicted_probability,
+                        "Predicted Diagnosis": generated_text.get("diagnosis", ""),
+                        "Predicted Explanation": generated_text.get("explanation", ""),
+                        "Tokenization Time": token_time,
+                        "Inference Time": infer_time,
+                        "Input Tokens": num_input_tokens,
+                        "Output Tokens": num_output_tokens,
+                        "Thinking Tokens": num_thinking_tokens,
+                        "Thinking Output": thinking_output,
                     }
                 )
-
-            metrics_tracker.add_results(predicted_probability, y_true)
-            metrics_tracker.add_metadata_item(
-                {
-                    "Input Prompt": X_input,
-                    "Target Label": y_true,
-                    "Predicted Probability": predicted_probability,
-                    "Predicted Diagnosis": generated_text.get("diagnosis", ""),
-                    "Predicted Explanation": generated_text.get("explanation", ""),
-                    "Inference Time": infer_time,
-                    "Input Tokens": num_input_tokens,
-                    "Output Tokens": num_output_tokens,
-                }
-            )
+            if len(metrics_tracker.items) > 100:
+                # Log metadata periodically to avoid memory issues
+                metrics_tracker.log_metadata()
 
         metrics_tracker.log_metadata(save_to_file=self.save_metadata)
         metrics_tracker.summary = metrics_tracker.compute_overall_metrics()
@@ -206,4 +292,4 @@ class Gemini2p5Model(PulseModel):
         logger.info("Test evaluation completed for %s", self.model_name)
         logger.info("Test metrics: %s", metrics_tracker.summary)
 
-        return float(np.mean(val_loss))
+        return 0.0  # Return a dummy loss value for compatibility

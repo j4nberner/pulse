@@ -597,7 +597,6 @@ class DatasetManager:
                         "step_size"
                     ],
                 )
-                logger.info("Saved windowed data for %s to files", dataset_id)
 
         del data  # Clear the data variable to free up memory
 

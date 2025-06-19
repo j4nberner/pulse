@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import re
+import warnings
 from typing import Any, Dict, List, Optional, Tuple
 
 import joblib
@@ -70,8 +71,10 @@ class EarlyStopping:
             if self.verbose:
                 logger.info("Loaded best model state from early stopping")
 
+        return model
 
-def save_torch_model(model_name: str, model: Any, save_dir: str) -> None:
+
+def save_torch_model(model_name: str, model: Any, save_dir: str) -> str:
     """Save the trained torch model to disk.
 
     Args:
@@ -92,6 +95,8 @@ def save_torch_model(model_name: str, model: Any, save_dir: str) -> None:
         logger.info("Model '%s' saved to %s", model_name, model_path)
     except Exception as e:
         logger.error("Failed to save model '%s': %s", model_name, str(e))
+
+    return model_path
 
 
 def save_sklearn_model(model_name: str, model: Any, save_dir: str) -> None:
@@ -243,6 +248,11 @@ def initialize_weights(module):
 # ------------------------------------
 
 
+def normalize_probability(prob_value: float) -> float:
+    """Normalize probability to a 0.0-1.0 range."""
+    return prob_value / 100.0
+
+
 def prompt_template_hf(
     input_text: str, custom_system_message=None, model=None
 ) -> List[Dict[str, str]]:
@@ -314,6 +324,10 @@ def prompt_template_hf(
                 "role": "user",
                 "content": f"{system_message} Text:\n{input_text} <think>\n",
             },
+        ]
+    elif model == "Gemini2p5flashModel":
+        formatted_prompt = [
+            {"role": "user", "parts": [{"text": f"{system_message} \n\n{input_text}"}]},
         ]
     else:
         formatted_prompt = [
@@ -548,6 +562,7 @@ def extract_last_json_block(text: str) -> Optional[str]:
                     return text[idx : start_idx + 1]
     return None
 
+
 def fix_json_formatting(json_text: str) -> str:
     """Fix common JSON formatting issues."""
     # Fix unterminated strings
@@ -568,6 +583,7 @@ def fix_json_formatting(json_text: str) -> str:
         return re.sub(r'"(.*?)"', repl, s, flags=re.DOTALL)
 
     return escape_newlines_in_strings(json_text)
+
 
 def parse_llm_output(
     output_text: str,
@@ -626,21 +642,24 @@ def parse_llm_output(
         if "probability" in parsed:
             try:
                 prob_raw = parsed["probability"]
-                
+
                 # Handle string values (strip quotes and convert)
                 if isinstance(prob_raw, str):
                     # Remove any surrounding quotes and whitespace
-                    prob_raw = prob_raw.strip().strip('"\'')
+                    prob_raw = prob_raw.strip().strip("\"'")
                     # Try to extract numeric value from string
                     import re
-                    numeric_match = re.search(r'(\d+\.?\d*)', prob_raw)
+
+                    numeric_match = re.search(r"(\d+\.?\d*)", prob_raw)
                     if numeric_match:
                         prob_raw = numeric_match.group(1)
                     else:
-                        logger.warning("No numeric value found in probability string: %s", prob_raw)
+                        logger.warning(
+                            "No numeric value found in probability string: %s", prob_raw
+                        )
                         parsed["probability"] = 0.5
                         return parsed
-                
+
                 # Convert to float
                 prob_value = float(prob_raw)
 
@@ -667,7 +686,8 @@ def parse_llm_output(
             except (ValueError, TypeError) as e:
                 logger.warning(
                     "Failed to convert probability '%s' to float: %s. Defaulting to 0.5",
-                    parsed.get("probability", "None"), e
+                    parsed.get("probability", "None"),
+                    e,
                 )
                 parsed["probability"] = 0.5
 
@@ -688,6 +708,12 @@ def extract_dict(output_text: str) -> Optional[Dict[str, Any]]:
     Returns:
         A dictionary parsed from the JSON string, or a default JSON object if no JSON was found.
     """
+    warnings.warn(
+        "extract_dict is deprecated and will be removed in a future release. "
+        "Use parse_llm_output instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     default_json = {
         "diagnosis": "unknown",
         "probability": 0.5,
@@ -733,14 +759,11 @@ def extract_dict(output_text: str) -> Optional[Dict[str, Any]]:
     try:
         parsed = json.loads(json_text_clean)
 
-        # Convert probability from 0-100 to 0.0-1.0 if needed
+        # Convert probability using helper function
         if "probability" in parsed:
             try:
                 prob_value = float(parsed["probability"])
-                if 0 <= prob_value <= 100:
-                    parsed["probability"] = prob_value / 100.0
-                elif not (0 <= prob_value <= 1):
-                    parsed["probability"] = 0.5
+                parsed["probability"] = normalize_probability(prob_value)
             except (ValueError, TypeError):
                 parsed["probability"] = 0.5
 
