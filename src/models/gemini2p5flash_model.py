@@ -6,15 +6,21 @@ import warnings
 from typing import Any, Dict
 
 import numpy as np
+
 # import vertexai
 from google import genai
-from google.genai.types import (ThinkingConfig, GenerateContentConfig)
+from google.genai.types import ThinkingConfig, GenerateContentConfig
+
 # from vertexai.generative_models import (GenerationConfig, GenerativeModel, ThinkingConfig)
 
 from src.eval.metrics import MetricsTracker
 from src.models.pulse_model import PulseModel
 from src.util.config_util import set_seeds
-from src.util.model_util import (parse_llm_output, prompt_template_hf)
+from src.util.model_util import (
+    parse_llm_output,
+    prompt_template_hf,
+    system_message_samples,
+)
 
 warnings.filterwarnings(
     "ignore",
@@ -40,6 +46,8 @@ class Gemini2p5Model(PulseModel):
         required_params = [
             "max_new_tokens",
             "model_id",
+            "thinking_budget",
+            "temperature",
         ]
         self.check_required_params(params, required_params)
 
@@ -66,11 +74,13 @@ class Gemini2p5Model(PulseModel):
         self.model_id = params["model_id"]
         self.prompting_id = params.get("prompting_id", None)
         self.max_new_tokens = params["max_new_tokens"]
+        self.thinking_budget = params["thinking_budget"]
 
         # self.model = GenerativeModel(self.model_id)
         self.is_agent = False
         self.agent_instance = None
 
+    # Rename to generate_standard
     def generate(
         self,
         input_text: str,
@@ -91,58 +101,74 @@ class Gemini2p5Model(PulseModel):
             input_text, custom_system_message, self.model_name
         )
 
-        # Generate output with scores
+        max_output_tokens = (
+            self.max_new_tokens + self.thinking_budget
+            if self.thinking_budget != -1
+            else 10000
+        )
+
+        incl_thought = True if self.thinking_budget > 0 else False
+
         infer_start = time.perf_counter()
-        # response = self.model.generate_content(
-        #     contents=input_text,
-        #     generation_config=GenerationConfig( # Use GenerativeConfig object
-        #         max_output_tokens=self.max_new_tokens,
-        #         temperature=self.params["temperature"],
-        #         top_p=1.0,
-        #         top_k=32,
-        #         thinking_config=ThinkingConfig(thinking_budget=0) # Add this line to disable thinking
-        #     ),
-        # )
         response = self.client.models.generate_content(
             model=self.model_id,
             contents=input_text,
             config=GenerateContentConfig(
-                max_output_tokens=self.max_new_tokens,
+                max_output_tokens=max_output_tokens,
                 temperature=self.params.get("temperature", 0.4),
                 top_p=1.0,
                 top_k=32,
-                thinking_config=ThinkingConfig(thinking_budget=0),  # Disable thinking
+                thinking_config=ThinkingConfig(
+                    thinking_budget=self.thinking_budget, include_thoughts=incl_thought
+                ),
             ),
         )
         infer_time = time.perf_counter() - infer_start
 
         usage_metadata = response.usage_metadata
         num_input_tokens = usage_metadata.prompt_token_count
-        num_output_tokens = usage_metadata.total_token_count - num_input_tokens
+        num_output_tokens = usage_metadata.candidates_token_count
 
-        # Log the decoded output for debugging
-        logger.debug("Decoded output:\n %s", response.text)
+        if incl_thought:
+            num_thinking_tokens = usage_metadata.thoughts_token_count
+        else:
+            num_thinking_tokens = 0
+
+        thinking_output = ""
+        answer_output = ""
+
+        for part in response.candidates[0].content.parts:
+            if not part.text:
+                continue
+            if part.thought:
+                thinking_output = part.text
+            else:
+                answer_output = part.text
+                logger.debug("Decoded output:\n %s", answer_output)
 
         # Parse the output if parse_json is True
         if parse_json:
-            generated_text = parse_llm_output(response.text)
+            generated_text = parse_llm_output(answer_output)
         else:
             generated_text = response
 
         logger.info(
-            "Inference time: %.4fs | Input Tokens: %d | Output Tokens: %d",
+            "Inference time: %.4fs | Input Tokens: %d | Output Tokens: %d | Thinking Budget: %d",
             infer_time,
             num_input_tokens,
             num_output_tokens,
+            num_thinking_tokens,
         )
 
         # Return consistent result structure
         return {
             "generated_text": generated_text,
+            "thinking_output": thinking_output,
             "token_time": 0.0,
             "infer_time": infer_time,
             "num_input_tokens": num_input_tokens,
             "num_output_tokens": num_output_tokens,
+            "num_thinking_tokens": num_thinking_tokens,
         }
 
     def evaluate(self, test_loader: Any, save_report: bool = False) -> float:
@@ -176,6 +202,9 @@ class Gemini2p5Model(PulseModel):
 
         verbose: int = self.params.get("verbose", 1)
 
+        sys_msg = system_message_samples(task=self.task_name)[1]
+        logger.info("System Message:\n\n %s", sys_msg)
+
         for X, y in zip(test_loader[0].iterrows(), test_loader[1].iterrows()):
             idx = X[0]
             if self.is_agent:
@@ -190,7 +219,7 @@ class Gemini2p5Model(PulseModel):
                     self.agent_instance.memory.set_current_sample_target(y_true)
 
                 # Get raw result from generation
-                result_dict = self.generate(X_input)
+                result_dict = self.generate(X_input, custom_system_message=sys_msg)
 
             except Exception as e:
                 logger.error(
@@ -207,6 +236,8 @@ class Gemini2p5Model(PulseModel):
                     "infer_time": 0.0,
                     "num_input_tokens": 0,
                     "num_output_tokens": 0,
+                    "num_thinking_tokens": 0,
+                    "thinking_output": "",
                 }
 
             # Extract results
@@ -215,6 +246,8 @@ class Gemini2p5Model(PulseModel):
             infer_time = result_dict["infer_time"]
             num_input_tokens = result_dict["num_input_tokens"]
             num_output_tokens = result_dict["num_output_tokens"]
+            num_thinking_tokens = result_dict["num_thinking_tokens"]
+            thinking_output = result_dict["thinking_output"]
 
             predicted_probability = float(generated_text.get("probability", np.nan))
 
@@ -246,8 +279,13 @@ class Gemini2p5Model(PulseModel):
                         "Inference Time": infer_time,
                         "Input Tokens": num_input_tokens,
                         "Output Tokens": num_output_tokens,
+                        "Thinking Tokens": num_thinking_tokens,
+                        "Thinking Output": thinking_output,
                     }
                 )
+            if len(metrics_tracker.items) > 100:
+                # Log metadata periodically to avoid memory issues
+                metrics_tracker.log_metadata()
 
         metrics_tracker.log_metadata(save_to_file=self.save_metadata)
         metrics_tracker.summary = metrics_tracker.compute_overall_metrics()

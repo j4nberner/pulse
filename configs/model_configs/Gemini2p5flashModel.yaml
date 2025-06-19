@@ -9,3 +9,4 @@ params:
   max_new_tokens: 300
   max_length: 10000 # Maximum length of input sequences
   temperature: 0.4 # Temperature for sampling (0.0 = greedy sampling)
+  thinking_budget: 0 # 0 = no thinking budget, -1 = dynamic thinking budget

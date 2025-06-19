@@ -12,8 +12,9 @@ from omegaconf import OmegaConf
 from torch.utils.data import Dataset
 
 from src.preprocessing.preprocessing_advanced.windowing import Windower
-from src.preprocessing.preprocessing_baseline.preprocessing_baseline import \
-    PreprocessorBaseline
+from src.preprocessing.preprocessing_baseline.preprocessing_baseline import (
+    PreprocessorBaseline,
+)
 from src.preprocessing.preprocessing_prompts import get_prompting_preprocessor
 from src.util.config_util import set_seeds
 
@@ -707,9 +708,22 @@ class DatasetManager:
                 dataset["data"]["y_val"] = val_result["y"]
 
             if fine_tuning is False:
-                # Used only for few shot examples if no fine-tuning. Set to none.
-                dataset["data"]["X_train"] = pd.DataFrame()
-                dataset["data"]["y_train"] = pd.DataFrame()
+                # Keep a small subset of training data for few-shot examples
+                # Randomly sample up to 25 samples for few-shot learning
+                max_few_shot_samples = min(25, len(dataset["data"]["X_train"]))
+                sampled_indices = (
+                    dataset["data"]["X_train"]
+                    .sample(n=max_few_shot_samples, random_state=42)
+                    .index
+                )
+                dataset["data"]["X_train"] = dataset["data"]["X_train"].loc[
+                    sampled_indices
+                ]
+                dataset["data"]["y_train"] = dataset["data"]["y_train"].loc[
+                    sampled_indices
+                ]
+                dataset["data"]["X_val"] = pd.DataFrame()
+                dataset["data"]["y_val"] = pd.DataFrame()
                 dataset["data"]["X_val"] = pd.DataFrame()
                 dataset["data"]["y_val"] = pd.DataFrame()
 
