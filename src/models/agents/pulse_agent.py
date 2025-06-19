@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional
 
 import pandas as pd
 
-from src.util.agent_util import AgentMemoryManager
+from src.models.agents.memory_manager import AgentMemoryManager
 from src.util.model_util import prompt_template_hf
 
 logger = logging.getLogger("PULSE_logger")

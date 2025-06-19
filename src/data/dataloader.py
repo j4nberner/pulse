@@ -668,7 +668,15 @@ class DatasetManager:
             prompting_preprocessor = get_prompting_preprocessor(
                 prompting_id=prompting_id
             )
-            num_shots = kwargs.get("num_shots", 0)
+
+            # Set num_shots based on prompting_id for zhu_2024b preprocessors
+            if prompting_id == "zhu_2024b_zero_shot_preprocessor":
+                num_shots = 0
+            elif prompting_id == "zhu_2024b_one_shot_preprocessor":
+                num_shots = 1
+            else:
+                num_shots = kwargs.get("num_shots", 0)
+
             data_window = self.config.preprocessing_advanced.windowing.data_window
 
             info_dict = {
@@ -722,8 +730,6 @@ class DatasetManager:
                 dataset["data"]["y_train"] = dataset["data"]["y_train"].loc[
                     sampled_indices
                 ]
-                dataset["data"]["X_val"] = pd.DataFrame()
-                dataset["data"]["y_val"] = pd.DataFrame()
                 dataset["data"]["X_val"] = pd.DataFrame()
                 dataset["data"]["y_val"] = pd.DataFrame()
 
@@ -896,19 +902,3 @@ class TorchDatasetWrapper(Dataset):
         return torch.tensor(X_sample, dtype=torch.float32), torch.tensor(
             y_sample, dtype=torch.float32
         )
-
-    # TODO: @sophiafe Is this still needed?
-    def get_batch(self, indices):
-        """
-        Custom method to get a batch with explicit indices.
-        More efficient than using DataLoader for large datasets.
-
-        Args:
-            indices (list): List of indices to include in batch
-
-        Returns:
-            tuple: (features, labels) for the specified indices
-        """
-        X_batch = self.X.iloc[indices].values.astype(np.float32)
-        y_batch = self.y.iloc[indices].values.astype(np.float32)
-        return X_batch, y_batch

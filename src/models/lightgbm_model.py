@@ -139,6 +139,10 @@ class LightGBMModel(PulseModel):
         model_save_name = f"{self.model_name}_{self.task_name}_{self.dataset_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         model_save_dir = os.path.join(self.save_dir, "Models")
         os.makedirs(model_save_dir, exist_ok=True)
+
+        # Store feature names as an attribute before saving
+        self.model._pulse_feature_names = feature_names
+
         save_sklearn_model(model_save_name, self.model, model_save_dir)
 
         # Log metrics to wandb
@@ -259,4 +263,8 @@ class LightGBMTrainer:
             eval_set=[(X_val, y_val)],
             callbacks=[early_stopping_callback],
         )
+
+        # Store feature names as an attribute for later retrieval
+        self.model.model._pulse_feature_names = feature_names
+
         logger.info("LightGBM model trained successfully.")
