@@ -732,8 +732,6 @@ class DatasetManager:
                 ]
                 dataset["data"]["X_val"] = pd.DataFrame()
                 dataset["data"]["y_val"] = pd.DataFrame()
-                dataset["data"]["X_val"] = pd.DataFrame()
-                dataset["data"]["y_val"] = pd.DataFrame()
 
             # Test data
             X = [dataset["data"]["X_test"], dataset["data"]["X_train"]]
