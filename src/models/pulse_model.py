@@ -574,7 +574,8 @@ class PulseLLMModel(PulseModel):
         sys_msgs = system_message_samples(task=self.task_name)
 
         # Skip first n samples if specified
-        skip_samples = self.params.get("skip_samples", 666)
+        # Default to 0, meaning no samples are skipped unless explicitly specified
+        skip_samples = self.params.get("skip_samples", 0)
         if skip_samples > 0:
             logger.info(
                 "Skipping first %d samples in the test set for system message evaluation",
