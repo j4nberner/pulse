@@ -1385,6 +1385,351 @@
           "minpse": 0.059
         }
       }
+    },
+    {
+      "model_id": "Gemini2p5flash",
+      "task_id": "mortality",
+      "dataset": "eicu",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
+      "run_id": "20250617_214747",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.83,
+          "auprc": 0.389,
+          "normalized_auprc": 5.56,
+          "specificity": 0.731,
+          "f1_score": 0.27,
+          "accuracy": 0.73,
+          "balanced_accuracy": 0.723,
+          "precision": 0.167,
+          "recall": 0.714,
+          "mcc": 0.248,
+          "kappa": 0.177,
+          "minpse": 0.3
+        }
+      }
+    },
+    {
+      "model_id": "Gemini2p5flash",
+      "task_id": "aki",
+      "dataset": "eicu",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
+      "run_id": "20250619_150123",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.609,
+          "auprc": 0.499,
+          "normalized_auprc": 1.609,
+          "specificity": 0.853,
+          "f1_score": 0.406,
+          "accuracy": 0.693,
+          "balanced_accuracy": 0.595,
+          "precision": 0.507,
+          "recall": 0.338,
+          "mcc": 0.218,
+          "kappa": 0.21,
+          "minpse": 0.377
+        }
+      }
+    },
+    {
+      "model_id": "Gemini2p5flash",
+      "task_id": "sepsis",
+      "dataset": "eicu",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
+      "run_id": "20250619_150123",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.613,
+          "auprc": 0.057,
+          "normalized_auprc": 1.19,
+          "specificity": 0.7,
+          "f1_score": 0.104,
+          "accuracy": 0.685,
+          "balanced_accuracy": 0.541,
+          "precision": 0.06,
+          "recall": 0.383,
+          "mcc": 0.038,
+          "kappa": 0.023,
+          "minpse": 0.07
+        }
+      }
+    },
+    {
+      "model_id": "Llama3",
+      "task_id": "aki",
+      "dataset": "eicu",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
+      "run_id": "20250608_181930",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.506,
+          "auprc": 0.36,
+          "normalized_auprc": 1.16,
+          "specificity": 0.972,
+          "f1_score": 0.077,
+          "accuracy": 0.684,
+          "balanced_accuracy": 0.507,
+          "precision": 0.406,
+          "recall": 0.043,
+          "mcc": 0.038,
+          "kappa": 0.019,
+          "minpse": 0.31
+        }
+      }
+    },
+    {
+      "model_id": "Llama3",
+      "task_id": "mortality",
+      "dataset": "eicu",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
+      "run_id": "20250608_181930",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.5,
+          "auprc": 0.535,
+          "normalized_auprc": 7.643,
+          "specificity": 0.0,
+          "f1_score": 0.131,
+          "accuracy": 0.07,
+          "balanced_accuracy": 0.5,
+          "precision": 0.07,
+          "recall": 1.0,
+          "mcc": 0.0,
+          "kappa": 0.0,
+          "minpse": 0.07
+        }
+      }
+    },
+    {
+      "model_id": "Llama3",
+      "task_id": "sepsis",
+      "dataset": "eicu",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
+      "run_id": "20250608_181930",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.545,
+          "auprc": 0.052,
+          "normalized_auprc": 1.081,
+          "specificity": 0.325,
+          "f1_score": 0.104,
+          "accuracy": 0.347,
+          "balanced_accuracy": 0.556,
+          "precision": 0.055,
+          "recall": 0.787,
+          "mcc": 0.051,
+          "kappa": 0.015,
+          "minpse": 0.055
+        }
+      }
+    },
+    {
+      "model_id": "Gemma3",
+      "task_id": "aki",
+      "dataset": "eicu",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
+      "run_id": "20250608_180109",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.61,
+          "auprc": 0.279,
+          "normalized_auprc": 0.902,
+          "specificity": 0.196,
+          "f1_score": 0.476,
+          "accuracy": 0.405,
+          "balanced_accuracy": 0.534,
+          "precision": 0.328,
+          "recall": 0.872,
+          "mcc": 0.083,
+          "kappa": 0.047,
+          "minpse": 0.409
+        }
+      }
+    },
+    {
+      "model_id": "Gemma3",
+      "task_id": "mortality",
+      "dataset": "eicu",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
+      "run_id": "20250608_180109",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.505,
+          "auprc": 0.535,
+          "normalized_auprc": 7.648,
+          "specificity": 0.0,
+          "f1_score": 0.131,
+          "accuracy": 0.07,
+          "balanced_accuracy": 0.5,
+          "precision": 0.07,
+          "recall": 1.0,
+          "mcc": 0.0,
+          "kappa": 0.0,
+          "minpse": 0.071
+        }
+      }
+    },
+    {
+      "model_id": "Gemma3",
+      "task_id": "sepsis",
+      "dataset": "eicu",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
+      "run_id": "20250608_180109",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.611,
+          "auprc": 0.035,
+          "normalized_auprc": 0.738,
+          "specificity": 0.045,
+          "f1_score": 0.096,
+          "accuracy": 0.091,
+          "balanced_accuracy": 0.523,
+          "precision": 0.05,
+          "recall": 1.0,
+          "mcc": 0.048,
+          "kappa": 0.005,
+          "minpse": 0.064
+        }
+      }
+    },
+    {
+      "model_id": "Mistral",
+      "task_id": "aki",
+      "dataset": "eicu",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
+      "run_id": "20250608_182848",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.48,
+          "auprc": 0.489,
+          "normalized_auprc": 1.577,
+          "specificity": 0.0,
+          "f1_score": 0.473,
+          "accuracy": 0.31,
+          "balanced_accuracy": 0.5,
+          "precision": 0.31,
+          "recall": 1.0,
+          "mcc": 0.0,
+          "kappa": 0.0,
+          "minpse": 0.31
+        }
+      }
+    },
+    {
+      "model_id": "Mistral",
+      "task_id": "mortality",
+      "dataset": "eicu",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
+      "run_id": "20250608_182848",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.416,
+          "auprc": 0.192,
+          "normalized_auprc": 2.747,
+          "specificity": 0.0,
+          "f1_score": 0.131,
+          "accuracy": 0.07,
+          "balanced_accuracy": 0.5,
+          "precision": 0.07,
+          "recall": 1.0,
+          "mcc": 0.0,
+          "kappa": 0.0,
+          "minpse": 0.07
+        }
+      }
+    },
+    {
+      "model_id": "Mistral",
+      "task_id": "sepsis",
+      "dataset": "eicu",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
+      "run_id": "20250608_182848",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.478,
+          "auprc": 0.024,
+          "normalized_auprc": 0.5,
+          "specificity": 0.956,
+          "f1_score": 0.0,
+          "accuracy": 0.91,
+          "balanced_accuracy": 0.478,
+          "precision": 0.0,
+          "recall": 0.0,
+          "mcc": -0.047,
+          "kappa": -0.047,
+          "minpse": 0.048
+        }
+      }
+    },
+    {
+      "model_id": "DeepseekR1Llama8b",
+      "task_id": "aki",
+      "dataset": "eicu",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
+      "run_id": "20250613_112431",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.586,
+          "auprc": 0.392,
+          "normalized_auprc": 1.264,
+          "specificity": 0.82,
+          "f1_score": 0.342,
+          "accuracy": 0.655,
+          "balanced_accuracy": 0.554,
+          "precision": 0.419,
+          "recall": 0.289,
+          "mcc": 0.123,
+          "kappa": 0.119,
+          "minpse": 0.382
+        }
+      }
+    },
+    {
+      "model_id": "DeepseekR1Llama8b",
+      "task_id": "mortality",
+      "dataset": "eicu",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
+      "run_id": "20250613_112431",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.661,
+          "auprc": 0.234,
+          "normalized_auprc": 3.344,
+          "specificity": 0.613,
+          "f1_score": 0.208,
+          "accuracy": 0.62,
+          "balanced_accuracy": 0.664,
+          "precision": 0.122,
+          "recall": 0.714,
+          "mcc": 0.17,
+          "kappa": 0.101,
+          "minpse": 0.135
+        }
+      }
+    },
+    {
+      "model_id": "DeepseekR1Llama8b",
+      "task_id": "sepsis",
+      "dataset": "eicu",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
+      "run_id": "20250613_112431",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.52,
+          "auprc": 0.054,
+          "normalized_auprc": 1.134,
+          "specificity": 0.569,
+          "f1_score": 0.097,
+          "accuracy": 0.565,
+          "balanced_accuracy": 0.529,
+          "precision": 0.054,
+          "recall": 0.489,
+          "mcc": 0.025,
+          "kappa": 0.012,
+          "minpse": 0.054
+        }
+      }
     }
   ]
 }
