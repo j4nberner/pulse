@@ -218,13 +218,17 @@ Please provide your assessment following the required format."""
         # Categorize features
         try:
             categorized_features_df = self.preprocessor_advanced.categorize_features(
-                patient_df, base_features, patient_df.columns
+                df=patient_df,
+                base_features=base_features,
+                X_cols=patient_df.columns,
+                num_categories=3,
+                for_llm=True,
             )
 
             # Format abnormal features
             patient_categorized = categorized_features_df.iloc[0]
             abnormal_indices = patient_categorized[
-                (patient_categorized == -1) | (patient_categorized == 1)
+                (patient_categorized == "too low") | (patient_categorized == "too high")
             ].index
 
             # Format for prompt
@@ -243,10 +247,8 @@ Please provide your assessment following the required format."""
                 # Get human-readable feature name from the dictionary
                 feature_name = get_feature_name(feature_abbreviation)
 
-                # Determine category
-                category = (
-                    "too high" if patient_categorized[feature] == 1 else "too low"
-                )
+                # Get category description
+                category = patient_categorized[feature]
 
                 # Create description
                 description = f"{feature_name} {category}"
