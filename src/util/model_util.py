@@ -74,7 +74,7 @@ class EarlyStopping:
         return model
 
 
-def save_torch_model(model_name: str, model: Any, save_dir: str) -> None:
+def save_torch_model(model_name: str, model: Any, save_dir: str) -> str:
     """Save the trained torch model to disk.
 
     Args:
@@ -182,8 +182,7 @@ def prepare_data_for_model_convdl(
     """
 
     # Import the converter
-    from src.preprocessing.preprocessing_advanced.windowing import \
-        WindowedDataTo3D
+    from src.preprocessing.preprocessing_advanced.windowing import WindowedDataTo3D
 
     # Create converter with model name and config
     converter = WindowedDataTo3D(
@@ -251,16 +250,7 @@ def initialize_weights(module):
 
 def normalize_probability(prob_value: float) -> float:
     """Normalize probability to a 0.0-1.0 range."""
-    if 0 <= prob_value <= 100:
-        return prob_value / 100.0
-    elif 0 <= prob_value <= 1:
-        return prob_value
-    else:
-        logger.warning(
-            "Probability value %s out of expected range. Clamping to [0,1]",
-            prob_value,
-        )
-        return max(0.0, min(1.0, prob_value / 100.0))
+    return prob_value / 100.0
 
 
 def prompt_template_hf(

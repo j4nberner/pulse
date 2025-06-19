@@ -294,12 +294,8 @@ class Windower:
 
             for set_type in ["train", "val", "test"]:
                 # Save files
-                x_path = os.path.join(
-                    self.base_path, save_directory, f"X_{set_type}.parquet"
-                )
-                y_path = os.path.join(
-                    self.base_path, save_directory, f"y_{set_type}.parquet"
-                )
+                x_path = os.path.join(permanent_directory, f"X_{set_type}.parquet")
+                y_path = os.path.join(permanent_directory, f"y_{set_type}.parquet")
                 if not os.path.exists(x_path):
                     results[set_type]["X"].to_parquet(x_path)
                 else:
