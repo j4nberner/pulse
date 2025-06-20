@@ -3,7 +3,8 @@
 Paper: https://arxiv.org/pdf/2305.15525
 
 Approach:
-- Featurename: [Raw Data]
+
+- Featurename unit: [Raw Data]
 - Few shot examples are marked as Example Question with the answer
 
 ---
@@ -21,13 +22,12 @@ Answer: "
 
 Example Question: Classify the following ICU patient data as either aki or not-aki
 
-stay_id (unit: ): 2
-age (unit: ): 80.0
-sex (unit: ): Male
-Height (unit: cm): 170.0
-Weight (unit: kg): 60.0
-Albumin (unit: g/dL): [2.25, 2.25, 2.25, 2.25, 2.25, 2.25]
-Alkaline Phosphatase (unit: U/L): [104.3, 104.3, 104.3, 104.3, 104.3, 104.3]
+age: 80.0
+sex: Male
+Height cm: 170.0
+Weight kg: 60.0
+Albumin g/dL: [2.25, 2.25, 2.25, 2.25, 2.25, 2.25]
+Alkaline Phosphatase U/L: [104.3, 104.3, 104.3, 104.3, 104.3, 104.3]
 ...
 
 Answer:
@@ -39,14 +39,13 @@ Answer:
 
 Question: Classify the following ICU patient data as either aki or not-aki
 
-stay_id (unit: ): 30505
-age (unit: ): 55.0
-sex (unit: ): Male
-Height (unit: cm): 170.0
-Weight (unit: kg): 95.0
-Albumin (unit: g/dL): [2.25, 2.25, 2.25, 2.25, 2.25, 2.25]
-Alkaline Phosphatase (unit: U/L): [104.3, 104.3, 104.3, 104.3, 104.3, 104.3]
-Alanine Aminotransferase (ALT) (unit: U/L): [151.02, 24.0, 24.0, 24.0, 24.0, 24.0]
-Aspartate Aminotransferase (AST) (unit: U/L): [231.81, 25.0, 25.0, 25.0, 25.0, 25.0]
-Base Excess (unit: mmol/L): [-0.44, -1.0, -1.0, -1.0, -1.2, -1.2]
+age: 55.0
+sex: Male
+Height cm: 170.0
+Weight kg: 95.0
+Albumin g/dL: [2.25, 2.25, 2.25, 2.25, 2.25, 2.25]
+Alkaline Phosphatase U/L: [104.3, 104.3, 104.3, 104.3, 104.3, 104.3]
+Alanine Aminotransferase (ALT) U/L: [151.02, 24.0, 24.0, 24.0, 24.0, 24.0]
+Aspartate Aminotransferase (AST) U/L: [231.81, 25.0, 25.0, 25.0, 25.0, 25.0]
+Base Excess mmol/L: [-0.44, -1.0, -1.0, -1.0, -1.2, -1.2]
 ...

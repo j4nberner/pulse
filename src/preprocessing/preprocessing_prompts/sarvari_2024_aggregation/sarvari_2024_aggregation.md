@@ -3,8 +3,9 @@
 https://onlinelibrary.wiley.com/doi/full/10.1002/hcs2.79
 
 Approach:
+
 - Aggregate time-series of each independent feature and prompt model with:
-    - Featurename (unit: g/dL): min=3.000, max=3.060, mean=3.055
+  - Featurename (unit: g/dL): min=3.000, max=3.060, mean=3.055
 
 ### Example Prompt as stated in paper:
 
@@ -54,12 +55,10 @@ Foundational data: “min peripheral oxygen saturation: 70”
 Further tests: Measure PaO2 in blood
 9: Leukocytosis
 Foundational data: “max wbc: 14.1, avg wbc: 13.8.” The patient's white blood cell count is consistently elevated which may suggest an ongoing inflammatory response or infection.
-Further tests: Infection markers such as CRP or PCT, Assessment of symptoms like fever, inflammation or fatigue.
-10. Unspecified acute kidney failure:
-    Foundational data: “max bun: 101, max creatinine: 5.8, avg bun: 38.15, avg creatinine: 2.78”
-Further tests: Urine output measurements for oliguria, ultrasound to rule out obstruction
-11. Presence of left artificial shoulder joint
-    Foundational data: The imaging report mentions: “Status post left total shoulder replacement”
+Further tests: Infection markers such as CRP or PCT, Assessment of symptoms like fever, inflammation or fatigue. 10. Unspecified acute kidney failure:
+Foundational data: “max bun: 101, max creatinine: 5.8, avg bun: 38.15, avg creatinine: 2.78”
+Further tests: Urine output measurements for oliguria, ultrasound to rule out obstruction 11. Presence of left artificial shoulder joint
+Foundational data: The imaging report mentions: “Status post left total shoulder replacement”
 Further diseases based on these diagnoses (continued the indexing from the previous number in the list):
 12: Unspecified septicemia
 Foundational data: positive MRSA screen, systemic inflammatory response: “max respiration rate: 29,” “max temperature: 38,” leukocytosis
@@ -78,42 +77,57 @@ Patient data:
 
 ### Adjusted prompt for Pulse benchmark
 
-Suggest a diagnoses of mortality or not-mortality for the following patient data.
-Before finalizing your answer check if you haven't missed any abnormal data points. ´´´
-
-For example, if the patient data mentions:
-
-Patient Info — index: 674, stay_id: 30128094, age: 65.0, sex: Female, weight: 57.6, height: 169.44
-Albumin (unit: g/dL): min=3.000, max=3.060, mean=3.055
-Alkaline Phosphatase (unit: U/L): min=52.000, max=119.480, mean=114.082
-Alanine Aminotransferase (ALT) (unit: U/L): min=22.000, max=189.700, mean=176.284
-Aspartate Aminotransferase (AST) (unit: U/L): min=27.000, max=300.580, mean=278.694
-Base Excess (unit: mmol/L): min=-6.000, max=-1.610, mean=-3.313
-Bicarbonate (unit: mmol/L): min=21.000, max=22.750, mean=21.570
-Total Bilirubin (unit: mg/dL): min=0.400, max=3.300, mean=2.765
-
-...
-
-Then your answer may be: 
-{
- "diagnosis": "not-mortality",
-  "probability": "the probability of your estimation as a float",
-  "explanation": "a brief explanation for the prediction"
-}
-
-
+Suggest a diagnosis of aki for the following patient data. Reply with aki or not-aki.
+Give exact numbers and/or text quotes from the data that made you think of each of the diagnoses.
+Before finalizing your answer check if you haven't missed any abnormal data points.
 
 Patient data:
 
-Patient Info — index: 0, stay_id: 38989889, age: 81.0, sex: Male, weight: 122.3, height: 185.42000000000002
-Albumin (unit: g/dL): min=3.060, max=3.060, mean=3.060
-Alkaline Phosphatase (unit: U/L): min=119.480, max=119.480, mean=119.480
-Alanine Aminotransferase (ALT) (unit: U/L): min=189.700, max=189.700, mean=189.700
-Aspartate Aminotransferase (AST) (unit: U/L): min=300.580, max=300.580, mean=300.580
-Base Excess (unit: mmol/L): min=-3.000, max=0.000, mean=-0.640
-Bicarbonate (unit: mmol/L): min=20.000, max=23.000, mean=20.960
-Total Bilirubin (unit: mg/dL): min=2.390, max=3.300, mean=2.845
-Band Neutrophils (unit: %): min=5.710, max=5.710, mean=5.710
-Blood Urea Nitrogen (BUN) (unit: mg/dL): min=25.000, max=34.000, mean=31.120
-
-...
+Patient Info — index: 0, age: 55.0, sex: Male, height: 170.0, weight: 95.0
+Albumin (unit: g/dL): min=2.250, max=2.250, mean=2.250
+Alkaline Phosphatase (unit: U/L): min=104.300, max=104.300, mean=104.300
+Alanine Aminotransferase (ALT) (unit: U/L): min=24.000, max=151.020, mean=45.170
+Aspartate Aminotransferase (AST) (unit: U/L): min=25.000, max=231.810, mean=59.468
+Base Excess (unit: mmol/L): min=-1.200, max=-0.440, mean=-0.973
+Bicarbonate (unit: mmol/L): min=23.400, max=24.600, mean=23.887
+Total Bilirubin (unit: mg/dL): min=1.111, max=1.700, mean=1.443
+Band Neutrophils (unit: %): min=21.360, max=21.360, mean=21.360
+Blood Urea Nitrogen (BUN) (unit: mg/dL): min=17.640, max=22.760, mean=18.493
+Calcium (unit: mg/dL): min=8.180, max=8.180, mean=8.180
+Ionized Calcium (unit: mmol/L): min=1.160, max=1.210, mean=1.202
+Creatine Kinase (CK) (unit: U/L): min=145.000, max=1169.990, mean=318.832
+Creatine Kinase-MB (CK-MB) (unit: ng/mL): min=3.800, max=30.540, mean=8.457
+Chloride (unit: mmol/L): min=105.000, max=108.150, mean=105.525
+Creatinine (unit: mg/dL): min=0.769, max=1.000, mean=0.808
+C-Reactive Protein (CRP) (unit: mg/L): min=7.000, max=93.640, mean=21.440
+Diastolic Blood Pressure (unit: mmHg): min=48.000, max=82.000, mean=61.000
+Fibrinogen (unit: mg/dL): min=279.250, max=321.000, mean=293.167
+Fraction of Inspired Oxygen (FiO2) (unit: %): min=44.900, max=44.900, mean=44.900
+Glucose (unit: mg/dL): min=152.020, max=162.144, mean=160.457
+Hemoglobin (unit: g/dL): min=10.410, max=15.000, mean=14.235
+Heart Rate (unit: bpm): min=84.000, max=100.000, mean=92.083
+inr (unit: ): min=1.240, max=1.240, mean=1.240
+Potassium (unit: mmol/L): min=4.100, max=4.600, mean=4.383
+Lactate (unit: mmol/L): min=0.900, max=1.930, mean=1.305
+Lymphocytes (unit: %): min=0.180, max=0.180, mean=0.180
+Mean Arterial Pressure (MAP) (unit: mmHg): min=70.000, max=134.000, mean=88.833
+Mean Corpuscular Hemoglobin (MCH) (unit: pg): min=30.720, max=31.000, mean=30.953
+Mean Corpuscular Hemoglobin Concentration (MCHC) (unit: g/dL): min=33.850, max=35.100, mean=34.892
+Mean Corpuscular Volume (MCV) (unit: fL): min=89.000, max=90.780, mean=89.297
+Methemoglobin (unit: %): min=0.700, max=1.500, mean=1.008
+Magnesium (unit: mg/dL): min=1.993, max=2.060, mean=2.005
+Sodium (unit: mmol/L): min=133.000, max=137.310, mean=135.218
+Neutrophils (unit: %): min=82.320, max=82.320, mean=82.320
+Oxygen Saturation (unit: %): min=89.000, max=95.000, mean=92.833
+Partial Pressure of Carbon Dioxide (PaCO2) (unit: mmHg): min=36.950, max=52.200, mean=49.658
+pH Level (unit: /): min=7.312, max=7.420, mean=7.330
+Phosphate (unit: mg/dL): min=3.360, max=5.173, mean=4.871
+Platelets (unit: 1000/µL): min=179.480, max=191.000, mean=189.080
+Partial Pressure of Oxygen (PaO2) (unit: mmHg): min=61.300, max=109.720, mean=69.370
+Partial Thromboplastin Time (PTT) (unit: sec): min=33.300, max=46.150, mean=41.867
+Respiratory Rate (unit: breaths/min): min=12.000, max=23.000, mean=17.333
+Systolic Blood Pressure (unit: mmHg): min=127.000, max=170.000, mean=143.000
+Temperature (unit: °C): min=35.700, max=36.700, mean=36.367
+Troponin T (unit: ng/mL): min=0.004, max=0.980, mean=0.168
+Urine Output (unit: mL/h): min=53.620, max=263.260, mean=88.560
+White Blood Cell Count (WBC) (unit: 1000/µL): min=10.980, max=14.600, mean=13.997

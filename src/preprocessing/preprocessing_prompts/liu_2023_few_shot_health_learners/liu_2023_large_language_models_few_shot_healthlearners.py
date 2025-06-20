@@ -156,7 +156,10 @@ def build_liu_query(
             # Get feature name, unit, and reference range
             value_list = row_dict.get(feature[0], None)
             if value_list is not None:
-                line = f"{feature[1][0]} (unit: {feature[1][1]}): {value_list}"
+                if feature[1][1] == "":
+                    line = f"{feature[1][0]}: {value_list}"
+                else:
+                    line = f"{feature[1][0]} {feature[1][1]}: {value_list}"
                 lines.append(line)
 
         # Add label (if provided)
@@ -168,7 +171,7 @@ def build_liu_query(
                     "Answer: \n"
                     "{\n"
                     f' "diagnosis": "{diagnosis}",\n'
-                    '  "classification": "<the probability of your estimation as a float>",\n'
+                    '  "classification": "<the score of your diagnosis between 0 and 100>",\n'
                     '  "explanation": "<a brief explanation for the prediction>"\n'
                     "}\n"
                 )
