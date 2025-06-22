@@ -11,7 +11,7 @@ from openai import AzureOpenAI
 import wandb
 from src.eval.metrics import MetricsTracker
 from src.models.pulse_model import PulseModel
-from src.util.model_util import extract_dict, prompt_template_hf
+from src.util.model_util import extract_dict, parse_llm_output, prompt_template_hf, system_message_samples
 
 warnings.filterwarnings(
     "ignore",
@@ -80,8 +80,8 @@ class GPTModel(PulseModel):
         infer_start = time.perf_counter()
         outputs = self.client.chat.completions.create(
             messages=input_text,
-            max_tokens=10000,
-            temperature=0.4,
+            max_tokens=self.params["max_new_tokens"],
+            temperature=self.params.get("temperature", 0.4),
             model=self.deployment,
         )
         infer_time = time.perf_counter() - infer_start
@@ -97,24 +97,23 @@ class GPTModel(PulseModel):
         decoded_output = outputs.choices[0].message.content
         logger.debug("Decoded output:\n %s", decoded_output)
 
-        # Extract dict from the decoded output (e.g., via regex or JSON parsing)
-        parsed = extract_dict(decoded_output)
+        generated_text = parse_llm_output(decoded_output)
 
         # Check if probability is a number or string, try to convert, else default to 0.5
-        prob = parsed.get("probability", 0.5)
+        prob = generated_text.get("probability", 50)
         try:
             prob = float(prob)
         except (ValueError, TypeError):
             logger.warning("Failed to convert probability to float. Defaulting to 0.5")
             prob = 0.5
-        parsed["probability"] = prob
+        generated_text["probability"] = prob
 
         logger.info(
             f"Inference time: {infer_time:.4f}s | Tokens: {num_input_tokens + num_output_tokens}"
         )
 
         return {
-            "generated_text": parsed,
+            "generated_text": generated_text,
             "infer_time": infer_time,
             "num_input_tokens": num_input_tokens,
             "num_output_tokens": num_output_tokens,
@@ -142,18 +141,21 @@ class GPTModel(PulseModel):
         verbose: int = self.params.get("verbose", 1)
         val_loss: list[float] = []
 
+        sys_msg = system_message_samples(task=self.task_name)[1]
+        logger.info("System Message:\n\n %s", sys_msg)
+
         for X, y in zip(test_loader[0].iterrows(), test_loader[1].iterrows()):
             X_input = X[1].iloc[0]
             y_true = y[1].iloc[0]
 
-            result_dict = self.generate(X_input)
+            result_dict = self.generate(X_input, custom_system_message=sys_msg)
 
             generated_text = result_dict["generated_text"]
             infer_time = result_dict["infer_time"]
             num_input_tokens = result_dict["num_input_tokens"]
             num_output_tokens = result_dict["num_output_tokens"]
 
-            predicted_probability = float(generated_text.get("probability", 0.5))
+            predicted_probability = float(generated_text.get("probability", 50))
 
             logger.info(
                 "Predicted probability: %s | True label: %s",
@@ -203,7 +205,7 @@ class GPTModel(PulseModel):
         metrics_tracker.log_metadata(save_to_file=self.save_metadata)
         metrics_tracker.summary = metrics_tracker.compute_overall_metrics()
         if save_report:
-            metrics_tracker.save_report()
+            metrics_tracker.save_report(prompting_id=self.prompting_id)
 
         logger.info("Test evaluation completed for %s", self.model_name)
         logger.info("Test metrics: %s", metrics_tracker.summary)
