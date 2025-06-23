@@ -12,9 +12,12 @@ import wandb
 from src.eval.metrics import MetricsTracker
 from src.models.pulse_model import PulseModel
 from src.util.config_util import set_seeds
-from src.util.model_util import (EarlyStopping, initialize_weights,
-                                 prepare_data_for_model_convdl,
-                                 save_torch_model)
+from src.util.model_util import (
+    EarlyStopping,
+    initialize_weights,
+    prepare_data_for_model_convdl,
+    save_torch_model,
+)
 
 logger = logging.getLogger("PULSE_logger")
 
@@ -225,9 +228,9 @@ class CNNModel(PulseModel, nn.Module):
                     "label": labels.cpu().numpy(),
                     "loss": loss,
                     "age": inputs[:, 0, 0].cpu().numpy(),
-                    "sex": inputs[:, 0, 1].cpu().numpy(),
-                    "height": inputs[:, 0, 2].cpu().numpy(),
-                    "weight": inputs[:, 0, 3].cpu().numpy(),
+                    "sex": inputs[:, 1, 0].cpu().numpy(),
+                    "height": inputs[:, 2, 0].cpu().numpy(),
+                    "weight": inputs[:, 3, 0].cpu().numpy(),
                 }
                 # Append results to metrics tracker
                 metrics_tracker.add_results(outputs.cpu().numpy(), labels.cpu().numpy())
