@@ -295,7 +295,10 @@ class PulseLLMModel(PulseModel):
 
         # Format input using prompt template
         input_text = prompt_template_hf(
-            input_text, custom_system_message=custom_system_message, model=self.model_name, task=self.task_name
+            input_text,
+            custom_system_message=custom_system_message,
+            model=self.model_name,
+            task=self.task_name,
         )
 
         # Tokenize with chat template
@@ -735,9 +738,15 @@ class PulseLLMModel(PulseModel):
                 return self._generate_standard(str(input_data), **kwargs)
 
             # Update agent context
+            # if self.agent_instance:
+            #     self.agent_instance.task_name = getattr(self, "task_name", None)
+            #     self.agent_instance.dataset_name = getattr(self, "dataset_name", None)
+
             if self.agent_instance:
-                self.agent_instance.task_name = getattr(self, "task_name", None)
-                self.agent_instance.dataset_name = getattr(self, "dataset_name", None)
+                self.agent_instance.update_task_context(
+                    getattr(self, "task_name", None),
+                    getattr(self, "dataset_name", None),
+                )
 
             # Validate input data type
             if isinstance(input_data, str):

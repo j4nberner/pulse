@@ -50,6 +50,14 @@ class Zhu2024cAgent(PulseAgent):
         # Define steps
         self._define_steps()
 
+    def _update_task_specific_content(self) -> None:
+        """Update task-specific content when task changes."""
+        self.task_content = get_task_specific_content(self.task_name)
+
+        # Redefine steps with updated task content
+        self.steps = []  # Clear existing steps
+        self._define_steps()
+
     # ------------------------------------------
     # Agent Step Methods
     # ------------------------------------------
@@ -78,6 +86,10 @@ class Zhu2024cAgent(PulseAgent):
 
     def process_single(self, patient_data: pd.Series) -> Dict[str, Any]:
         """Process a single patient's data through all reasoning steps."""
+        # Update task context if needed (ensures task_content is current)
+        if hasattr(self.model, "task_name") and hasattr(self.model, "dataset_name"):
+            self.update_task_context(self.model.task_name, self.model.dataset_name)
+
         # Reset memory for this patient
         self.memory.reset()
 
@@ -155,7 +167,7 @@ class Zhu2024cAgent(PulseAgent):
     {feature_data}
 
     Disease definition and description: 
-    {self.task_content['task_info']}
+    {self.task_content['task_info_long']}
     """
             return prompt
 

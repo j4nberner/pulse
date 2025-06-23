@@ -74,6 +74,14 @@ class HybridReasoningAgent(PulseAgent):
 
         self._define_steps()
 
+    def _update_task_specific_content(self) -> None:
+        """Update task-specific content when task changes."""
+        self.task_content = get_task_specific_content(self.task_name)
+
+        # Redefine steps with updated task content
+        self.steps = []  # Clear existing steps
+        self._define_steps()
+
     def _load_xgb_model(self) -> None:
         """Load the pretrained XGBoost model for the current task."""
         try:
@@ -184,6 +192,10 @@ class HybridReasoningAgent(PulseAgent):
 
     def process_single(self, patient_data: pd.Series) -> Dict[str, Any]:
         """Process a single patient through the hybrid reasoning workflow."""
+        # Update task context if needed (ensures task_content is current)
+        if hasattr(self.model, "task_name") and hasattr(self.model, "dataset_name"):
+            self.update_task_context(self.model.task_name, self.model.dataset_name)
+
         # Reset memory
         self.memory.reset()
 
@@ -927,10 +939,10 @@ Respond in JSON format:
                 investigation_prob = investigation_results.get("probability", "N/A")
                 if isinstance(investigation_prob, (int, float)):
                     # Convert to integer percentage if it's a decimal
-                    if investigation_prob < 1:
-                        investigation_prob = int(investigation_prob * 100)
+                    if investigation_prob <= 1:
+                        investigation_prob = int(round(investigation_prob * 100))
                     else:
-                        investigation_prob = int(investigation_prob)
+                        investigation_prob = int(round(investigation_prob))
                     investigation_prob_text = f"{investigation_prob}%"
                 else:
                     investigation_prob_text = f"{investigation_prob}%"
@@ -945,11 +957,24 @@ DETAILED INVESTIGATION RESULTS:
             # Format clinical probability for display
             clinical_prob_display = clinical_assessment.get("probability", "N/A")
             if isinstance(clinical_prob_display, (int, float)):
-                if clinical_prob_display < 1:
-                    clinical_prob_display = clinical_prob_display * 100
-                clinical_prob_text = f"{clinical_prob_display:.0f}%"
+                if clinical_prob_display <= 1:
+                    clinical_prob_display = int(round(clinical_prob_display * 100))
+                else:
+                    clinical_prob_display = int(round(clinical_prob_display))
+                clinical_prob_text = f"{clinical_prob_display}%"
             else:
                 clinical_prob_text = f"{clinical_prob_display}%"
+
+            # Format ML probability for display
+            ml_prob_display = ml_assessment.get("probability", "N/A")
+            if isinstance(ml_prob_display, (int, float)):
+                if ml_prob_display <= 1:
+                    ml_prob_display = int(round(ml_prob_display * 100))
+                else:
+                    ml_prob_display = int(round(ml_prob_display))
+                ml_prob_text = f"{ml_prob_display}%"
+            else:
+                ml_prob_text = f"{ml_prob_display}%"
 
             return f"""Patient Demographics:
 {demographics_str}
@@ -957,7 +982,7 @@ DETAILED INVESTIGATION RESULTS:
 HYBRID XGBOOST-CLINICAL ASSESSMENT SUMMARY:
 
 XGBOOST MODEL ASSESSMENT:
-- XGBoost prediction: {ml_assessment['probability']:.0f}%
+- XGBoost prediction: {ml_prob_text}
 - XGBoost confidence: {ml_assessment['confidence']:.0f}%
 - Key XGBoost factors: {', '.join(ai_features)}
 
@@ -969,7 +994,7 @@ CLINICAL ASSESSMENT:
 {investigation_text}
 
 SYNTHESIS GUIDANCE:
-- XGBoost confidence ({ml_assessment['confidence']:.0f}%) means {ml_assessment['confidence']:.0f}% certain the risk is {ml_assessment['probability']:.0f}%
+- XGBoost confidence ({ml_assessment['confidence']:.0f}%) means {ml_assessment['confidence']:.0f}% certain the risk is {ml_prob_text}
 - High-confidence predictions (>80%) should strongly anchor your assessment
 - Clinical assessment has limited context (no medications, physical exam, full history)
 - Justify any major deviation from high-confidence ML predictions

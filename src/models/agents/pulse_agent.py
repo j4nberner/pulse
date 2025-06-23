@@ -60,6 +60,24 @@ class PulseAgent(ABC):
         """Add a reasoning step to the agent."""
         self.steps.append({"name": name, **step_params})
 
+    def update_task_context(self, task_name: str, dataset_name: str) -> None:
+        """Update the agent's task and dataset context."""
+        if self.task_name != task_name or self.dataset_name != dataset_name:
+            logger.debug(
+                f"Updating agent context from {self.task_name}/{self.dataset_name} to {task_name}/{dataset_name}"
+            )
+            self.task_name = task_name
+            self.dataset_name = dataset_name
+
+            # Update memory manager context
+            if hasattr(self, "memory"):
+                agent_id = f"{self.__class__.__name__}_{task_name}_{dataset_name}"
+                self.memory.agent_id = agent_id
+
+            # Call task-specific update if implemented by subclass
+            if hasattr(self, "_update_task_specific_content"):
+                self._update_task_specific_content()
+
     @abstractmethod
     def process_single(self, patient_data: pd.Series) -> Dict[str, Any]:
         """Process a single patient's data."""
