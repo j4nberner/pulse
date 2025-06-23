@@ -2,6 +2,7 @@ import logging
 import time
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
+from datetime import datetime
 
 import pandas as pd
 
@@ -50,6 +51,10 @@ class PulseAgent(ABC):
         # Create memory manager
         agent_id = f"{self.__class__.__name__}_{task_name}_{dataset_name}"
         self.memory = AgentMemoryManager(agent_id, output_dir, metrics_tracker)
+
+        # Log agent configuration metadata if metrics tracker available
+        if metrics_tracker:
+            self._log_agent_configuration()
 
     def add_step(self, name: str, **step_params) -> None:
         """Add a reasoning step to the agent."""
@@ -156,3 +161,53 @@ class PulseAgent(ABC):
             )
 
             return {"output": f"Error: {str(e)}", "error": str(e)}
+
+    def _log_agent_configuration(self):
+        """Log the agent's configuration metadata."""
+        config_metadata = {
+            "Sample ID": "AGENT_CONFIG",
+            "Step Name": "CONFIGURATION",
+            "Step Number": -1,
+            "Target Label": 0,
+            # Agent Configuration
+            "metadata_agent_type": self.__class__.__name__,
+            "metadata_model_name": self.model_name,
+            "metadata_task_name": self.task_name,
+            "metadata_dataset_name": self.dataset_name,
+            "metadata_output_dir": self.output_dir,
+            # Agent-specific configurations (will be None for agents that don't have them)
+            "metadata_confidence_threshold": getattr(
+                self, "confidence_threshold", None
+            ),
+            "metadata_max_iterations": getattr(self, "max_iterations", None),
+            "metadata_min_iterations": getattr(self, "min_iterations", None),
+            "metadata_ml_confidence_threshold": getattr(
+                self, "ml_confidence_threshold", None
+            ),
+            "metadata_agreement_threshold": getattr(self, "agreement_threshold", None),
+            "metadata_top_features_count": getattr(self, "top_features_count", None),
+            "metadata_specialist_types": getattr(self, "specialist_types", None),
+            # Additional parameters
+            "metadata_additional_params": str(self.kwargs) if self.kwargs else "",
+            "metadata_total_steps_defined": len(self.steps),
+            "metadata_config_timestamp": datetime.now().isoformat(),
+            # Standard row placeholders
+            "System Message": "AGENT_CONFIGURATION",
+            "Input Prompt": "",
+            "Output": "",
+            "Predicted Probability": None,
+            "Predicted Diagnosis": "",
+            "Predicted Explanation": "",
+            "Requested Tests": "",
+            "Confidence": None,
+            "Tokenization Time": 0,
+            "Inference Time": 0,
+            "Input Tokens": 0,
+            "Output Tokens": 0,
+        }
+
+        # Add to metrics tracker
+        if hasattr(self.memory, "metrics_tracker") and self.memory.metrics_tracker:
+            self.memory.metrics_tracker.add_metadata_item(config_metadata)
+
+        logger.info(f"Agent configuration logged: {self.__class__.__name__}")

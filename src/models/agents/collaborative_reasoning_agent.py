@@ -1,6 +1,7 @@
 import logging
 from typing import Any, Dict, Optional
 
+import numpy as np
 import pandas as pd
 
 from src.models.agents.pulse_agent import PulseAgent
@@ -95,7 +96,7 @@ class CollaborativeReasoningAgent(PulseAgent):
         self.memory.reset()
 
         sample_id = patient_data.name if hasattr(patient_data, "name") else "default"
-        self.memory.set_current_sample(sample_id)
+        self.memory.set_current_sample(sample_id, patient_data)
 
         # Keep original data with _na columns for uncertainty analysis
         original_patient_data = patient_data.copy()
@@ -390,3 +391,149 @@ Guidelines:
 Average specialist confidence: {avg_confidence:.1f}%"""
 
         return format_prompt
+
+    def _prepare_step_metadata(
+        self, step_name: str, state: Dict[str, Any], output: Any
+    ) -> Dict[str, Any]:
+        """Prepare step-specific metadata for collaborative reasoning workflow."""
+        additional_metadata = {}
+
+        # Base metadata
+        additional_metadata.update(
+            {
+                "metadata_total_features_available": len(
+                    state.get("available_features", set())
+                ),
+                "metadata_data_completeness_score": self._calculate_data_completeness(
+                    state.get("patient_data")
+                ),
+            }
+        )
+
+        # Specialist assessment metadata
+        if step_name.endswith("_assessment"):
+            specialist_type = step_name.replace("_assessment", "")
+            specialist_features = state.get("available_features", set())
+
+            # Get specialist-specific features
+            from src.util.agent_util import get_specialist_features
+
+            specialist_feature_set = get_specialist_features(
+                specialist_type, specialist_features
+            )
+
+            additional_metadata.update(
+                {
+                    f"metadata_{specialist_type}_features_available": len(
+                        specialist_feature_set
+                    ),
+                    f"metadata_{specialist_type}_data_available": len(
+                        specialist_feature_set
+                    )
+                    > 0,
+                    "metadata_specialist_type": specialist_type,
+                }
+            )
+
+            # Add assessment-specific metadata if output is available
+            if isinstance(output, dict):
+                additional_metadata.update(
+                    {
+                        f"metadata_{specialist_type}_confidence": output.get(
+                            "confidence", None
+                        ),
+                        f"metadata_{specialist_type}_probability": output.get(
+                            "probability", None
+                        ),
+                    }
+                )
+
+        elif step_name == "synthesis":
+            # Synthesis metadata
+            specialist_assessments = state.get("specialist_assessments", {})
+
+            # Calculate agreement metrics
+            probabilities = [
+                assessment.get("probability", 50)
+                for assessment in specialist_assessments.values()
+                if isinstance(assessment.get("probability"), (int, float))
+            ]
+            confidences = [
+                assessment.get("confidence", 50)
+                for assessment in specialist_assessments.values()
+                if isinstance(assessment.get("confidence"), (int, float))
+            ]
+
+            if probabilities:
+                prob_variance = (
+                    float(np.var(probabilities)) if len(probabilities) > 1 else 0.0
+                )
+                prob_range = (
+                    max(probabilities) - min(probabilities)
+                    if len(probabilities) > 1
+                    else 0.0
+                )
+                highest_prob_specialist = (
+                    max(
+                        specialist_assessments.keys(),
+                        key=lambda x: specialist_assessments[x].get("probability", 0),
+                    )
+                    if specialist_assessments
+                    else None
+                )
+            else:
+                prob_variance = 0.0
+                prob_range = 0.0
+                highest_prob_specialist = None
+
+            if confidences:
+                avg_confidence = sum(confidences) / len(confidences)
+                highest_conf_specialist = (
+                    max(
+                        specialist_assessments.keys(),
+                        key=lambda x: specialist_assessments[x].get("confidence", 0),
+                    )
+                    if specialist_assessments
+                    else None
+                )
+            else:
+                avg_confidence = 0.0
+                highest_conf_specialist = None
+
+            successful_specialists = [
+                name
+                for name, assessment in specialist_assessments.items()
+                if not assessment.get("diagnosis", "").startswith(
+                    ("error-", "insufficient-data-")
+                )
+            ]
+
+            additional_metadata.update(
+                {
+                    "metadata_specialist_probability_variance": prob_variance,
+                    "metadata_specialist_probability_range": prob_range,
+                    "metadata_average_specialist_confidence": avg_confidence,
+                    "metadata_successful_specialists_count": len(
+                        successful_specialists
+                    ),
+                    "metadata_failed_specialists_count": len(specialist_assessments)
+                    - len(successful_specialists),
+                    "metadata_highest_prob_specialist": highest_prob_specialist,
+                    "metadata_highest_conf_specialist": highest_conf_specialist,
+                    "metadata_specialists_with_data": ",".join(successful_specialists),
+                }
+            )
+
+        return additional_metadata
+
+    def _calculate_data_completeness(self, patient_data: Any) -> float:
+        """Calculate data completeness score."""
+        try:
+            if patient_data is not None and hasattr(patient_data, "index"):
+                non_na_count = patient_data.count()
+                total_count = len(patient_data)
+                return float(non_na_count / total_count) if total_count > 0 else 0.0
+            return 1.0
+        except Exception as e:
+            logger.warning(f"Error calculating data completeness: {e}")
+            return 0.0

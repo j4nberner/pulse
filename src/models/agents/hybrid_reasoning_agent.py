@@ -1,9 +1,9 @@
-import glob
 import logging
 import os
+import glob
+import joblib
 from typing import Any, Dict, Optional, Set, Tuple
 
-import joblib
 import pandas as pd
 
 from src.models.agents.pulse_agent import PulseAgent
@@ -187,11 +187,11 @@ class HybridReasoningAgent(PulseAgent):
         # Reset memory
         self.memory.reset()
 
-        sample_id = patient_data.name if hasattr(patient_data, "name") else "default"
-        self.memory.set_current_sample(sample_id)
-
         # Keep original data with _na columns for XGBoost
         original_patient_data = patient_data.copy()
+
+        sample_id = patient_data.name if hasattr(patient_data, "name") else "default"
+        self.memory.set_current_sample(sample_id, original_patient_data)
 
         # Filter out _na columns for clinical reasoning
         filtered_patient_data = filter_na_columns(patient_data)
@@ -984,6 +984,18 @@ Clinical Context: {self.task_content['task_info']}"""
         """Prepare step-specific metadata for hybrid reasoning workflow."""
         additional_metadata = {}
 
+        # Base metadata for all steps
+        additional_metadata.update(
+            {
+                "metadata_total_features_available": len(
+                    state.get("available_features", set())
+                ),
+                "metadata_data_completeness_score": self._calculate_data_completeness(
+                    state.get("patient_data")
+                ),
+            }
+        )
+
         if step_name == "ml_interpretation":
             # Log ML model results that aren't captured elsewhere
             additional_metadata.update(
@@ -998,20 +1010,26 @@ Clinical Context: {self.task_content['task_info']}"""
                             ]
                         ]
                     ),
+                    "metadata_xgb_model_available": self.xgb_model is not None,
+                    "metadata_xgb_feature_count": (
+                        len(self.xgb_feature_names) if self.xgb_feature_names else 0
+                    ),
                 }
             )
 
         elif step_name == "clinical_assessment":
             # Log agreement analysis that isn't captured elsewhere
+            ml_prediction = state.get("ml_prediction", 0)
+            clinical_prob = state.get("clinical_probability", 0)
+
             additional_metadata.update(
                 {
-                    "metadata_ml_vs_clinical_diff": abs(
-                        state.get("ml_prediction", 0)
-                        - state.get("clinical_probability", 0)
-                    ),
+                    "metadata_ml_vs_clinical_diff": abs(ml_prediction - clinical_prob),
                     "metadata_ai_agreement": (
                         output.get("ai_agreement") if isinstance(output, dict) else None
                     ),
+                    "metadata_ml_confidence_adequate": state.get("ml_confidence", 0)
+                    >= self.ml_confidence_threshold,
                 }
             )
 
@@ -1029,6 +1047,7 @@ Clinical Context: {self.task_content['task_info']}"""
                         "probability_difference", 0
                     )
                     > int(self.agreement_threshold * 100),
+                    "metadata_agreement_threshold": int(self.agreement_threshold * 100),
                 }
             )
 
@@ -1039,9 +1058,7 @@ Clinical Context: {self.task_content['task_info']}"""
             ml_conf = state.get("ml_confidence", 0.5)
 
             clinical_assessment = state.get("clinical_assessment", {})
-            clinical_prob = clinical_assessment.get(
-                "probability", 0.5  # Already normalized 0-1
-            )
+            clinical_prob = clinical_assessment.get("probability", 0.5)
             clinical_conf = clinical_assessment.get("confidence", 50) / 100.0
 
             # Use dampened investigation results if available
@@ -1083,7 +1100,7 @@ Clinical Context: {self.task_content['task_info']}"""
                     "metadata_max_allowed_deviation": (
                         0.35 if ml_conf >= 0.8 else 0.5
                     ),  # Simplified for logging
-                    "metadata_escalation_dampened": state.get(
+                    "metadata_dampening_applied": state.get(
                         "dampened_investigation_results"
                     )
                     is not None,
@@ -1098,3 +1115,15 @@ Clinical Context: {self.task_content['task_info']}"""
             )
 
         return additional_metadata
+
+    def _calculate_data_completeness(self, patient_data: Any) -> float:
+        """Calculate data completeness score."""
+        try:
+            if patient_data is not None and hasattr(patient_data, "index"):
+                non_na_count = patient_data.count()
+                total_count = len(patient_data)
+                return float(non_na_count / total_count) if total_count > 0 else 0.0
+            return 1.0
+        except Exception as e:
+            logger.warning(f"Error calculating data completeness: {e}")
+            return 0.0

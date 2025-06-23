@@ -55,12 +55,19 @@ class AgentMemoryManager:
         self.total_samples = 0  # Track total expected samples
         self.metrics_tracker = metrics_tracker  # Store reference
         self.current_target_label = None  # Store current sample's target
+        self.agent_instance = None  # Store reference to agent for metadata
 
-    def set_current_sample(self, sample_id: Any) -> None:
-        """Set the current sample being processed."""
+    def set_current_sample(
+        self, sample_id: Any, patient_data: Optional[Any] = None
+    ) -> None:
+        """Set the current sample being processed and optionally add sample-level metadata."""
         self.current_sample_id = str(sample_id)
         if self.current_sample_id not in self.samples:
             self.samples[self.current_sample_id] = []
+
+        # Add sample-level metadata if patient data provided
+        if patient_data is not None:
+            self._add_sample_metadata(patient_data)
 
     def set_current_sample_target(self, target_label: float) -> None:
         """Set the target label for the current sample."""
@@ -174,3 +181,145 @@ class AgentMemoryManager:
         ):
             # Clear just the current sample's steps
             self.samples[self.current_sample_id] = []
+
+    def _add_sample_metadata(self, patient_data: Any) -> None:
+        """Add sample-level metadata row."""
+        from src.util.agent_util import (
+            get_monitoring_period_hours,
+            get_specialist_features,
+        )
+
+        # Calculate data quality metrics
+        data_completeness = self._calculate_data_completeness(patient_data)
+        imputation_percentage = self._calculate_imputation_percentage(patient_data)
+
+        sample_metadata = {
+            "Sample ID": str(self.current_sample_id),
+            "Step Name": "SAMPLE_METADATA",
+            "Step Number": 0,
+            "Target Label": self.current_target_label or 0,
+            # Patient Demographics & Clinical Context
+            "metadata_patient_age": (
+                getattr(patient_data, "age", None)
+                if hasattr(patient_data, "age")
+                else patient_data.get("age") if hasattr(patient_data, "get") else None
+            ),
+            "metadata_patient_sex": (
+                getattr(patient_data, "sex", None)
+                if hasattr(patient_data, "sex")
+                else patient_data.get("sex") if hasattr(patient_data, "get") else None
+            ),
+            "metadata_patient_weight": (
+                getattr(patient_data, "weight", None)
+                if hasattr(patient_data, "weight")
+                else (
+                    patient_data.get("weight") if hasattr(patient_data, "get") else None
+                )
+            ),
+            "metadata_patient_height": (
+                getattr(patient_data, "height", None)
+                if hasattr(patient_data, "height")
+                else (
+                    patient_data.get("height") if hasattr(patient_data, "get") else None
+                )
+            ),
+            "metadata_monitoring_hours": (
+                get_monitoring_period_hours(patient_data)
+                if hasattr(patient_data, "index")
+                else 0
+            ),
+            # Data Quality Metrics
+            "metadata_total_features_available": (
+                len(set(patient_data.index)) if hasattr(patient_data, "index") else 0
+            ),
+            "metadata_data_completeness_score": data_completeness,
+            "metadata_imputation_percentage": imputation_percentage,
+            # Agent-specific metadata based on agent type from agent_id
+            "metadata_agent_type": (
+                self.agent_id.split("_")[0] if "_" in self.agent_id else "Unknown"
+            ),
+            # Timestamps
+            "metadata_sample_start_time": datetime.now().isoformat(),
+            # Placeholders for system message, input, output that aren't applicable to sample metadata
+            "System Message": "SAMPLE_METADATA_ROW",
+            "Input Prompt": "",
+            "Output": "",
+            "Predicted Probability": None,
+            "Predicted Diagnosis": "",
+            "Predicted Explanation": "",
+            "Requested Tests": "",
+            "Confidence": None,
+            "Tokenization Time": 0,
+            "Inference Time": 0,
+            "Input Tokens": 0,
+            "Output Tokens": 0,
+        }
+
+        # Add domain-specific metadata for CollaborativeReasoningAgent
+        if "CollaborativeReasoningAgent" in self.agent_id and hasattr(
+            patient_data, "index"
+        ):
+            available_features = set(patient_data.index)
+            try:
+                sample_metadata.update(
+                    {
+                        "metadata_hemodynamic_features_available": len(
+                            get_specialist_features("hemodynamic", available_features)
+                        ),
+                        "metadata_metabolic_features_available": len(
+                            get_specialist_features("metabolic", available_features)
+                        ),
+                        "metadata_hematologic_features_available": len(
+                            get_specialist_features("hematologic", available_features)
+                        ),
+                    }
+                )
+            except Exception:
+                # Fallback if specialist feature calculation fails
+                sample_metadata.update(
+                    {
+                        "metadata_hemodynamic_features_available": 0,
+                        "metadata_metabolic_features_available": 0,
+                        "metadata_hematologic_features_available": 0,
+                    }
+                )
+
+        # Add to metrics tracker
+        if self.metrics_tracker:
+            self.metrics_tracker.add_metadata_item(sample_metadata)
+
+    def _calculate_data_completeness(self, patient_data: Any) -> float:
+        """Calculate overall data completeness (0-1)."""
+        try:
+            if hasattr(patient_data, "index"):
+                # For pandas Series - count non-NaN values
+                import pandas as pd
+
+                non_na_count = patient_data.count()
+                total_count = len(patient_data)
+                return float(non_na_count / total_count) if total_count > 0 else 0.0
+            return 1.0  # Fallback
+        except Exception as e:
+            logger.warning(f"Error calculating data completeness: {e}")
+            return 0.0
+
+    def _calculate_imputation_percentage(self, patient_data: Any) -> float:
+        """Calculate percentage of data that was imputed using _na indicators."""
+        try:
+            if hasattr(patient_data, "index"):
+                # Count _na indicator columns
+                na_columns = [col for col in patient_data.index if "_na" in col]
+                if not na_columns:
+                    return 0.0
+
+                # Count how many _na indicators show imputation (value = 1)
+                imputed_count = 0
+                for col in na_columns:
+                    if patient_data[col] == 1.0:
+                        imputed_count += 1
+
+                return float(imputed_count / len(na_columns)) if na_columns else 0.0
+            return 0.0
+        except Exception as e:
+            logger.warning(f"Error calculating imputation percentage: {e}")
+            return 0.0

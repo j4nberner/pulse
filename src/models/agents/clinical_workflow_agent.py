@@ -127,7 +127,7 @@ class ClinicalWorkflowAgent(PulseAgent):
         self.memory.reset()
 
         sample_id = patient_data.name if hasattr(patient_data, "name") else "default"
-        self.memory.set_current_sample(sample_id)
+        self.memory.set_current_sample(sample_id, patient_data)
 
         # Store original data with _na columns for uncertainty analysis
         original_patient_data = patient_data.copy()
@@ -667,3 +667,95 @@ Task: Determine if this ICU patient will develop {self.task_content['complicatio
 Clinical Context: {self.task_content['task_info']}"""
 
         return format_prompt
+
+    def _prepare_step_metadata(
+        self, step_name: str, state: Dict[str, Any], output: Any
+    ) -> Dict[str, Any]:
+        """Prepare step-specific metadata for clinical workflow."""
+        additional_metadata = {}
+
+        # Base workflow metadata
+        additional_metadata.update(
+            {
+                "metadata_current_iteration": state.get("iteration", 0),
+                "metadata_total_features_available": len(
+                    state.get("available_features", set())
+                ),
+                "metadata_features_used_count": len(state.get("used_features", set())),
+            }
+        )
+
+        if step_name == "lab_ordering":
+            # Lab ordering specific metadata
+            requested_tests = (
+                output.get("requested_tests", []) if isinstance(output, dict) else []
+            )
+            available_by_group = get_lab_groups_available(state["available_features"])
+            total_available_labs = sum(
+                len(features) for features in available_by_group.values()
+            )
+            total_unused_labs = sum(
+                len([f for f in features if f not in state["used_features"]])
+                for features in available_by_group.values()
+            )
+
+            additional_metadata.update(
+                {
+                    "metadata_labs_requested_count": len(requested_tests),
+                    "metadata_total_available_labs": total_available_labs,
+                    "metadata_total_unused_labs": total_unused_labs,
+                    "metadata_stopping_reason": (
+                        "no_labs_requested" if not requested_tests else "labs_requested"
+                    ),
+                }
+            )
+
+        elif step_name == "updated_assessment":
+            # Updated assessment specific metadata
+            previous_confidence = state.get("current_confidence", 0)
+            current_confidence = (
+                extract_confidence(output) if isinstance(output, dict) else 0
+            )
+
+            additional_metadata.update(
+                {
+                    "metadata_confidence_delta": current_confidence
+                    - previous_confidence,
+                    "metadata_probability_delta": (
+                        output.get("probability", 50)
+                        if isinstance(output, dict)
+                        else 50
+                    )
+                    - (
+                        state["assessment_history"][-2]["probability"]
+                        if len(state.get("assessment_history", [])) > 1
+                        else 50
+                    ),
+                    "metadata_confidence_improved": current_confidence
+                    > previous_confidence,
+                }
+            )
+
+        elif step_name == "final_prediction":
+            # Final prediction metadata
+            total_iterations = state.get("iteration", 0)
+            final_confidence = (
+                extract_confidence(output) if isinstance(output, dict) else 0
+            )
+            stopping_reason = (
+                "confidence_reached"
+                if final_confidence >= self.confidence_threshold
+                else (
+                    "max_iterations"
+                    if total_iterations >= self.max_iterations
+                    else "normal"
+                )
+            )
+
+            additional_metadata.update(
+                {
+                    "metadata_stopping_reason": stopping_reason,
+                }
+            )
+
+        return additional_metadata
