@@ -692,18 +692,9 @@ def get_monitoring_period_hours(patient_data: pd.Series) -> int:
     Returns:
         Number of hours in the monitoring period (e.g., 6 if columns go from feature_0 to feature_5)
     """
-    max_window = 0
-
-    # Look for any windowed columns to determine the monitoring period
+    window_indices = set()
     for col in patient_data.index:
-        # Check if column ends with _digit pattern (e.g., hr_0, hr_1, sbp_5, etc.)
         parts = col.split("_")
         if len(parts) >= 2 and parts[-1].isdigit():
-            try:
-                window_num = int(parts[-1])
-                max_window = max(max_window, window_num)
-            except ValueError:
-                continue
-
-    # Return number of hours (max window index + 1, since indexing starts at 0)
-    return max_window + 1
+            window_indices.add(int(parts[-1]))
+    return len(window_indices)

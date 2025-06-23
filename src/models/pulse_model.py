@@ -738,10 +738,6 @@ class PulseLLMModel(PulseModel):
                 return self._generate_standard(str(input_data), **kwargs)
 
             # Update agent context
-            # if self.agent_instance:
-            #     self.agent_instance.task_name = getattr(self, "task_name", None)
-            #     self.agent_instance.dataset_name = getattr(self, "dataset_name", None)
-
             if self.agent_instance:
                 self.agent_instance.update_task_context(
                     getattr(self, "task_name", None),

@@ -463,9 +463,9 @@ Pay attention to temporal patterns in the data:
 Respond in JSON format:
 {{
     "diagnosis": "preliminary-{self.task_content['task_name']}-risk",
-    "probability": XX (integer between 0 and 100, where 0 means {self.task_content['task_name']} will not occur and 100 means {self.task_content['task_name']} will definitely occur),
+    "probability": XX (integer between 0 and 100, where 0 means {self.task_content['task_name']} will not occur and 100 means {self.task_content['task_name']} will definitely occur; probability is your best estimate of the likelihood of the complication),
     "explanation": "Your detailed clinical reasoning including differential diagnosis and temporal pattern assessment (MAX 200 words)",
-    "confidence": XX (integer between 0 and 100, where 0 means not confident at all and 100 means very confident in your assessment)
+    "confidence": XX (integer between 0 and 100, where 0 means not confident at all and 100 means very confident in your assessment; confidence reflects your certainty in your own reasoning based on the available data)
 }}
 
 IMPORTANT: With only vital signs available, confidence should typically be 50-70. Higher confidence (>75) should only be used when clinical picture is very clear."""
@@ -574,9 +574,10 @@ Guidelines for test selection:
 Respond in JSON format:
 {{
     "diagnosis": "lab-ordering-decision",
-    "probability": XX (integer between 0 and 100, where 0 means {self.task_content['task_name']} will not occur and 100 means {self.task_content['task_name']} will definitely occur),
+    "probability": XX (integer between 0 and 100, where 0 means {self.task_content['task_name']} will not occur and 100 means {self.task_content['task_name']} will definitely occur; probability is your best estimate of the likelihood of the complication),
     "explanation": "Why you want these specific tests and how they will help your decision-making (MAX 200 words)",
-    "requested_tests": ["test1", "test2", "test3"]
+    "requested_tests": ["test1", "test2", "test3"],
+    "confidence": XX (integer between 0 and 100, where 0 means not confident at all and 100 means very confident in your decision; confidence reflects your certainty in your own reasoning based on the available data)
 }}
 REMEMBER: Only use exact abbreviations from the list above."""
 
@@ -608,9 +609,9 @@ New Laboratory Results (over {monitoring_hours}-hour monitoring period):
 Respond in JSON format:
 {{
     "diagnosis": "updated-{self.task_content['task_name']}-assessment",
-    "probability": XX (integer between 0 and 100, where 0 means {self.task_content['task_name']} will not occur and 100 means {self.task_content['task_name']} will definitely occur),
+    "probability": XX (integer between 0 and 100, where 0 means {self.task_content['task_name']} will not occur and 100 means {self.task_content['task_name']} will definitely occur; probability is your best estimate of the likelihood of the complication),
     "explanation": "How the new labs change your assessment and interpretation of abnormal values (MAX 200 words)",
-    "confidence": XX (integer between 0 and 100, where 0 means not confident at all and 100 means very confident in your assessment)
+    "confidence": XX (integer between 0 and 100, where 0 means not confident at all and 100 means very confident in your assessment; confidence reflects your certainty in your own reasoning based on the available data)
 }}"""
 
         return format_prompt

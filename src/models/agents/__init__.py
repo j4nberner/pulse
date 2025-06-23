@@ -76,13 +76,6 @@ except ImportError as e:
     logger.warning("Could not import ClinicalWorkflowAgent: %s", e)
 
 try:
-    from src.models.agents.guided_autonomous_agent import GuidedAutonomousAgent
-
-    register_agent("guided_autonomous_agent", GuidedAutonomousAgent)
-except ImportError as e:
-    logger.warning("Could not import GuidedAutonomousAgent: %s", e)
-
-try:
     from src.models.agents.collaborative_reasoning_agent import \
         CollaborativeReasoningAgent
 

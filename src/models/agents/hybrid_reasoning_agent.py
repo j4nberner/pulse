@@ -17,6 +17,7 @@ from src.util.agent_util import (
     format_clinical_data,
     format_clinical_text,
     get_task_specific_content,
+    get_monitoring_period_hours,
 )
 from src.util.data_util import (
     get_feature_name,
@@ -369,6 +370,19 @@ class HybridReasoningAgent(PulseAgent):
         except Exception as e:
             logger.error("Error in hybrid reasoning workflow: %s", e, exc_info=True)
             return create_error_response(f"Hybrid reasoning error: {str(e)}")
+
+    def update_task_context(self, task_name, dataset_name):
+        """Update task and dataset context, and reload XGBoost model if needed."""
+        if (self.task_name != task_name) or (self.dataset_name != dataset_name):
+            self.task_name = task_name
+            self.dataset_name = dataset_name
+            self.task_content = get_task_specific_content(self.task_name)
+            # Delete previous XGBoost model to free up memory
+            if hasattr(self, "xgb_model") and self.xgb_model is not None:
+                del self.xgb_model
+                self.xgb_model = None
+            self._load_xgb_model()  # Ensure the correct model is loaded
+            self._define_steps()
 
     def _run_xgb_prediction(
         self, patient_data: pd.Series
@@ -743,9 +757,9 @@ Consider:
 Respond in JSON format:
 {{
     "diagnosis": "ai-clinical-interpretation",
-    "probability": XX (your clinical interpretation of the appropriate risk level based on XGBoost findings, integer 0-100),
+    "probability": XX (integer between 0 and 100, where 0 means {self.task_content['task_name']} will not occur and 100 means {self.task_content['task_name']} will definitely occur; your clinical interpretation of the appropriate risk level based on XGBoost findings),
     "explanation": "Clinical interpretation of XGBoost model findings, including significance of important features and any data quality considerations (MAX 200 words)",
-    "confidence": XX (your confidence in interpreting the XGBoost model results, integer 0-100)
+    "confidence": XX (integer between 0 and 100, where 0 means not confident at all and 100 means very confident in your assessment; your confidence in interpreting the XGBoost model results)
 }}"""
 
         return format_prompt
@@ -769,6 +783,9 @@ Respond in JSON format:
             demographics_str = (
                 ", ".join(demo_text) if demo_text else "Demographics: Not available"
             )
+
+            # Get monitoring period from the data
+            monitoring_hours = get_monitoring_period_hours(state["patient_data"])
 
             # Format clinical data for top features
             vital_signs = clinical_data.get("vital_signs", {})
@@ -797,7 +814,7 @@ XGBOOST MODEL RESULTS:
 - XGBoost confidence: {ml_results['confidence']:.0f}%
 - XGBoost identified key factors: {ml_features_str}
 
-CLINICAL DATA FOR KEY FACTORS:
+CLINICAL DATA FOR KEY FACTORS (over {monitoring_hours}-hour monitoring period):
 {clinical_str}
 
 CLINICAL ASSESSMENT TASK:
@@ -817,9 +834,9 @@ Consider:
 Respond in JSON format:
 {{
     "diagnosis": "clinical-{self.task_content['task_name']}-assessment",
-    "probability": XX (your independent clinical assessment of {self.task_content['task_name']} risk, integer 0-100),
+    "probability": XX (integer between 0 and 100, where 0 means {self.task_content['task_name']} will not occur and 100 means {self.task_content['task_name']} will definitely occur; your independent clinical assessment of {self.task_content['task_name']} risk),
     "explanation": "Your clinical reasoning based on patient data, noting agreement/disagreement with XGBoost assessment (MAX 200 words)",
-    "confidence": XX (your confidence in this clinical assessment given limited data, integer 0-100),
+    "confidence": XX (integer between 0 and 100, where 0 means not confident at all and 100 means very confident in your assessment; confidence reflects your certainty in your own reasoning based on the available data),
     "ai_agreement": "agree/partial/disagree (how well your clinical assessment aligns with the XGBoost prediction)"
 }}"""
 
@@ -836,6 +853,9 @@ Respond in JSON format:
             disagreement = formatted_data["disagreement_context"]
             ml_prob = formatted_data["ml_assessment"]
             clinical_prob = formatted_data["clinical_assessment"]
+
+            # Get monitoring period from the data
+            monitoring_hours = get_monitoring_period_hours(state["patient_data"])
 
             # Format clinical data for investigation
             clinical_text = format_clinical_text(clinical_data)
@@ -882,7 +902,7 @@ DISAGREEMENT DETECTED:
 - XGBoost confidence: {disagreement['ml_confidence']:.0f}%
 {feature_breakdown}
 
-DETAILED CLINICAL DATA:
+DETAILED CLINICAL DATA (over {monitoring_hours}-hour monitoring period):
 {clinical_str}
 
 INVESTIGATION TASK:
@@ -898,9 +918,9 @@ Analyze:
 Respond in JSON format:
 {{
     "diagnosis": "detailed-investigation-{self.task_content['task_name']}",
-    "probability": XX (refined probability assessment after detailed investigation, integer 0-100),
+    "probability": XX (integer between 0 and 100, where 0 means {self.task_content['task_name']} will not occur and 100 means {self.task_content['task_name']} will definitely occur; refined probability assessment after detailed investigation),
     "explanation": "Detailed analysis explaining the disagreement and your refined assessment based on thorough investigation",
-    "confidence": XX (confidence in this refined assessment, integer 0-100)
+    "confidence": XX (integer between 0 and 100, where 0 means not confident at all and 100 means very confident in your assessment; confidence reflects your certainty in your own reasoning based on the available data)
 }}"""
 
         return format_prompt
@@ -939,10 +959,10 @@ Respond in JSON format:
                 investigation_prob = investigation_results.get("probability", "N/A")
                 if isinstance(investigation_prob, (int, float)):
                     # Convert to integer percentage if it's a decimal
-                    if investigation_prob <= 1:
-                        investigation_prob = int(round(investigation_prob * 100))
+                    if investigation_prob < 1:
+                        investigation_prob = int(investigation_prob * 100)
                     else:
-                        investigation_prob = int(round(investigation_prob))
+                        investigation_prob = int(investigation_prob)
                     investigation_prob_text = f"{investigation_prob}%"
                 else:
                     investigation_prob_text = f"{investigation_prob}%"
@@ -957,24 +977,11 @@ DETAILED INVESTIGATION RESULTS:
             # Format clinical probability for display
             clinical_prob_display = clinical_assessment.get("probability", "N/A")
             if isinstance(clinical_prob_display, (int, float)):
-                if clinical_prob_display <= 1:
-                    clinical_prob_display = int(round(clinical_prob_display * 100))
-                else:
-                    clinical_prob_display = int(round(clinical_prob_display))
-                clinical_prob_text = f"{clinical_prob_display}%"
+                if clinical_prob_display < 1:
+                    clinical_prob_display = clinical_prob_display * 100
+                clinical_prob_text = f"{clinical_prob_display:.0f}%"
             else:
                 clinical_prob_text = f"{clinical_prob_display}%"
-
-            # Format ML probability for display
-            ml_prob_display = ml_assessment.get("probability", "N/A")
-            if isinstance(ml_prob_display, (int, float)):
-                if ml_prob_display <= 1:
-                    ml_prob_display = int(round(ml_prob_display * 100))
-                else:
-                    ml_prob_display = int(round(ml_prob_display))
-                ml_prob_text = f"{ml_prob_display}%"
-            else:
-                ml_prob_text = f"{ml_prob_display}%"
 
             return f"""Patient Demographics:
 {demographics_str}
@@ -982,7 +989,7 @@ DETAILED INVESTIGATION RESULTS:
 HYBRID XGBOOST-CLINICAL ASSESSMENT SUMMARY:
 
 XGBOOST MODEL ASSESSMENT:
-- XGBoost prediction: {ml_prob_text}
+- XGBoost prediction: {ml_assessment['probability']:.0f}%
 - XGBoost confidence: {ml_assessment['confidence']:.0f}%
 - Key XGBoost factors: {', '.join(ai_features)}
 
@@ -994,7 +1001,7 @@ CLINICAL ASSESSMENT:
 {investigation_text}
 
 SYNTHESIS GUIDANCE:
-- XGBoost confidence ({ml_assessment['confidence']:.0f}%) means {ml_assessment['confidence']:.0f}% certain the risk is {ml_prob_text}
+- XGBoost confidence ({ml_assessment['confidence']:.0f}%) means {ml_assessment['confidence']:.0f}% certain the risk is {ml_assessment['probability']:.0f}%
 - High-confidence predictions (>80%) should strongly anchor your assessment
 - Clinical assessment has limited context (no medications, physical exam, full history)
 - Justify any major deviation from high-confidence ML predictions

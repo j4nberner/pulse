@@ -17,6 +17,7 @@ from src.util.agent_util import (
     get_specialist_features,
     get_specialist_system_message,
     get_task_specific_content,
+    get_specialist_features,
 )
 
 logger = logging.getLogger("PULSE_logger")
@@ -90,7 +91,7 @@ class CollaborativeReasoningAgent(PulseAgent):
 
         # Phase 2: Synthesis step
         self.add_step(
-            name="synthesis",
+            name="final_prediction",
             system_message=None,  # Uses default system message
             prompt_template=self._create_synthesis_template(),
             input_formatter=self._format_synthesis_data,
@@ -183,7 +184,7 @@ class CollaborativeReasoningAgent(PulseAgent):
                 )
 
             # Phase 2: Synthesis
-            synthesis_result = self.run_step("synthesis", None, state)
+            synthesis_result = self.run_step("final_prediction", None, state)
             synthesis_output = synthesis_result["output"]
 
             # Aggregate token metrics
@@ -318,9 +319,9 @@ Pay attention to:
 Respond in JSON format:
 {{
     "diagnosis": "specialist-{self.task_content['task_name']}-assessment",
-    "probability": XX (integer between 0 and 100, where 0 means {self.task_content['task_name']} will not occur and 100 means {self.task_content['task_name']} will definitely occur),
+    "probability": XX (integer between 0 and 100, where 0 means {self.task_content['task_name']} will not occur and 100 means {self.task_content['task_name']} will definitely occur; probability is your best estimate of the likelihood of the complication),
     "explanation": "Your concise {specialist_type} specialist assessment including key findings, temporal patterns, and clinical significance (MAX 200 words)",
-    "confidence": XX (integer between 0 and 100, where 0 means not confident at all and 100 means very confident in your {specialist_type} assessment)
+    "confidence": XX (integer between 0 and 100, where 0 means not confident at all and 100 means very confident in your assessment; confidence reflects your certainty in your own reasoning based on the available data)
 }}
 
 IMPORTANT: Base your confidence on data completeness, clarity of findings, and strength of evidence in your domain."""
@@ -352,7 +353,12 @@ IMPORTANT: Base your confidence on data completeness, clarity of findings, and s
             valid_assessments = 0
 
             for specialist_type, assessment in specialist_assessments.items():
+                # Convert probability to integer 0-100 for display
                 probability = assessment.get("probability", 50)
+                if isinstance(probability, float) and 0 <= probability <= 1:
+                    probability_display = int(round(probability * 100))
+                else:
+                    probability_display = int(round(probability))
                 confidence = assessment.get("confidence", 50)
                 explanation = assessment.get("explanation", "No explanation provided")
 
@@ -365,7 +371,7 @@ IMPORTANT: Base your confidence on data completeness, clarity of findings, and s
 
                 assessment_summary.append(
                     f"\n{specialist_type.upper()} SPECIALIST:\n"
-                    f"- Probability: {probability}%\n"
+                    f"- Probability: {probability_display}%\n"
                     f"- Confidence: {confidence}%\n"
                     f"- Assessment: {explanation}\n"
                 )
@@ -427,9 +433,6 @@ Average specialist confidence: {avg_confidence:.1f}%"""
             specialist_type = step_name.replace("_assessment", "")
             specialist_features = state.get("available_features", set())
 
-            # Get specialist-specific features
-            from src.util.agent_util import get_specialist_features
-
             specialist_feature_set = get_specialist_features(
                 specialist_type, specialist_features
             )
@@ -460,7 +463,7 @@ Average specialist confidence: {avg_confidence:.1f}%"""
                     }
                 )
 
-        elif step_name == "synthesis":
+        elif step_name == "final_prediction":
             # Synthesis metadata
             specialist_assessments = state.get("specialist_assessments", {})
 
