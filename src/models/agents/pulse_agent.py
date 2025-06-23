@@ -120,8 +120,15 @@ class PulseAgent(ABC):
             ):
                 output = step_config["output_processor"](output, state)
 
+            # Prepare additional metadata if subclass provides it
+            additional_metadata = None
+            if hasattr(self, "_prepare_step_metadata"):
+                additional_metadata = self._prepare_step_metadata(
+                    step_name, state, output
+                )
+
             # Add step to memory
-            self.memory.add_step(
+            step_memory = self.memory.add_step(
                 step_name=step_name,
                 input_data=prompt,
                 output_data=output,
@@ -130,6 +137,7 @@ class PulseAgent(ABC):
                 num_output_tokens=result.get("num_output_tokens", 0),
                 token_time=result.get("token_time", 0),
                 infer_time=time.time() - start_time,
+                additional_metadata=additional_metadata,
             )
 
             return {"output": output, "result": result}
@@ -138,12 +146,13 @@ class PulseAgent(ABC):
             logger.error(f"Error executing step '{step_name}': {e}", exc_info=True)
 
             # Add error step to memory
-            self.memory.add_step(
+            step_memory = self.memory.add_step(
                 step_name=step_name,
                 input_data=prompt,
                 output_data=f"Error: {str(e)}",
                 system_message=log_system_message,
                 infer_time=time.time() - start_time,
+                additional_metadata=None,
             )
 
             return {"output": f"Error: {str(e)}", "error": str(e)}

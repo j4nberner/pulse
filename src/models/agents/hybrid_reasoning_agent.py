@@ -1,18 +1,28 @@
 import glob
 import logging
 import os
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Set, Tuple
 
 import joblib
 import pandas as pd
 
 from src.models.agents.pulse_agent import PulseAgent
-from src.preprocessing.preprocessing_advanced.preprocessing_advanced import \
-    PreprocessorAdvanced
-from src.util.agent_util import (create_error_response, extract_confidence,
-                                 filter_na_columns, format_clinical_data,
-                                 format_clinical_text)
-from src.util.data_util import get_feature_name
+from src.preprocessing.preprocessing_advanced.preprocessing_advanced import (
+    PreprocessorAdvanced,
+)
+from src.util.agent_util import (
+    create_error_response,
+    extract_confidence,
+    filter_na_columns,
+    format_clinical_data,
+    format_clinical_text,
+    get_task_specific_content,
+)
+from src.util.data_util import (
+    get_feature_name,
+    get_priority_features_for_task,
+    features_dict,
+)
 
 logger = logging.getLogger("PULSE_logger")
 
@@ -25,8 +35,7 @@ class HybridReasoningAgent(PulseAgent):
     Workflow:
     1. ML Risk Stratification (XGBoost prediction + feature importance)
     2. Clinical Context Integration (interpret ML findings clinically)
-    3. Targeted Investigation (conditional based on confidence/agreement)
-    4. Confidence-Weighted Synthesis (combine ML + clinical reasoning)
+    3. Detailed Investigation (conditional based on confidence/a        return task_features.get(self.task_name, set())fidence-Weighted Synthesis (combine ML + clinical reasoning)
     """
 
     def __init__(
@@ -38,7 +47,7 @@ class HybridReasoningAgent(PulseAgent):
         metrics_tracker: Optional[Any] = None,
         ml_confidence_threshold: float = 0.7,
         agreement_threshold: float = 0.2,
-        top_features_count: int = 8,
+        top_features_count: int = 10,
         **kwargs,
     ):
         super().__init__(
@@ -53,7 +62,7 @@ class HybridReasoningAgent(PulseAgent):
         self.ml_confidence_threshold = ml_confidence_threshold
         self.agreement_threshold = agreement_threshold
         self.top_features_count = top_features_count
-        self.task_content = self._get_task_specific_content()
+        self.task_content = get_task_specific_content(self.task_name)
 
         # Initialize preprocessing tools
         self.preprocessor_advanced = PreprocessorAdvanced()
@@ -135,7 +144,7 @@ class HybridReasoningAgent(PulseAgent):
 
         # Step 1: ML Risk Stratification
         self.add_step(
-            name="ml_risk_stratification",
+            name="ml_interpretation",
             system_message="You are an AI-assisted clinical decision support specialist. Analyze the ML model's risk prediction and feature importance to provide clinical interpretation of the AI assessment.",
             prompt_template=self._create_ml_stratification_template(),
             input_formatter=self._format_ml_data,
@@ -145,7 +154,7 @@ class HybridReasoningAgent(PulseAgent):
 
         # Step 2: Clinical Context Integration
         self.add_step(
-            name="clinical_context_integration",
+            name="clinical_assessment",
             system_message="You are an experienced ICU physician evaluating how AI predictions align with clinical expectations. Assess agreement between ML findings and clinical reasoning.",
             prompt_template=self._create_clinical_integration_template(),
             input_formatter=self._format_integration_data,
@@ -153,19 +162,19 @@ class HybridReasoningAgent(PulseAgent):
             parse_json=True,
         )
 
-        # Step 3: Targeted Investigation (conditional)
+        # Step 3: Detailed Investigation (conditional)
         self.add_step(
-            name="targeted_investigation",
+            name="detailed_investigation",
             system_message="You are conducting a focused clinical investigation of discrepant or uncertain findings. Analyze the most important clinical parameters in detail.",
-            prompt_template=self._create_targeted_investigation_template(),
+            prompt_template=self._create_detailed_investigation_template(),
             input_formatter=self._format_investigation_data,
             output_processor=None,
             parse_json=True,
         )
 
-        # Step 4: Confidence-Weighted Synthesis
+        # Step 4: Final Prediction
         self.add_step(
-            name="confidence_weighted_synthesis",
+            name="final_prediction",
             system_message=None,  # Uses default system message
             prompt_template=self._create_synthesis_template(),
             input_formatter=self._format_synthesis_data,
@@ -204,23 +213,23 @@ class HybridReasoningAgent(PulseAgent):
 
         try:
             # Step 1: ML Risk Stratification
-            ml_result = self.run_step(
-                "ml_risk_stratification", original_patient_data, state
-            )
+            ml_result = self.run_step("ml_interpretation", original_patient_data, state)
             ml_output = ml_result["output"]
 
             if isinstance(ml_output, str) and "Error" in ml_output:
                 logger.error("ML stratification failed: %s", ml_output)
                 return create_error_response("ML risk stratification failed")
 
-            # Update state with ML results
-            state["ml_prediction"] = ml_output.get("probability", 50)
-            state["ml_confidence"] = extract_confidence(ml_output)
+            # Verify the LLM step completed successfully
+            logger.debug("ML stratification LLM response received successfully")
+            logger.debug(
+                "State after ML step - ML prediction: %d, ML confidence: %.3f",
+                state["ml_prediction"],
+                state["ml_confidence"],
+            )
 
             # Step 2: Clinical Context Integration
-            integration_result = self.run_step(
-                "clinical_context_integration", None, state
-            )
+            integration_result = self.run_step("clinical_assessment", None, state)
             integration_output = integration_result["output"]
 
             if isinstance(integration_output, str) and "Error" in integration_output:
@@ -229,26 +238,37 @@ class HybridReasoningAgent(PulseAgent):
 
             state["clinical_assessment"] = integration_output
 
-            # Determine if detailed investigation is needed
-            ml_conf = state["ml_confidence"]
-            clinical_prob = integration_output.get("probability", 50) / 100.0
-            ml_prob = state["ml_prediction"] / 100.0
+            # Store the converted clinical probability for later use
+            clinical_prob_raw = integration_output.get("probability", 50)
+            # Convert from 0-1 range back to percentage for internal calculations
+            clinical_prob = (
+                int(clinical_prob_raw * 100)
+                if clinical_prob_raw < 1
+                else int(clinical_prob_raw)
+            )
+            state["clinical_probability"] = clinical_prob
 
-            # Check agreement between ML and clinical assessment
+            # Determine if detailed investigation is needed
+            ml_conf = int(state["ml_confidence"] * 100)
+            ml_prob = state["ml_prediction"]  # Already an integer
+
+            # Check agreement between ML and clinical assessment (using integer percentages)
             prob_difference = abs(ml_prob - clinical_prob)
-            low_ml_confidence = ml_conf < self.ml_confidence_threshold
-            high_disagreement = prob_difference > self.agreement_threshold
+            low_ml_confidence = ml_conf < int(self.ml_confidence_threshold * 100)
+            high_disagreement = prob_difference > int(self.agreement_threshold * 100)
 
             state["agreement"] = {
                 "probability_difference": prob_difference,
                 "ml_confidence": ml_conf,
-                "clinical_confidence": extract_confidence(integration_output),
+                "clinical_confidence": int(
+                    extract_confidence(integration_output) * 100
+                ),
             }
 
             state["needs_investigation"] = low_ml_confidence or high_disagreement
 
             logger.info(
-                "ML vs Clinical: %.3f vs %.3f (diff=%.3f), ML conf=%.3f, Investigation needed: %s",
+                "ML vs Clinical: %d vs %d (diff=%d), ML conf=%d, Investigation needed: %s",
                 ml_prob,
                 clinical_prob,
                 prob_difference,
@@ -256,26 +276,67 @@ class HybridReasoningAgent(PulseAgent):
                 state["needs_investigation"],
             )
 
-            # Step 3: Targeted Investigation (conditional)
+            # Step 3: Detailed Investigation (conditional)
             if state["needs_investigation"]:
                 investigation_result = self.run_step(
-                    "targeted_investigation", None, state
+                    "detailed_investigation", None, state
                 )
                 investigation_output = investigation_result["output"]
                 state["investigation_results"] = investigation_output
                 logger.info(
-                    "Conducted targeted investigation due to disagreement/uncertainty"
+                    "Conducted detailed investigation due to disagreement/uncertainty"
                 )
             else:
                 state["investigation_results"] = None
                 logger.info(
-                    "Skipped targeted investigation - high confidence and agreement"
+                    "Skipped detailed investigation - high confidence and agreement"
                 )
 
             # Step 4: Confidence-Weighted Synthesis
-            synthesis_result = self.run_step(
-                "confidence_weighted_synthesis", None, state
-            )
+            # Apply dampening logic before synthesis to ensure template gets dampened values
+            if state["needs_investigation"] and state.get("investigation_results"):
+                ml_prob = state.get("ml_prediction", 50) / 100.0
+                ml_conf = state.get("ml_confidence", 0.5)
+
+                # Apply confidence-weighted dampening
+                if ml_conf >= 0.9:
+                    max_deviation = 0.2
+                elif ml_conf >= 0.8:
+                    max_deviation = 0.35
+                elif ml_conf >= 0.7:
+                    max_deviation = 0.5
+                elif ml_conf >= 0.6:
+                    max_deviation = 0.65
+                else:
+                    max_deviation = 0.8
+
+                investigation_prob = state["investigation_results"].get(
+                    "probability", 0.5
+                )
+                if (
+                    isinstance(investigation_prob, (int, float))
+                    and investigation_prob > 1
+                ):
+                    investigation_prob = (
+                        investigation_prob / 100.0
+                    )  # Convert percentage to decimal
+
+                deviation = abs(investigation_prob - ml_prob)
+                if deviation > max_deviation:
+                    if investigation_prob > ml_prob:
+                        dampened_prob = ml_prob + max_deviation
+                    else:
+                        dampened_prob = max(ml_prob - max_deviation, 0)
+
+                    # Create dampened investigation results for synthesis
+                    dampened_investigation = state["investigation_results"].copy()
+                    dampened_investigation["probability"] = dampened_prob
+                    state["dampened_investigation_results"] = dampened_investigation
+                    logger.info(
+                        f"Applied dampening: {investigation_prob*100:.1f}% -> {dampened_prob*100:.1f}%"
+                    )
+
+            synthesis_result = self.run_step("final_prediction", None, state)
             synthesis_output = synthesis_result["output"]
 
             # Aggregate token metrics
@@ -392,19 +453,43 @@ class HybridReasoningAgent(PulseAgent):
         ml_prob, ml_conf, feature_importance = self._run_xgb_prediction(patient_data)
 
         # Store in state for later use
-        state["ml_prediction"] = ml_prob * 100  # Convert to percentage
+        state["ml_prediction"] = int(ml_prob * 100)  # Convert to integer percentage
         state["ml_confidence"] = ml_conf
         state["feature_importance"] = feature_importance
 
-        # Get top important features with improved clinical naming
+        # Get top important features with improved clinical naming and base feature deduplication
         if feature_importance:
             sorted_features = sorted(
                 feature_importance.items(), key=lambda x: x[1], reverse=True
             )
 
+            # Deduplicate by base feature name, keeping the most important time window for each
+            base_feature_map = {}
+            for feat_name, importance in sorted_features:
+                # Extract base feature name
+                if feat_name.endswith("_na"):
+                    base_feature = feat_name.replace("_na", "").split("_")[0]
+                else:
+                    base_feature = (
+                        feat_name.split("_")[0] if "_" in feat_name else feat_name
+                    )
+
+                # Keep only the most important instance of each base feature
+                if (
+                    base_feature not in base_feature_map
+                    or importance > base_feature_map[base_feature][1]
+                ):
+                    base_feature_map[base_feature] = (feat_name, importance)
+
+            # Sort by importance and take top N unique base features
+            unique_features = sorted(
+                base_feature_map.values(), key=lambda x: x[1], reverse=True
+            )
+            top_unique_features = unique_features[: self.top_features_count]
+
             # Format features for clinical display
             formatted_features = []
-            for feat_name, importance in sorted_features[: self.top_features_count]:
+            for feat_name, importance in top_unique_features:
                 # Try to get clinical name
                 if feat_name.endswith("_na"):
                     # Missingness indicator
@@ -415,13 +500,13 @@ class HybridReasoningAgent(PulseAgent):
                     else:
                         display_name = f"Missing: {feat_name}"
                 else:
-                    # Regular feature
+                    # Regular feature - use clinical name only
                     base_feature = (
                         feat_name.split("_")[0] if "_" in feat_name else feat_name
                     )
                     clinical_name = get_feature_name(base_feature)
                     if clinical_name and clinical_name != "Unknown":
-                        display_name = f"{clinical_name} ({feat_name})"
+                        display_name = clinical_name
                     else:
                         display_name = feat_name
 
@@ -435,12 +520,12 @@ class HybridReasoningAgent(PulseAgent):
             "ML prediction: %.1f%% (conf: %.1f%%), top features: %s",
             ml_prob * 100,
             ml_conf * 100,
-            [f[0] for f in state["top_features"][:3]],
+            [f[0] for f in state["top_features"][:10]],
         )
 
         return {
-            "ml_probability": ml_prob * 100,
-            "ml_confidence": ml_conf * 100,
+            "ml_probability": int(ml_prob * 100),
+            "ml_confidence": int(ml_conf * 100),
             "top_features": state["top_features"],
             "patient_data": state["patient_data"],
         }
@@ -455,26 +540,30 @@ class HybridReasoningAgent(PulseAgent):
         for feat_display_name, importance in state["top_features"]:
             # Extract base feature name from display name
             if feat_display_name.startswith("Missing: "):
-                # Handle missing data patterns
+                # Handle missing data patterns - extract the clinical name and map back to abbreviation
                 clinical_name = feat_display_name.replace("Missing: ", "")
-                # Try to reverse-lookup the feature key
-                base_feature = clinical_name.lower().replace(" ", "_")
-            elif "(" in feat_display_name and feat_display_name.endswith(")"):
-                # Extract actual feature name from "Clinical Name (feat_name)" format
-                feat_name = feat_display_name.split("(")[-1].rstrip(")")
-                base_feature = (
-                    feat_name.split("_")[0] if "_" in feat_name else feat_name
-                )
+                # Find matching abbreviation from features_dict
+                base_feature = None
+                for abbrev, (full_name, _, _) in features_dict.items():
+                    if full_name == clinical_name:
+                        base_feature = abbrev
+                        break
+                if not base_feature:
+                    # Fallback to simple conversion
+                    base_feature = clinical_name.lower().replace(" ", "_")
             else:
-                # Direct feature name
-                base_feature = (
-                    feat_display_name.split("_")[0]
-                    if "_" in feat_display_name
-                    else feat_display_name
-                )
+                # Regular clinical name - find matching abbreviation
+                base_feature = None
+                for abbrev, (full_name, _, _) in features_dict.items():
+                    if full_name == feat_display_name:
+                        base_feature = abbrev
+                        break
+                if not base_feature:
+                    # Fallback to simple conversion
+                    base_feature = feat_display_name.lower().replace(" ", "_")
 
             # Skip _na features for clinical data formatting
-            if not base_feature.endswith("_na"):
+            if base_feature and not base_feature.endswith("_na"):
                 top_feature_keys.add(base_feature)
 
         clinical_data = format_clinical_data(
@@ -483,13 +572,15 @@ class HybridReasoningAgent(PulseAgent):
             preprocessor_advanced=self.preprocessor_advanced,
             include_demographics=True,
             include_temporal_patterns=True,
+            include_uncertainty=True,
+            original_patient_data=state["original_patient_data"],
         )
 
         return {
             "ml_results": {
-                "probability": state["ml_prediction"],
-                "confidence": state["ml_confidence"] * 100,
-                "top_features": state["top_features"][:5],  # Show top 5 for brevity
+                "probability": state["ml_prediction"],  # Already an integer
+                "confidence": int(state["ml_confidence"] * 100),
+                "top_features": state["top_features"][:10],
             },
             "clinical_data": clinical_data,
         }
@@ -497,46 +588,75 @@ class HybridReasoningAgent(PulseAgent):
     def _format_investigation_data(
         self, state: Dict[str, Any], input_data: Any
     ) -> Dict[str, Any]:
-        """Format data for targeted investigation."""
-        # Focus on discrepant features - those with high importance but potential clinical disagreement
-        investigation_features = set()
+        """Format data for detailed investigation with comprehensive task-specific features."""
+        # Start with features already analyzed in Step 2
+        step2_features = set()
 
         # Add all top important features for detailed analysis
         for feat_display_name, importance in state["top_features"]:
             # Extract base feature name from display name
             if feat_display_name.startswith("Missing: "):
+                # Handle missing data patterns - extract the clinical name and map back to abbreviation
                 clinical_name = feat_display_name.replace("Missing: ", "")
-                base_feature = clinical_name.lower().replace(" ", "_")
-            elif "(" in feat_display_name and feat_display_name.endswith(")"):
-                feat_name = feat_display_name.split("(")[-1].rstrip(")")
-                base_feature = (
-                    feat_name.split("_")[0] if "_" in feat_name else feat_name
-                )
+                # Find matching abbreviation from features_dict
+                base_feature = None
+                for abbrev, (full_name, _, _) in features_dict.items():
+                    if full_name == clinical_name:
+                        base_feature = abbrev
+                        break
+                if not base_feature:
+                    # Fallback to simple conversion
+                    base_feature = clinical_name.lower().replace(" ", "_")
             else:
-                base_feature = (
-                    feat_display_name.split("_")[0]
-                    if "_" in feat_display_name
-                    else feat_display_name
-                )
+                # Regular clinical name - find matching abbreviation
+                base_feature = None
+                for abbrev, (full_name, _, _) in features_dict.items():
+                    if full_name == feat_display_name:
+                        base_feature = abbrev
+                        break
+                if not base_feature:
+                    # Fallback to simple conversion
+                    base_feature = feat_display_name.lower().replace(" ", "_")
 
             # Skip _na features for clinical data formatting
-            if not base_feature.endswith("_na"):
-                investigation_features.add(base_feature)
+            if base_feature and not base_feature.endswith("_na"):
+                step2_features.add(base_feature)
+
+        # Add comprehensive task-specific features for deeper investigation
+        task_specific_features = get_priority_features_for_task(self.task_name)
+
+        # Identify newly introduced features
+        new_features = task_specific_features - step2_features
+        all_investigation_features = step2_features | task_specific_features
+
+        logger.debug(
+            "Investigation features: step2=%d, task-specific=%d, new=%d, total=%d",
+            len(step2_features),
+            len(task_specific_features),
+            len(new_features),
+            len(all_investigation_features),
+        )
 
         clinical_data = format_clinical_data(
             patient_data=state["patient_data"],
-            feature_keys=investigation_features,
+            feature_keys=all_investigation_features,
             preprocessor_advanced=self.preprocessor_advanced,
             include_demographics=False,
             include_temporal_patterns=True,
+            include_uncertainty=True,
+            original_patient_data=state["original_patient_data"],
         )
 
         return {
-            "focus_features": list(investigation_features),
+            "focus_features": list(all_investigation_features),
+            "step2_features": list(step2_features),
+            "new_features": list(new_features),
             "clinical_data": clinical_data,
             "disagreement_context": state["agreement"],
-            "ml_assessment": state["ml_prediction"],
-            "clinical_assessment": state["clinical_assessment"].get("probability", 50),
+            "ml_assessment": state["ml_prediction"],  # Already an integer
+            "clinical_assessment": state[
+                "clinical_probability"
+            ],  # Use the converted value from state
         }
 
     def _format_synthesis_data(
@@ -557,14 +677,15 @@ class HybridReasoningAgent(PulseAgent):
         return {
             "demographics": demographics,
             "ml_assessment": {
-                "probability": state["ml_prediction"],
-                "confidence": state["ml_confidence"] * 100,
-                "key_features": state["top_features"][:3],
+                "probability": state["ml_prediction"],  # Already an integer
+                "confidence": int(state["ml_confidence"] * 100),
+                "key_features": state["top_features"][:10],
             },
             "clinical_assessment": state["clinical_assessment"],
             "investigation_conducted": state["needs_investigation"],
-            "investigation_results": state.get("investigation_results"),
-            "agreement_analysis": state["agreement"],
+            "investigation_results": state.get(
+                "dampened_investigation_results", state.get("investigation_results")
+            ),
         }
 
     def _create_ml_stratification_template(self):
@@ -586,32 +707,33 @@ class HybridReasoningAgent(PulseAgent):
                 else "No significant features identified"
             )
 
-            return f"""An AI model has analyzed this ICU patient's data for {self.task_content['complication_name']} risk prediction.
+            return f"""An XGBoost model has analyzed this ICU patient's data for {self.task_content['task_name']} risk prediction.
 
-AI MODEL ASSESSMENT:
-- Predicted probability of {self.task_content['complication_name']}: {ml_prob:.1f}%
-- Model confidence: {ml_conf:.1f}%
+XGBOOST MODEL ASSESSMENT:
+- Predicted probability of {self.task_content['task_name']}: {ml_prob:.0f}%
+- Model confidence: {ml_conf:.0f}%
 
-TOP IMPORTANT FEATURES (by AI model importance):
+TOP IMPORTANT FEATURES (by XGBoost feature importance):
 {features_str}
 
 Clinical Context:
 {self.task_content['task_info']}
 
-TASK: Provide clinical interpretation of the AI model's assessment.
+TASK: Provide clinical interpretation of the XGBoost model's assessment.
 
 Consider:
 - What do these important features suggest clinically?
+- XGBoost models excel at capturing non-linear relationships and feature interactions - are there potential interactions between these features?
 - Are there any missingness patterns (_na features) that might indicate data quality issues?
-- Does the AI prediction align with typical clinical presentation patterns?
+- Does the XGBoost prediction align with typical clinical presentation patterns?
 - What clinical reasoning might explain this risk level?
 
 Respond in JSON format:
 {{
     "diagnosis": "ai-clinical-interpretation",
-    "probability": XX (your clinical interpretation of the appropriate risk level based on AI findings, integer 0-100),
-    "explanation": "Clinical interpretation of AI model findings, including significance of important features and any data quality considerations",
-    "confidence": XX (your confidence in interpreting the AI model results, integer 0-100)
+    "probability": XX (your clinical interpretation of the appropriate risk level based on XGBoost findings, integer 0-100),
+    "explanation": "Clinical interpretation of XGBoost model findings, including significance of important features and any data quality considerations (MAX 200 words)",
+    "confidence": XX (your confidence in interpreting the XGBoost model results, integer 0-100)
 }}"""
 
         return format_prompt
@@ -648,20 +770,20 @@ Respond in JSON format:
             # Format top ML features
             ml_features_text = []
             for feat_display_name, importance in ml_results["top_features"]:
-                ml_features_text.append(f"- {feat_display_name}")
+                # Extract just the display name without importance scores or bullet points
+                ml_features_text.append(feat_display_name)
 
-            ml_features_str = "\n".join(ml_features_text)
+            ml_features_str = ", ".join(ml_features_text)
 
-            return f"""Compare AI model assessment with clinical evaluation for {self.task_content['complication_name']} risk.
+            return f"""Compare XGBoost model assessment with clinical evaluation for {self.task_content['task_name']} risk.
 
 Patient Demographics:
 {demographics_str}
 
-AI MODEL RESULTS:
-- AI predicted probability: {ml_results['probability']:.1f}%
-- AI confidence: {ml_results['confidence']:.1f}%
-- AI identified key factors:
-{ml_features_str}
+XGBOOST MODEL RESULTS:
+- XGBoost predicted probability: {ml_results['probability']:.0f}%
+- XGBoost confidence: {ml_results['confidence']:.0f}%
+- XGBoost identified key factors: {ml_features_str}
 
 CLINICAL DATA FOR KEY FACTORS:
 {clinical_str}
@@ -669,28 +791,35 @@ CLINICAL DATA FOR KEY FACTORS:
 CLINICAL ASSESSMENT TASK:
 Based on your clinical expertise and the actual patient data, provide your independent assessment.
 
+IMPORTANT LIMITATIONS:
+- Available data is limited to laboratory values and vital signs only
+- No information on: medications, physical examination, patient history, imaging, microbiology
+- Your confidence should reflect these data limitations
+
 Consider:
-- Do the clinical values support or contradict the AI prediction?
-- Are there clinical patterns the AI might have missed or overemphasized?
-- How do temporal trends affect your clinical judgment?
-- What is your confidence in this clinical assessment?
+- Do the clinical values support or contradict the XGBoost prediction?
+- XGBoost models can capture complex feature interactions - are there clinical patterns the model might have missed or overemphasized?
+- How do temporal trends affect your clinical judgment compared to the XGBoost assessment?
+- What is your confidence in this clinical assessment given the limited available data?
 
 Respond in JSON format:
 {{
-    "diagnosis": "clinical-{self.task_content['complication_name']}-assessment",
-    "probability": XX (your independent clinical assessment of {self.task_content['complication_name']} risk, integer 0-100),
-    "explanation": "Your clinical reasoning based on patient data, noting agreement/disagreement with AI assessment",
-    "confidence": XX (your confidence in this clinical assessment, integer 0-100),
-    "ai_agreement": "agree/partial/disagree (how well your clinical assessment aligns with the AI prediction)"
+    "diagnosis": "clinical-{self.task_content['task_name']}-assessment",
+    "probability": XX (your independent clinical assessment of {self.task_content['task_name']} risk, integer 0-100),
+    "explanation": "Your clinical reasoning based on patient data, noting agreement/disagreement with XGBoost assessment (MAX 200 words)",
+    "confidence": XX (your confidence in this clinical assessment given limited data, integer 0-100),
+    "ai_agreement": "agree/partial/disagree (how well your clinical assessment aligns with the XGBoost prediction)"
 }}"""
 
         return format_prompt
 
-    def _create_targeted_investigation_template(self):
-        """Template for targeted investigation."""
+    def _create_detailed_investigation_template(self):
+        """Template for detailed investigation."""
 
         def format_prompt(formatted_data, state):
             focus_features = formatted_data["focus_features"]
+            step2_features = formatted_data["step2_features"]
+            new_features = formatted_data["new_features"]
             clinical_data = formatted_data["clinical_data"]
             disagreement = formatted_data["disagreement_context"]
             ml_prob = formatted_data["ml_assessment"]
@@ -700,36 +829,66 @@ Respond in JSON format:
             clinical_text = format_clinical_text(clinical_data)
             clinical_str = "\n".join(clinical_text)
 
-            return f"""TARGETED CLINICAL INVESTIGATION
+            # Create feature breakdown text
+            feature_breakdown = ""
+            if step2_features and new_features:
+                # Convert to full names for display
+                step2_display = [get_feature_name(f) for f in sorted(step2_features)]
+                new_display = [get_feature_name(f) for f in sorted(new_features)]
+
+                feature_breakdown = f"""
+FEATURE ANALYSIS BREAKDOWN:
+- Previously analyzed features: {', '.join(step2_display)}
+- Newly introduced features: {', '.join(new_display)}
+- Total features for investigation: {len(focus_features)}
+
+FOCUS: Pay special attention to newly introduced features that may explain the disagreement."""
+            elif new_features:
+                # Convert to full names for display
+                new_display = [get_feature_name(f) for f in sorted(new_features)]
+
+                feature_breakdown = f"""
+FEATURE ANALYSIS BREAKDOWN:
+- Newly introduced features: {', '.join(new_display)}
+- Total features for investigation: {len(focus_features)}
+
+FOCUS: These are additional clinical parameters not previously considered."""
+            else:
+                feature_breakdown = f"""
+FEATURE ANALYSIS BREAKDOWN:
+- All features were previously analyzed in initial assessment
+- Total features for investigation: {len(focus_features)}
+
+FOCUS: Look for subtle patterns and interactions in the existing data."""
+
+            return f"""DETAILED CLINICAL INVESTIGATION
 
 DISAGREEMENT DETECTED:
-- AI model prediction: {ml_prob:.1f}%
-- Clinical assessment: {clinical_prob:.1f}%
-- Probability difference: {disagreement['probability_difference']:.3f}
-- AI confidence: {disagreement['ml_confidence']:.3f}
-
-FOCUS AREAS FOR INVESTIGATION:
-Clinical parameters requiring detailed analysis: {', '.join(focus_features)}
+- XGBoost model prediction: {ml_prob:.0f}%
+- Clinical assessment: {clinical_prob:.0f}%
+- Probability difference: {disagreement['probability_difference']:.0f}
+- XGBoost confidence: {disagreement['ml_confidence']:.0f}%
+{feature_breakdown}
 
 DETAILED CLINICAL DATA:
 {clinical_str}
 
 INVESTIGATION TASK:
-Conduct a focused analysis to resolve the disagreement between AI and clinical assessments.
+Conduct a focused analysis to resolve the disagreement between XGBoost and clinical assessments.
 
 Analyze:
+- Do newly introduced features provide additional insight into the disagreement?
 - Are there subtle clinical patterns that explain the disagreement?
-- Could temporal trends provide additional insight?
-- Are there interactions between parameters that affect risk assessment?
-- Which assessment (AI or initial clinical) appears more reliable given the detailed data?
+- Could temporal trends provide additional insight into the disagreement?
+- Are there interactions between parameters that affect risk assessment (XGBoost models excel at capturing such interactions)?
+- Which assessment (XGBoost or initial clinical) appears more reliable given the comprehensive data?
 
 Respond in JSON format:
 {{
-    "diagnosis": "targeted-investigation-{self.task_content['complication_name']}",
+    "diagnosis": "detailed-investigation-{self.task_content['task_name']}",
     "probability": XX (refined probability assessment after detailed investigation, integer 0-100),
     "explanation": "Detailed analysis explaining the disagreement and your refined assessment based on thorough investigation",
-    "confidence": XX (confidence in this refined assessment, integer 0-100),
-    "resolution": "favor-ai/favor-clinical/synthesis (which approach your investigation supports)"
+    "confidence": XX (confidence in this refined assessment, integer 0-100)
 }}"""
 
         return format_prompt
@@ -743,7 +902,6 @@ Respond in JSON format:
             clinical_assessment = formatted_data["clinical_assessment"]
             investigation_conducted = formatted_data["investigation_conducted"]
             investigation_results = formatted_data.get("investigation_results")
-            agreement_analysis = formatted_data["agreement_analysis"]
 
             # Format demographics
             demo_text = []
@@ -765,67 +923,178 @@ Respond in JSON format:
 
             investigation_text = ""
             if investigation_conducted and investigation_results:
+                # Format investigation probability correctly as integer percentage
+                investigation_prob = investigation_results.get("probability", "N/A")
+                if isinstance(investigation_prob, (int, float)):
+                    # Convert to integer percentage if it's a decimal
+                    if investigation_prob < 1:
+                        investigation_prob = int(investigation_prob * 100)
+                    else:
+                        investigation_prob = int(investigation_prob)
+                    investigation_prob_text = f"{investigation_prob}%"
+                else:
+                    investigation_prob_text = f"{investigation_prob}%"
+
                 investigation_text = f"""
 DETAILED INVESTIGATION RESULTS:
-- Refined probability: {investigation_results.get('probability', 'N/A')}%
-- Investigation findings: {investigation_results.get('explanation', 'No details available')}
-- Resolution approach: {investigation_results.get('resolution', 'unclear')}"""
+- Refined probability: {investigation_prob_text}
+- Investigation findings: {investigation_results.get('explanation', 'No details available')}"""
             else:
                 investigation_text = "\nDETAILED INVESTIGATION: Not required (high confidence and agreement)"
+
+            # Format clinical probability for display
+            clinical_prob_display = clinical_assessment.get("probability", "N/A")
+            if isinstance(clinical_prob_display, (int, float)):
+                if clinical_prob_display < 1:
+                    clinical_prob_display = clinical_prob_display * 100
+                clinical_prob_text = f"{clinical_prob_display:.0f}%"
+            else:
+                clinical_prob_text = f"{clinical_prob_display}%"
 
             return f"""Patient Demographics:
 {demographics_str}
 
-HYBRID AI-CLINICAL ASSESSMENT SUMMARY:
+HYBRID XGBOOST-CLINICAL ASSESSMENT SUMMARY:
 
-AI MODEL ASSESSMENT:
-- AI prediction: {ml_assessment['probability']:.1f}%
-- AI confidence: {ml_assessment['confidence']:.1f}%
-- Key AI factors: {', '.join(ai_features)}
+XGBOOST MODEL ASSESSMENT:
+- XGBoost prediction: {ml_assessment['probability']:.0f}%
+- XGBoost confidence: {ml_assessment['confidence']:.0f}%
+- Key XGBoost factors: {', '.join(ai_features)}
 
 CLINICAL ASSESSMENT:
-- Clinical prediction: {clinical_assessment.get('probability', 'N/A')}%
+- Clinical prediction: {clinical_prob_text}
 - Clinical confidence: {clinical_assessment.get('confidence', 'N/A')}%
 - AI agreement level: {clinical_assessment.get('ai_agreement', 'unclear')}
+- Clinical reasoning: {clinical_assessment.get('explanation', 'No clinical reasoning provided')}
+{investigation_text}
 
-AGREEMENT ANALYSIS:
-- Probability difference: {agreement_analysis['probability_difference']:.3f}
-- AI confidence: {agreement_analysis['ml_confidence']:.3f}
-- Clinical confidence: {agreement_analysis['clinical_confidence']:.3f}{investigation_text}
-
-SYNTHESIS TASK:
-Provide a final assessment that intelligently combines AI model predictions with clinical reasoning.
-
-Guidelines for synthesis:
-- Weight assessments by their respective confidence levels
-- Consider the agreement/disagreement between AI and clinical approaches
-- If investigation was conducted, incorporate those refined findings
-- Provide a probability that reflects the best integration of both approaches
-- Explain how you balanced AI predictions with clinical judgment
+SYNTHESIS GUIDANCE:
+- XGBoost confidence ({ml_assessment['confidence']:.0f}%) means {ml_assessment['confidence']:.0f}% certain the risk is {ml_assessment['probability']:.0f}%
+- High-confidence predictions (>80%) should strongly anchor your assessment
+- Clinical assessment has limited context (no medications, physical exam, full history)
+- Justify any major deviation from high-confidence ML predictions
 
 Clinical Context: {self.task_content['task_info']}"""
 
         return format_prompt
 
-    def _get_task_specific_content(self) -> Dict[str, str]:
-        """Get task-specific content for prompts."""
-        task = self.task_name
-        if task == "mortality":
-            return {
-                "complication_name": "mortality",
-                "task_info": "ICU mortality refers to death occurring during the ICU stay. Key risk factors include hemodynamic instability, respiratory failure, multi-organ dysfunction, and severe metabolic derangements.",
-            }
-        elif task == "aki":
-            return {
-                "complication_name": "aki",
-                "task_info": "Acute kidney injury (AKI) is defined by rapid decline in kidney function with increased creatinine (≥1.5x baseline or ≥0.3 mg/dL increase in 48h) or decreased urine output (<0.5 mL/kg/h for 6-12h). Common causes include sepsis, hypotension, and nephrotoxins.",
-            }
-        elif task == "sepsis":
-            return {
-                "complication_name": "sepsis",
-                "task_info": "Sepsis is life-threatening organ dysfunction caused by dysregulated host response to infection. Diagnosed by SOFA score increase ≥2 points with suspected infection. Key indicators include fever, tachycardia, tachypnea, altered mental status, and laboratory abnormalities.",
-            }
-        return {
-            "complication_name": "complications",
-            "task_info": "General ICU complications assessment.",
-        }
+    def _prepare_step_metadata(
+        self, step_name: str, state: Dict[str, Any], output: Any
+    ) -> Dict[str, Any]:
+        """Prepare step-specific metadata for hybrid reasoning workflow."""
+        additional_metadata = {}
+
+        if step_name == "ml_interpretation":
+            # Log ML model results that aren't captured elsewhere
+            additional_metadata.update(
+                {
+                    "metadata_ml_prediction": state.get("ml_prediction", 0),
+                    "metadata_ml_confidence": int(state.get("ml_confidence", 0) * 100),
+                    "metadata_ml_top_unique_features": str(
+                        [
+                            f[0]
+                            for f in state.get("top_features", [])[
+                                : self.top_features_count
+                            ]
+                        ]
+                    ),
+                }
+            )
+
+        elif step_name == "clinical_assessment":
+            # Log agreement analysis that isn't captured elsewhere
+            additional_metadata.update(
+                {
+                    "metadata_ml_vs_clinical_diff": abs(
+                        state.get("ml_prediction", 0)
+                        - state.get("clinical_probability", 0)
+                    ),
+                    "metadata_ai_agreement": (
+                        output.get("ai_agreement") if isinstance(output, dict) else None
+                    ),
+                }
+            )
+
+        elif step_name == "detailed_investigation":
+            # Log investigation trigger logic that isn't captured elsewhere
+            agreement = state.get("agreement", {})
+            additional_metadata.update(
+                {
+                    "metadata_investigation_triggered": state.get(
+                        "needs_investigation", False
+                    ),
+                    "metadata_ml_confidence_low": agreement.get("ml_confidence", 0)
+                    < int(self.ml_confidence_threshold * 100),
+                    "metadata_high_disagreement": agreement.get(
+                        "probability_difference", 0
+                    )
+                    > int(self.agreement_threshold * 100),
+                }
+            )
+
+        elif step_name == "final_prediction":
+            # Calculate objective synthesis using mathematical formula
+            # Convert ML prediction from percentage to 0-1 range for consistent calculation
+            ml_prob = state.get("ml_prediction", 50) / 100.0
+            ml_conf = state.get("ml_confidence", 0.5)
+
+            clinical_assessment = state.get("clinical_assessment", {})
+            clinical_prob = clinical_assessment.get(
+                "probability", 0.5  # Already normalized 0-1
+            )
+            clinical_conf = clinical_assessment.get("confidence", 50) / 100.0
+
+            # Use dampened investigation results if available
+            final_clinical_prob = clinical_prob
+            if state.get("needs_investigation", False):
+                if state.get("dampened_investigation_results"):
+                    # Use dampened results
+                    final_clinical_prob = state["dampened_investigation_results"].get(
+                        "probability", clinical_prob
+                    )
+                    clinical_conf = (
+                        state["dampened_investigation_results"].get("confidence", 80)
+                        / 100.0
+                    )
+                elif state.get("investigation_results"):
+                    # Use original results
+                    investigation_results = state["investigation_results"]
+                    final_clinical_prob = investigation_results.get(
+                        "probability", clinical_prob
+                    )
+                    clinical_conf = investigation_results.get("confidence", 80) / 100.0
+
+            # Calculate confidence-weighted average
+            total_weight = ml_conf + clinical_conf
+            if total_weight > 0:
+                objective_synthesis = (
+                    ml_prob * ml_conf + final_clinical_prob * clinical_conf
+                ) / total_weight
+            else:
+                objective_synthesis = (
+                    ml_prob + final_clinical_prob
+                ) / 2  # Fallback to simple average
+
+            # Log metadata
+            additional_metadata.update(
+                {
+                    "metadata_objective_synthesis": objective_synthesis,
+                    "metadata_dampened_clinical": final_clinical_prob,
+                    "metadata_max_allowed_deviation": (
+                        0.35 if ml_conf >= 0.8 else 0.5
+                    ),  # Simplified for logging
+                    "metadata_escalation_dampened": state.get(
+                        "dampened_investigation_results"
+                    )
+                    is not None,
+                    "metadata_original_clinical": (
+                        state.get("investigation_results", {}).get(
+                            "probability", clinical_prob
+                        )
+                        if state.get("needs_investigation")
+                        else clinical_prob
+                    ),
+                }
+            )
+
+        return additional_metadata

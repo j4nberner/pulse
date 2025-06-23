@@ -4,11 +4,19 @@ from typing import Any, Dict, Optional
 import pandas as pd
 
 from src.models.agents.pulse_agent import PulseAgent
-from src.preprocessing.preprocessing_advanced.preprocessing_advanced import \
-    PreprocessorAdvanced
-from src.util.agent_util import (create_error_response, filter_na_columns,
-                                 format_clinical_data, format_clinical_text,
-                                 get_specialist_features, get_specialist_system_message)
+from src.preprocessing.preprocessing_advanced.preprocessing_advanced import (
+    PreprocessorAdvanced,
+)
+from src.util.agent_util import (
+    create_error_response,
+    filter_na_columns,
+    format_clinical_data,
+    format_clinical_text,
+    get_monitoring_period_hours,
+    get_specialist_features,
+    get_specialist_system_message,
+    get_task_specific_content,
+)
 
 logger = logging.getLogger("PULSE_logger")
 
@@ -43,7 +51,7 @@ class CollaborativeReasoningAgent(PulseAgent):
             **kwargs,
         )
 
-        self.task_content = self._get_task_specific_content()
+        self.task_content = get_task_specific_content(self.task_name)
 
         # Initialize preprocessing tools
         self.preprocessor_advanced = PreprocessorAdvanced()
@@ -232,6 +240,9 @@ class CollaborativeReasoningAgent(PulseAgent):
             # Extract demographics and clinical data
             demographics = formatted_data.get("demographics", {})
 
+            # Get monitoring period from the data
+            monitoring_hours = get_monitoring_period_hours(state["patient_data"])
+
             # Clinical data might be under 'vital_signs' key or directly
             if "vital_signs" in formatted_data:
                 clinical_data = formatted_data["vital_signs"]
@@ -276,7 +287,7 @@ class CollaborativeReasoningAgent(PulseAgent):
 Patient Demographics:
 {demographics_str}
 
-{specialist_type.title()} Data (over monitoring period):
+{specialist_type.title()} Data (over {monitoring_hours}-hour monitoring period):
 {clinical_str}
 
 Clinical Context:
@@ -293,9 +304,9 @@ Pay attention to:
 
 Respond in JSON format:
 {{
-    "diagnosis": "specialist-{self.task_content['complication_name']}-assessment",
-    "probability": XX (integer between 0 and 100, where 0 means {self.task_content['complication_name']} will not occur and 100 means {self.task_content['complication_name']} will definitely occur),
-    "explanation": "Your concise {specialist_type} specialist assessment including key findings, temporal patterns, and clinical significance (MAX 150 words)",
+    "diagnosis": "specialist-{self.task_content['task_name']}-assessment",
+    "probability": XX (integer between 0 and 100, where 0 means {self.task_content['task_name']} will not occur and 100 means {self.task_content['task_name']} will definitely occur),
+    "explanation": "Your concise {specialist_type} specialist assessment including key findings, temporal patterns, and clinical significance (MAX 200 words)",
     "confidence": XX (integer between 0 and 100, where 0 means not confident at all and 100 means very confident in your {specialist_type} assessment)
 }}
 
@@ -379,26 +390,3 @@ Guidelines:
 Average specialist confidence: {avg_confidence:.1f}%"""
 
         return format_prompt
-
-    def _get_task_specific_content(self) -> Dict[str, str]:
-        """Get task-specific content for prompts."""
-        task = self.task_name
-        if task == "mortality":
-            return {
-                "complication_name": "mortality",
-                "task_info": "ICU mortality refers to death occurring during the ICU stay. Key risk factors include hemodynamic instability, respiratory failure, multi-organ dysfunction, and severe metabolic derangements.",
-            }
-        elif task == "aki":
-            return {
-                "complication_name": "aki",
-                "task_info": "Acute kidney injury (AKI) is defined by rapid decline in kidney function with increased creatinine (≥1.5x baseline or ≥0.3 mg/dL increase in 48h) or decreased urine output (<0.5 mL/kg/h for 6-12h). Common causes include sepsis, hypotension, and nephrotoxins.",
-            }
-        elif task == "sepsis":
-            return {
-                "complication_name": "sepsis",
-                "task_info": "Sepsis is life-threatening organ dysfunction caused by dysregulated host response to infection. Diagnosed by SOFA score increase ≥2 points with suspected infection. Key indicators include fever, tachycardia, tachypnea, altered mental status, and laboratory abnormalities.",
-            }
-        return {
-            "complication_name": "complications",
-            "task_info": "General ICU complications assessment.",
-        }

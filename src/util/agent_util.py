@@ -4,15 +4,20 @@ from typing import Any, Dict, List, Optional, Set
 import numpy as np
 import pandas as pd
 
-from src.preprocessing.preprocessing_advanced.preprocessing_advanced import \
-    PreprocessorAdvanced
-from src.util.data_util import (get_all_feature_groups,
-                                get_clinical_group_aliases,
-                                get_common_feature_aliases,
-                                get_feature_group_keys,
-                                get_feature_group_title, get_feature_name,
-                                get_feature_reference_range, get_feature_uom,
-                                validate_feature_exists)
+from src.preprocessing.preprocessing_advanced.preprocessing_advanced import (
+    PreprocessorAdvanced,
+)
+from src.util.data_util import (
+    get_all_feature_groups,
+    get_clinical_group_aliases,
+    get_common_feature_aliases,
+    get_feature_group_keys,
+    get_feature_group_title,
+    get_feature_name,
+    get_feature_reference_range,
+    get_feature_uom,
+    validate_feature_exists,
+)
 
 logger = logging.getLogger("PULSE_logger")
 
@@ -34,11 +39,13 @@ def format_clinical_data(
     Format clinical data (vital signs or lab results) using aggregate_feature_windows.
 
     Args:
-        patient_data: Patient data series
+        patient_data: Patient data series (filtered, without _na columns)
         feature_keys: Set of feature keys to format
         preprocessor_advanced: Instance of PreprocessorAdvanced for data processing
         include_demographics: Whether to include demographics in output
         include_temporal_patterns: Whether to include temporal trend analysis
+        include_uncertainty: Whether to include uncertainty/missingness analysis
+        original_patient_data: Original patient data with _na columns for uncertainty analysis
 
     Returns:
         Dictionary with formatted clinical data
@@ -592,6 +599,48 @@ def get_specialist_system_message(specialist_type: str, task_name: str) -> str:
 
 
 # ===========================
+# TASK-SPECIFIC CONTENT
+# ===========================
+
+
+def get_task_specific_content(task_name: str) -> Dict[str, str]:
+    """
+    Get task-specific content for prompts.
+
+    Args:
+        task_name: The task name (e.g., 'mortality', 'aki', 'sepsis')
+
+    Returns:
+        Dictionary containing complication_name and task_info for the specified task
+    """
+    if task_name == "mortality":
+        return {
+            "task_name": "mortality",
+            "complication_name": "death",
+            "prediction_description": "the prediction of ICU mortality",
+            "task_info": "ICU mortality refers to death occurring during the ICU stay. Key risk factors include hemodynamic instability, respiratory failure, multi-organ dysfunction, and severe metabolic derangements.",
+        }
+    elif task_name == "aki":
+        return {
+            "task_name": "aki",
+            "complication_name": "acute kidney injury",
+            "prediction_description": "prediction of the onset of acute kidney injury",
+            "task_info": "Acute kidney injury (AKI) is defined by rapid decline in kidney function with increased creatinine (≥1.5x baseline or ≥0.3 mg/dL increase in 48h) or decreased urine output (<0.5 mL/kg/h for 6-12h). Common causes include sepsis, hypotension, and nephrotoxins.",
+        }
+    elif task_name == "sepsis":
+        return {
+            "task_name": "sepsis",
+            "complication_name": "sepsis",
+            "prediction_description": "prediction of the onset of sepsis",
+            "task_info": "Sepsis is life-threatening organ dysfunction caused by dysregulated host response to infection. Diagnosed by SOFA score increase ≥2 points with suspected infection. Key indicators include fever, tachycardia, tachypnea, altered mental status, and laboratory abnormalities.",
+        }
+    return {
+        "complication_name": "complications",
+        "task_info": "General ICU complications assessment.",
+    }
+
+
+# ===========================
 # OTHER UTILS
 # ===========================
 
@@ -628,3 +677,30 @@ def create_error_response(error_message: str) -> Dict[str, Any]:
         "num_input_tokens": 0,
         "num_output_tokens": 0,
     }
+
+
+def get_monitoring_period_hours(patient_data: pd.Series) -> int:
+    """
+    Get the monitoring period duration in hours from windowed data columns.
+
+    Args:
+        patient_data: Patient data series with windowed columns (e.g., feature_0, feature_1, etc.)
+
+    Returns:
+        Number of hours in the monitoring period (e.g., 6 if columns go from feature_0 to feature_5)
+    """
+    max_window = 0
+
+    # Look for any windowed columns to determine the monitoring period
+    for col in patient_data.index:
+        # Check if column ends with _digit pattern (e.g., hr_0, hr_1, sbp_5, etc.)
+        parts = col.split("_")
+        if len(parts) >= 2 and parts[-1].isdigit():
+            try:
+                window_num = int(parts[-1])
+                max_window = max(max_window, window_num)
+            except ValueError:
+                continue
+
+    # Return number of hours (max window index + 1, since indexing starts at 0)
+    return max_window + 1
