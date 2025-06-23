@@ -266,6 +266,56 @@ def get_common_feature_aliases() -> dict:
     }
 
 
+def get_priority_features_for_task(task_name: str) -> set:
+    """Get comprehensive task-specific features for investigation step."""
+    task_features = {
+        "mortality": {
+            "map",
+            "sbp",
+            "dbp",
+            "lact",
+            "o2sat",
+            "po2",
+            "pco2",
+            "crea",
+            "bun",
+            "urine",
+            "bili",
+            "alt",
+            "ast",
+            "ph",
+            "be",
+            "bicar",
+            "plt",
+            "inr_pt",
+            "hr",
+            "temp",
+        },
+        "aki": {"crea", "urine", "bun", "map", "sbp", "na", "k"},
+        "sepsis": {
+            "temp",
+            "hr",
+            "resp",
+            "map",
+            "sbp",
+            "o2sat",
+            "po2",
+            "pco2",
+            "fio2",
+            "plt",
+            "bili",
+            "crea",
+            "wbc",
+            "neut",
+            "bnd",
+            "crp",
+            "lact",
+        },
+    }
+
+    return task_features.get(task_name, set())
+
+
 def get_clinical_group_aliases() -> dict:
     """Get common clinical aliases for feature groups."""
     # Define subset lists for easier reference
