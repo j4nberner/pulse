@@ -527,7 +527,7 @@ class PulseLLMModel(PulseModel):
         metrics_tracker.log_metadata(save_to_file=self.save_metadata)
         metrics_tracker.summary = metrics_tracker.compute_overall_metrics()
         if save_report:
-            metrics_tracker.save_report()
+            metrics_tracker.save_report(prompting_id=self.prompting_id)
 
         logger.info("Test evaluation completed for %s", self.model_name)
         logger.info("Test metrics: %s", metrics_tracker.summary)
