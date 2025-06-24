@@ -11,6 +11,29 @@ from matplotlib import gridspec
 
 from src.eval.metrics import calculate_auprc
 
+VARIABLE_NAMES = {
+    "model_name": "Model Name",
+    "task_id": "Task ID",
+    "dataset": "Dataset",
+    "timestamp": "Timestamp",
+    "model_id": "Model ID",
+    "prompting_id": "Prompting ID",
+}
+
+PROMPTING_ID_VARIABLES = {
+    "sarvari_2024_aggregation_preprocessor": "Aggregation",
+    "zhu_2024b_zero_shot_preprocessor": "Zero-shot",
+    "liu_2023_few_shot_preprocessor": "Few-shot",
+    "zhu_2024b_one_shot_preprocessor": "One-shot",
+    "zhu_2024a_cot_preprocessor": "Chain-of-Thought",
+    "aki": "AKI",
+    "mortality": "Mortality",
+    "sepsis": "Sepsis",
+}
+
+
+COLORS = ["#2E86AB", "#A23B72", "#F18F01", "#C73E1D", "#8E44AD", "#27AE60"]
+
 
 class LLMAnalyzer:
     """
@@ -32,11 +55,7 @@ class LLMAnalyzer:
             outputfolder_path_list (list): List of output folder paths.
 
         """
-        categorized_files = self.categorize_files(outputfolder_path_list)
-        metadata_path_list = categorized_files["metadata_files"]
-        metrics_report_path = categorized_files["metrics_report_files"]
-
-        df_mdata = self.load_metadata(metadata_path_list)
+        pass
 
     @staticmethod
     def categorize_files(outputfolder_path_list):
@@ -413,19 +432,46 @@ class LLMAnalyzer:
             plt.show()
 
     @staticmethod
-    def plot_metrics(df, group=["model_id"], metrics=None, titel_prefix=""):
+    def plot_metrics(
+        df,
+        group=["model_id"],
+        metrics=None,
+        title_prefix="",
+        figsize=(12, 8),
+        save_path=None,
+        dpi=300,
+        style="seaborn-v0_8-whitegrid",
+    ):
         """
-        Plot metrics from the DataFrame, grouped by group.
+        Plot metrics from the DataFrame, grouped by group with enhanced styling for presentations.
 
         Args:
             df (DataFrame): DataFrame containing metrics.
             group (list): List of columns to group by (default is ["model_id"]).
             metrics (list): Specific metrics to plot (optional). Defaults to AUPRC, AUROC, MCC.
-            titel_prefix (str): Prefix for the plot title.
+            title_prefix (str): Prefix for the plot title.
+            figsize (tuple): Figure size (width, height).
+            save_path (str): Path to save the figure (optional).
+            dpi (int): DPI for saved figure.
+            style (str): Matplotlib style to use.
         """
         if df.empty:
             print("No data to plot.")
             return
+
+        # Sort df by group
+        # Custom sort order for 'task'
+        if "task_id" in group:
+            task_order = ["mortality", "aki", "sepsis"]
+            df["task_id"] = pd.Categorical(
+                df["task_id"], categories=task_order, ordered=True
+            )
+            df = df.sort_values(by=group)
+        else:
+            df = df.sort_values(by=group)
+
+        # Set style for better presentation
+        plt.style.use(style)
 
         # Ensure group is a list
         if isinstance(group, str):
@@ -447,7 +493,10 @@ class LLMAnalyzer:
         for idx, row in df.iterrows():
             for m, label in zip(metrics, metric_labels):
                 if m in df.columns:
-                    group_key = tuple(row[g] for g in group)
+                    group_key = ", ".join(
+                        PROMPTING_ID_VARIABLES.get(str(row[g]), str(row[g]))
+                        for g in group
+                    )
                     plot_data.append(
                         {
                             "Group": group_key,
@@ -462,7 +511,6 @@ class LLMAnalyzer:
             return
 
         # Sort by the order of appearance in the DataFrame for the group columns
-        # and keep the order of unique group keys as they appear
         unique_groups = []
         seen = set()
         for key in plot_df["Group"]:
@@ -475,75 +523,129 @@ class LLMAnalyzer:
 
         # Aggregate duplicates if necessary
         agg_df = plot_df.groupby(["Group", "Metric"], as_index=False).agg(
-            {"Value": ["mean", "count"]}
+            {"Value": ["mean", "count", "std"]}
         )
         # Flatten MultiIndex columns
-        agg_df.columns = ["Group", "Metric", "Value", "Count"]
+        agg_df.columns = ["Group", "Metric", "Value", "Count", "Std"]
+        agg_df["Std"] = agg_df["Std"].fillna(0)  # Fill NaN std with 0
 
         # Use only the mean values for plotting
         plot_df_final = agg_df[["Group", "Metric", "Value"]].pivot(
             index="Group", columns="Metric", values="Value"
         )
 
-        # Determine the number of groups (rows in the table)
-        n_groups = len(plot_df_final)
-        # Adjust figure height: base height + extra per group (tune as needed)
-        base_height = 6
-        extra_height_per_group = 0.5
-        fig_height = base_height + n_groups * extra_height_per_group
-
-        ax = plot_df_final.plot(
-            kind="bar",
-            figsize=(10, fig_height),
-            width=0.5,
-            edgecolor="black",
-            colormap="Set1",
+        # Get std values for error bars
+        std_df = agg_df[["Group", "Metric", "Std"]].pivot(
+            index="Group", columns="Metric", values="Std"
         )
-        # Shorten group labels using a mapping to single letters
+
+        # Create figure with improved layout
+        fig, ax = plt.subplots(figsize=figsize, facecolor="white")
+
+        # Create bar plot with error bars
+        bars = plot_df_final.plot(
+            kind="bar",
+            ax=ax,
+            width=0.7,
+            edgecolor="white",
+            linewidth=1.5,
+            color=COLORS[: len(metric_labels)],
+            yerr=std_df if agg_df["Count"].max() > 1 else None,
+            capsize=4,
+            error_kw={"elinewidth": 1.5, "capthick": 1.5},
+        )
+
+        # Group labels
         group_names = [
             name[0] if isinstance(name, tuple) and len(name) == 1 else name
             for name in plot_df_final.index.tolist()
         ]
-        group_label_dict = {name: chr(65 + i) for i, name in enumerate(group_names)}
-        short_labels = [group_label_dict[name] for name in group_names]
-        ax.set_xticklabels(short_labels, rotation=0)
 
-        # Print the mapping as a table
-        # print("Group label mapping:")
-        # print(pd.DataFrame({"Letter": short_labels, "Group": group_names}))
+        # Use full names if not too many
+        short_labels = [
+            name[:20] + "..." if len(name) > 30 else name for name in group_names
+        ]
+        show_table = False
 
-        # Add the mapping as a table below the plot
-
-        # Prepare table data
-        table_data = list(zip(short_labels, group_names))
-        col_labels = ["Letter", "Group"]
-
-        # Create a new axes below the main plot for the table
-
-        # Get the current figure
-        fig = plt.gcf()
-
-        # Adjust the main plot to make space for the table
-        plt.subplots_adjust(bottom=0.3)
-
-        # Add the table below the plot using bbox_to_anchor
-        table = plt.table(
-            cellText=table_data,
-            colLabels=col_labels,
-            cellLoc="center",
-            loc="bottom",
-            bbox=[0, -0.35, 1, 0.25],  # [left, bottom, width, height]
-            colColours=["#f2f2f2"] * 2,
+        ax.set_xticklabels(
+            short_labels, rotation=45, ha="right", fontsize=11, fontweight="medium"
         )
-        table.auto_set_font_size(False)
-        table.set_fontsize(9)
-        table.scale(1, 1.2)
 
-        plt.grid(axis="y", linestyle="--", alpha=0.7)
-        plt.title(f"{titel_prefix}Metrics Grouped by {', '.join(group)}")
-        plt.xlabel("Group")
-        plt.ylabel("Value")
-        plt.ylim(0, 1)
-        plt.legend(metric_labels, frameon=False)
-        # plt.tight_layout()
+        # Enhanced styling
+        ax.grid(True, axis="y", linestyle="--", alpha=0.3, linewidth=0.8)
+        ax.set_axisbelow(True)
+
+        # title and labels
+        group_display_names = [
+            VARIABLE_NAMES.get(g, g.replace("_", " ").title()) for g in group
+        ]
+        title = f"{title_prefix}Performance Metrics by {', '.join(group_display_names)}"
+        ax.set_title(title, fontsize=16, fontweight="bold", pad=20)
+        ax.set_xlabel("Groups", fontsize=12, fontweight="medium")
+        ax.set_ylabel("Metric Value", fontsize=12, fontweight="medium")
+
+        # Set y-axis limits and formatting
+        ax.set_ylim(-0.2, 1.05)
+        ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f"{x:.2f}"))
+
+        legend = ax.legend(
+            metric_labels,
+            loc="upper left",
+            bbox_to_anchor=(1.02, 1),
+            frameon=True,
+            fancybox=True,
+            shadow=True,
+            fontsize=11,
+            title="Metrics",
+            title_fontsize=12,
+        )
+        legend.get_frame().set_facecolor("white")
+        legend.get_frame().set_alpha(0.9)
+
+        # Add value labels on bars - Fixed version
+        # Get the bar containers (not ErrorbarContainer)
+        bar_containers = [c for c in ax.containers if hasattr(c, "patches")]
+        for container in bar_containers:
+            # Get the actual bar heights for labeling
+            labels = []
+            for patch in container.patches:
+                height = patch.get_height()
+                if not np.isnan(height):
+                    labels.append(f"{height:.3f}")
+                else:
+                    labels.append("")
+
+            ax.bar_label(
+                container,
+                labels=labels,
+                fontsize=9,
+                rotation=90,
+                padding=3,
+                fontweight="medium",
+            )
+
+        # Adjust layout
+        plt.tight_layout()
+        plt.subplots_adjust(right=1.4)
+
+        # Add subtle background
+        ax.set_facecolor("#fafafa")
+
+        # Remove top and right spines for cleaner look
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+        ax.spines["left"].set_linewidth(0.8)
+        ax.spines["bottom"].set_linewidth(0.8)
+
+        # Save figure if path provided
+        if save_path:
+            plt.savefig(
+                save_path,
+                dpi=dpi,
+                bbox_inches="tight",
+                facecolor="white",
+                edgecolor="none",
+            )
+            print(f"Figure saved to: {save_path}")
+
         plt.show()
