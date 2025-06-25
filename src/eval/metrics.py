@@ -181,7 +181,6 @@ class MetricsTracker:
             "dataset": self.dataset_name,
             "prompting_id": kwargs.get("prompting_id", ""),
             "run_id": self.run_id,
-            "prompting_id": kwargs.get("prompting_id", ""),
             "metrics_summary": self.summary,
         }
 
