@@ -27,6 +27,7 @@ from src.util.model_util import (
 
 logger = logging.getLogger("PULSE_logger")
 
+os.environ["TORCHDYNAMO_DISABLE"] = "1" # Disabled to not get Gemma errors
 
 class PulseModel:
     """
@@ -496,13 +497,14 @@ class PulseLLMModel(PulseModel):
             ).unsqueeze(0)
             target = torch.tensor(float(y_true), dtype=torch.float32).unsqueeze(0)
 
-            loss = criterion(predicted_label, target)
-            val_loss.append(loss.item())
+            #TODO: No needed most likely. Deactivated to avoid errors with nan values
+            # loss = criterion(predicted_label, target)
+            # val_loss.append(loss.item())
 
             if self.wandb:
                 wandb.log(
                     {
-                        "val_loss": loss.item(),
+                        # "val_loss": loss.item(),
                         "token_time": token_time,
                         "infer_time": infer_time,
                         "num_input_tokens": num_input_tokens,
@@ -530,14 +532,14 @@ class PulseLLMModel(PulseModel):
         metrics_tracker.log_metadata(save_to_file=self.save_metadata)
         metrics_tracker.summary = metrics_tracker.compute_overall_metrics()
         if save_report:
-            metrics_tracker.save_report()
+            metrics_tracker.save_report(prompting_id=self.prompting_id)
 
         logger.info("Test evaluation completed for %s", self.model_name)
         logger.info("Test metrics: %s", metrics_tracker.summary)
 
         # self.delete_model()
 
-        return float(np.mean(val_loss))
+        return 0.0 #float(np.mean(val_loss))
 
     def evaluate_sys_msgs(self, test_loader: Any, save_report: bool = True) -> float:
         """Evaluates the model on a given test set.
@@ -574,7 +576,6 @@ class PulseLLMModel(PulseModel):
         sys_msgs = system_message_samples(task=self.task_name)
 
         # Skip first n samples if specified
-        # Default to 0, meaning no samples are skipped unless explicitly specified
         skip_samples = self.params.get("skip_samples", 0)
         if skip_samples > 0:
             logger.info(
@@ -624,8 +625,8 @@ class PulseLLMModel(PulseModel):
                 ).unsqueeze(0)
                 target = torch.tensor(float(y_true), dtype=torch.float32).unsqueeze(0)
 
-                loss = criterion(predicted_label, target)
-                val_loss.append(loss.item())
+                # loss = criterion(predicted_label, target)
+                # val_loss.append(loss.item())
 
                 metrics_tracker.add_results(predicted_probability, y_true)
                 metrics_tracker.add_metadata_item(

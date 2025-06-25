@@ -1,4 +1,3 @@
-# https://github.com/GoogleCloudPlatform/generative-ai/blob/main/gemini/getting-started/intro_gemini_2_5_flash.ipynb
 import logging
 import os
 import time
@@ -6,6 +5,7 @@ import warnings
 from typing import Any, Dict
 
 import numpy as np
+
 # import vertexai
 from google import genai
 from google.genai.types import GenerateContentConfig, ThinkingConfig
@@ -13,8 +13,11 @@ from google.genai.types import GenerateContentConfig, ThinkingConfig
 from src.eval.metrics import MetricsTracker
 from src.models.pulse_model import PulseModel
 from src.util.config_util import set_seeds
-from src.util.model_util import (parse_llm_output, prompt_template_hf,
-                                 system_message_samples)
+from src.util.model_util import (
+    parse_llm_output,
+    prompt_template_hf,
+    system_message_samples,
+)
 
 # from vertexai.generative_models import (GenerationConfig, GenerativeModel, ThinkingConfig)
 
@@ -27,17 +30,17 @@ warnings.filterwarnings(
 logger = logging.getLogger("PULSE_logger")
 
 
-class Gemini2p5Model(PulseModel):
-    """Gemini2p5 model wrapper."""
+class ClaudeSonnet4Model(PulseModel):
+    """ClaudeSonnet4 model wrapper."""
 
     def __init__(self, params: Dict[str, Any], **kwargs) -> None:
-        """Initializes the Gemini2p5Model with parameters and paths.
+        """Initializes the ClaudeSonnet4Model with parameters and paths.
 
         Args:
             params: Configuration dictionary with model parameters.
             **kwargs: Additional optional parameters such as `output_dir` and `wandb`.
         """
-        model_name = kwargs.pop("model_name", "Gemini2p5Model")
+        model_name = kwargs.pop("model_name", "ClaudeSonnet4Model")
         super().__init__(model_name, params, **kwargs)
 
         required_params = [
