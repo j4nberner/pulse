@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 from matplotlib.table import Table
 from matplotlib import gridspec
+from IPython.display import HTML, display
 
 from src.eval.metrics import calculate_auprc
 
@@ -58,7 +59,7 @@ class LLMAnalyzer:
         pass
 
     @staticmethod
-    def categorize_files(outputfolder_path_list):
+    def categorize_files(outputfolder_path_list: list, verbose: bool = True):
         """
         Categorize files in the output folders into metrics report files, metadata files, and log files.
 
@@ -70,7 +71,12 @@ class LLMAnalyzer:
         """
         file_list = []
         for outputfolder_path in outputfolder_path_list:
-            file_list.extend(glob.glob(os.path.join(outputfolder_path, "*")))
+            # List files in the main folder
+            # file_list.extend(glob.glob(os.path.join(outputfolder_path, "*")))
+            # List files in all subfolders (recursively)
+            for root, dirs, files in os.walk(outputfolder_path):
+                for file in files:
+                    file_list.append(os.path.join(root, file))
 
         categorized_files = {
             "metrics_report_files": [f for f in file_list if "metrics_report" in f],
@@ -78,15 +84,16 @@ class LLMAnalyzer:
             "log_files": [f for f in file_list if "log" in f],
         }
 
-        print("Metrics Report Files:")
-        for file in categorized_files["metrics_report_files"]:
-            print(file)
-        print("\nMetadata Files:")
-        for file in categorized_files["metadata_files"]:
-            print(file)
-        print("\nLog Files:")
-        for file in categorized_files["log_files"]:
-            print(file)
+        if verbose:
+            print("Metrics Report Files:")
+            for file in categorized_files["metrics_report_files"]:
+                print(file)
+            print("\nMetadata Files:")
+            for file in categorized_files["metadata_files"]:
+                print(file)
+            print("\nLog Files:")
+            for file in categorized_files["log_files"]:
+                print(file)
 
         return categorized_files
 
@@ -96,7 +103,7 @@ class LLMAnalyzer:
         Load metadata from a CSV file into a DataFrame.
 
         Args:
-            metadata_path (str): Path to the metadata CSV file.
+            metadata_path_list (list): Path list with the metadata CSV files
 
         Returns:
             pd.DataFrame: DataFrame containing the metadata.
@@ -308,6 +315,86 @@ class LLMAnalyzer:
         df_best_results = pd.DataFrame.from_dict(best_results)
 
         return df_best_results
+
+    @staticmethod
+    def print_approach_summary(df, filters=None):
+        """
+        Print a summary of the approach from the metadata DataFrame.
+
+        Parameters:
+            df (pd.DataFrame): Metadata DataFrame (e.g., df_mdata).
+            filters (dict): Optional. Dictionary of filters, e.g., {'task': ['aki', 'sepsis'], 'dataset': 'eicu'}.
+
+        Prints:
+            Number of samples, unique tasks, datasets, and a preview of predictions.
+        """
+        df_filtered = df.copy()
+        if filters:
+            for key, value in filters.items():
+                if key in df_filtered.columns:
+                    if isinstance(value, list):
+                        df_filtered = df_filtered[df_filtered[key].isin(value)]
+                    else:
+                        df_filtered = df_filtered[df_filtered[key] == value]
+
+        # Group by task and dataset
+        group_cols = ["task", "dataset"]
+        summary = (
+            df_filtered.groupby(group_cols)
+            .agg(
+                mean_inference_time=("Inference Time", "mean"),
+                total_inference_time=("Inference Time", "sum"),
+                mean_input_tokens=("Input Tokens", "mean"),
+                total_input_tokens=("Input Tokens", "sum"),
+                mean_output_tokens=("Output Tokens", "mean"),
+                total_output_tokens=("Output Tokens", "sum"),
+                positive_samples=("Target Label", lambda x: (x == 1).sum()),
+                negative_samples=("Target Label", lambda x: (x == 0).sum()),
+                total_samples=("Target Label", "count"),
+            )
+            .reset_index()
+        )
+
+        summary_html = f"""
+        <h3>Summary of Approach</h3>
+        <ul>
+            <li><b>Number of samples:</b> {len(df_filtered):,}</li>
+            <li><b>Tasks:</b> {', '.join(map(str, df_filtered['task'].unique()))}</li>
+            <li><b>Datasets:</b> {', '.join(map(str, df_filtered['dataset'].unique()))}</li>
+            <li><b>Predicted diagnoses:</b> {', '.join(map(str, df_filtered['Predicted Diagnosis'].unique()))}</li>
+            <li><b>Total inference time:</b> {df_filtered['Inference Time'].sum() / 3600:,.2f} h</li>
+            <li><b>Total input tokens:</b> {df_filtered['Input Tokens'].sum():,}</li>
+            <li><b>Total output tokens:</b> {df_filtered['Output Tokens'].sum():,}</li>
+        </ul>
+        """
+        display(HTML(summary_html))
+
+        # Calculate ratio of positive vs negative samples
+        summary["pos_neg_ratio"] = summary["positive_samples"] / summary[
+            "negative_samples"
+        ].replace(0, np.nan)
+
+        # Display summary as a styled table for better readability
+        styled_summary = summary.style.format(
+            {
+                "mean_inference_time": "{:.2f}s",
+                "total_inference_time": "{:.2f}s",
+                "mean_input_tokens": "{:.0f}",
+                "total_input_tokens": "{:.0f}",
+                "mean_output_tokens": "{:.0f}",
+                "total_output_tokens": "{:.0f}",
+                "pos_neg_ratio": "{:.2f}",
+            }
+        ).background_gradient(
+            subset=[
+                "mean_inference_time",
+                "mean_input_tokens",
+                "mean_output_tokens",
+                "pos_neg_ratio",
+            ],
+            cmap="Blues",
+        )
+        display(styled_summary)
 
     @staticmethod
     def plot_prediction_distribution(
