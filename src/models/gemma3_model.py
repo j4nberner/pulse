@@ -4,8 +4,11 @@ from typing import Any, Dict
 
 import torch
 from peft import PromptTuningConfig, PromptTuningInit, TaskType, get_peft_model
-from transformers import (AutoTokenizer, BitsAndBytesConfig,
-                          Gemma3ForConditionalGeneration)
+from transformers import (
+    AutoTokenizer,
+    BitsAndBytesConfig,
+    Gemma3ForConditionalGeneration,
+)
 
 from src.models.pulse_model import PulseLLMModel
 
@@ -35,6 +38,7 @@ class Gemma3Model(PulseLLMModel):
             "max_new_tokens",
             "verbose",
             "tuning",
+            "quantization",
             "num_epochs",
             "max_new_tokens",
             "max_length",
@@ -44,14 +48,19 @@ class Gemma3Model(PulseLLMModel):
         self.check_required_params(params, required_params)
 
         self.max_length: int = self.params.get("max_length", 5120)
+        self.quantization = params["quantization"]
 
-        self.quantization_config = BitsAndBytesConfig(
-            load_in_8bit=True, llm_int8_threshold=6.0, llm_int8_has_fp16_weight=True
-        )
+        if self.quantization:
+            logger.info("Using quantization for Gemma3 model")
+            self.quantization_config = BitsAndBytesConfig(
+                load_in_4bit=True,
+                bnb_4bit_quant_type="nf4",
+                bnb_4bit_use_double_quant=True,
+                bnb_4bit_compute_dtype=torch.bfloat16,
+            )
 
     def load_model(self) -> None:
         """Loads the tokenizer and model weights and initializes HF pipeline."""
-        # TODO: @j4nberner Check if AutoModel also works here -> if yes, inherit directly form PulseLLMModel
         try:
             # Skip loading if already loaded
             if self.is_loaded:
@@ -60,17 +69,25 @@ class Gemma3Model(PulseLLMModel):
 
             logger.debug(f"Loading model %s", self.model_id)
             self.tokenizer = AutoTokenizer.from_pretrained(
-                self.model_id, 
+                self.model_id,
                 padding_side="left",
                 padding="longest",
-                pad_to_multiple_of=8, # <-- ensures seq_len % 8 == 0
+                pad_to_multiple_of=8,  # <-- ensures seq_len % 8 == 0
             )
-            self.model = Gemma3ForConditionalGeneration.from_pretrained(
-                self.model_id,
-                device_map="auto",
-                torch_dtype=torch.bfloat16,
-                attn_implementation="eager",
-            )
+            if self.quantization:
+                self.model = Gemma3ForConditionalGeneration.from_pretrained(
+                    self.model_id,
+                    device_map="auto",
+                    quantization_config=self.quantization_config,
+                    attn_implementation="eager",
+                )
+            else:
+                self.model = Gemma3ForConditionalGeneration.from_pretrained(
+                    self.model_id,
+                    device_map="auto",
+                    torch_dtype=torch.bfloat16,
+                    attn_implementation="eager",
+                )
 
             if self.params.get("tuning", False):
                 logger.info("Applying Prompt Tuning")
