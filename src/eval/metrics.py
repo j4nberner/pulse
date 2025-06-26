@@ -119,10 +119,10 @@ class MetricsTracker:
             # Compute mean for numeric columns only
             means = df.select_dtypes(include=[np.number]).mean().to_dict()
             for k, v in means.items():
-                logger.info(f"Average {k}: {v}")
-                logger.debug(f"Max {k}: {df[k].max()}")
-                logger.debug(f"Min {k}: {df[k].min()}")
-                logger.info(f"Total {k}: {df[k].sum()}")
+                logger.info("Average %s: %s", k, v)
+                logger.debug("Max %s: %s", k, df[k].max())
+                logger.debug("Min %s: %s", k, df[k].min())
+                logger.info("Total %s: %s", k, df[k].sum())
             if save_to_file:
                 summary_path = os.path.join(
                     self.save_dir,
@@ -586,6 +586,11 @@ def calculate_all_metrics(
         y_true = y_true.detach().cpu().numpy()
     if isinstance(y_pred, torch.Tensor):
         y_pred = y_pred.detach().cpu().numpy()
+
+    # Filter out nan values in y_pred and y_true
+    mask = ~np.isnan(y_pred) & ~np.isnan(y_true)
+    y_pred = y_pred[mask]
+    y_true = y_true[mask]
 
     # Auto-detect if predictions are logits or probabilities
     if np.any((y_pred < 0) | (y_pred > 1)):

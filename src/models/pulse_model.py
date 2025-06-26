@@ -403,7 +403,8 @@ class PulseLLMModel(PulseModel):
         Returns:
             The average validation loss across the test dataset.
         """
-        criterion = nn.BCELoss()  # Binary Cross Entropy Loss
+        # Criterion not needed for LLM inference
+        # criterion = nn.BCELoss()  # Binary Cross Entropy Loss
 
         # Check if model is already loaded before attempting to load
         if not self.is_loaded:
@@ -496,13 +497,14 @@ class PulseLLMModel(PulseModel):
             ).unsqueeze(0)
             target = torch.tensor(float(y_true), dtype=torch.float32).unsqueeze(0)
 
-            loss = criterion(predicted_label, target)
-            val_loss.append(loss.item())
+            # Criterion not needed for LLM inference
+            # loss = criterion(predicted_label, target)
+            val_loss.append(np.nan)
 
             if self.wandb:
                 wandb.log(
                     {
-                        "val_loss": loss.item(),
+                        # "val_loss": loss.item(),
                         "token_time": token_time,
                         "infer_time": infer_time,
                         "num_input_tokens": num_input_tokens,
@@ -549,7 +551,8 @@ class PulseLLMModel(PulseModel):
         Returns:
             The average validation loss across the test dataset.
         """
-        criterion = nn.BCELoss()  # Binary Cross Entropy Loss
+        # Criterion not needed for LLM inference
+        # criterion = nn.BCELoss()  # Binary Cross Entropy Loss
 
         # Check if model is already loaded before attempting to load
         if not self.is_loaded:
@@ -624,8 +627,9 @@ class PulseLLMModel(PulseModel):
                 ).unsqueeze(0)
                 target = torch.tensor(float(y_true), dtype=torch.float32).unsqueeze(0)
 
-                loss = criterion(predicted_label, target)
-                val_loss.append(loss.item())
+                # Criterion not needed for LLM inference
+                # loss = criterion(predicted_label, target)
+                val_loss.append(np.nan)
 
                 metrics_tracker.add_results(predicted_probability, y_true)
                 metrics_tracker.add_metadata_item(
