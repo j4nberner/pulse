@@ -15,13 +15,11 @@ from src.eval.metrics import calculate_auprc
 VARIABLE_NAMES = {
     "model_name": "Model Name",
     "task_id": "Task ID",
+    "task": "Task",
     "dataset": "Dataset",
     "timestamp": "Timestamp",
     "model_id": "Model ID",
     "prompting_id": "Prompting ID",
-}
-
-PROMPTING_ID_VARIABLES = {
     "sarvari_2024_aggregation_preprocessor": "Aggregation",
     "zhu_2024b_zero_shot_preprocessor": "Zero-shot",
     "liu_2023_few_shot_preprocessor": "Few-shot",
@@ -399,52 +397,138 @@ class LLMAnalyzer:
     @staticmethod
     def plot_prediction_distribution(
         df,
-        title="Prediction Distribution",
+        title_prefix="Prediction Probability Distribution",
+        data_filter=None,
         bins=np.arange(0, 1.05, 0.05),
         color_neg="#4682b4",
         color_pos="salmon",
         show_stats=True,
-        show=True,
+        show_plot=True,
     ):
         """
-        Plot the distribution of predicted probabilities, separated by target label.
+        Plot the distribution of predicted probabilities, separated by ground truth labels.
+        Ground truth positive and negative counts are displayed with striped histogram bars.
 
         Args:
             df (pd.DataFrame): DataFrame with columns 'Predicted Probability' and 'Target Label'.
-            title (str): Plot title.
-            bins (array): Histogram bins.
-            color_neg (str): Color for negative samples.
-            color_pos (str): Color for positive samples.
-            show_stats (bool): Print statistics to stdout.
-            show (bool): Whether to call plt.show().
+            title (str): Main title for the plot.
+            data_filter (dict): Optional. Dictionary of filters to apply to the DataFrame.
+                e.g., {'task': 'aki', 'dataset': 'eicu'}
+            bins (array): Bins for the histogram.
+            color_neg (str): Color for true negative samples.
+            color_pos (str): Color for true positive samples.
+            show_stats (bool): If True, print summary statistics to stdout.
+            show_plot (bool): If True, display the plot using plt.show().
         """
-        fig, ax = plt.subplots(figsize=(6, 4))
+        df = df.copy()
 
-        # Separate by label
+        # Apply data_filter if provided
+        if data_filter:
+            for column, allowed_values in data_filter.items():
+                if column in df.columns:
+                    if isinstance(allowed_values, list):
+                        df = df[df[column].isin(allowed_values)]
+                    else:
+                        df = df[df[column] == allowed_values]
+
+        # Build a human-readable filter_config string
+        filter_config = ""
+        if data_filter:
+            filter_parts = []
+            for column, values in data_filter.items():
+                display_key = VARIABLE_NAMES.get(str(column), str(column))
+
+                if isinstance(values, list):
+                    values_display = [
+                        VARIABLE_NAMES.get(str(v), str(v)) for v in values
+                    ]
+                else:
+                    values_display = [VARIABLE_NAMES.get(str(values), str(values))]
+
+                filter_parts.append(", ".join(values_display))
+
+            filter_config = " | ".join(filter_parts)
+
+        fig, ax = plt.subplots(
+            figsize=(6, 4)
+        )  # Slightly larger figure for better readability
+
+        # Separate data by ground truth label
         positive_samples = df[df["Target Label"] == 1]
         negative_samples = df[df["Target Label"] == 0]
 
-        # Stacked histogram for actual labels
+        # Stacked histogram for ground truth labels with hatching
+        # True Negatives: Target Label == 0 and Predicted Probability < 0.5
+        true_negative_samples = df[
+            (df["Target Label"] == 0) & (df["Predicted Probability"] < 0.5)
+        ]
+        # True Positives: Target Label == 1 and Predicted Probability >= 0.5
+        true_positive_samples = df[
+            (df["Target Label"] == 1) & (df["Predicted Probability"] >= 0.5)
+        ]
+        # False Negatives: Target Label == 1 and Predicted Probability < 0.5
+        false_negative_samples = df[
+            (df["Target Label"] == 1) & (df["Predicted Probability"] < 0.5)
+        ]
+        # False Positives: Target Label == 0 and Predicted Probability >= 0.5
+        false_positive_samples = df[
+            (df["Target Label"] == 0) & (df["Predicted Probability"] >= 0.5)
+        ]
+
+        # Plot histograms for positive and negative samples
         ax.hist(
             [
-                negative_samples["Predicted Probability"],
-                positive_samples["Predicted Probability"],
+                negative_samples["Target Label"],
+                positive_samples["Target Label"],
+            ],
+            bins=bins,
+            alpha=1.0,
+            label=["Negative Samples (Label=0)", "Positive Samples (Label=1)"],
+            color=[color_neg, color_pos],
+            edgecolor="black",
+            linewidth=1.0,
+            stacked=True,
+            hatch=["..", ".."],
+        )
+
+        # Plot histograms for each group with hatching for TP, TN, FP, FN
+        ax.hist(
+            [
+                false_positive_samples["Predicted Probability"],
+                true_positive_samples["Predicted Probability"],
             ],
             bins=bins,
             alpha=0.7,
-            label=["True Negative (Label=0)", "True Positive (Label=1)"],
-            color=[color_neg, color_pos],
-            edgecolor="black",
-            linewidth=0.5,
+            label=["False Positives (FP)", "True Positives (TP)"],
+            color=[color_pos, color_pos],
+            edgecolor=["black", "black"],
+            linewidth=0.8,
             stacked=True,
+            hatch=["xx", None],
         )
 
-        # Overlay all predicted probabilities as step
+        # Overlay FP and FN with different hatching and lower alpha
+        ax.hist(
+            [
+                false_negative_samples["Predicted Probability"],
+                true_negative_samples["Predicted Probability"],
+            ],
+            bins=bins,
+            alpha=0.7,
+            label=["False Negatives (FN)", "True Negatives (TN)"],
+            color=[color_neg, color_neg],
+            edgecolor=["black", "black"],
+            linewidth=0.8,
+            stacked=True,
+            hatch=["xx", None],
+        )
+
+        # Overlay all predicted probabilities as a step plot
         ax.hist(
             df["Predicted Probability"],
             bins=bins,
             alpha=0.7,
-            label="All Predicted Probabilities",
+            # label="All Predicted Probabilities",
             edgecolor="black",
             color="black",
             histtype="step",
@@ -452,69 +536,89 @@ class LLMAnalyzer:
         )
 
         # Add vertical line at 0.5 for decision threshold
-        ax.axvline(
-            x=0.5,
-            color="gray",
-            linestyle="-",
-            alpha=0.8,
-            linewidth=1.5,
-            label="Decision Threshold (0.5)",
-        )
+        # ax.axvline(
+        #     x=0.5,
+        #     color="gray",
+        #     linestyle="-",
+        #     alpha=0.8,
+        #     linewidth=1.5,
+        #     label="Decision Threshold (0.5)",
+        # )
 
-        # Positive rate line
-        pos_rate = df["Target Label"].mean()
-        ax.axvline(
-            x=pos_rate,
-            color="red",
-            linestyle="--",
-            alpha=0.8,
-            linewidth=1.5,
-            label=f"Positive Rate ({pos_rate:.3f})",
-        )
+        # Ground truth positive rate line
+        ground_truth_positive_rate = df["Target Label"].mean()
+        # ax.axvline(
+        #     x=ground_truth_positive_rate,
+        #     color="black",
+        #     linestyle="dotted",
+        #     alpha=0.8,
+        #     linewidth=1.5,
+        #     label=f"Ground Truth Positive Rate ({ground_truth_positive_rate:.3f})",
+        # )
 
-        # Mean predicted probability
-        pred_mean = df["Predicted Probability"].mean()
-        ax.axvline(
-            x=pred_mean,
-            color="blue",
-            linestyle="--",
-            alpha=0.8,
-            linewidth=1.5,
-            label=f"Mean Pred. Prob. ({pred_mean:.3f})",
-        )
+        # Mean predicted probability line
+        mean_predicted_probability = df["Predicted Probability"].mean()
+        # ax.axvline(
+        #     x=mean_predicted_probability,
+        #     color="black",
+        #     linestyle="--",
+        #     alpha=0.8,
+        #     linewidth=1.5,
+        #     label=f"Mean Predicted Probability ({mean_predicted_probability:.3f})",
+        # )
 
         ax.set_xlabel("Predicted Probability", fontsize=10)
         ax.set_ylabel("Count", fontsize=10)
-        ax.set_title(f"{title}\n(n={len(df)})", fontsize=12)
-        ax.legend(fontsize=8, loc="upper right")
+        ax.set_title(f"{title_prefix}\n{filter_config}", fontsize=12)
+        ax.legend(fontsize=9, loc="upper right")
         ax.grid(alpha=0.3)
-        ax.set_xlim(0, 1)
-        ax.set_xticks(np.arange(0, 1.1, 0.2))
+        ax.set_xlim(-0.1, 1.1)
+        ax.set_xticks(np.arange(0, 1.1, 0.1))
 
         # Print statistics
         if show_stats:
             pred_std = df["Predicted Probability"].std()
-            calibration_error = abs(pred_mean - pos_rate)
-            print(f"Records: {len(df)}")
-            print(f"Positive samples: {len(positive_samples)}")
-            print(f"Negative samples: {len(negative_samples)}")
-            print(f"Positive rate (actual): {pos_rate:.3f}")
-            print(f"Mean predicted probability: {pred_mean:.3f}")
-            print(f"Std predicted probability: {pred_std:.3f}")
-            print(
-                f"Calibration error (|pred_mean - pos_rate|): {calibration_error:.3f}"
+            calibration_error = abs(
+                mean_predicted_probability - ground_truth_positive_rate
             )
-            if "calculate_auprc" in globals():
-                auprc_val = calculate_auprc(
-                    df["Target Label"].values, df["Predicted Probability"].values
-                )
-                if isinstance(auprc_val, dict):
-                    auprc_value = auprc_val.get("auprc", 0.0)
-                else:
-                    auprc_value = auprc_val
-                print(f"AUPRC: {auprc_value:.3f}")
+            print(f"--- Prediction Distribution Statistics ---")
+            print(f"Total Records: {len(df)}")
+            print(f"Ground Truth Positive Samples: {len(positive_samples)}")
+            print(f"Ground Truth Negative Samples: {len(negative_samples)}")
+            print(
+                f"Mean Predicted Probability (Average of All Predictions): {mean_predicted_probability:.3f}"
+            )
+            print(f"Std Predicted Probability: {pred_std:.3f}")
+            print(
+                f"Calibration Error (|Mean Pred. Prob. - Ground Truth Pos. Rate|): {calibration_error:.3f}"
+            )
+            print(f"True Positives: {len(true_positive_samples)}")
+            print(f"True Negatives: {len(true_negative_samples)}")
+            print(f"False Positives: {len(false_positive_samples)}")
+            print(f"False Negatives: {len(false_negative_samples)}")
 
-        if show:
+            # Calculate and print accuracy if possible (requires thresholding)
+            y_pred_binary = (df["Predicted Probability"] >= 0.5).astype(int)
+            accuracy = (y_pred_binary == df["Target Label"]).mean()
+            print(f"Accuracy (at 0.5 threshold): {accuracy:.3f}")
+
+            # This part assumes 'calculate_auprc' is defined or imported
+            if "calculate_auprc" in globals():
+                try:
+                    auprc_val = calculate_auprc(
+                        df["Target Label"].values, df["Predicted Probability"].values
+                    )
+                    if isinstance(auprc_val, dict):
+                        auprc_value = auprc_val.get("auprc", 0.0)
+                    else:
+                        auprc_value = auprc_val
+                    print(f"AUPRC: {auprc_value:.3f}")
+                except Exception as e:
+                    print(
+                        f"Could not calculate AUPRC: {e}. Make sure sklearn.metrics.average_precision_score is available."
+                    )
+
+        if show_plot:
             plt.tight_layout()
             plt.show()
 
@@ -581,8 +685,7 @@ class LLMAnalyzer:
             for m, label in zip(metrics, metric_labels):
                 if m in df.columns:
                     group_key = ", ".join(
-                        PROMPTING_ID_VARIABLES.get(str(row[g]), str(row[g]))
-                        for g in group
+                        VARIABLE_NAMES.get(str(row[g]), str(row[g])) for g in group
                     )
                     plot_data.append(
                         {
@@ -736,3 +839,99 @@ class LLMAnalyzer:
             print(f"Figure saved to: {save_path}")
 
         plt.show()
+
+    @staticmethod
+    def save_metrics_to_results_json(
+        metrics_report_path, results_json_path="../docs/results.json"
+    ):
+        """
+        Save metrics from a metrics report file to the results.json file.
+
+        If a model with the same model_id, prompting_id, and run_id already exists,
+        it will be overwritten. Otherwise, new records are added to the results array.
+
+        Args:
+            metrics_report_path (str): Path to the metrics report JSON file
+            results_json_path (str): Path to the results.json file (default: "../docs/results.json")
+
+        Returns:
+            tuple: (added_count, updated_count) - number of records added and updated
+        """
+
+        # Load existing results if file exists, otherwise start with empty dict
+        if os.path.exists(results_json_path):
+            with open(results_json_path, "r", encoding="utf-8") as f:
+                try:
+                    results_data = json.load(f)
+                except json.JSONDecodeError:
+                    results_data = {}
+        else:
+            results_data = {}
+
+        # Ensure 'results' key exists and is a list
+        if "results" not in results_data or not isinstance(
+            results_data["results"], list
+        ):
+            results_data["results"] = []
+
+        # Load metrics content from the metrics report file
+        with open(metrics_report_path, "r", encoding="utf-8") as f:
+            metrics_content = json.load(f)
+
+        # Ensure metrics_content is a list
+        if not isinstance(metrics_content, list):
+            metrics_content = [metrics_content]
+
+        added_count = 0
+        updated_count = 0
+
+        # Process each record in metrics_content
+        for new_record in metrics_content:
+            # Create a unique identifier for comparison
+            new_id = (
+                new_record.get("model_id", ""),
+                new_record.get("prompting_id", ""),
+                new_record.get("run_id", ""),
+            )
+
+            # Look for existing record with same identifier
+            existing_index = None
+            for i, existing_record in enumerate(results_data["results"]):
+                existing_id = (
+                    existing_record.get("model_id", ""),
+                    existing_record.get("prompting_id", ""),
+                    existing_record.get("run_id", ""),
+                )
+                if existing_id == new_id:
+                    existing_index = i
+                    break
+
+            # Update existing record or add new one
+            if existing_index is not None:
+                print(
+                    f"Updating existing record: model_id='{new_record.get('model_id')}', "
+                    f"prompting_id='{new_record.get('prompting_id')}', "
+                    f"run_id='{new_record.get('run_id')}'"
+                )
+                results_data["results"][existing_index] = new_record
+                updated_count += 1
+            else:
+                print(
+                    f"Adding new record: model_id='{new_record.get('model_id')}', "
+                    f"prompting_id='{new_record.get('prompting_id')}', "
+                    f"run_id='{new_record.get('run_id')}'"
+                )
+                results_data["results"].append(new_record)
+                added_count += 1
+
+        # Save the updated results
+        with open(results_json_path, "w", encoding="utf-8") as f:
+            json.dump(results_data, f, indent=2)
+
+        print(f"Results saved to {results_json_path}")
+        print(
+            f"Added {added_count} new records, updated {updated_count} existing records"
+        )
+        print(f"Total records in results.json: {len(results_data['results'])}")
+
+        return added_count, updated_count
