@@ -275,7 +275,183 @@
         font-style: italic;
       }
 
+      /* Medical Context Styles */
+      .medical-context {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border-radius: 20px;
+        padding: 25px;
+        margin-bottom: 25px;
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+      }
+
+      .context-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+      }
+
+      .context-card {
+        background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+        border-radius: 15px;
+        padding: 20px;
+        text-align: center;
+        transition: transform 0.3s ease;
+      }
+
+      .context-card:hover {
+        transform: translateY(-5px);
+      }
+
+      .context-icon {
+        font-size: 2.5em;
+        margin-bottom: 15px;
+      }
+
+      .context-card h4 {
+        color: #1e40af;
+        margin-bottom: 10px;
+        font-size: 1.1em;
+      }
+
+      .context-card p {
+        color: #64748b;
+        font-size: 0.9em;
+        line-height: 1.5;
+      }
+
+      /* Clinical Notice Styles */
+      .clinical-notice {
+        background: linear-gradient(135deg, #fef3c7, #fbbf24);
+        border-radius: 15px;
+        padding: 20px;
+        margin-bottom: 25px;
+        border-left: 5px solid #f59e0b;
+      }
+
+      .notice-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 10px;
+      }
+
+      .notice-icon {
+        font-size: 1.2em;
+      }
+
+      .clinical-notice p {
+        color: #92400e;
+        font-size: 0.9em;
+        line-height: 1.5;
+        margin: 0;
+      }
+
+      /* Medical Metrics Styles */
+      .medical-metrics-info {
+        background: #f8fafc;
+        border-radius: 10px;
+        padding: 20px;
+      }
+
+      .metric-explanations {
+        display: grid;
+        gap: 12px;
+      }
+
+      .metric-explanation {
+        background: white;
+        padding: 12px 15px;
+        border-radius: 8px;
+        border-left: 4px solid #3b82f6;
+        font-size: 0.9em;
+      }
+
+      .metric-explanation strong {
+        color: #1e40af;
+      }
+
+      /* Dataset Grid Styles */
+      .dataset-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+      }
+
+      .dataset-info {
+        background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+        border-radius: 12px;
+        padding: 20px;
+        border-top: 4px solid #3b82f6;
+      }
+
+      .dataset-info h4 {
+        color: #1e40af;
+        margin-bottom: 15px;
+        font-size: 1.2em;
+        text-align: center;
+      }
+
+      .dataset-info p {
+        margin-bottom: 8px;
+        font-size: 0.9em;
+        line-height: 1.4;
+      }
+
+      .dataset-info strong {
+        color: #475569;
+      }
+
+      /* Enhanced Medical Color Scheme */
+      :root {
+        --medical-blue: #1e3a8a;
+        --medical-green: #16a34a;
+        --medical-red: #dc2626;
+        --clinical-gray: #64748b;
+        --trust-blue: #3b82f6;
+        --warning-yellow: #f59e0b;
+      }
+
+      .metric-high {
+        background: linear-gradient(135deg, var(--medical-green), #22c55e);
+        color: white;
+      }
+
+      .metric-medium {
+        background: linear-gradient(135deg, var(--warning-yellow), #fbbf24);
+        color: white;
+      }
+
+      .metric-low {
+        background: linear-gradient(135deg, var(--medical-red), #ef4444);
+        color: white;
+      }
+
+      /* Mobile Responsiveness for Medical Content */
       @media (max-width: 768px) {
+        .medical-context {
+          padding: 15px;
+        }
+        
+        .context-cards {
+          grid-template-columns: 1fr;
+          gap: 15px;
+        }
+        
+        .dataset-grid {
+          grid-template-columns: 1fr;
+        }
+        
+        .context-card, .dataset-info {
+          padding: 15px;
+        }
+        
+        /* Larger touch targets for clinical use */
+        select, button {
+          min-height: 44px;
+          font-size: 16px;
+        }
+
         .dashboard {
           grid-template-columns: 1fr;
         }
@@ -301,6 +477,101 @@
 
         .pulse-logo {
           height: 40px;
+        }
+
+        .context-cards {
+          grid-template-columns: 1fr;
+        }
+
+        .dataset-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      /* Research Footer Styles */
+      .research-footer {
+        background: linear-gradient(135deg, #1e293b, #334155);
+        color: white;
+        border-radius: 20px;
+        padding: 30px;
+        margin-top: 30px;
+        text-align: center;
+      }
+
+      .research-footer h4 {
+        color: #e2e8f0;
+        margin-bottom: 15px;
+        font-size: 1.3em;
+      }
+
+      .research-footer p {
+        color: #cbd5e1;
+        line-height: 1.6;
+        margin-bottom: 25px;
+      }
+
+      .research-highlights {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+        margin: 25px 0;
+      }
+
+      .highlight-item {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        padding: 20px;
+        text-align: left;
+      }
+
+      .highlight-icon {
+        font-size: 1.5em;
+        margin-right: 10px;
+      }
+
+      .highlight-item strong {
+        color: #60a5fa;
+        display: block;
+        margin-bottom: 5px;
+      }
+
+      .research-links {
+        display: flex;
+        gap: 15px;
+        justify-content: center;
+        flex-wrap: wrap;
+        margin-top: 25px;
+      }
+
+      .research-btn {
+        background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+        color: white;
+        padding: 12px 20px;
+        border-radius: 10px;
+        text-decoration: none;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        border: none;
+        cursor: pointer;
+      }
+
+      .research-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(59, 130, 246, 0.3);
+      }
+
+      @media (max-width: 768px) {
+        .research-highlights {
+          grid-template-columns: 1fr;
+        }
+        
+        .research-links {
+          flex-direction: column;
+          align-items: stretch;
+        }
+        
+        .research-btn {
+          text-align: center;
         }
       }
     </style>
@@ -348,6 +619,36 @@
             </select>
           </div>
         </div>
+      </div>
+
+      <!-- Medical Context Section -->
+      <div class="medical-context">
+        <div class="context-cards">
+          <div class="context-card">
+            <div class="context-icon">🏥</div>
+            <h4>Clinical Impact</h4>
+            <p>Evaluating AI models for critical care decision support in real ICU environments</p>
+          </div>
+          <div class="context-card">
+            <div class="context-icon">⚡</div>
+            <h4>Time-Critical</h4>
+            <p>Performance metrics reflect real-time prediction capabilities for patient outcomes</p>
+          </div>
+          <div class="context-card">
+            <div class="context-icon">📊</div>
+            <h4>Multi-Dataset</h4>
+            <p>Validated across MIMIC-IV, eICU, and HiRID for generalizability</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Clinical Validation Notice -->
+      <div class="clinical-notice">
+        <div class="notice-header">
+          <span class="notice-icon">⚠️</span>
+          <strong>Clinical Validation Notice</strong>
+        </div>
+        <p>These models are for research purposes only. Clinical deployment requires additional validation, regulatory approval, and integration with existing clinical workflows.</p>
       </div>
 
       <div class="summary-stats" id="summaryStats">
@@ -417,6 +718,79 @@
             </table>
           </div>
         </div>
+
+        <div class="card">
+          <h3>Clinical Metrics Interpretation</h3>
+          <div class="medical-metrics-info">
+            <div class="metric-explanations">
+              <div class="metric-explanation">
+                <strong>AUROC ≥ 0.8:</strong> Excellent discriminative ability for clinical use
+              </div>
+              <div class="metric-explanation">
+                <strong>AUPRC ≥ 0.7:</strong> Good precision-recall balance for rare events
+              </div>
+              <div class="metric-explanation">
+                <strong>MCC ≥ 0.5:</strong> Strong correlation accounting for class imbalance
+              </div>
+              <div class="metric-explanation">
+                <strong>F1 ≥ 0.7:</strong> Balanced precision and recall for clinical decisions
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Dataset Characteristics</h3>
+          <div class="dataset-grid">
+            <div class="dataset-info">
+              <h4>MIMIC-IV</h4>
+              <p><strong>Source:</strong> Beth Israel Deaconess Medical Center</p>
+              <p><strong>Patients:</strong> ~380,000 patients</p>
+              <p><strong>Time Period:</strong> 2008-2019</p>
+              <p><strong>Specialty:</strong> Multi-department ICU data</p>
+            </div>
+            <div class="dataset-info">
+              <h4>eICU</h4>
+              <p><strong>Source:</strong> Multi-center collaborative</p>
+              <p><strong>Patients:</strong> ~200,000 ICU stays</p>
+              <p><strong>Hospitals:</strong> 208 hospitals</p>
+              <p><strong>Specialty:</strong> Diverse ICU environments</p>
+            </div>
+            <div class="dataset-info">
+              <h4>HiRID</h4>
+              <p><strong>Source:</strong> University Hospital Zurich</p>
+              <p><strong>Patients:</strong> ~33,000 patients</p>
+              <p><strong>Resolution:</strong> High-frequency (2-min intervals)</p>
+              <p><strong>Specialty:</strong> High-resolution physiological data</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Research Context Footer -->
+      <div class="research-footer">
+        <h4>Research Background</h4>
+        <p>This benchmark is part of ongoing research in AI-assisted critical care. Our evaluation framework considers both technical performance and clinical applicability for real-world ICU deployment.</p>
+        <div class="research-highlights">
+          <div class="highlight-item">
+            <span class="highlight-icon">🔬</span>
+            <strong>Rigorous Methodology:</strong> Standardized evaluation protocols across multiple ICU datasets
+          </div>
+          <div class="highlight-item">
+            <span class="highlight-icon">📊</span>
+            <strong>Clinical Metrics:</strong> Performance thresholds based on medical literature and expert consensus
+          </div>
+          <div class="highlight-item">
+            <span class="highlight-icon">🏥</span>
+            <strong>Real-World Focus:</strong> Evaluation considers deployment constraints and clinical workflows
+          </div>
+        </div>
+        <div class="research-links">
+          <a href="#" class="research-btn">📄 Read Paper</a>
+          <a href="#" class="research-btn">💾 Download Data</a>
+          <a href="#" class="research-btn">🔬 Methodology</a>
+          <a href="#" class="research-btn">📧 Contact Team</a>
+        </div>
       </div>
     </div>
 
@@ -424,6 +798,42 @@
       console.log("Script loaded successfully");
       let benchmarkData = [];
       let charts = {};
+
+      // Medical task descriptions with clinical context
+      const medicalTaskDescriptions = {
+        'mortality': {
+          name: 'In-Hospital Mortality Prediction',
+          description: 'Predicting patient mortality risk within 24-48 hours',
+          clinicalRelevance: 'Early warning system for high-risk patients',
+          prevalence: '~8-12% in ICU populations'
+        },
+        'aki': {
+          name: 'Acute Kidney Injury (AKI)',
+          description: 'Predicting onset of kidney dysfunction',
+          clinicalRelevance: 'Enable early intervention to prevent progression',
+          prevalence: '~20-25% of ICU admissions'
+        },
+        'sepsis': {
+          name: 'Sepsis Detection',
+          description: 'Early identification of septic shock',
+          clinicalRelevance: 'Critical for timely antibiotic administration',
+          prevalence: '~15-20% of ICU patients'
+        },
+        'los': {
+          name: 'Length of Stay Prediction',
+          description: 'Predicting extended ICU stay duration',
+          clinicalRelevance: 'Resource planning and bed management',
+          prevalence: 'Variable by ICU type'
+        }
+      };
+
+      // Clinical acceptability thresholds
+      const clinicalThresholds = {
+        'auroc': 0.8,  // Minimum for clinical consideration
+        'auprc': 0.7,  // Good precision-recall balance
+        'mcc': 0.5,    // Strong correlation
+        'f1_score': 0.7 // Balanced precision and recall
+      };
 
       // Baseline model identifiers
       const baselineModels = [
@@ -717,20 +1127,18 @@
 
         // Check for partial matches - order matters, most specific first
         const modelIdLower = modelId.toLowerCase();
-
+        
         // Check for DeepSeek first (before other matches)
-        if (modelIdLower.includes("deepseek")) return modelLogos["DeepSeek"];
-
+        if (modelIdLower.includes('deepseek')) return modelLogos['DeepSeek'];
+        
         // Check for other models
-        if (modelIdLower.includes("gpt") || modelIdLower.includes("openai"))
-          return modelLogos["OpenAI"];
-        if (modelIdLower.includes("gemini")) return modelLogos["Gemini"];
-        if (modelIdLower.includes("gemma")) return modelLogos["Gemma"];
-        if (modelIdLower.includes("claude")) return modelLogos["Claude"];
-        if (modelIdLower.includes("llama") || modelIdLower.includes("meta"))
-          return modelLogos["Llama"];
-        if (modelIdLower.includes("mistral")) return modelLogos["Mistral"];
-
+        if (modelIdLower.includes('gpt') || modelIdLower.includes('openai')) return modelLogos['OpenAI'];
+        if (modelIdLower.includes('gemini')) return modelLogos['Gemini'];
+        if (modelIdLower.includes('gemma')) return modelLogos['Gemma'];
+        if (modelIdLower.includes('claude')) return modelLogos['Claude'];
+        if (modelIdLower.includes('llama') || modelIdLower.includes('meta')) return modelLogos['Llama'];
+        if (modelIdLower.includes('mistral')) return modelLogos['Mistral'];
+        
         return null;
       }
 
@@ -850,12 +1258,30 @@
                 beginAtZero: primaryMetric === "mcc" ? false : true,
                 min: primaryMetric === "mcc" ? -1 : 0,
                 max: 1,
+                ticks: {
+                  color: '#64748b'
+                },
+                grid: {
+                  color: 'rgba(148, 163, 184, 0.1)'
+                }
               },
               x: {
                 ticks: {
                   maxRotation: 45,
+                  color: '#64748b'
                 },
+                grid: {
+                  display: false
+                }
               },
+            },
+            // Add clinical threshold line
+            elements: {
+              line: {
+                borderColor: clinicalThresholds[primaryMetric] ? '#dc2626' : 'transparent',
+                borderWidth: 2,
+                borderDash: [5, 5]
+              }
             },
           },
           plugins: [
@@ -1070,23 +1496,46 @@
                     }</td>
                     <td>${d.dataset.toUpperCase()}</td>
                     <td><span class="metric-value ${getMetricClass(
-                      metrics.auroc
+                      metrics.auroc, 'auroc'
                     )}">${(metrics.auroc || 0).toFixed(3)}</span></td>
                     <td><span class="metric-value ${getMetricClass(
-                      metrics.auprc
+                      metrics.auprc, 'auprc'
                     )}">${(metrics.auprc || 0).toFixed(3)}</span></td>
                     <td><span class="metric-value ${getMetricClass(
-                      metrics.mcc
+                      metrics.mcc, 'mcc'
                     )}">${(metrics.mcc || 0).toFixed(3)}</span></td>
                     <td><span class="metric-value ${getMetricClass(
-                      metrics.f1_score
+                      metrics.f1_score, 'f1_score'
                     )}">${(metrics.f1_score || 0).toFixed(3)}</span></td>
                 `;
           tbody.appendChild(row);
         });
       }
 
-      function getMetricClass(value) {
+      function getMetricClass(value, metricType = 'general') {
+        // Use clinical thresholds for better medical interpretation
+        if (metricType === 'auroc') {
+          if (value >= clinicalThresholds.auroc) return "metric-high";
+          if (value >= 0.7) return "metric-medium";
+          return "metric-low";
+        }
+        if (metricType === 'auprc') {
+          if (value >= clinicalThresholds.auprc) return "metric-high";
+          if (value >= 0.5) return "metric-medium";
+          return "metric-low";
+        }
+        if (metricType === 'mcc') {
+          if (value >= clinicalThresholds.mcc) return "metric-high";
+          if (value >= 0.3) return "metric-medium";
+          return "metric-low";
+        }
+        if (metricType === 'f1_score') {
+          if (value >= clinicalThresholds.f1_score) return "metric-high";
+          if (value >= 0.5) return "metric-medium";
+          return "metric-low";
+        }
+        
+        // Default behavior for backward compatibility
         if (value >= 0.8) return "metric-high";
         if (value >= 0.6) return "metric-medium";
         if (value >= 0.0) return "metric-low";

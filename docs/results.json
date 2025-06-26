@@ -1707,6 +1707,29 @@
           "minpse": 0.091
         }
       }
+    },
+    {
+      "model_id": "DeepseekR1Llama8b",
+      "task_id": "sepsis",
+      "dataset": "miiv",
+      "run_id": "20250620_211315",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.5,
+          "auprc": 0.023,
+          "normalized_auprc": 0.912,
+          "specificity": 0.572,
+          "f1_score": 0.04,
+          "accuracy": 0.567,
+          "balanced_accuracy": 0.466,
+          "precision": 0.021,
+          "recall": 0.36,
+          "mcc": -0.022,
+          "kappa": -0.008,
+          "minpse": 0.028
+        }
+      }
     }
   ]
 }
