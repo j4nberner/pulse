@@ -3,6 +3,7 @@ from typing import Any, Dict, List, Optional, Set
 
 import numpy as np
 import pandas as pd
+import re
 
 from src.preprocessing.preprocessing_advanced.preprocessing_advanced import (
     PreprocessorAdvanced,
@@ -666,13 +667,13 @@ def get_task_specific_content(task_name: str) -> Dict[str, str]:
 def extract_confidence(output: Dict[str, Any]) -> float:
     """Extract confidence value from LLM output with fallback logic."""
     if "confidence" in output:
-        confidence = output.get("confidence", 50)
+        confidence = output.get("confidence", 0)
         # Handle string values from LLM output
         if isinstance(confidence, str):
             try:
                 confidence = float(confidence)
             except ValueError:
-                confidence = 50
+                confidence = 0
         return confidence / 100.0
     else:
         # Use probability as confidence indicator when confidence not provided
@@ -721,3 +722,33 @@ def filter_na_columns(patient_data: pd.Series) -> pd.Series:
     temp_df = pd.DataFrame([patient_data])
     filtered_df = temp_df.filter(regex=r"^(?!.*_na(_\d+)?$)")
     return filtered_df.iloc[0]
+
+
+def parse_numeric_value(value, default=0):
+    """
+    Parse a numeric value: return float if float, int if int, float from string, else default.
+    If value is None or missing, return "unknown".
+    """
+    if value is None:
+        return "unknown"
+    if isinstance(value, float):
+        return value
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str):
+        s = value.strip().strip("\"'")
+
+        numeric_match = re.search(r"(-?\d+\.?\d*)", s)
+        if numeric_match:
+            try:
+                num_str = numeric_match.group(1)
+                if "." in num_str:
+                    return float(num_str)
+                else:
+                    return int(num_str)
+            except Exception:
+                pass
+    logger.warning(
+        "Failed to parse numeric value from '%s', returning default: %s", value, default
+    )
+    return default

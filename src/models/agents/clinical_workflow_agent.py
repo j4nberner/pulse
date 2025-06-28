@@ -22,6 +22,7 @@ from src.util.agent_util import (
     validate_features,
     validate_lab_request,
     format_demographics_str,
+    parse_numeric_value,
 )
 from src.util.data_util import (
     get_all_feature_groups,
@@ -189,8 +190,12 @@ class ClinicalWorkflowAgent(PulseAgent):
                     "reasoning": initial_output.get(
                         "explanation", initial_output.get("reasoning", "")
                     ),
-                    "probability": initial_output.get("probability", 50),
-                    "confidence": initial_output.get("confidence", 50),
+                    "probability": parse_numeric_value(
+                        initial_output.get("probability", 50), 50
+                    ),
+                    "confidence": parse_numeric_value(
+                        initial_output.get("confidence", 0), 0
+                    ),
                 }
             )
 
@@ -291,8 +296,12 @@ class ClinicalWorkflowAgent(PulseAgent):
                         "reasoning": updated_output.get(
                             "explanation", updated_output.get("reasoning", "")
                         ),
-                        "probability": updated_output.get("probability", 50),
-                        "confidence": updated_output.get("confidence", 50),
+                        "probability": parse_numeric_value(
+                            updated_output.get("probability", 50), 50
+                        ),
+                        "confidence": parse_numeric_value(
+                            updated_output.get("confidence", 0), 0
+                        ),
                     }
                 )
 
@@ -512,7 +521,7 @@ With only vital signs available, confidence should typically be 50-70. Higher co
 Previous Assessment:
 - Reasoning: {previous_assessment.get('explanation', previous_assessment.get('reasoning', ''))}
 - Current probability: {int(float(previous_assessment['probability']) * 100) if isinstance(previous_assessment['probability'], (int, float)) and previous_assessment['probability'] <= 1 else int(previous_assessment['probability'])}%
-- Current confidence: {int(float(previous_assessment.get('confidence', previous_assessment['probability'])) * 100) if isinstance(previous_assessment.get('confidence', previous_assessment['probability']), (int, float)) and previous_assessment.get('confidence', previous_assessment['probability']) <= 1 else int(previous_assessment.get('confidence', previous_assessment['probability']))}%
+- Current confidence: {int(float(previous_assessment.get('confidence', 0)) * 100) if isinstance(previous_assessment.get('confidence', 0), (int, float)) and previous_assessment.get('confidence', 0) <= 1 else int(previous_assessment.get('confidence', 0))}%
 
 Since no additional tests are available, respond with an empty test list.
 
@@ -549,7 +558,7 @@ Respond in JSON format:
 Previous Assessment:
 - Reasoning: {previous_assessment.get('explanation', previous_assessment.get('reasoning', ''))}
 - Current probability: {int(float(previous_assessment['probability']) * 100) if isinstance(previous_assessment['probability'], (int, float)) and previous_assessment['probability'] <= 1 else int(previous_assessment['probability'])}%
-- Current confidence: {int(float(previous_assessment.get('confidence', previous_assessment['probability'])) * 100) if isinstance(previous_assessment.get('confidence', previous_assessment['probability']), (int, float)) and previous_assessment.get('confidence', previous_assessment['probability']) <= 1 else int(previous_assessment.get('confidence', previous_assessment['probability']))}%
+- Current confidence: {int(float(previous_assessment.get('confidence', 0)) * 100) if isinstance(previous_assessment.get('confidence', 0), (int, float)) and previous_assessment.get('confidence', 0) <= 1 else int(previous_assessment.get('confidence', 0))}%
 {''.join(analyzed_summary)}
 
 Available Tests to Order:
@@ -562,7 +571,7 @@ Clinical Context:
 
 Guidelines for test selection:
 - Use only the EXACT abbreviations shown as keywords in the list above. Do NOT use full names, group names, or name variations.
-- Select a maximum of 2-6 of the most clinically relevant tests.
+- Select a maximum of 4-10 of the most clinically relevant tests.
 - Focus on tests that will help confirm or rule out your differential diagnosis.
 - Prioritize tests that directly assess organ function relevant to your suspected diagnosis.
 
@@ -570,7 +579,7 @@ Respond in JSON format:
 {{
     "diagnosis": "lab-ordering-decision",
     "probability": XX (integer between 0 and 100, where 0 means {self.task_content['task_name']} will not occur and 100 means {self.task_content['task_name']} will definitely occur; probability is your best estimate of the likelihood of the complication),
-    "explanation": "Why you want these specific tests and how they will help your decision-making (MAX 200 words)",
+    "explanation": "Why you want these specific tests and how they will help your decision-making (MAX 100 words)",
     "requested_tests": ["test1", "test2", "test3"],
     "confidence": XX (integer between 0 and 100, where 0 means not confident at all and 100 means very confident in your decision; confidence reflects your certainty in your own reasoning based on the available data)
 }}
@@ -597,7 +606,7 @@ Only use exact abbreviations from the list above."""
 Previous Assessment:
 - Reasoning: {previous_assessment.get('explanation', previous_assessment.get('reasoning', ''))}
 - Previous probability: {int(float(previous_assessment['probability']) * 100) if isinstance(previous_assessment['probability'], (int, float)) and previous_assessment['probability'] <= 1 else int(previous_assessment['probability'])}%
-- Previous confidence: {int(float(previous_assessment.get('confidence', previous_assessment['probability'])) * 100) if isinstance(previous_assessment.get('confidence', previous_assessment['probability']), (int, float)) and previous_assessment.get('confidence', previous_assessment['probability']) <= 1 else int(previous_assessment.get('confidence', previous_assessment['probability']))}%
+- Previous confidence: {int(float(previous_assessment.get('confidence', 0)) * 100) if isinstance(previous_assessment.get('confidence', 0), (int, float)) and previous_assessment.get('confidence', 0) <= 1 else int(previous_assessment.get('confidence', 0))}%
 
 New Laboratory Results (Over {monitoring_hours}-Hour Monitoring Period):
 {labs_str}
@@ -638,18 +647,16 @@ Respond in JSON format:
             for i, assessment in enumerate(assessment_history):
                 # Convert probability and confidence to float, then to 0-100 scale
                 try:
-                    probability = float(assessment["probability"])
-                    confidence = float(
-                        assessment.get("confidence", assessment["probability"])
-                    )
+                    probability = parse_numeric_value(assessment["probability"], 50)
+                    confidence = parse_numeric_value(assessment.get("confidence", 0), 0)
                     # Convert to 0-100 scale if stored as 0-1
-                    if probability <= 1:
+                    if isinstance(probability, float) and probability <= 1:
                         probability = probability * 100
-                    if confidence <= 1:
+                    if isinstance(confidence, float) and confidence <= 1:
                         confidence = confidence * 100
                 except (ValueError, TypeError):
                     probability = 50.0
-                    confidence = 50.0
+                    confidence = 0.0
 
                 explanation = assessment.get("explanation") or assessment.get(
                     "reasoning"

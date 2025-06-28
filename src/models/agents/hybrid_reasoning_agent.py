@@ -2,7 +2,7 @@ import logging
 import os
 import glob
 import joblib
-from typing import Any, Dict, Optional, Set, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 import pandas as pd
 
@@ -12,13 +12,13 @@ from src.preprocessing.preprocessing_advanced.preprocessing_advanced import (
 )
 from src.util.agent_util import (
     create_error_response,
-    extract_confidence,
     filter_na_columns,
     format_clinical_data,
     format_clinical_text,
     get_task_specific_content,
     get_monitoring_period_hours,
     format_demographics_str,
+    parse_numeric_value,
 )
 from src.util.data_util import (
     get_feature_name,
@@ -255,12 +255,11 @@ class HybridReasoningAgent(PulseAgent):
 
             # Store the converted clinical probability for later use
             clinical_prob_raw = integration_output.get("probability", 50)
-            # Convert from 0-1 range back to percentage for internal calculations
-            clinical_prob = (
-                int(clinical_prob_raw * 100)
-                if clinical_prob_raw < 1
-                else int(clinical_prob_raw)
-            )
+            clinical_prob = parse_numeric_value(clinical_prob_raw, 50)
+            if isinstance(clinical_prob, float) and clinical_prob < 1:
+                clinical_prob = int(clinical_prob * 100)
+            else:
+                clinical_prob = int(clinical_prob)
             state["clinical_probability"] = clinical_prob
 
             # Determine if detailed investigation is needed
@@ -276,7 +275,8 @@ class HybridReasoningAgent(PulseAgent):
                 "probability_difference": prob_difference,
                 "ml_confidence": ml_conf,
                 "clinical_confidence": int(
-                    extract_confidence(integration_output) * 100
+                    parse_numeric_value(integration_output.get("confidence", 0), 0)
+                    * 100
                 ),
             }
 
@@ -325,8 +325,8 @@ class HybridReasoningAgent(PulseAgent):
                 else:
                     max_deviation = 0.8
 
-                investigation_prob = state["investigation_results"].get(
-                    "probability", 0.5
+                investigation_prob = parse_numeric_value(
+                    state["investigation_results"].get("probability", 0.5), 0.5
                 )
                 if (
                     isinstance(investigation_prob, (int, float))
@@ -1087,28 +1087,46 @@ Clinical Context:
             ml_conf = state.get("ml_confidence", 0.5)
 
             clinical_assessment = state.get("clinical_assessment", {})
-            clinical_prob = clinical_assessment.get("probability", 0.5)
-            clinical_conf = clinical_assessment.get("confidence", 50) / 100.0
+            clinical_prob = parse_numeric_value(
+                clinical_assessment.get("probability", 0.5), 0.5
+            )
+            clinical_conf = (
+                parse_numeric_value(clinical_assessment.get("confidence", 0), 0) / 100.0
+            )
 
             # Use dampened investigation results if available
             final_clinical_prob = clinical_prob
             if state.get("needs_investigation", False):
                 if state.get("dampened_investigation_results"):
                     # Use dampened results
-                    final_clinical_prob = state["dampened_investigation_results"].get(
-                        "probability", clinical_prob
+                    final_clinical_prob = parse_numeric_value(
+                        state["dampened_investigation_results"].get(
+                            "probability", clinical_prob
+                        ),
+                        clinical_prob,
                     )
                     clinical_conf = (
-                        state["dampened_investigation_results"].get("confidence", 80)
+                        parse_numeric_value(
+                            state["dampened_investigation_results"].get(
+                                "confidence", 0
+                            ),
+                            0,
+                        )
                         / 100.0
                     )
                 elif state.get("investigation_results"):
                     # Use original results
                     investigation_results = state["investigation_results"]
-                    final_clinical_prob = investigation_results.get(
-                        "probability", clinical_prob
+                    final_clinical_prob = parse_numeric_value(
+                        investigation_results.get("probability", clinical_prob),
+                        clinical_prob,
                     )
-                    clinical_conf = investigation_results.get("confidence", 80) / 100.0
+                    clinical_conf = (
+                        parse_numeric_value(
+                            investigation_results.get("confidence", 0), 0
+                        )
+                        / 100.0
+                    )
 
             # Calculate confidence-weighted average
             total_weight = ml_conf + clinical_conf
@@ -1134,8 +1152,11 @@ Clinical Context:
                     )
                     is not None,
                     "metadata_original_clinical": (
-                        state.get("investigation_results", {}).get(
-                            "probability", clinical_prob
+                        parse_numeric_value(
+                            state.get("investigation_results", {}).get(
+                                "probability", clinical_prob
+                            ),
+                            clinical_prob,
                         )
                         if state.get("needs_investigation")
                         else clinical_prob

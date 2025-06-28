@@ -18,6 +18,7 @@ from src.util.agent_util import (
     get_specialist_system_message,
     get_task_specific_content,
     format_demographics_str,
+    parse_numeric_value,
 )
 
 logger = logging.getLogger("PULSE_logger")
@@ -338,24 +339,26 @@ Base your confidence on data completeness, clarity of findings, and strength of 
             for specialist_type, assessment in specialist_assessments.items():
                 # Convert probability to integer 0-100 for display
                 probability = assessment.get("probability", 50)
+                probability = parse_numeric_value(probability, 50)
                 if isinstance(probability, float) and 0 <= probability <= 1:
                     probability_display = int(round(probability * 100))
                 else:
                     probability_display = int(round(probability))
                 confidence = assessment.get("confidence", 50)
+                confidence = parse_numeric_value(confidence, 0)
                 explanation = assessment.get("explanation", "No explanation provided")
 
                 # Count valid assessments for confidence calculation
                 if not assessment.get("diagnosis", "").startswith(
                     ("error-", "insufficient-data-")
                 ):
-                    total_confidence += float(confidence)
+                    total_confidence += confidence
                     valid_assessments += 1
 
                 assessment_summary.append(
                     f"\n{specialist_type} Specialist:\n"
                     f"- Probability: {probability_display}%\n"
-                    f"- Confidence: {confidence}%\n"
+                    f"- Confidence: {int(round(confidence))}%\n"
                     f"- Assessment: {explanation}\n"
                 )
 
@@ -437,11 +440,11 @@ Average specialist confidence: {avg_confidence:.1f}%"""
             if isinstance(output, dict):
                 additional_metadata.update(
                     {
-                        f"metadata_{specialist_type}_confidence": output.get(
-                            "confidence", None
+                        f"metadata_{specialist_type}_confidence": parse_numeric_value(
+                            output.get("confidence", None)
                         ),
-                        f"metadata_{specialist_type}_probability": output.get(
-                            "probability", None
+                        f"metadata_{specialist_type}_probability": parse_numeric_value(
+                            output.get("probability", None)
                         ),
                     }
                 )
@@ -452,14 +455,12 @@ Average specialist confidence: {avg_confidence:.1f}%"""
 
             # Calculate agreement metrics
             probabilities = [
-                assessment.get("probability", 50)
+                parse_numeric_value(assessment.get("probability", 50), 50)
                 for assessment in specialist_assessments.values()
-                if isinstance(assessment.get("probability"), (int, float))
             ]
             confidences = [
-                assessment.get("confidence", 50)
+                parse_numeric_value(assessment.get("confidence", 0), 0)
                 for assessment in specialist_assessments.values()
-                if isinstance(assessment.get("confidence"), (int, float))
             ]
 
             if probabilities:
@@ -474,7 +475,9 @@ Average specialist confidence: {avg_confidence:.1f}%"""
                 highest_prob_specialist = (
                     max(
                         specialist_assessments.keys(),
-                        key=lambda x: specialist_assessments[x].get("probability", 0),
+                        key=lambda x: parse_numeric_value(
+                            specialist_assessments[x].get("probability", 0), 0
+                        ),
                     )
                     if specialist_assessments
                     else None
@@ -489,7 +492,9 @@ Average specialist confidence: {avg_confidence:.1f}%"""
                 highest_conf_specialist = (
                     max(
                         specialist_assessments.keys(),
-                        key=lambda x: specialist_assessments[x].get("confidence", 0),
+                        key=lambda x: parse_numeric_value(
+                            specialist_assessments[x].get("confidence", 0), 0
+                        ),
                     )
                     if specialist_assessments
                     else None

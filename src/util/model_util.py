@@ -588,15 +588,57 @@ def extract_last_json_block(text: str) -> Optional[str]:
 
 def fix_json_formatting(json_text: str) -> str:
     """Fix common JSON formatting issues."""
+    # Remove lines that are just a quoted brace (e.g., '"}"') or similar junk
+    if any(
+        re.match(r'^\s*"\s*}\s*"\s*,?\s*$', line)
+        or re.match(r'^\s*"\s*}\s*"\s*$', line)
+        for line in json_text.splitlines()
+    ):
+        lines = json_text.splitlines()
+        filtered_lines = [
+            line
+            for line in lines
+            if not re.match(r'^\s*"\s*}\s*"\s*,?\s*$', line)
+            and not re.match(r'^\s*"\s*}\s*"\s*$', line)
+        ]
+        json_text = "\n".join(filtered_lines)
+        logger.debug(
+            "Fixed junk lines (quoted braces) by removing them from JSON text."
+        )
+
+    # Remove incomplete key at the end (e.g., "conf)
+    incomplete_key_pattern = r',\s*\n?\s*"(?:[^"]*)$'
+    if re.search(incomplete_key_pattern, json_text):
+        json_text = re.sub(incomplete_key_pattern, "", json_text)
+        logger.debug("Fixed incomplete key at the end of JSON text.")
+
     # Fix unterminated strings
     if json_text.count('"') % 2 != 0:
         json_text += '"'
         logger.debug("Fixed unterminated string by adding closing quote.")
 
+    # Fix missing value after colon, replacing any '"key":}' or '"key":' with '"key": ""}'
+    if re.search(r'(":[ \t]*)}', json_text) or re.search(r'(":[ \t]*)$', json_text):
+        json_text = re.sub(r'(":[ \t]*)}', r'\1""}', json_text)
+        json_text = re.sub(r'(":[ \t]*)$', r'\1""', json_text)
+        logger.debug("Fixed missing value after colon by inserting empty string.")
+
+    # Fix unclosed arrays (relevant e.g. for clinical workflow agent)
+    open_brackets = json_text.count("[")
+    close_brackets = json_text.count("]")
+    if open_brackets > close_brackets:
+        json_text += "]" * (open_brackets - close_brackets)
+        logger.debug("Fixed unclosed array by adding closing bracket(s).")
+
     # Fix missing final brace
     if not json_text.endswith("}"):
         json_text += "}"
         logger.debug("Fixed unclosed JSON object by adding closing brace.")
+
+    # Remove trailing commas before closing braces/brackets
+    if re.search(r",\s*([\]}])", json_text):
+        json_text = re.sub(r",\s*([\]}])", r"\1", json_text)
+        logger.debug("Fixed trailing comma before closing braces")
 
     # Escape newlines in quoted strings
     def escape_newlines_in_strings(s: str) -> str:
@@ -605,7 +647,9 @@ def fix_json_formatting(json_text: str) -> str:
 
         return re.sub(r'"(.*?)"', repl, s, flags=re.DOTALL)
 
-    return escape_newlines_in_strings(json_text)
+    json_text = escape_newlines_in_strings(json_text)
+
+    return json_text
 
 
 def parse_llm_output(
