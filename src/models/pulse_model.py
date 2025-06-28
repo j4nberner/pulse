@@ -27,6 +27,7 @@ from src.util.model_util import (
 
 logger = logging.getLogger("PULSE_logger")
 
+os.environ["TORCHDYNAMO_DISABLE"] = "1" # Disabled to not get Gemma errors
 
 class PulseModel:
     """
@@ -539,7 +540,7 @@ class PulseLLMModel(PulseModel):
 
         # self.delete_model()
 
-        return float(np.mean(val_loss))
+        return 0.0 #float(np.mean(val_loss))
 
     def evaluate_sys_msgs(self, test_loader: Any, save_report: bool = True) -> float:
         """Evaluates the model on a given test set.
@@ -577,7 +578,6 @@ class PulseLLMModel(PulseModel):
         sys_msgs = system_message_samples(task=self.task_name)
 
         # Skip first n samples if specified
-        # Default to 0, meaning no samples are skipped unless explicitly specified
         skip_samples = self.params.get("skip_samples", 0)
         if skip_samples > 0:
             logger.info(

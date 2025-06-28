@@ -4,6 +4,7 @@ params:
   trainer_name: "MistralTrainer"
   model_id: "mistralai/Mistral-7B-Instruct-v0.3" # Model ID for Llama3, path to pretrained model (if any)
   type: "LLM" # Type of model (convML for conventional machine learning, convDL for conventional deep learning and LLM for large language models)
+  mode: "inference" # Mode of operation (inference, training)
   verbose: 2
   tuning: false # Whether to use prompt tuning
   num_epochs: 10 # Number of epochs for training

@@ -1,4 +1,3 @@
-# https://github.com/GoogleCloudPlatform/generative-ai/blob/main/gemini/getting-started/intro_gemini_2_5_flash.ipynb
 import logging
 import os
 import time
@@ -31,17 +30,17 @@ warnings.filterwarnings(
 logger = logging.getLogger("PULSE_logger")
 
 
-class Gemini2p5Model(PulseModel):
-    """Gemini2p5 model wrapper."""
+class ClaudeSonnet4Model(PulseModel):
+    """ClaudeSonnet4 model wrapper."""
 
     def __init__(self, params: Dict[str, Any], **kwargs) -> None:
-        """Initializes the Gemini2p5Model with parameters and paths.
+        """Initializes the ClaudeSonnet4Model with parameters and paths.
 
         Args:
             params: Configuration dictionary with model parameters.
             **kwargs: Additional optional parameters such as `output_dir` and `wandb`.
         """
-        model_name = kwargs.pop("model_name", "Gemini2p5Model")
+        model_name = kwargs.pop("model_name", "ClaudeSonnet4Model")
         super().__init__(model_name, params, **kwargs)
 
         required_params = [
@@ -81,7 +80,7 @@ class Gemini2p5Model(PulseModel):
         self.is_agent = False
         self.agent_instance = None
 
-    # TODO: Rename to generate_standard
+    # Rename to generate_standard
     def generate(
         self,
         input_text: str,
@@ -99,7 +98,7 @@ class Gemini2p5Model(PulseModel):
 
         # Format input using prompt template
         input_text = prompt_template_hf(
-            input_text, custom_system_message, self.model_name, task=self.task_name
+            input_text, custom_system_message, self.model_name
         )
 
         max_output_tokens = (

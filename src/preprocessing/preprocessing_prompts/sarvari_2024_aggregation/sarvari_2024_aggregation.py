@@ -174,7 +174,6 @@ def build_sarvari_query(
                     '  "explanation": "<a brief explanation for the prediction>"\n'
                     "}\n\n"
                 )
-                # '  "probability": "1.0",\n'
 
         # Add suffix
         lines.append("")

@@ -2,6 +2,7 @@ from .cnn_model import CNNModel, CNNTrainer
 from .deepseekr1_model import DeepseekR1Model
 from .gemini2p5flash_model import Gemini2p5Model
 from .gemma3_model import Gemma3Model
+from .gpt_model import GPTModel
 from .gru_model import GRUModel, GRUTrainer
 from .inceptiontime_model import InceptionTimeModel, InceptionTimeTrainer
 from .lightgbm_model import LightGBMModel, LightGBMTrainer
@@ -27,7 +28,7 @@ model_cls_name_dict = {
     "DeepseekR1Llama8bModel": DeepseekR1Model,
     "MistralModel": MistralModel,
     "Gemini2p5flashModel": Gemini2p5Model,
-    # "GPT4oModel": GPTModel,
+    "GPT4oModel": GPTModel,
 }
 
 trainer_cls_name_dict = {

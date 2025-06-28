@@ -12,9 +12,12 @@ import wandb
 from src.eval.metrics import MetricsTracker
 from src.models.pulse_model import PulseModel
 from src.util.config_util import set_seeds
-from src.util.model_util import (EarlyStopping, initialize_weights,
-                                 prepare_data_for_model_convdl,
-                                 save_torch_model)
+from src.util.model_util import (
+    EarlyStopping,
+    initialize_weights,
+    prepare_data_for_model_convdl,
+    save_torch_model,
+)
 
 # Set up logger
 logger = logging.getLogger("PULSE_logger")
@@ -360,9 +363,9 @@ class InceptionTimeModel(PulseModel, nn.Module):
                     "prediction": outputs.cpu().numpy(),
                     "label": labels.cpu().numpy(),
                     "age": features[:, 0, 0].cpu().numpy(),
-                    "sex": features[:, 0, 1].cpu().numpy(),
-                    "height": features[:, 0, 2].cpu().numpy(),
-                    "weight": features[:, 0, 3].cpu().numpy(),
+                    "sex": features[:, 1, 0].cpu().numpy(),
+                    "height": features[:, 2, 0].cpu().numpy(),
+                    "weight": features[:, 3, 0].cpu().numpy(),
                 }
                 # Append results to metrics tracker
                 metrics_tracker.add_results(outputs.cpu().numpy(), labels.cpu().numpy())
@@ -551,7 +554,9 @@ class InceptionTimeTrainer:
         # After training loop, load best model weights and save final model
         self.model = self.model.early_stopping.load_best_model(self.model)
         model_save_name = f"{self.model.model_name}_{self.task_name}_{self.dataset_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-        self.model.pretrained_model_path = save_torch_model(model_save_name, self.model, self.model_save_dir)
+        self.model.pretrained_model_path = save_torch_model(
+            model_save_name, self.model, self.model_save_dir
+        )
 
     def train_epoch(self, epoch: int, verbose: int = 1) -> None:
         """

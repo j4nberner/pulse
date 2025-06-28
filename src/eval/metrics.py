@@ -179,8 +179,8 @@ class MetricsTracker:
             "model_id": self.model_id,
             "task_id": self.task_id,
             "dataset": self.dataset_name,
-            "run_id": self.run_id,
             "prompting_id": kwargs.get("prompting_id", ""),
+            "run_id": self.run_id,
             "metrics_summary": self.summary,
         }
 
@@ -587,10 +587,14 @@ def calculate_all_metrics(
     if isinstance(y_pred, torch.Tensor):
         y_pred = y_pred.detach().cpu().numpy()
 
-    # Filter out nan values in y_pred and y_true
-    mask = ~np.isnan(y_pred) & ~np.isnan(y_true)
-    y_pred = y_pred[mask]
-    y_true = y_true[mask]
+    # Filter out NaN values in y_true and y_pred
+    valid_indices = ~np.isnan(y_true) & ~np.isnan(y_pred)
+    y_true = y_true[valid_indices]
+    y_pred = y_pred[valid_indices]
+    # Log the number of filtered values (NaNs)
+    num_filtered = np.size(y_true) - np.count_nonzero(valid_indices)
+    if num_filtered > 0:
+        logger.info(f"Filtered out {num_filtered} NaN value(s) from y_true/y_pred.")
 
     # Auto-detect if predictions are logits or probabilities
     if np.any((y_pred < 0) | (y_pred > 1)):
