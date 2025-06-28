@@ -21,6 +21,7 @@ from src.util.agent_util import (
     get_task_specific_content,
     validate_features,
     validate_lab_request,
+    format_demographics_str,
 )
 from src.util.data_util import (
     get_all_feature_groups,
@@ -426,17 +427,7 @@ class ClinicalWorkflowAgent(PulseAgent):
             monitoring_hours = get_monitoring_period_hours(state["patient_data"])
 
             # Format patient demographics
-            demo_text = []
-            if "age" in demographics:
-                demo_text.append(f"Age: {demographics['age']} years")
-            if "sex" in demographics:
-                demo_text.append(f"Sex: {demographics['sex']}")
-            if "weight" in demographics:
-                demo_text.append(f"Weight: {demographics['weight']} kg")
-
-            demographics_str = (
-                ", ".join(demo_text) if demo_text else "Demographics: Not available"
-            )
+            demographics_str = format_demographics_str(demographics)
 
             # Format vital signs using helper method
             vitals_text = format_clinical_text(vital_signs)
@@ -447,28 +438,29 @@ class ClinicalWorkflowAgent(PulseAgent):
 Patient Demographics:
 {demographics_str}
 
-Current vital signs (over {monitoring_hours}-hour monitoring period):
+Current Vital Signs (Over {monitoring_hours}-Hour Monitoring Period):
 {vitals_str}
 
 Clinical Context:
 {self.task_content['task_info']}
 
-Based on these vital signs, patient demographics, and temporal patterns (where available), provide your initial clinical assessment.
+Based on all available information (including vital signs, patient demographics, and temporal patterns where available), provide your initial clinical assessment. Carefully consider the overall clinical picture, integrating both static and dynamic findings, and evaluate for the presence or absence of {self.task_content['complication_name']}.
 
-Pay attention to temporal patterns in the data:
-- Trend direction (stable, slowly/moderately/rapidly increasing/decreasing)
-- Value normality (normal, slightly/very low/high)
-- Clinical significance of combined trend and abnormality patterns
+Pay attention to:
+- The overall clinical context and plausibility of the outcome
+- The presence or absence of key clinical features supporting or arguing against the outcome
+- The clinical significance of temporal trends and the interplay between abnormal and normal findings
 
 Respond in JSON format:
 {{
     "diagnosis": "preliminary-{self.task_content['task_name']}-risk",
     "probability": XX (integer between 0 and 100, where 0 means {self.task_content['task_name']} will not occur and 100 means {self.task_content['task_name']} will definitely occur; probability is your best estimate of the likelihood of the complication),
-    "explanation": "Your detailed clinical reasoning including differential diagnosis and temporal pattern assessment (MAX 200 words)",
+    "explanation": "Your detailed clinical reasoning, integrating all available information and justifying your probability estimate (MAX 200 words)",
     "confidence": XX (integer between 0 and 100, where 0 means not confident at all and 100 means very confident in your assessment; confidence reflects your certainty in your own reasoning based on the available data)
 }}
 
-IMPORTANT: With only vital signs available, confidence should typically be 50-70. Higher confidence (>75) should only be used when clinical picture is very clear."""
+Important: 
+With only vital signs available, confidence should typically be 50-70. Higher confidence (>75) should only be used when the clinical picture is very clear."""
 
         return format_prompt
 
@@ -552,7 +544,7 @@ Respond in JSON format:
                     f"\nTests previously analyzed: {', '.join(all_analyzed_features)}"
                 )
 
-            return f"""Based on your previous assessment, decide which additional tests to order.
+            return f"""Based on your previous assessment, decide which additional tests to order next to clarify the clinical picture and help determine the likelihood of {self.task_content['complication_name']}.
 
 Previous Assessment:
 - Reasoning: {previous_assessment.get('explanation', previous_assessment.get('reasoning', ''))}
@@ -560,13 +552,16 @@ Previous Assessment:
 - Current confidence: {int(float(previous_assessment.get('confidence', previous_assessment['probability'])) * 100) if isinstance(previous_assessment.get('confidence', previous_assessment['probability']), (int, float)) and previous_assessment.get('confidence', previous_assessment['probability']) <= 1 else int(previous_assessment.get('confidence', previous_assessment['probability']))}%
 {''.join(analyzed_summary)}
 
-Available tests to order:
+Available Tests to Order:
 {''.join(test_list)}
 
-Clinical goal: Determine risk of {self.task_content['complication_name']}
+Clinical Goal: Determine risk of {self.task_content['complication_name']}
+
+Clinical Context:
+{self.task_content['task_info']}
 
 Guidelines for test selection:
-- Use only the EXACT abbreviations shown in the list above (e.g., "crea", "bun", "wbc", "ph", "pco2"). Do NOT use full names, group names, or name variations.
+- Use only the EXACT abbreviations shown as keywords in the list above. Do NOT use full names, group names, or name variations.
 - Select a maximum of 2-6 of the most clinically relevant tests.
 - Focus on tests that will help confirm or rule out your differential diagnosis.
 - Prioritize tests that directly assess organ function relevant to your suspected diagnosis.
@@ -579,7 +574,8 @@ Respond in JSON format:
     "requested_tests": ["test1", "test2", "test3"],
     "confidence": XX (integer between 0 and 100, where 0 means not confident at all and 100 means very confident in your decision; confidence reflects your certainty in your own reasoning based on the available data)
 }}
-REMEMBER: Only use exact abbreviations from the list above."""
+Remember:
+Only use exact abbreviations from the list above."""
 
         return format_prompt
 
@@ -596,21 +592,24 @@ REMEMBER: Only use exact abbreviations from the list above."""
 
             previous_assessment = state["assessment_history"][-1]
 
-            return f"""Update your clinical assessment with new laboratory results.
+            return f"""Update your clinical assessment with the new laboratory results, integrating them with all previously available information. Carefully consider how these new findings affect your overall assessment of the risk for {self.task_content['complication_name']}. Do not focus solely on trends or isolated abnormalities—evaluate the entire clinical context and how the new data supports or refutes your hypotheses.
 
 Previous Assessment:
 - Reasoning: {previous_assessment.get('explanation', previous_assessment.get('reasoning', ''))}
 - Previous probability: {int(float(previous_assessment['probability']) * 100) if isinstance(previous_assessment['probability'], (int, float)) and previous_assessment['probability'] <= 1 else int(previous_assessment['probability'])}%
 - Previous confidence: {int(float(previous_assessment.get('confidence', previous_assessment['probability'])) * 100) if isinstance(previous_assessment.get('confidence', previous_assessment['probability']), (int, float)) and previous_assessment.get('confidence', previous_assessment['probability']) <= 1 else int(previous_assessment.get('confidence', previous_assessment['probability']))}%
 
-New Laboratory Results (over {monitoring_hours}-hour monitoring period):
+New Laboratory Results (Over {monitoring_hours}-Hour Monitoring Period):
 {labs_str}
+
+Clinical Context:
+{self.task_content['task_info']}
 
 Respond in JSON format:
 {{
     "diagnosis": "updated-{self.task_content['task_name']}-assessment",
     "probability": XX (integer between 0 and 100, where 0 means {self.task_content['task_name']} will not occur and 100 means {self.task_content['task_name']} will definitely occur; probability is your best estimate of the likelihood of the complication),
-    "explanation": "How the new labs change your assessment and interpretation of abnormal values (MAX 200 words)",
+    "explanation": "How the new labs, in the context of all prior data, change your assessment and interpretation of the risk (MAX 200 words)",
     "confidence": XX (integer between 0 and 100, where 0 means not confident at all and 100 means very confident in your assessment; confidence reflects your certainty in your own reasoning based on the available data)
 }}"""
 
@@ -628,16 +627,7 @@ Respond in JSON format:
             monitoring_hours = get_monitoring_period_hours(state["patient_data"])
 
             # Format demographics
-            demo_text = []
-            if "age" in demographics:
-                demo_text.append(f"Age: {demographics['age']} years")
-            if "sex" in demographics:
-                demo_text.append(f"Sex: {demographics['sex']}")
-            if "weight" in demographics:
-                demo_text.append(f"Weight: {demographics['weight']} kg")
-            demographics_str = (
-                ", ".join(demo_text) if demo_text else "Demographics: Not available"
-            )
+            demographics_str = format_demographics_str(demographics)
 
             # Format all clinical data using helper method
             clinical_text = format_clinical_text(clinical_data)
@@ -661,23 +651,29 @@ Respond in JSON format:
                     probability = 50.0
                     confidence = 50.0
 
+                explanation = assessment.get("explanation") or assessment.get(
+                    "reasoning"
+                )
                 assessment_summary.append(
-                    f"Step {i+1} ({assessment['step']}): Probability={probability:.1f}%, "
-                    f"Confidence={confidence:.1f}%"
+                    f"Step {i+1}: Probability={probability:.1f}%, Confidence={confidence:.1f}%\nReasoning: {explanation if explanation else 'No explanation provided.'}"
                 )
 
             return f"""Patient Demographics:
 {demographics_str}
 
-Clinical Data Summary (over {monitoring_hours}-hour monitoring period):
+Clinical Data (Over {monitoring_hours}-Hour Monitoring Period):
 {clinical_str}
 
 Assessment Progression:
 {chr(10).join(assessment_summary)}
 
-Task: Determine if this ICU patient will develop {self.task_content['complication_name']}.
+Clinical Context:
+{self.task_content['task_info']}
 
-Clinical Context: {self.task_content['task_info']}"""
+Final Assessment Instructions:
+- Review the entire assessment history and all clinical data.
+- Integrate all information for a final, well-justified prediction.
+- Justify your probability and confidence based on all data."""
 
         return format_prompt
 

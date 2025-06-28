@@ -67,6 +67,8 @@ def format_clinical_data(
             patient_demographics["age"] = patient_data["age"]
         if "sex" in patient_data.index:
             patient_demographics["sex"] = patient_data["sex"]
+        if "height" in patient_data.index:
+            patient_demographics["height"] = patient_data["height"]
         if "weight" in patient_data.index:
             patient_demographics["weight"] = patient_data["weight"]
         result["demographics"] = patient_demographics
@@ -182,12 +184,25 @@ def format_clinical_text(clinical_data: Dict[str, Dict]) -> List[str]:
     return formatted_lines
 
 
-def filter_na_columns(patient_data: pd.Series) -> pd.Series:
-    """Filter out columns with '_na' suffixes like Sarvari preprocessor does."""
-    # Convert to DataFrame for regex filtering, then back to Series
-    temp_df = pd.DataFrame([patient_data])
-    filtered_df = temp_df.filter(regex=r"^(?!.*_na(_\d+)?$)")
-    return filtered_df.iloc[0]
+def format_demographics_str(demographics: dict) -> str:
+    """
+    Format demographics dictionary into a string for prompt templates.
+    Always includes age, sex, height, and weight if present.
+    Age, height, and weight are formatted as integers if possible.
+    """
+    demo_text = []
+    if "age" in demographics and demographics["age"] is not None:
+        age_val = int(round(float(demographics["age"])))
+        demo_text.append(f"Age: {age_val} years")
+    if "sex" in demographics and demographics["sex"] is not None:
+        demo_text.append(f"Sex: {demographics['sex']}")
+    if "height" in demographics and demographics["height"] is not None:
+        height_val = int(round(float(demographics["height"])))
+        demo_text.append(f"Height: {height_val} cm")
+    if "weight" in demographics and demographics["weight"] is not None:
+        weight_val = int(round(float(demographics["weight"])))
+        demo_text.append(f"Weight: {weight_val} kg")
+    return ", ".join(demo_text) if demo_text else "Demographics: Not available"
 
 
 # ===========================
@@ -634,7 +649,7 @@ def get_task_specific_content(task_name: str) -> Dict[str, str]:
             "task_name": "sepsis",
             "complication_name": "sepsis",
             "prediction_description": "prediction of the onset of sepsis",
-            "task_info": "Sepsis is life-threatening organ dysfunction caused by a dysregulated host response to infection. It is diagnosed by an increase in the SOFA score of ≥2 points in the presence of suspected infection. Key indicators include fever, tachycardia, tachypnea, altered mental status, and laboratory abnormalities.",
+            "task_info": "Sepsis is a life-threatening organ dysfunction caused by a dysregulated host response to infection. It is diagnosed by an increase in the SOFA score of ≥2 points in the presence of suspected infection. Key indicators include fever, tachycardia, tachypnea, altered mental status, and laboratory abnormalities.",
             "task_info_long": "Sepsis is a life-threatening condition characterized by organ dysfunction resulting from a dysregulated host response to infection. It is diagnosed when a suspected or confirmed infection is accompanied by an acute increase of two or more points in the patient’s Sequential Organ Failure Assessment (SOFA) score relative to their baseline. The SOFA score evaluates six physiological parameters: the ratio of partial pressure of oxygen to the fraction of inspired oxygen, mean arterial pressure, serum bilirubin concentration, platelet count, serum creatinine level, and the Glasgow Coma Score. A complication of sepsis is septic shock, which is marked by a drop in blood pressure and elevated lactate levels. Indicators of suspected infection may include positive blood cultures or the initiation of antibiotic therapy.",
         }
     return {
@@ -698,3 +713,11 @@ def get_monitoring_period_hours(patient_data: pd.Series) -> int:
         if len(parts) >= 2 and parts[-1].isdigit():
             window_indices.add(int(parts[-1]))
     return len(window_indices)
+
+
+def filter_na_columns(patient_data: pd.Series) -> pd.Series:
+    """Filter out columns with '_na' suffixes like Sarvari preprocessor does."""
+    # Convert to DataFrame for regex filtering, then back to Series
+    temp_df = pd.DataFrame([patient_data])
+    filtered_df = temp_df.filter(regex=r"^(?!.*_na(_\d+)?$)")
+    return filtered_df.iloc[0]

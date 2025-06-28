@@ -18,6 +18,7 @@ from src.util.agent_util import (
     format_clinical_text,
     get_task_specific_content,
     get_monitoring_period_hours,
+    format_demographics_str,
 )
 from src.util.data_util import (
     get_feature_name,
@@ -36,7 +37,8 @@ class HybridReasoningAgent(PulseAgent):
     Workflow:
     1. ML Risk Stratification (XGBoost prediction + feature importance)
     2. Clinical Context Integration (interpret ML findings clinically)
-    3. Detailed Investigation (conditional based on confidence/a        return task_features.get(self.task_name, set())fidence-Weighted Synthesis (combine ML + clinical reasoning)
+    3. Detailed Investigation (conditional based on confidence/agreement)
+    4. Confidence-Weighted Synthesis (combine ML + clinical reasoning)
     """
 
     def __init__(
@@ -46,7 +48,7 @@ class HybridReasoningAgent(PulseAgent):
         dataset_name: Optional[str] = None,
         output_dir: Optional[str] = None,
         metrics_tracker: Optional[Any] = None,
-        ml_confidence_threshold: float = 0.7,
+        ml_confidence_threshold: float = 0.8,
         agreement_threshold: float = 0.2,
         top_features_count: int = 10,
         **kwargs,
@@ -735,17 +737,18 @@ class HybridReasoningAgent(PulseAgent):
 
             return f"""An XGBoost model has analyzed this ICU patient's data for {self.task_content['task_name']} risk prediction.
 
-XGBOOST MODEL ASSESSMENT:
+XGBoost Model Assessment:
 - Predicted probability of {self.task_content['task_name']}: {ml_prob:.0f}%
 - Model confidence: {ml_conf:.0f}%
 
-TOP IMPORTANT FEATURES (by XGBoost feature importance):
+Top Important Features (by XGBoost Feature Importance):
 {features_str}
 
 Clinical Context:
 {self.task_content['task_info']}
 
-TASK: Provide clinical interpretation of the XGBoost model's assessment.
+Task: 
+Provide clinical interpretation of the XGBoost model's assessment.
 
 Consider:
 - What do these important features suggest clinically?
@@ -773,16 +776,7 @@ Respond in JSON format:
 
             # Format demographics
             demographics = clinical_data.get("demographics", {})
-            demo_text = []
-            if "age" in demographics:
-                demo_text.append(f"Age: {demographics['age']} years")
-            if "sex" in demographics:
-                demo_text.append(f"Sex: {demographics['sex']}")
-            if "weight" in demographics:
-                demo_text.append(f"Weight: {demographics['weight']} kg")
-            demographics_str = (
-                ", ".join(demo_text) if demo_text else "Demographics: Not available"
-            )
+            demographics_str = format_demographics_str(demographics)
 
             # Get monitoring period from the data
             monitoring_hours = get_monitoring_period_hours(state["patient_data"])
@@ -809,18 +803,21 @@ Respond in JSON format:
 Patient Demographics:
 {demographics_str}
 
-XGBOOST MODEL RESULTS:
+XGBoost Model Results:
 - XGBoost predicted probability: {ml_results['probability']:.0f}%
 - XGBoost confidence: {ml_results['confidence']:.0f}%
 - XGBoost identified key factors: {ml_features_str}
 
-CLINICAL DATA FOR KEY FACTORS (over {monitoring_hours}-hour monitoring period):
+Clinical Data for Key Factors (Over {monitoring_hours}-Hour Monitoring Period):
 {clinical_str}
 
-CLINICAL ASSESSMENT TASK:
+Clinical Context:
+{self.task_content['task_info']}
+
+Clinical Assessment Task:
 Based on your clinical expertise and the actual patient data, provide your independent assessment.
 
-IMPORTANT LIMITATIONS:
+Important Limitations:
 - Available data is limited to laboratory values and vital signs only
 - No information on: medications, physical examination, patient history, imaging, microbiology
 - Your confidence should reflect these data limitations
@@ -838,7 +835,10 @@ Respond in JSON format:
     "explanation": "Your clinical reasoning based on patient data, noting agreement/disagreement with XGBoost assessment (MAX 200 words)",
     "confidence": XX (integer between 0 and 100, where 0 means not confident at all and 100 means very confident in your assessment; confidence reflects your certainty in your own reasoning based on the available data),
     "ai_agreement": "agree/partial/disagree (how well your clinical assessment aligns with the XGBoost prediction)"
-}}"""
+}}
+
+Warning: 
+Any significant deviation from the XGBoost-predicted probability for {self.task_content['task_name']} must be backed by a strong clinical justification."""
 
         return format_prompt
 
@@ -869,29 +869,32 @@ Respond in JSON format:
                 new_display = [get_feature_name(f) for f in sorted(new_features)]
 
                 feature_breakdown = f"""
-FEATURE ANALYSIS BREAKDOWN:
+Feature Analysis Breakdown:
 - Previously analyzed features: {', '.join(step2_display)}
 - Newly introduced features: {', '.join(new_display)}
 - Total features for investigation: {len(focus_features)}
 
-FOCUS: Pay special attention to newly introduced features that may explain the disagreement."""
+Focus:
+Pay special attention to newly introduced features that may explain the disagreement."""
             elif new_features:
                 # Convert to full names for display
                 new_display = [get_feature_name(f) for f in sorted(new_features)]
 
                 feature_breakdown = f"""
-FEATURE ANALYSIS BREAKDOWN:
+Feature Analysis Breakdown:
 - Newly introduced features: {', '.join(new_display)}
 - Total features for investigation: {len(focus_features)}
 
-FOCUS: These are additional clinical parameters not previously considered."""
+Focus:
+These are additional clinical parameters not previously considered."""
             else:
                 feature_breakdown = f"""
-FEATURE ANALYSIS BREAKDOWN:
+Feature Analysis Breakdown:
 - All features were previously analyzed in initial assessment
 - Total features for investigation: {len(focus_features)}
 
-FOCUS: Look for subtle patterns and interactions in the existing data."""
+Focus:
+Look for subtle patterns and interactions in the existing data."""
 
             return f"""DETAILED CLINICAL INVESTIGATION
 
@@ -904,6 +907,9 @@ DISAGREEMENT DETECTED:
 
 DETAILED CLINICAL DATA (over {monitoring_hours}-hour monitoring period):
 {clinical_str}
+
+Clinical Context:
+{self.task_content['task_info']}
 
 INVESTIGATION TASK:
 Conduct a focused analysis to resolve the disagreement between XGBoost and clinical assessments.
@@ -919,7 +925,7 @@ Respond in JSON format:
 {{
     "diagnosis": "detailed-investigation-{self.task_content['task_name']}",
     "probability": XX (integer between 0 and 100, where 0 means {self.task_content['task_name']} will not occur and 100 means {self.task_content['task_name']} will definitely occur; refined probability assessment after detailed investigation),
-    "explanation": "Detailed analysis explaining the disagreement and your refined assessment based on thorough investigation",
+    "explanation": "Analysis explaining the disagreement and your refined assessment based on thorough investigation (MAX 200 words)",
     "confidence": XX (integer between 0 and 100, where 0 means not confident at all and 100 means very confident in your assessment; confidence reflects your certainty in your own reasoning based on the available data)
 }}"""
 
@@ -936,21 +942,11 @@ Respond in JSON format:
             investigation_results = formatted_data.get("investigation_results")
 
             # Format demographics
-            demo_text = []
-            if "age" in demographics:
-                demo_text.append(f"Age: {demographics['age']} years")
-            if "sex" in demographics:
-                demo_text.append(f"Sex: {demographics['sex']}")
-            if "weight" in demographics:
-                demo_text.append(f"Weight: {demographics['weight']} kg")
-            demographics_str = (
-                ", ".join(demo_text) if demo_text else "Demographics: Not available"
-            )
+            demographics_str = format_demographics_str(demographics)
 
             # Format key AI features
             ai_features = []
             for feat_display_name, importance in ml_assessment["key_features"]:
-                # Use the already formatted display name
                 ai_features.append(feat_display_name)
 
             investigation_text = ""
@@ -968,11 +964,11 @@ Respond in JSON format:
                     investigation_prob_text = f"{investigation_prob}%"
 
                 investigation_text = f"""
-DETAILED INVESTIGATION RESULTS:
+Detailed Investigation Results:
 - Refined probability: {investigation_prob_text}
 - Investigation findings: {investigation_results.get('explanation', 'No details available')}"""
             else:
-                investigation_text = "\nDETAILED INVESTIGATION: Not required (high confidence and agreement)"
+                investigation_text = "\nDetailed Investigation:\nNot required (high confidence and agreement)"
 
             # Format clinical probability for display
             clinical_prob_display = clinical_assessment.get("probability", "N/A")
@@ -986,27 +982,28 @@ DETAILED INVESTIGATION RESULTS:
             return f"""Patient Demographics:
 {demographics_str}
 
-HYBRID XGBOOST-CLINICAL ASSESSMENT SUMMARY:
+Hybrid XGBoost-Clinical Assessment Summary:
 
-XGBOOST MODEL ASSESSMENT:
+XGBoost Model Assessment:
 - XGBoost prediction: {ml_assessment['probability']:.0f}%
 - XGBoost confidence: {ml_assessment['confidence']:.0f}%
 - Key XGBoost factors: {', '.join(ai_features)}
 
-CLINICAL ASSESSMENT:
+Clinical Assessment:
 - Clinical prediction: {clinical_prob_text}
 - Clinical confidence: {clinical_assessment.get('confidence', 'N/A')}%
 - AI agreement level: {clinical_assessment.get('ai_agreement', 'unclear')}
 - Clinical reasoning: {clinical_assessment.get('explanation', 'No clinical reasoning provided')}
 {investigation_text}
 
-SYNTHESIS GUIDANCE:
+Synthesis Guidance:
 - XGBoost confidence ({ml_assessment['confidence']:.0f}%) means {ml_assessment['confidence']:.0f}% certain the risk is {ml_assessment['probability']:.0f}%
 - High-confidence predictions (>80%) should strongly anchor your assessment
 - Clinical assessment has limited context (no medications, physical exam, full history)
 - Justify any major deviation from high-confidence ML predictions
 
-Clinical Context: {self.task_content['task_info']}"""
+Clinical Context: 
+{self.task_content['task_info']}"""
 
         return format_prompt
 
@@ -1157,5 +1154,5 @@ Clinical Context: {self.task_content['task_info']}"""
                 return float(non_na_count / total_count) if total_count > 0 else 0.0
             return 1.0
         except Exception as e:
-            logger.warning(f"Error calculating data completeness: {e}")
+            logger.warning("Error calculating data completeness: %s", e)
             return 0.0

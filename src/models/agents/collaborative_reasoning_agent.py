@@ -17,7 +17,7 @@ from src.util.agent_util import (
     get_specialist_features,
     get_specialist_system_message,
     get_task_specific_content,
-    get_specialist_features,
+    format_demographics_str,
 )
 
 logger = logging.getLogger("PULSE_logger")
@@ -266,16 +266,7 @@ class CollaborativeReasoningAgent(PulseAgent):
                 }
 
             # Format demographics
-            demo_text = []
-            if "age" in demographics:
-                demo_text.append(f"Age: {demographics['age']} years")
-            if "sex" in demographics:
-                demo_text.append(f"Sex: {demographics['sex']}")
-            if "weight" in demographics:
-                demo_text.append(f"Weight: {demographics['weight']} kg")
-            demographics_str = (
-                ", ".join(demo_text) if demo_text else "Demographics: Not available"
-            )
+            demographics_str = format_demographics_str(demographics)
 
             # Format clinical data
             clinical_text = format_clinical_text(clinical_data)
@@ -311,10 +302,10 @@ Specialist Focus:
 As a {specialist_type} specialist, focus on {focus_desc}. Provide your domain-specific assessment based on your expertise.
 
 Pay attention to:
-- Temporal patterns (trend direction and clinical significance)
-- Data uncertainty and completeness
-- Domain-specific abnormalities and their severity
-- Clinical relationships between parameters in your domain
+- Temporal patterns (e.g., is a parameter rising, falling, or stable? What is the clinical significance of this trend?)
+- Data uncertainty and completeness (note missing or ambiguous data and how it affects your assessment)
+- Domain-specific abnormalities and their severity (identify abnormal values and discuss their clinical impact)
+- Clinical relationships between parameters in your domain (explain how findings relate to each other physiologically)
 
 Respond in JSON format:
 {{
@@ -324,7 +315,8 @@ Respond in JSON format:
     "confidence": XX (integer between 0 and 100, where 0 means not confident at all and 100 means very confident in your assessment; confidence reflects your certainty in your own reasoning based on the available data)
 }}
 
-IMPORTANT: Base your confidence on data completeness, clarity of findings, and strength of evidence in your domain."""
+Important:
+Base your confidence on data completeness, clarity of findings, and strength of evidence in your domain."""
 
         return format_prompt
 
@@ -336,16 +328,7 @@ IMPORTANT: Base your confidence on data completeness, clarity of findings, and s
             specialist_assessments = formatted_data["specialist_assessments"]
 
             # Format demographics
-            demo_text = []
-            if "age" in demographics:
-                demo_text.append(f"Age: {demographics['age']} years")
-            if "sex" in demographics:
-                demo_text.append(f"Sex: {demographics['sex']}")
-            if "weight" in demographics:
-                demo_text.append(f"Weight: {demographics['weight']} kg")
-            demographics_str = (
-                ", ".join(demo_text) if demo_text else "Demographics: Not available"
-            )
+            demographics_str = format_demographics_str(demographics)
 
             # Format specialist assessments
             assessment_summary = []
@@ -370,7 +353,7 @@ IMPORTANT: Base your confidence on data completeness, clarity of findings, and s
                     valid_assessments += 1
 
                 assessment_summary.append(
-                    f"\n{specialist_type.upper()} SPECIALIST:\n"
+                    f"\n{specialist_type} Specialist:\n"
                     f"- Probability: {probability_display}%\n"
                     f"- Confidence: {confidence}%\n"
                     f"- Assessment: {explanation}\n"
@@ -384,13 +367,13 @@ IMPORTANT: Base your confidence on data completeness, clarity of findings, and s
             return f"""Patient Demographics:
 {demographics_str}
 
-SPECIALIST ASSESSMENTS:
+Specialist Assessments:
 {assessment_str}
 
 Clinical Context:
 {self.task_content['task_info']}
 
-SYNTHESIS TASK:
+Synthesis Task:
 As the coordinating physician, integrate the specialist assessments to provide a final clinical decision regarding {self.task_content['complication_name']} risk.
 
 Consider:
@@ -550,5 +533,5 @@ Average specialist confidence: {avg_confidence:.1f}%"""
                 return float(non_na_count / total_count) if total_count > 0 else 0.0
             return 1.0
         except Exception as e:
-            logger.warning(f"Error calculating data completeness: {e}")
+            logger.warning("Error calculating data completeness: %s", e)
             return 0.0
