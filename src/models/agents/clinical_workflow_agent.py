@@ -469,7 +469,7 @@ Respond in JSON format:
 }}
 
 Important: 
-With only vital signs available, confidence should typically be 50-70. Higher confidence (>75) should only be used when the clinical picture is very clear."""
+With only vital signs available, confidence should typically be below 50. Higher confidence should only be used when the clinical picture is very clear."""
 
         return format_prompt
 

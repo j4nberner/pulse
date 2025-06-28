@@ -348,7 +348,9 @@ class HybridReasoningAgent(PulseAgent):
                     dampened_investigation["probability"] = dampened_prob
                     state["dampened_investigation_results"] = dampened_investigation
                     logger.info(
-                        f"Applied dampening: {investigation_prob*100:.1f}% -> {dampened_prob*100:.1f}%"
+                        "Applied dampening: %.1f%% -> %.1f%%",
+                        investigation_prob * 100,
+                        dampened_prob * 100,
                     )
 
             synthesis_result = self.run_step("final_prediction", None, state)
@@ -896,22 +898,22 @@ Feature Analysis Breakdown:
 Focus:
 Look for subtle patterns and interactions in the existing data."""
 
-            return f"""DETAILED CLINICAL INVESTIGATION
+            return f"""Detailed Clinical Investigation
 
-DISAGREEMENT DETECTED:
+Disagreement Detected:
 - XGBoost model prediction: {ml_prob:.0f}%
 - Clinical assessment: {clinical_prob:.0f}%
 - Probability difference: {disagreement['probability_difference']:.0f}
 - XGBoost confidence: {disagreement['ml_confidence']:.0f}%
 {feature_breakdown}
 
-DETAILED CLINICAL DATA (over {monitoring_hours}-hour monitoring period):
+Detailed Clinical Data (Over {monitoring_hours}-Hour Monitoring Period):
 {clinical_str}
 
 Clinical Context:
 {self.task_content['task_info']}
 
-INVESTIGATION TASK:
+Investigation Task:
 Conduct a focused analysis to resolve the disagreement between XGBoost and clinical assessments.
 
 Analyze:

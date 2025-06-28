@@ -356,7 +356,7 @@ Base your confidence on data completeness, clarity of findings, and strength of 
                     valid_assessments += 1
 
                 assessment_summary.append(
-                    f"\n{specialist_type} Specialist:\n"
+                    f"\n{specialist_type.capitalize()} Specialist:\n"
                     f"- Probability: {probability_display}%\n"
                     f"- Confidence: {int(round(confidence))}%\n"
                     f"- Assessment: {explanation}\n"

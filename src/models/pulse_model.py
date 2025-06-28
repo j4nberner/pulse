@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     pass
 
 from src.eval.metrics import MetricsTracker
+from src.models.agents import create_agent_instance
 from src.util.config_util import set_seeds
 from src.util.model_util import (
     parse_llm_output,
@@ -27,7 +28,8 @@ from src.util.model_util import (
 
 logger = logging.getLogger("PULSE_logger")
 
-os.environ["TORCHDYNAMO_DISABLE"] = "1" # Disabled to not get Gemma errors
+os.environ["TORCHDYNAMO_DISABLE"] = "1"  # Disabled to not get Gemma errors
+
 
 class PulseModel:
     """
@@ -540,7 +542,7 @@ class PulseLLMModel(PulseModel):
 
         # self.delete_model()
 
-        return 0.0 #float(np.mean(val_loss))
+        return 0.0  # float(np.mean(val_loss))
 
     def evaluate_sys_msgs(self, test_loader: Any, save_report: bool = True) -> float:
         """Evaluates the model on a given test set.
@@ -768,8 +770,6 @@ class PulseLLMModel(PulseModel):
 
     def _initialize_agent(self) -> None:
         """Initialize the agent instance based on prompting_id."""
-        from src.models.agents import create_agent_instance
-
         self.agent_instance = create_agent_instance(
             prompting_id=self.prompting_id,
             model=self,
