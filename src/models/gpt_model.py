@@ -73,7 +73,7 @@ class GPTModel(PulseModel):
 
         # Format input using prompt template
         input_text = prompt_template_hf(
-            input_text, custom_system_message, model="GPTModel"
+            input_text, custom_system_message, model="GPTModel", task=self.task_name
         )
 
         # Generate output with scores

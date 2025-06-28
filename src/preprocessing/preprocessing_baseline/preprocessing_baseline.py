@@ -1,4 +1,5 @@
 import gc
+import json
 import logging
 import os
 import warnings
@@ -411,6 +412,14 @@ class PreprocessorBaseline:
             X_train.loc[:, columns_for_standardization]
         )
 
+        # Save scaler parameters for all standardized columns (static and dynamic)
+        scaler_params = {}
+        for i, col in enumerate(columns_for_standardization):
+            scaler_params[col] = {"mean": scaler.mean_[i], "std": scaler.scale_[i]}
+
+        if self.config["save_data"]:
+            self.save_scaler_parameters(scaler_params)
+
         # Transform validation and test sets with the same scaler
         X_val.loc[:, columns_for_standardization] = scaler.transform(
             X_val.loc[:, columns_for_standardization]
@@ -425,6 +434,30 @@ class PreprocessorBaseline:
         X_test["sex"] = X_test["sex"].map({"Female": 1, "Male": -1})
 
         return X_train, X_val, X_test
+
+    def save_scaler_parameters(self, scaler_params: dict) -> None:
+        """Save scaler parameters for future use in destandardization."""
+        config_dirname = self.generate_preprocessing_dirname()
+
+        # Determine the base path to use (original_base_path if available, otherwise base_path)
+        target_base_path = (
+            self.original_base_path
+            if hasattr(self, "original_base_path") and self.original_base_path
+            else self.base_path
+        )
+
+        # Save to notebooks/scaler_parameters directory
+        directory = os.path.join(target_base_path, "notebooks/scaler_parameters")
+        os.makedirs(directory, exist_ok=True)
+
+        scaler_file = os.path.join(
+            directory,
+            f"scaler_parameters_{self.task}_{self.dataset_name}_{config_dirname}.json",
+        )
+        with open(scaler_file, "w") as f:
+            json.dump(scaler_params, f, indent=2)
+
+        logger.info(f"Saved scaler parameters to {scaler_file}")
 
     def impute_static_all_sets(
         self, X_train: pd.DataFrame, X_val: pd.DataFrame, X_test: pd.DataFrame
@@ -465,7 +498,7 @@ class PreprocessorBaseline:
 
         # Debug log for global medians
         logger.debug(
-            "Global means used as imputation fallback for static features: %s",
+            "Global means used as imputation fallback for static features (if forward-/backward fill fails): %s",
             global_means_static_dict,
         )
 

@@ -25,7 +25,7 @@ class MistralModel(PulseLLMModel):
             **kwargs: Additional optional parameters such as `output_dir` and `wandb`.
         """
         model_name = kwargs.pop("model_name", "MistralModel")
-        super().__init__(model_name, params=params, **kwargs)
+        super().__init__(model_name, params, **kwargs)
 
         required_params = [
             "max_new_tokens",

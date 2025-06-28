@@ -119,10 +119,10 @@ class MetricsTracker:
             # Compute mean for numeric columns only
             means = df.select_dtypes(include=[np.number]).mean().to_dict()
             for k, v in means.items():
-                logger.info(f"Average {k}: {v}")
-                logger.debug(f"Max {k}: {df[k].max()}")
-                logger.debug(f"Min {k}: {df[k].min()}")
-                logger.info(f"Total {k}: {df[k].sum()}")
+                logger.info("Average %s: %s", k, v)
+                logger.debug("Max %s: %s", k, df[k].max())
+                logger.debug("Min %s: %s", k, df[k].min())
+                logger.info("Total %s: %s", k, df[k].sum())
             if save_to_file:
                 summary_path = os.path.join(
                     self.save_dir,
