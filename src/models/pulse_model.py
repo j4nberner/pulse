@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     pass
 
 from src.eval.metrics import MetricsTracker
+from src.models.agents import create_agent_instance
 from src.util.config_util import set_seeds
 from src.util.model_util import (
     parse_llm_output,
@@ -27,7 +28,8 @@ from src.util.model_util import (
 
 logger = logging.getLogger("PULSE_logger")
 
-os.environ["TORCHDYNAMO_DISABLE"] = "1" # Disabled to not get Gemma errors
+os.environ["TORCHDYNAMO_DISABLE"] = "1"  # Disabled to not get Gemma errors
+
 
 class PulseModel:
     """
@@ -296,7 +298,10 @@ class PulseLLMModel(PulseModel):
 
         # Format input using prompt template
         input_text = prompt_template_hf(
-            input_text, custom_system_message, self.model_name
+            input_text,
+            custom_system_message=custom_system_message,
+            model=self.model_name,
+            task=self.task_name,
         )
 
         # Tokenize with chat template
@@ -401,7 +406,8 @@ class PulseLLMModel(PulseModel):
         Returns:
             The average validation loss across the test dataset.
         """
-        criterion = nn.BCELoss()  # Binary Cross Entropy Loss
+        # Criterion not needed for LLM inference
+        # criterion = nn.BCELoss()  # Binary Cross Entropy Loss
 
         # Check if model is already loaded before attempting to load
         if not self.is_loaded:
@@ -431,10 +437,14 @@ class PulseLLMModel(PulseModel):
         verbose: int = self.params.get("verbose", 1)
         val_loss: list[float] = []
 
-        sys_msg = system_message_samples(task=self.task_name)[1]
-        logger.info("System Message:\n\n %s", sys_msg)
-
         self.model.eval()
+
+        # Ensure sequential Sample IDs for agent models
+        if self.is_agent:
+            test_loader = (
+                test_loader[0].reset_index(drop=True),
+                test_loader[1].reset_index(drop=True),
+            )
 
         for X, y in zip(test_loader[0].iterrows(), test_loader[1].iterrows()):
             idx = X[0]
@@ -450,7 +460,7 @@ class PulseLLMModel(PulseModel):
                     self.agent_instance.memory.set_current_sample_target(y_true)
 
                 # Get raw result from generation
-                result_dict = self.generate(X_input, custom_system_message=sys_msg)
+                result_dict = self.generate(X_input)
 
             except Exception as e:
                 logger.error(
@@ -497,9 +507,9 @@ class PulseLLMModel(PulseModel):
             ).unsqueeze(0)
             target = torch.tensor(float(y_true), dtype=torch.float32).unsqueeze(0)
 
-            #TODO: No needed most likely. Deactivated to avoid errors with nan values
+            # Criterion not needed for LLM inference
             # loss = criterion(predicted_label, target)
-            # val_loss.append(loss.item())
+            val_loss.append(np.nan)
 
             if self.wandb:
                 wandb.log(
@@ -539,7 +549,7 @@ class PulseLLMModel(PulseModel):
 
         # self.delete_model()
 
-        return 0.0 #float(np.mean(val_loss))
+        return 0.0  # float(np.mean(val_loss))
 
     def evaluate_sys_msgs(self, test_loader: Any, save_report: bool = True) -> float:
         """Evaluates the model on a given test set.
@@ -551,7 +561,8 @@ class PulseLLMModel(PulseModel):
         Returns:
             The average validation loss across the test dataset.
         """
-        criterion = nn.BCELoss()  # Binary Cross Entropy Loss
+        # Criterion not needed for LLM inference
+        # criterion = nn.BCELoss()  # Binary Cross Entropy Loss
 
         # Check if model is already loaded before attempting to load
         if not self.is_loaded:
@@ -625,8 +636,9 @@ class PulseLLMModel(PulseModel):
                 ).unsqueeze(0)
                 target = torch.tensor(float(y_true), dtype=torch.float32).unsqueeze(0)
 
+                # Criterion not needed for LLM inference
                 # loss = criterion(predicted_label, target)
-                # val_loss.append(loss.item())
+                val_loss.append(np.nan)
 
                 metrics_tracker.add_results(predicted_probability, y_true)
                 metrics_tracker.add_metadata_item(
@@ -740,8 +752,10 @@ class PulseLLMModel(PulseModel):
 
             # Update agent context
             if self.agent_instance:
-                self.agent_instance.task_name = getattr(self, "task_name", None)
-                self.agent_instance.dataset_name = getattr(self, "dataset_name", None)
+                self.agent_instance.update_task_context(
+                    getattr(self, "task_name", None),
+                    getattr(self, "dataset_name", None),
+                )
 
             # Validate input data type
             if isinstance(input_data, str):
@@ -763,8 +777,6 @@ class PulseLLMModel(PulseModel):
 
     def _initialize_agent(self) -> None:
         """Initialize the agent instance based on prompting_id."""
-        from src.models.agents import create_agent_instance
-
         self.agent_instance = create_agent_instance(
             prompting_id=self.prompting_id,
             model=self,

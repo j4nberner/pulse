@@ -4,16 +4,32 @@ from typing import Any, Dict, Optional
 import pandas as pd
 
 from src.models.agents.pulse_agent import PulseAgent
-from src.preprocessing.preprocessing_advanced.preprocessing_advanced import \
-    PreprocessorAdvanced
-from src.util.agent_util import (create_error_response, extract_confidence,
-                                 extract_requested_labs, filter_na_columns,
-                                 format_clinical_data, format_clinical_text,
-                                 get_available_labs, get_available_vitals,
-                                 get_lab_groups_available, validate_features,
-                                 validate_lab_request)
-from src.util.data_util import (get_all_feature_groups, get_feature_group_keys,
-                                get_feature_group_title, get_feature_name)
+from src.preprocessing.preprocessing_advanced.preprocessing_advanced import (
+    PreprocessorAdvanced,
+)
+from src.util.agent_util import (
+    create_error_response,
+    extract_confidence,
+    extract_requested_labs,
+    filter_na_columns,
+    format_clinical_data,
+    format_clinical_text,
+    get_available_labs,
+    get_available_vitals,
+    get_lab_groups_available,
+    get_monitoring_period_hours,
+    get_task_specific_content,
+    validate_features,
+    validate_lab_request,
+    format_demographics_str,
+    parse_numeric_value,
+)
+from src.util.data_util import (
+    get_all_feature_groups,
+    get_feature_group_keys,
+    get_feature_group_title,
+    get_feature_name,
+)
 
 logger = logging.getLogger("PULSE_logger")
 
@@ -53,7 +69,7 @@ class ClinicalWorkflowAgent(PulseAgent):
         self.confidence_threshold = confidence_threshold
         self.max_iterations = max_iterations
         self.min_iterations = min_iterations
-        self.task_content = self._get_task_specific_content()
+        self.task_content = get_task_specific_content(self.task_name)
 
         # Initialize preprocessing tools
         self.preprocessor_advanced = PreprocessorAdvanced()
@@ -62,6 +78,14 @@ class ClinicalWorkflowAgent(PulseAgent):
         self.vital_signs = set(get_feature_group_keys("vitals"))
         self.lab_groups = get_all_feature_groups()
 
+        self._define_steps()
+
+    def _update_task_specific_content(self) -> None:
+        """Update task-specific content when task changes."""
+        self.task_content = get_task_specific_content(self.task_name)
+
+        # Redefine steps with updated task content
+        self.steps = []  # Clear existing steps
         self._define_steps()
 
     def _define_steps(self) -> None:
@@ -109,11 +133,18 @@ class ClinicalWorkflowAgent(PulseAgent):
 
     def process_single(self, patient_data: pd.Series) -> Dict[str, Any]:
         """Process a single patient through the clinical workflow."""
+        # Update task context if needed (ensures task_content is current)
+        if hasattr(self.model, "task_name") and hasattr(self.model, "dataset_name"):
+            self.update_task_context(self.model.task_name, self.model.dataset_name)
+
         # Reset memory
         self.memory.reset()
 
         sample_id = patient_data.name if hasattr(patient_data, "name") else "default"
-        self.memory.set_current_sample(sample_id)
+        self.memory.set_current_sample(sample_id, patient_data)
+
+        # Store original data with _na columns for uncertainty analysis
+        original_patient_data = patient_data.copy()
 
         # Filter out _na columns
         patient_data = filter_na_columns(patient_data)
@@ -121,6 +152,7 @@ class ClinicalWorkflowAgent(PulseAgent):
         # Initialize state
         state = {
             "patient_data": patient_data,
+            "original_patient_data": original_patient_data,
             "task_name": self.task_name,
             "dataset_name": self.dataset_name,
             "available_features": set(patient_data.index),
@@ -158,8 +190,12 @@ class ClinicalWorkflowAgent(PulseAgent):
                     "reasoning": initial_output.get(
                         "explanation", initial_output.get("reasoning", "")
                     ),
-                    "probability": initial_output.get("probability", 50),
-                    "confidence": initial_output.get("confidence", 50),
+                    "probability": parse_numeric_value(
+                        initial_output.get("probability", 50), 50
+                    ),
+                    "confidence": parse_numeric_value(
+                        initial_output.get("confidence", 0), 0
+                    ),
                 }
             )
 
@@ -260,8 +296,12 @@ class ClinicalWorkflowAgent(PulseAgent):
                         "reasoning": updated_output.get(
                             "explanation", updated_output.get("reasoning", "")
                         ),
-                        "probability": updated_output.get("probability", 50),
-                        "confidence": updated_output.get("confidence", 50),
+                        "probability": parse_numeric_value(
+                            updated_output.get("probability", 50), 50
+                        ),
+                        "confidence": parse_numeric_value(
+                            updated_output.get("confidence", 0), 0
+                        ),
                     }
                 )
 
@@ -317,6 +357,7 @@ class ClinicalWorkflowAgent(PulseAgent):
     ) -> Dict[str, Any]:
         """Format vital signs data for initial assessment using aggregate_feature_windows."""
         patient_data = input_data
+        original_patient_data = state["original_patient_data"]
         vitals_keys = get_feature_group_keys("vitals")
         available_vitals = {
             vital
@@ -330,6 +371,8 @@ class ClinicalWorkflowAgent(PulseAgent):
             preprocessor_advanced=self.preprocessor_advanced,
             include_demographics=True,
             include_temporal_patterns=True,
+            include_uncertainty=True,
+            original_patient_data=original_patient_data,
         )
 
     def _format_lab_data(
@@ -338,12 +381,15 @@ class ClinicalWorkflowAgent(PulseAgent):
         """Format lab data for updated assessment."""
         available_labs = input_data
         patient_data = state["patient_data"]
+        original_patient_data = state["original_patient_data"]
         return format_clinical_data(
             patient_data=patient_data,
             feature_keys=available_labs,
             preprocessor_advanced=self.preprocessor_advanced,
             include_demographics=False,
             include_temporal_patterns=True,
+            include_uncertainty=True,
+            original_patient_data=original_patient_data,
         )
 
     def _format_final_data(
@@ -351,6 +397,7 @@ class ClinicalWorkflowAgent(PulseAgent):
     ) -> Dict[str, Any]:
         """Format comprehensive data for final decision."""
         patient_data = state["patient_data"]
+        original_patient_data = state["original_patient_data"]
 
         # Get demographics
         demographics = {}
@@ -361,13 +408,15 @@ class ClinicalWorkflowAgent(PulseAgent):
         if "weight" in patient_data.index:
             demographics["weight"] = patient_data["weight"]
 
-        # Get all used clinical data with temporal patterns
+        # Get all used clinical data with temporal patterns and uncertainty
         all_clinical_data = format_clinical_data(
             patient_data=patient_data,
             feature_keys=state["used_features"],
             preprocessor_advanced=self.preprocessor_advanced,
             include_demographics=False,
             include_temporal_patterns=True,
+            include_uncertainty=True,
+            original_patient_data=original_patient_data,
         )
 
         return {
@@ -383,18 +432,11 @@ class ClinicalWorkflowAgent(PulseAgent):
             demographics = formatted_data["demographics"]
             vital_signs = formatted_data["vital_signs"]
 
-            # Format patient demographics
-            demo_text = []
-            if "age" in demographics:
-                demo_text.append(f"Age: {demographics['age']} years")
-            if "sex" in demographics:
-                demo_text.append(f"Sex: {demographics['sex']}")
-            if "weight" in demographics:
-                demo_text.append(f"Weight: {demographics['weight']} kg")
+            # Get monitoring period from the data
+            monitoring_hours = get_monitoring_period_hours(state["patient_data"])
 
-            demographics_str = (
-                ", ".join(demo_text) if demo_text else "Demographics: Not available"
-            )
+            # Format patient demographics
+            demographics_str = format_demographics_str(demographics)
 
             # Format vital signs using helper method
             vitals_text = format_clinical_text(vital_signs)
@@ -405,28 +447,29 @@ class ClinicalWorkflowAgent(PulseAgent):
 Patient Demographics:
 {demographics_str}
 
-Current vital signs (over monitoring period):
+Current Vital Signs (Over {monitoring_hours}-Hour Monitoring Period):
 {vitals_str}
 
 Clinical Context:
 {self.task_content['task_info']}
 
-Based on these vital signs, patient demographics, and temporal patterns (where available), provide your initial clinical assessment.
+Based on all available information (including vital signs, patient demographics, and temporal patterns where available), provide your initial clinical assessment. Carefully consider the overall clinical picture, integrating both static and dynamic findings, and evaluate for the presence or absence of {self.task_content['complication_name']}.
 
-Pay attention to temporal patterns in the data:
-- Trend direction (stable, slowly/moderately/rapidly increasing/decreasing)
-- Value normality (normal, slightly/very low/high)
-- Clinical significance of combined trend and abnormality patterns
+Pay attention to:
+- The overall clinical context and plausibility of the outcome
+- The presence or absence of key clinical features supporting or arguing against the outcome
+- The clinical significance of temporal trends and the interplay between abnormal and normal findings
 
 Respond in JSON format:
 {{
-    "diagnosis": "preliminary-{self.task_content['complication_name']}-risk",
-    "probability": XX (integer between 0 and 100, where 0 means {self.task_content['complication_name']} will not occur and 100 means {self.task_content['complication_name']} will definitely occur),
-    "explanation": "Your detailed clinical reasoning including differential diagnosis and temporal pattern assessment",
-    "confidence": XX (integer between 0 and 100, where 0 means not confident at all and 100 means very confident in your assessment)
+    "diagnosis": "preliminary-{self.task_content['task_name']}-risk",
+    "probability": XX (integer between 0 and 100, where 0 means {self.task_content['task_name']} will not occur and 100 means {self.task_content['task_name']} will definitely occur; probability is your best estimate of the likelihood of the complication),
+    "explanation": "Your detailed clinical reasoning, integrating all available information and justifying your probability estimate (MAX 190 words)",
+    "confidence": XX (integer between 0 and 100, where 0 means not confident at all and 100 means very confident in your assessment; confidence reflects your certainty in your own reasoning based on the available data)
 }}
 
-IMPORTANT: With only vital signs available, confidence should typically be 50-70. Higher confidence (>75) should only be used when clinical picture is very clear."""
+Important: 
+With only vital signs available, confidence should typically be below 50. Higher confidence should only be used when the clinical picture is very clear."""
 
         return format_prompt
 
@@ -439,17 +482,23 @@ IMPORTANT: With only vital signs available, confidence should typically be 50-70
             # Get available tests by clinical group using data_util
             available_by_group = get_lab_groups_available(state["available_features"])
 
-            # Filter out already used features - CRITICAL for preventing re-ordering
+            # Filter out already used features and organize already used ones
             filtered_available = {}
+            already_used_by_group = {}
             total_unused_features = 0
 
             for group_name, features in available_by_group.items():
                 unused_features = [
                     f for f in features if f not in state["used_features"]
                 ]
+                used_features = [f for f in features if f in state["used_features"]]
+
                 if unused_features:
                     filtered_available[group_name] = unused_features
                     total_unused_features += len(unused_features)
+
+                if used_features:
+                    already_used_by_group[group_name] = used_features
 
             # Debug logging to track filtering
             logger.debug("Used features so far: %s", list(state["used_features"]))
@@ -471,15 +520,15 @@ IMPORTANT: With only vital signs available, confidence should typically be 50-70
 
 Previous Assessment:
 - Reasoning: {previous_assessment.get('explanation', previous_assessment.get('reasoning', ''))}
-- Current probability: {previous_assessment['probability']}%
-- Current confidence: {previous_assessment.get('confidence', previous_assessment['probability'])}%
+- Current probability: {int(float(previous_assessment['probability']) * 100) if isinstance(previous_assessment['probability'], (int, float)) and previous_assessment['probability'] <= 1 else int(previous_assessment['probability'])}%
+- Current confidence: {int(float(previous_assessment.get('confidence', 0)) * 100) if isinstance(previous_assessment.get('confidence', 0), (int, float)) and previous_assessment.get('confidence', 0) <= 1 else int(previous_assessment.get('confidence', 0))}%
 
 Since no additional tests are available, respond with an empty test list.
 
 Respond in JSON format:
 {{
     "diagnosis": "lab-ordering-complete",
-    "probability": {previous_assessment['probability']},
+    "probability": {int(float(previous_assessment['probability']) * 100) if isinstance(previous_assessment['probability'], (int, float)) and previous_assessment['probability'] <= 1 else int(previous_assessment['probability'])},
     "explanation": "All available laboratory tests have been ordered and analyzed. No additional tests are available.",
     "requested_tests": []
 }}"""
@@ -493,32 +542,49 @@ Respond in JSON format:
                     full_name = get_feature_name(feature_key)
                     test_list.append(f"  - {feature_key}: {full_name}")
 
-            return f"""Based on your previous assessment, decide which additional tests to order.
+            # Format already analyzed tests (concise summary)
+            analyzed_summary = []
+            if already_used_by_group:
+                all_analyzed_features = []
+                for group_name, features in already_used_by_group.items():
+                    feature_names = [get_feature_name(f) for f in features]
+                    all_analyzed_features.extend(feature_names)
+                analyzed_summary.append(
+                    f"\nTests previously analyzed: {', '.join(all_analyzed_features)}"
+                )
+
+            return f"""Based on your previous assessment, decide which additional tests to order next to clarify the clinical picture and help determine the likelihood of {self.task_content['complication_name']}.
 
 Previous Assessment:
 - Reasoning: {previous_assessment.get('explanation', previous_assessment.get('reasoning', ''))}
-- Current probability: {previous_assessment['probability']}%
-- Current confidence: {previous_assessment.get('confidence', previous_assessment['probability'])}%
+- Current probability: {int(float(previous_assessment['probability']) * 100) if isinstance(previous_assessment['probability'], (int, float)) and previous_assessment['probability'] <= 1 else int(previous_assessment['probability'])}%
+- Current confidence: {int(float(previous_assessment.get('confidence', 0)) * 100) if isinstance(previous_assessment.get('confidence', 0), (int, float)) and previous_assessment.get('confidence', 0) <= 1 else int(previous_assessment.get('confidence', 0))}%
+{''.join(analyzed_summary)}
 
-Available tests to order (excluding already ordered tests):
+Available Tests to Order:
 {''.join(test_list)}
 
-Clinical goal: Determine risk of {self.task_content['complication_name']}
+Clinical Goal: Determine risk of {self.task_content['complication_name']}
+
+Clinical Context:
+{self.task_content['task_info']}
 
 Guidelines for test selection:
-- Use only the EXACT abbreviations shown in the list above (e.g., "crea", "bun", "wbc", "ph", "pco2"). Do NOT use full names, group names, or name variations.
-- Select a maximum of 2-6 of the most clinically relevant tests.
+- Use only the EXACT abbreviations shown as keywords in the list above. Do NOT use full names, group names, or name variations.
+- Select a maximum of 4-10 of the most clinically relevant tests.
 - Focus on tests that will help confirm or rule out your differential diagnosis.
 - Prioritize tests that directly assess organ function relevant to your suspected diagnosis.
 
 Respond in JSON format:
 {{
     "diagnosis": "lab-ordering-decision",
-    "probability": XX (integer between 0 and 100, where 0 means {self.task_content['complication_name']} will not occur and 100 means {self.task_content['complication_name']} will definitely occur),
-    "explanation": "Why you want these specific tests and how they will help your decision-making",
-    "requested_tests": ["test1", "test2", "test3"]
+    "probability": XX (integer between 0 and 100, where 0 means {self.task_content['task_name']} will not occur and 100 means {self.task_content['task_name']} will definitely occur; probability is your best estimate of the likelihood of the complication),
+    "explanation": "Why you want these specific tests and how they will help your decision-making (MAX 100 words)",
+    "requested_tests": ["test1", "test2", "test3"],
+    "confidence": XX (integer between 0 and 100, where 0 means not confident at all and 100 means very confident in your decision; confidence reflects your certainty in your own reasoning based on the available data)
 }}
-REMEMBER: Only use exact abbreviations from the list above."""
+Remember:
+Only use exact abbreviations from the list above."""
 
         return format_prompt
 
@@ -526,28 +592,34 @@ REMEMBER: Only use exact abbreviations from the list above."""
         """Template for updated assessment with new lab results."""
 
         def format_prompt(formatted_lab_data, state):
+            # Get monitoring period from the data
+            monitoring_hours = get_monitoring_period_hours(state["patient_data"])
+
             # Format lab results using helper method
             formatted_labs = format_clinical_text(formatted_lab_data)
             labs_str = "\n".join(formatted_labs)
 
             previous_assessment = state["assessment_history"][-1]
 
-            return f"""Update your clinical assessment with new laboratory results.
+            return f"""Update your clinical assessment with the new laboratory results, integrating them with all previously available information. Carefully consider how these new findings affect your overall assessment of the risk for {self.task_content['complication_name']}. Do not focus solely on trends or isolated abnormalities—evaluate the entire clinical context and how the new data supports or refutes your hypotheses.
 
 Previous Assessment:
 - Reasoning: {previous_assessment.get('explanation', previous_assessment.get('reasoning', ''))}
-- Previous probability: {previous_assessment['probability']}%
-- Previous confidence: {previous_assessment.get('confidence', previous_assessment['probability'])}%
+- Previous probability: {int(float(previous_assessment['probability']) * 100) if isinstance(previous_assessment['probability'], (int, float)) and previous_assessment['probability'] <= 1 else int(previous_assessment['probability'])}%
+- Previous confidence: {int(float(previous_assessment.get('confidence', 0)) * 100) if isinstance(previous_assessment.get('confidence', 0), (int, float)) and previous_assessment.get('confidence', 0) <= 1 else int(previous_assessment.get('confidence', 0))}%
 
-New Laboratory Results (over monitoring period):
+New Laboratory Results (Over {monitoring_hours}-Hour Monitoring Period):
 {labs_str}
+
+Clinical Context:
+{self.task_content['task_info']}
 
 Respond in JSON format:
 {{
-    "diagnosis": "updated-{self.task_content['complication_name']}-assessment",
-    "probability": XX (integer between 0 and 100, where 0 means {self.task_content['complication_name']} will not occur and 100 means {self.task_content['complication_name']} will definitely occur),
-    "explanation": "How the new labs change your assessment and interpretation of abnormal values",
-    "confidence": XX (integer between 0 and 100, where 0 means not confident at all and 100 means very confident in your assessment)
+    "diagnosis": "updated-{self.task_content['task_name']}-assessment",
+    "probability": XX (integer between 0 and 100, where 0 means {self.task_content['task_name']} will not occur and 100 means {self.task_content['task_name']} will definitely occur; probability is your best estimate of the likelihood of the complication),
+    "explanation": "How the new labs, in the context of all prior data, change your assessment and interpretation of the risk (MAX 190 words)",
+    "confidence": XX (integer between 0 and 100, where 0 means not confident at all and 100 means very confident in your assessment; confidence reflects your certainty in your own reasoning based on the available data)
 }}"""
 
         return format_prompt
@@ -560,17 +632,11 @@ Respond in JSON format:
             clinical_data = formatted_data["clinical_data"]
             assessment_history = formatted_data["assessment_history"]
 
+            # Get monitoring period from the data
+            monitoring_hours = get_monitoring_period_hours(state["patient_data"])
+
             # Format demographics
-            demo_text = []
-            if "age" in demographics:
-                demo_text.append(f"Age: {demographics['age']} years")
-            if "sex" in demographics:
-                demo_text.append(f"Sex: {demographics['sex']}")
-            if "weight" in demographics:
-                demo_text.append(f"Weight: {demographics['weight']} kg")
-            demographics_str = (
-                ", ".join(demo_text) if demo_text else "Demographics: Not available"
-            )
+            demographics_str = format_demographics_str(demographics)
 
             # Format all clinical data using helper method
             clinical_text = format_clinical_text(clinical_data)
@@ -579,55 +645,133 @@ Respond in JSON format:
             # Format assessment progression
             assessment_summary = []
             for i, assessment in enumerate(assessment_history):
-                # Convert probability and confidence to float
+                # Convert probability and confidence to float, then to 0-100 scale
                 try:
-                    probability = float(assessment["probability"])
-                    confidence = float(
-                        assessment.get("confidence", assessment["probability"])
-                    )
+                    probability = parse_numeric_value(assessment["probability"], 50)
+                    confidence = parse_numeric_value(assessment.get("confidence", 0), 0)
+                    # Convert to 0-100 scale if stored as 0-1
+                    if isinstance(probability, float) and probability <= 1:
+                        probability = probability * 100
+                    if isinstance(confidence, float) and confidence <= 1:
+                        confidence = confidence * 100
                 except (ValueError, TypeError):
                     probability = 50.0
-                    confidence = 50.0
+                    confidence = 0.0
 
+                explanation = assessment.get("explanation") or assessment.get(
+                    "reasoning"
+                )
                 assessment_summary.append(
-                    f"Step {i+1} ({assessment['step']}): Probability={probability:.1f}%, "
-                    f"Confidence={confidence:.1f}%"
+                    f"Step {i+1}: Probability={probability:.1f}%, Confidence={confidence:.1f}%\nReasoning: {explanation if explanation else 'No explanation provided.'}"
                 )
 
             return f"""Patient Demographics:
 {demographics_str}
 
-Clinical Data Summary (over monitoring period):
+Clinical Data (Over {monitoring_hours}-Hour Monitoring Period):
 {clinical_str}
 
 Assessment Progression:
 {chr(10).join(assessment_summary)}
 
-Task: Determine if this ICU patient will develop {self.task_content['complication_name']}.
+Clinical Context:
+{self.task_content['task_info']}
 
-Clinical Context: {self.task_content['task_info']}"""
+Final Assessment Instructions:
+- Review the entire assessment history and all clinical data.
+- Integrate all information for a final, well-justified prediction.
+- Justify your probability and confidence based on all data."""
 
         return format_prompt
 
-    def _get_task_specific_content(self) -> Dict[str, str]:
-        """Get task-specific content for prompts."""
-        task = self.task_name
-        if task == "mortality":
-            return {
-                "complication_name": "mortality",
-                "task_info": "ICU mortality refers to death occurring during the ICU stay. Key risk factors include hemodynamic instability, respiratory failure, multi-organ dysfunction, and severe metabolic derangements.",
+    def _prepare_step_metadata(
+        self, step_name: str, state: Dict[str, Any], output: Any
+    ) -> Dict[str, Any]:
+        """Prepare step-specific metadata for clinical workflow."""
+        additional_metadata = {}
+
+        # Base workflow metadata
+        additional_metadata.update(
+            {
+                "metadata_current_iteration": state.get("iteration", 0),
+                "metadata_total_features_available": len(
+                    state.get("available_features", set())
+                ),
+                "metadata_features_used_count": len(state.get("used_features", set())),
             }
-        elif task == "aki":
-            return {
-                "complication_name": "aki",
-                "task_info": "Acute kidney injury (AKI) is defined by rapid decline in kidney function with increased creatinine (≥1.5x baseline or ≥0.3 mg/dL increase in 48h) or decreased urine output (<0.5 mL/kg/h for 6-12h). Common causes include sepsis, hypotension, and nephrotoxins.",
-            }
-        elif task == "sepsis":
-            return {
-                "complication_name": "sepsis",
-                "task_info": "Sepsis is life-threatening organ dysfunction caused by dysregulated host response to infection. Diagnosed by SOFA score increase ≥2 points with suspected infection. Key indicators include fever, tachycardia, tachypnea, altered mental status, and laboratory abnormalities.",
-            }
-        return {
-            "complication_name": "complications",
-            "task_info": "General ICU complications assessment.",
-        }
+        )
+
+        if step_name == "lab_ordering":
+            # Lab ordering specific metadata
+            requested_tests = (
+                output.get("requested_tests", []) if isinstance(output, dict) else []
+            )
+            available_by_group = get_lab_groups_available(state["available_features"])
+            total_available_labs = sum(
+                len(features) for features in available_by_group.values()
+            )
+            total_unused_labs = sum(
+                len([f for f in features if f not in state["used_features"]])
+                for features in available_by_group.values()
+            )
+
+            additional_metadata.update(
+                {
+                    "metadata_labs_requested_count": len(requested_tests),
+                    "metadata_total_available_labs": total_available_labs,
+                    "metadata_total_unused_labs": total_unused_labs,
+                    "metadata_stopping_reason": (
+                        "no_labs_requested" if not requested_tests else "labs_requested"
+                    ),
+                }
+            )
+
+        elif step_name == "updated_assessment":
+            # Updated assessment specific metadata
+            previous_confidence = state.get("current_confidence", 0)
+            current_confidence = (
+                extract_confidence(output) if isinstance(output, dict) else 0
+            )
+
+            additional_metadata.update(
+                {
+                    "metadata_confidence_delta": current_confidence
+                    - previous_confidence,
+                    "metadata_probability_delta": (
+                        output.get("probability", 50)
+                        if isinstance(output, dict)
+                        else 50
+                    )
+                    - (
+                        state["assessment_history"][-2]["probability"]
+                        if len(state.get("assessment_history", [])) > 1
+                        else 50
+                    ),
+                    "metadata_confidence_improved": current_confidence
+                    > previous_confidence,
+                }
+            )
+
+        elif step_name == "final_prediction":
+            # Final prediction metadata
+            total_iterations = state.get("iteration", 0)
+            final_confidence = (
+                extract_confidence(output) if isinstance(output, dict) else 0
+            )
+            stopping_reason = (
+                "confidence_reached"
+                if final_confidence >= self.confidence_threshold
+                else (
+                    "max_iterations"
+                    if total_iterations >= self.max_iterations
+                    else "normal"
+                )
+            )
+
+            additional_metadata.update(
+                {
+                    "metadata_stopping_reason": stopping_reason,
+                }
+            )
+
+        return additional_metadata

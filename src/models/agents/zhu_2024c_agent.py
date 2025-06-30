@@ -4,9 +4,11 @@ from typing import Any, Dict, Optional
 import pandas as pd
 
 from src.models.agents.pulse_agent import PulseAgent
-from src.preprocessing.preprocessing_advanced.preprocessing_advanced import \
-    PreprocessorAdvanced
+from src.preprocessing.preprocessing_advanced.preprocessing_advanced import (
+    PreprocessorAdvanced,
+)
 from src.util.data_util import get_feature_name
+from src.util.agent_util import get_task_specific_content
 
 logger = logging.getLogger("PULSE_logger")
 
@@ -43,9 +45,17 @@ class Zhu2024cAgent(PulseAgent):
         self.preprocessor_advanced = PreprocessorAdvanced()
 
         # Initialize task content
-        self.task_content = self._get_task_specific_content()
+        self.task_content = get_task_specific_content(self.task_name)
 
         # Define steps
+        self._define_steps()
+
+    def _update_task_specific_content(self) -> None:
+        """Update task-specific content when task changes."""
+        self.task_content = get_task_specific_content(self.task_name)
+
+        # Redefine steps with updated task content
+        self.steps = []  # Clear existing steps
         self._define_steps()
 
     # ------------------------------------------
@@ -76,6 +86,10 @@ class Zhu2024cAgent(PulseAgent):
 
     def process_single(self, patient_data: pd.Series) -> Dict[str, Any]:
         """Process a single patient's data through all reasoning steps."""
+        # Update task context if needed (ensures task_content is current)
+        if hasattr(self.model, "task_name") and hasattr(self.model, "dataset_name"):
+            self.update_task_context(self.model.task_name, self.model.dataset_name)
+
         # Reset memory for this patient
         self.memory.reset()
 
@@ -153,7 +167,7 @@ class Zhu2024cAgent(PulseAgent):
     {feature_data}
 
     Disease definition and description: 
-    {self.task_content['task_info']}
+    {self.task_content['task_info_long']}
     """
             return prompt
 
@@ -176,29 +190,6 @@ Please provide your assessment following the required format."""
             return prompt
 
         return format_final_prediction_prompt
-
-    def _get_task_specific_content(self) -> Dict[str, str]:
-        """Get task-specific content for prompts."""
-        task = self.task_name
-        if task == "mortality":
-            return {
-                "complication_name": "death",
-                "prediction_description": "the prediction of ICU mortality",
-                "task_info": "Mortality refers to the occurrence of death within a specific population and time period. In the context of ICU patients, the task involves analyzing information from the first 25 hours of a patient's ICU stay to predict whether the patient will survive the remainder of their stay. This prediction task supports early risk assessment and clinical decision-making in critical care settings.",
-            }
-        elif task == "aki":
-            return {
-                "complication_name": "acute kidney injury",
-                "prediction_description": "prediction of the onset of acute kidney injury",
-                "task_info": "Acute kidney injury (AKI) is a subset of acute kidney diseases and disorders (AKD), characterized by a rapid decline in kidney function occurring within 7 days, with health implications. According to KDIGO criteria, AKI is diagnosed when there is an increase in serum creatinine to ≥1.5 times baseline within the prior 7 days, or an increase in serum creatinine by ≥0.3 mg/dL (≥26.5 µmol/L) within 48 hours, or urine output <0.5 mL/kg/h for 6–12 hours. The most common causes of AKI include sepsis, ischemia from hypotension or shock, and nephrotoxic exposures such as certain medications or contrast agents.",
-            }
-        elif task == "sepsis":
-            return {
-                "complication_name": "sepsis",
-                "prediction_description": "prediction of the onset of sepsis",
-                "task_info": "Sepsis is a life-threatening condition characterized by organ dysfunction resulting from a dysregulated host response to infection. It is diagnosed when a suspected or confirmed infection is accompanied by an acute increase of two or more points in the patient's Sequential Organ Failure Assessment (SOFA) score relative to their baseline. The SOFA score evaluates six physiological parameters: the ratio of partial pressure of oxygen to the fraction of inspired oxygen, mean arterial pressure, serum bilirubin concentration, platelet count, serum creatinine level, and the Glasgow Coma Score. A complication of sepsis is septic shock, which is marked by a drop in blood pressure and elevated lactate levels. Indicators of suspected infection may include positive blood cultures or the initiation of antibiotic therapy.",
-            }
-        return {}
 
     def _process_patient_features(
         self, state: Dict[str, Any], patient_data: pd.Series

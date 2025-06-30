@@ -5,7 +5,7 @@ general:
   app_name: "Pulse"
   app_version: "1.0.2"
   app_mode: "debug" # "debug", "count_tokens", "benchmark"
-  debug_data_length: 1000 # Number of samples to use for debugging
+  debug_data_length: 1 # Number of samples to use for debugging
   logging_level: "DEBUG" # "DEBUG", "INFO", "WARNING", "ERROR"
   use_scratch: true # Whether to use scratch space for temporary files
   save_metadata: true # Whether to save the metadata file. Inludes prompts for LLMs
@@ -16,14 +16,14 @@ wandb:
   entity: "berner"
 
 ###### Application specific settings ######
-base_path: "" #"/cluster/project/bmds_lab/sepsis_sophia/pulse"
-original_base_path: "" #"cluster/project/bmds_lab/sepsis_jan/pulse"
+base_path: "/cluster/project/bmds_lab/sepsis_sophia/pulse"
+original_base_path: "cluster/project/bmds_lab/sepsis_sophia/pulse"
 
 # Tasks to process
 tasks:
-  # - "mortality"
+  - "mortality"
   - "aki"
-  # - "sepsis"
+  - "sepsis"
 
 # Datasets to process
 dataset_path: "datasets/original_harmonized" #"/path/to/datasets"
@@ -71,7 +71,6 @@ prompting:
     # - "collaborative_reasoning_agent_preprocessor"
     # - "clinical_workflow_agent_preprocessor"
     # - "hybrid_reasoning_agent_preprocessor"
-    # - "guided_autonomous_agent_preprocessor"
 
   shots: 0
 
@@ -94,7 +93,7 @@ load_models:
   # - "configs/model_configs/MedGemma4bModel.yaml"
   # - "configs/model_configs/Gemma312BModel.yaml"
 
-  # - "configs/model_configs/Llama3.yaml"
+  - "configs/model_configs/Llama3.yaml"
   # - "configs/model_configs/Llama4.yaml" # not tested...
 
   # - "configs/model_configs/DeepseekR1Llama8bModel.yaml"

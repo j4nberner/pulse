@@ -25,6 +25,7 @@ VARIABLE_NAMES = {
     "liu_2023_few_shot_preprocessor": "Few-shot",
     "zhu_2024b_one_shot_preprocessor": "One-shot",
     "zhu_2024a_cot_preprocessor": "Chain-of-Thought",
+    "zhu_2024c_categorization_summary_agent_preprocessor": "Categorization Summary Agent",
     "aki": "AKI",
     "mortality": "Mortality",
     "sepsis": "Sepsis",

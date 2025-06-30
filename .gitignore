@@ -2,6 +2,7 @@ datasets/
 results/
 secrets/
 output/
+notebooks/*/
 visualizations/*/
 output_to_keep/
 wandb/
@@ -16,4 +17,4 @@ frontend/
 app.py
 config_gui_adapted.yaml
 configs/config_ui.html
-pulse/
+*.DS_Store

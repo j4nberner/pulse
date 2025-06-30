@@ -240,6 +240,7 @@ def get_common_feature_aliases() -> dict:
         "bicarbonate": "bicar",
         "hco3": "bicar",  # Common alternative name
         "base excess": "be",
+        "base_excess": "be",
         "troponin": "tnt",
         "troponin t": "tnt",
         "creatine kinase": "ck",
@@ -264,6 +265,56 @@ def get_common_feature_aliases() -> dict:
         "pao2": "po2",  # Partial pressure of oxygen
         "paco2": "pco2",  # Partial pressure of carbon dioxide
     }
+
+
+def get_priority_features_for_task(task_name: str) -> set:
+    """Get comprehensive task-specific features for investigation step."""
+    task_features = {
+        "mortality": {
+            "map",
+            "sbp",
+            "dbp",
+            "lact",
+            "o2sat",
+            "po2",
+            "pco2",
+            "crea",
+            "bun",
+            "urine",
+            "bili",
+            "alt",
+            "ast",
+            "ph",
+            "be",
+            "bicar",
+            "plt",
+            "inr_pt",
+            "hr",
+            "temp",
+        },
+        "aki": {"crea", "urine", "bun", "map", "sbp", "na", "k"},
+        "sepsis": {
+            "temp",
+            "hr",
+            "resp",
+            "map",
+            "sbp",
+            "o2sat",
+            "po2",
+            "pco2",
+            "fio2",
+            "plt",
+            "bili",
+            "crea",
+            "wbc",
+            "neut",
+            "bnd",
+            "crp",
+            "lact",
+        },
+    }
+
+    return task_features.get(task_name, set())
 
 
 def get_clinical_group_aliases() -> dict:
