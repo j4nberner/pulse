@@ -1,14 +1,25 @@
 import logging
 from typing import Any, Dict, Optional
 
+import numpy as np
 import pandas as pd
 
 from src.models.agents.pulse_agent import PulseAgent
-from src.preprocessing.preprocessing_advanced.preprocessing_advanced import \
-    PreprocessorAdvanced
-from src.util.agent_util import (create_error_response, filter_na_columns,
-                                 format_clinical_data, format_clinical_text,
-                                 get_specialist_features, get_specialist_system_message)
+from src.preprocessing.preprocessing_advanced.preprocessing_advanced import (
+    PreprocessorAdvanced,
+)
+from src.util.agent_util import (
+    create_error_response,
+    filter_na_columns,
+    format_clinical_data,
+    format_clinical_text,
+    get_monitoring_period_hours,
+    get_specialist_features,
+    get_specialist_system_message,
+    get_task_specific_content,
+    format_demographics_str,
+    parse_numeric_value,
+)
 
 logger = logging.getLogger("PULSE_logger")
 
@@ -43,7 +54,7 @@ class CollaborativeReasoningAgent(PulseAgent):
             **kwargs,
         )
 
-        self.task_content = self._get_task_specific_content()
+        self.task_content = get_task_specific_content(self.task_name)
 
         # Initialize preprocessing tools
         self.preprocessor_advanced = PreprocessorAdvanced()
@@ -51,6 +62,14 @@ class CollaborativeReasoningAgent(PulseAgent):
         # Define specialist types
         self.specialist_types = ["hemodynamic", "metabolic", "hematologic"]
 
+        self._define_steps()
+
+    def _update_task_specific_content(self) -> None:
+        """Update task-specific content when task changes."""
+        self.task_content = get_task_specific_content(self.task_name)
+
+        # Redefine steps with updated task content
+        self.steps = []  # Clear existing steps
         self._define_steps()
 
     def _define_steps(self) -> None:
@@ -73,7 +92,7 @@ class CollaborativeReasoningAgent(PulseAgent):
 
         # Phase 2: Synthesis step
         self.add_step(
-            name="synthesis",
+            name="final_prediction",
             system_message=None,  # Uses default system message
             prompt_template=self._create_synthesis_template(),
             input_formatter=self._format_synthesis_data,
@@ -83,11 +102,15 @@ class CollaborativeReasoningAgent(PulseAgent):
 
     def process_single(self, patient_data: pd.Series) -> Dict[str, Any]:
         """Process a single patient through the collaborative reasoning workflow."""
+        # Update task context if needed (ensures task_content is current)
+        if hasattr(self.model, "task_name") and hasattr(self.model, "dataset_name"):
+            self.update_task_context(self.model.task_name, self.model.dataset_name)
+
         # Reset memory
         self.memory.reset()
 
         sample_id = patient_data.name if hasattr(patient_data, "name") else "default"
-        self.memory.set_current_sample(sample_id)
+        self.memory.set_current_sample(sample_id, patient_data)
 
         # Keep original data with _na columns for uncertainty analysis
         original_patient_data = patient_data.copy()
@@ -162,7 +185,7 @@ class CollaborativeReasoningAgent(PulseAgent):
                 )
 
             # Phase 2: Synthesis
-            synthesis_result = self.run_step("synthesis", None, state)
+            synthesis_result = self.run_step("final_prediction", None, state)
             synthesis_output = synthesis_result["output"]
 
             # Aggregate token metrics
@@ -232,6 +255,9 @@ class CollaborativeReasoningAgent(PulseAgent):
             # Extract demographics and clinical data
             demographics = formatted_data.get("demographics", {})
 
+            # Get monitoring period from the data
+            monitoring_hours = get_monitoring_period_hours(state["patient_data"])
+
             # Clinical data might be under 'vital_signs' key or directly
             if "vital_signs" in formatted_data:
                 clinical_data = formatted_data["vital_signs"]
@@ -241,16 +267,7 @@ class CollaborativeReasoningAgent(PulseAgent):
                 }
 
             # Format demographics
-            demo_text = []
-            if "age" in demographics:
-                demo_text.append(f"Age: {demographics['age']} years")
-            if "sex" in demographics:
-                demo_text.append(f"Sex: {demographics['sex']}")
-            if "weight" in demographics:
-                demo_text.append(f"Weight: {demographics['weight']} kg")
-            demographics_str = (
-                ", ".join(demo_text) if demo_text else "Demographics: Not available"
-            )
+            demographics_str = format_demographics_str(demographics)
 
             # Format clinical data
             clinical_text = format_clinical_text(clinical_data)
@@ -276,7 +293,7 @@ class CollaborativeReasoningAgent(PulseAgent):
 Patient Demographics:
 {demographics_str}
 
-{specialist_type.title()} Data (over monitoring period):
+{specialist_type.title()} Data (over {monitoring_hours}-hour monitoring period):
 {clinical_str}
 
 Clinical Context:
@@ -286,20 +303,21 @@ Specialist Focus:
 As a {specialist_type} specialist, focus on {focus_desc}. Provide your domain-specific assessment based on your expertise.
 
 Pay attention to:
-- Temporal patterns (trend direction and clinical significance)
-- Data uncertainty and completeness
-- Domain-specific abnormalities and their severity
-- Clinical relationships between parameters in your domain
+- Temporal patterns (e.g., is a parameter rising, falling, or stable? What is the clinical significance of this trend?)
+- Data uncertainty and completeness (note missing or ambiguous data and how it affects your assessment)
+- Domain-specific abnormalities and their severity (identify abnormal values and discuss their clinical impact)
+- Clinical relationships between parameters in your domain (explain how findings relate to each other physiologically)
 
 Respond in JSON format:
 {{
-    "diagnosis": "specialist-{self.task_content['complication_name']}-assessment",
-    "probability": XX (integer between 0 and 100, where 0 means {self.task_content['complication_name']} will not occur and 100 means {self.task_content['complication_name']} will definitely occur),
-    "explanation": "Your concise {specialist_type} specialist assessment including key findings, temporal patterns, and clinical significance (MAX 150 words)",
-    "confidence": XX (integer between 0 and 100, where 0 means not confident at all and 100 means very confident in your {specialist_type} assessment)
+    "diagnosis": "specialist-{self.task_content['task_name']}-assessment",
+    "probability": XX (integer between 0 and 100, where 0 means {self.task_content['task_name']} will not occur and 100 means {self.task_content['task_name']} will definitely occur; probability is your best estimate of the likelihood of the complication),
+    "explanation": "Your concise {specialist_type} specialist assessment including key findings, temporal patterns, and clinical significance (MAX 190 words)",
+    "confidence": XX (integer between 0 and 100, where 0 means not confident at all and 100 means very confident in your assessment; confidence reflects your certainty in your own reasoning based on the available data)
 }}
 
-IMPORTANT: Base your confidence on data completeness, clarity of findings, and strength of evidence in your domain."""
+Important:
+Base your confidence on data completeness, clarity of findings, and strength of evidence in your domain."""
 
         return format_prompt
 
@@ -311,16 +329,7 @@ IMPORTANT: Base your confidence on data completeness, clarity of findings, and s
             specialist_assessments = formatted_data["specialist_assessments"]
 
             # Format demographics
-            demo_text = []
-            if "age" in demographics:
-                demo_text.append(f"Age: {demographics['age']} years")
-            if "sex" in demographics:
-                demo_text.append(f"Sex: {demographics['sex']}")
-            if "weight" in demographics:
-                demo_text.append(f"Weight: {demographics['weight']} kg")
-            demographics_str = (
-                ", ".join(demo_text) if demo_text else "Demographics: Not available"
-            )
+            demographics_str = format_demographics_str(demographics)
 
             # Format specialist assessments
             assessment_summary = []
@@ -328,21 +337,28 @@ IMPORTANT: Base your confidence on data completeness, clarity of findings, and s
             valid_assessments = 0
 
             for specialist_type, assessment in specialist_assessments.items():
+                # Convert probability to integer 0-100 for display
                 probability = assessment.get("probability", 50)
+                probability = parse_numeric_value(probability, 50)
+                if isinstance(probability, float) and 0 <= probability <= 1:
+                    probability_display = int(round(probability * 100))
+                else:
+                    probability_display = int(round(probability))
                 confidence = assessment.get("confidence", 50)
+                confidence = parse_numeric_value(confidence, 0)
                 explanation = assessment.get("explanation", "No explanation provided")
 
                 # Count valid assessments for confidence calculation
                 if not assessment.get("diagnosis", "").startswith(
                     ("error-", "insufficient-data-")
                 ):
-                    total_confidence += float(confidence)
+                    total_confidence += confidence
                     valid_assessments += 1
 
                 assessment_summary.append(
-                    f"\n{specialist_type.upper()} SPECIALIST:\n"
-                    f"- Probability: {probability}%\n"
-                    f"- Confidence: {confidence}%\n"
+                    f"\n{specialist_type.capitalize()} Specialist:\n"
+                    f"- Probability: {probability_display}%\n"
+                    f"- Confidence: {int(round(confidence))}%\n"
                     f"- Assessment: {explanation}\n"
                 )
 
@@ -354,13 +370,13 @@ IMPORTANT: Base your confidence on data completeness, clarity of findings, and s
             return f"""Patient Demographics:
 {demographics_str}
 
-SPECIALIST ASSESSMENTS:
+Specialist Assessments:
 {assessment_str}
 
 Clinical Context:
 {self.task_content['task_info']}
 
-SYNTHESIS TASK:
+Synthesis Task:
 As the coordinating physician, integrate the specialist assessments to provide a final clinical decision regarding {self.task_content['complication_name']} risk.
 
 Consider:
@@ -380,25 +396,147 @@ Average specialist confidence: {avg_confidence:.1f}%"""
 
         return format_prompt
 
-    def _get_task_specific_content(self) -> Dict[str, str]:
-        """Get task-specific content for prompts."""
-        task = self.task_name
-        if task == "mortality":
-            return {
-                "complication_name": "mortality",
-                "task_info": "ICU mortality refers to death occurring during the ICU stay. Key risk factors include hemodynamic instability, respiratory failure, multi-organ dysfunction, and severe metabolic derangements.",
+    def _prepare_step_metadata(
+        self, step_name: str, state: Dict[str, Any], output: Any
+    ) -> Dict[str, Any]:
+        """Prepare step-specific metadata for collaborative reasoning workflow."""
+        additional_metadata = {}
+
+        # Base metadata
+        additional_metadata.update(
+            {
+                "metadata_total_features_available": len(
+                    state.get("available_features", set())
+                ),
+                "metadata_data_completeness_score": self._calculate_data_completeness(
+                    state.get("patient_data")
+                ),
             }
-        elif task == "aki":
-            return {
-                "complication_name": "aki",
-                "task_info": "Acute kidney injury (AKI) is defined by rapid decline in kidney function with increased creatinine (≥1.5x baseline or ≥0.3 mg/dL increase in 48h) or decreased urine output (<0.5 mL/kg/h for 6-12h). Common causes include sepsis, hypotension, and nephrotoxins.",
-            }
-        elif task == "sepsis":
-            return {
-                "complication_name": "sepsis",
-                "task_info": "Sepsis is life-threatening organ dysfunction caused by dysregulated host response to infection. Diagnosed by SOFA score increase ≥2 points with suspected infection. Key indicators include fever, tachycardia, tachypnea, altered mental status, and laboratory abnormalities.",
-            }
-        return {
-            "complication_name": "complications",
-            "task_info": "General ICU complications assessment.",
-        }
+        )
+
+        # Specialist assessment metadata
+        if step_name.endswith("_assessment"):
+            specialist_type = step_name.replace("_assessment", "")
+            specialist_features = state.get("available_features", set())
+
+            specialist_feature_set = get_specialist_features(
+                specialist_type, specialist_features
+            )
+
+            additional_metadata.update(
+                {
+                    f"metadata_{specialist_type}_features_available": len(
+                        specialist_feature_set
+                    ),
+                    f"metadata_{specialist_type}_data_available": len(
+                        specialist_feature_set
+                    )
+                    > 0,
+                    "metadata_specialist_type": specialist_type,
+                }
+            )
+
+            # Add assessment-specific metadata if output is available
+            if isinstance(output, dict):
+                additional_metadata.update(
+                    {
+                        f"metadata_{specialist_type}_confidence": parse_numeric_value(
+                            output.get("confidence", None)
+                        ),
+                        f"metadata_{specialist_type}_probability": parse_numeric_value(
+                            output.get("probability", None)
+                        ),
+                    }
+                )
+
+        elif step_name == "final_prediction":
+            # Synthesis metadata
+            specialist_assessments = state.get("specialist_assessments", {})
+
+            # Calculate agreement metrics
+            probabilities = [
+                parse_numeric_value(assessment.get("probability", 50), 50)
+                for assessment in specialist_assessments.values()
+            ]
+            confidences = [
+                parse_numeric_value(assessment.get("confidence", 0), 0)
+                for assessment in specialist_assessments.values()
+            ]
+
+            if probabilities:
+                prob_variance = (
+                    float(np.var(probabilities)) if len(probabilities) > 1 else 0.0
+                )
+                prob_range = (
+                    max(probabilities) - min(probabilities)
+                    if len(probabilities) > 1
+                    else 0.0
+                )
+                highest_prob_specialist = (
+                    max(
+                        specialist_assessments.keys(),
+                        key=lambda x: parse_numeric_value(
+                            specialist_assessments[x].get("probability", 0), 0
+                        ),
+                    )
+                    if specialist_assessments
+                    else None
+                )
+            else:
+                prob_variance = 0.0
+                prob_range = 0.0
+                highest_prob_specialist = None
+
+            if confidences:
+                avg_confidence = sum(confidences) / len(confidences)
+                highest_conf_specialist = (
+                    max(
+                        specialist_assessments.keys(),
+                        key=lambda x: parse_numeric_value(
+                            specialist_assessments[x].get("confidence", 0), 0
+                        ),
+                    )
+                    if specialist_assessments
+                    else None
+                )
+            else:
+                avg_confidence = 0.0
+                highest_conf_specialist = None
+
+            successful_specialists = [
+                name
+                for name, assessment in specialist_assessments.items()
+                if not assessment.get("diagnosis", "").startswith(
+                    ("error-", "insufficient-data-")
+                )
+            ]
+
+            additional_metadata.update(
+                {
+                    "metadata_specialist_probability_variance": prob_variance,
+                    "metadata_specialist_probability_range": prob_range,
+                    "metadata_average_specialist_confidence": avg_confidence,
+                    "metadata_successful_specialists_count": len(
+                        successful_specialists
+                    ),
+                    "metadata_failed_specialists_count": len(specialist_assessments)
+                    - len(successful_specialists),
+                    "metadata_highest_prob_specialist": highest_prob_specialist,
+                    "metadata_highest_conf_specialist": highest_conf_specialist,
+                    "metadata_specialists_with_data": ",".join(successful_specialists),
+                }
+            )
+
+        return additional_metadata
+
+    def _calculate_data_completeness(self, patient_data: Any) -> float:
+        """Calculate data completeness score."""
+        try:
+            if patient_data is not None and hasattr(patient_data, "index"):
+                non_na_count = patient_data.count()
+                total_count = len(patient_data)
+                return float(non_na_count / total_count) if total_count > 0 else 0.0
+            return 1.0
+        except Exception as e:
+            logger.warning("Error calculating data completeness: %s", e)
+            return 0.0

@@ -3,16 +3,22 @@ from typing import Any, Dict, List, Optional, Set
 
 import numpy as np
 import pandas as pd
+import re
 
-from src.preprocessing.preprocessing_advanced.preprocessing_advanced import \
-    PreprocessorAdvanced
-from src.util.data_util import (get_all_feature_groups,
-                                get_clinical_group_aliases,
-                                get_common_feature_aliases,
-                                get_feature_group_keys,
-                                get_feature_group_title, get_feature_name,
-                                get_feature_reference_range, get_feature_uom,
-                                validate_feature_exists)
+from src.preprocessing.preprocessing_advanced.preprocessing_advanced import (
+    PreprocessorAdvanced,
+)
+from src.util.data_util import (
+    get_all_feature_groups,
+    get_clinical_group_aliases,
+    get_common_feature_aliases,
+    get_feature_group_keys,
+    get_feature_group_title,
+    get_feature_name,
+    get_feature_reference_range,
+    get_feature_uom,
+    validate_feature_exists,
+)
 
 logger = logging.getLogger("PULSE_logger")
 
@@ -34,11 +40,13 @@ def format_clinical_data(
     Format clinical data (vital signs or lab results) using aggregate_feature_windows.
 
     Args:
-        patient_data: Patient data series
+        patient_data: Patient data series (filtered, without _na columns)
         feature_keys: Set of feature keys to format
         preprocessor_advanced: Instance of PreprocessorAdvanced for data processing
         include_demographics: Whether to include demographics in output
         include_temporal_patterns: Whether to include temporal trend analysis
+        include_uncertainty: Whether to include uncertainty/missingness analysis
+        original_patient_data: Original patient data with _na columns for uncertainty analysis
 
     Returns:
         Dictionary with formatted clinical data
@@ -60,6 +68,8 @@ def format_clinical_data(
             patient_demographics["age"] = patient_data["age"]
         if "sex" in patient_data.index:
             patient_demographics["sex"] = patient_data["sex"]
+        if "height" in patient_data.index:
+            patient_demographics["height"] = patient_data["height"]
         if "weight" in patient_data.index:
             patient_demographics["weight"] = patient_data["weight"]
         result["demographics"] = patient_demographics
@@ -175,12 +185,25 @@ def format_clinical_text(clinical_data: Dict[str, Dict]) -> List[str]:
     return formatted_lines
 
 
-def filter_na_columns(patient_data: pd.Series) -> pd.Series:
-    """Filter out columns with '_na' suffixes like Sarvari preprocessor does."""
-    # Convert to DataFrame for regex filtering, then back to Series
-    temp_df = pd.DataFrame([patient_data])
-    filtered_df = temp_df.filter(regex=r"^(?!.*_na(_\d+)?$)")
-    return filtered_df.iloc[0]
+def format_demographics_str(demographics: dict) -> str:
+    """
+    Format demographics dictionary into a string for prompt templates.
+    Always includes age, sex, height, and weight if present.
+    Age, height, and weight are formatted as integers if possible.
+    """
+    demo_text = []
+    if "age" in demographics and demographics["age"] is not None:
+        age_val = int(round(float(demographics["age"])))
+        demo_text.append(f"Age: {age_val} years")
+    if "sex" in demographics and demographics["sex"] is not None:
+        demo_text.append(f"Sex: {demographics['sex']}")
+    if "height" in demographics and demographics["height"] is not None:
+        height_val = int(round(float(demographics["height"])))
+        demo_text.append(f"Height: {height_val} cm")
+    if "weight" in demographics and demographics["weight"] is not None:
+        weight_val = int(round(float(demographics["weight"])))
+        demo_text.append(f"Weight: {weight_val} kg")
+    return ", ".join(demo_text) if demo_text else "Demographics: Not available"
 
 
 # ===========================
@@ -592,6 +615,51 @@ def get_specialist_system_message(specialist_type: str, task_name: str) -> str:
 
 
 # ===========================
+# TASK-SPECIFIC CONTENT
+# ===========================
+
+
+def get_task_specific_content(task_name: str) -> Dict[str, str]:
+    """
+    Get task-specific content for prompts.
+
+    Args:
+        task_name: The task name (e.g., 'mortality', 'aki', 'sepsis')
+
+    Returns:
+        Dictionary containing complication_name and task_info for the specified task
+    """
+    if task_name == "mortality":
+        return {
+            "task_name": "mortality",
+            "complication_name": "death",
+            "prediction_description": "the prediction of ICU mortality",
+            "task_info": "ICU mortality refers to death occurring during the ICU stay. Key risk factors include hemodynamic instability, respiratory failure, multi-organ dysfunction, and severe metabolic derangements.",
+            "task_info_long": "Mortality refers to the occurrence of death within a specific population and time period. In the context of ICU patients, the task involves analyzing information from the first 25 hours of a patient’s ICU stay to predict whether the patient will survive the remainder of their stay. This prediction task supports early risk assessment and clinical decision-making in critical care settings.",
+        }
+    elif task_name == "aki":
+        return {
+            "task_name": "aki",
+            "complication_name": "acute kidney injury",
+            "prediction_description": "prediction of the onset of acute kidney injury",
+            "task_info": "Acute kidney injury (AKI) is defined by rapid decline in kidney function with increased creatinine (≥1.5x baseline or ≥0.3 mg/dL increase in 48h) or decreased urine output (<0.5 mL/kg/h for 6-12h). Common causes include sepsis, hypotension, and nephrotoxins.",
+            "task_info_long": "Acute kidney injury (AKI) is a subset of acute kidney diseases and disorders (AKD), characterized by a rapid decline in kidney function occurring within 7 days, with health implications. According to KDIGO criteria, AKI is diagnosed when there is an increase in serum creatinine to ≥1.5 times baseline within the prior 7 days, or an increase in serum creatinine by ≥0.3 mg/dL (≥26.5 µmol/L) within 48 hours, or urine output <0.5 mL/kg/h for 6–12 hours. The most common causes of AKI include sepsis, ischemia from hypotension or shock, and nephrotoxic exposures such as certain medications or contrast agents.",
+        }
+    elif task_name == "sepsis":
+        return {
+            "task_name": "sepsis",
+            "complication_name": "sepsis",
+            "prediction_description": "prediction of the onset of sepsis",
+            "task_info": "Sepsis is a life-threatening organ dysfunction caused by a dysregulated host response to infection. It is diagnosed by an increase in the SOFA score of ≥2 points in the presence of suspected infection. Key indicators include fever, tachycardia, tachypnea, altered mental status, and laboratory abnormalities.",
+            "task_info_long": "Sepsis is a life-threatening condition characterized by organ dysfunction resulting from a dysregulated host response to infection. It is diagnosed when a suspected or confirmed infection is accompanied by an acute increase of two or more points in the patient’s Sequential Organ Failure Assessment (SOFA) score relative to their baseline. The SOFA score evaluates six physiological parameters: the ratio of partial pressure of oxygen to the fraction of inspired oxygen, mean arterial pressure, serum bilirubin concentration, platelet count, serum creatinine level, and the Glasgow Coma Score. A complication of sepsis is septic shock, which is marked by a drop in blood pressure and elevated lactate levels. Indicators of suspected infection may include positive blood cultures or the initiation of antibiotic therapy.",
+        }
+    return {
+        "complication_name": "complications",
+        "task_info": "General ICU complications assessment.",
+    }
+
+
+# ===========================
 # OTHER UTILS
 # ===========================
 
@@ -599,13 +667,13 @@ def get_specialist_system_message(specialist_type: str, task_name: str) -> str:
 def extract_confidence(output: Dict[str, Any]) -> float:
     """Extract confidence value from LLM output with fallback logic."""
     if "confidence" in output:
-        confidence = output.get("confidence", 50)
+        confidence = output.get("confidence", 0)
         # Handle string values from LLM output
         if isinstance(confidence, str):
             try:
                 confidence = float(confidence)
             except ValueError:
-                confidence = 50
+                confidence = 0
         return confidence / 100.0
     else:
         # Use probability as confidence indicator when confidence not provided
@@ -628,3 +696,59 @@ def create_error_response(error_message: str) -> Dict[str, Any]:
         "num_input_tokens": 0,
         "num_output_tokens": 0,
     }
+
+
+def get_monitoring_period_hours(patient_data: pd.Series) -> int:
+    """
+    Get the monitoring period duration in hours from windowed data columns.
+
+    Args:
+        patient_data: Patient data series with windowed columns (e.g., feature_0, feature_1, etc.)
+
+    Returns:
+        Number of hours in the monitoring period (e.g., 6 if columns go from feature_0 to feature_5)
+    """
+    window_indices = set()
+    for col in patient_data.index:
+        parts = col.split("_")
+        if len(parts) >= 2 and parts[-1].isdigit():
+            window_indices.add(int(parts[-1]))
+    return len(window_indices)
+
+
+def filter_na_columns(patient_data: pd.Series) -> pd.Series:
+    """Filter out columns with '_na' suffixes like Sarvari preprocessor does."""
+    # Convert to DataFrame for regex filtering, then back to Series
+    temp_df = pd.DataFrame([patient_data])
+    filtered_df = temp_df.filter(regex=r"^(?!.*_na(_\d+)?$)")
+    return filtered_df.iloc[0]
+
+
+def parse_numeric_value(value, default=0):
+    """
+    Parse a numeric value: return float if float, int if int, float from string, else default.
+    If value is None or missing, return "unknown".
+    """
+    if value is None:
+        return "unknown"
+    if isinstance(value, float):
+        return value
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str):
+        s = value.strip().strip("\"'")
+
+        numeric_match = re.search(r"(-?\d+\.?\d*)", s)
+        if numeric_match:
+            try:
+                num_str = numeric_match.group(1)
+                if "." in num_str:
+                    return float(num_str)
+                else:
+                    return int(num_str)
+            except Exception:
+                pass
+    logger.warning(
+        "Failed to parse numeric value from '%s', returning default: %s", value, default
+    )
+    return default

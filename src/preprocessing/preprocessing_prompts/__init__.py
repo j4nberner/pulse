@@ -16,7 +16,6 @@ preprocessor_method_dict = {
     "sarvari_2024_aggregation_preprocessor": sarvari_aggregation_preprocessor,
     "zhu_2024c_categorization_summary_agent_preprocessor": generic_agent_preprocessor,
     "clinical_workflow_agent_preprocessor": generic_agent_preprocessor,
-    "guided_autonomous_agent_preprocessor": generic_agent_preprocessor,
     "collaborative_reasoning_agent_preprocessor": generic_agent_preprocessor,
     "hybrid_reasoning_agent_preprocessor": generic_agent_preprocessor,
     # Add other preprocessor methods here as needed
