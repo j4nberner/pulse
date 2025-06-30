@@ -464,7 +464,7 @@ Respond in JSON format:
 {{
     "diagnosis": "preliminary-{self.task_content['task_name']}-risk",
     "probability": XX (integer between 0 and 100, where 0 means {self.task_content['task_name']} will not occur and 100 means {self.task_content['task_name']} will definitely occur; probability is your best estimate of the likelihood of the complication),
-    "explanation": "Your detailed clinical reasoning, integrating all available information and justifying your probability estimate (MAX 200 words)",
+    "explanation": "Your detailed clinical reasoning, integrating all available information and justifying your probability estimate (MAX 190 words)",
     "confidence": XX (integer between 0 and 100, where 0 means not confident at all and 100 means very confident in your assessment; confidence reflects your certainty in your own reasoning based on the available data)
 }}
 
@@ -618,7 +618,7 @@ Respond in JSON format:
 {{
     "diagnosis": "updated-{self.task_content['task_name']}-assessment",
     "probability": XX (integer between 0 and 100, where 0 means {self.task_content['task_name']} will not occur and 100 means {self.task_content['task_name']} will definitely occur; probability is your best estimate of the likelihood of the complication),
-    "explanation": "How the new labs, in the context of all prior data, change your assessment and interpretation of the risk (MAX 200 words)",
+    "explanation": "How the new labs, in the context of all prior data, change your assessment and interpretation of the risk (MAX 190 words)",
     "confidence": XX (integer between 0 and 100, where 0 means not confident at all and 100 means very confident in your assessment; confidence reflects your certainty in your own reasoning based on the available data)
 }}"""
 

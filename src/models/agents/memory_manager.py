@@ -1,6 +1,11 @@
 import logging
+import pandas as pd
 from datetime import datetime
 from typing import Any, Dict, List, Optional
+from src.util.agent_util import (
+    get_monitoring_period_hours,
+    get_specialist_features,
+)
 
 logger = logging.getLogger("PULSE_logger")
 
@@ -184,10 +189,6 @@ class AgentMemoryManager:
 
     def _add_sample_metadata(self, patient_data: Any) -> None:
         """Add sample-level metadata row."""
-        from src.util.agent_util import (
-            get_monitoring_period_hours,
-            get_specialist_features,
-        )
 
         # Calculate data quality metrics
         data_completeness = self._calculate_data_completeness(patient_data)
@@ -293,14 +294,12 @@ class AgentMemoryManager:
         try:
             if hasattr(patient_data, "index"):
                 # For pandas Series - count non-NaN values
-                import pandas as pd
-
                 non_na_count = patient_data.count()
                 total_count = len(patient_data)
                 return float(non_na_count / total_count) if total_count > 0 else 0.0
             return 1.0  # Fallback
         except Exception as e:
-            logger.warning(f"Error calculating data completeness: {e}")
+            logger.warning("Error calculating data completeness: %s", e)
             return 0.0
 
     def _calculate_imputation_percentage(self, patient_data: Any) -> float:

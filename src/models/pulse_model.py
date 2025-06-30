@@ -439,6 +439,13 @@ class PulseLLMModel(PulseModel):
 
         self.model.eval()
 
+        # Ensure sequential Sample IDs for agent models
+        if self.is_agent:
+            test_loader = (
+                test_loader[0].reset_index(drop=True),
+                test_loader[1].reset_index(drop=True),
+            )
+
         for X, y in zip(test_loader[0].iterrows(), test_loader[1].iterrows()):
             idx = X[0]
             if self.is_agent:

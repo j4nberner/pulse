@@ -240,6 +240,7 @@ def get_common_feature_aliases() -> dict:
         "bicarbonate": "bicar",
         "hco3": "bicar",  # Common alternative name
         "base excess": "be",
+        "base_excess": "be",
         "troponin": "tnt",
         "troponin t": "tnt",
         "creatine kinase": "ck",

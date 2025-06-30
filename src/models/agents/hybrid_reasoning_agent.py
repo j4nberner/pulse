@@ -763,7 +763,7 @@ Respond in JSON format:
 {{
     "diagnosis": "ai-clinical-interpretation",
     "probability": XX (integer between 0 and 100, where 0 means {self.task_content['task_name']} will not occur and 100 means {self.task_content['task_name']} will definitely occur; your clinical interpretation of the appropriate risk level based on XGBoost findings),
-    "explanation": "Clinical interpretation of XGBoost model findings, including significance of important features and any data quality considerations (MAX 200 words)",
+    "explanation": "Clinical interpretation of XGBoost model findings, including significance of important features and any data quality considerations (MAX 190 words)",
     "confidence": XX (integer between 0 and 100, where 0 means not confident at all and 100 means very confident in your assessment; your confidence in interpreting the XGBoost model results)
 }}"""
 
@@ -834,7 +834,7 @@ Respond in JSON format:
 {{
     "diagnosis": "clinical-{self.task_content['task_name']}-assessment",
     "probability": XX (integer between 0 and 100, where 0 means {self.task_content['task_name']} will not occur and 100 means {self.task_content['task_name']} will definitely occur; your independent clinical assessment of {self.task_content['task_name']} risk),
-    "explanation": "Your clinical reasoning based on patient data, noting agreement/disagreement with XGBoost assessment (MAX 200 words)",
+    "explanation": "Your clinical reasoning based on patient data, noting agreement/disagreement with XGBoost assessment (MAX 180 words)",
     "confidence": XX (integer between 0 and 100, where 0 means not confident at all and 100 means very confident in your assessment; confidence reflects your certainty in your own reasoning based on the available data),
     "ai_agreement": "agree/partial/disagree (how well your clinical assessment aligns with the XGBoost prediction)"
 }}
@@ -927,7 +927,7 @@ Respond in JSON format:
 {{
     "diagnosis": "detailed-investigation-{self.task_content['task_name']}",
     "probability": XX (integer between 0 and 100, where 0 means {self.task_content['task_name']} will not occur and 100 means {self.task_content['task_name']} will definitely occur; refined probability assessment after detailed investigation),
-    "explanation": "Analysis explaining the disagreement and your refined assessment based on thorough investigation (MAX 200 words)",
+    "explanation": "Analysis explaining the disagreement and your refined assessment based on thorough investigation (MAX 190 words)",
     "confidence": XX (integer between 0 and 100, where 0 means not confident at all and 100 means very confident in your assessment; confidence reflects your certainty in your own reasoning based on the available data)
 }}"""
 
