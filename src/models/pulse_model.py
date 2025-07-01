@@ -305,20 +305,15 @@ class PulseLLMModel(PulseModel):
         )
 
         # Tokenize with chat template
-        chat_prompt = self.tokenizer.apply_chat_template(
-            input_text, tokenize=False, add_generation_prompt=True
-        )
-
-        token_start = time.perf_counter()
-        tokenized_inputs = self.tokenizer(
-            chat_prompt,
+        tokenized_inputs = self.tokenizer.apply_chat_template(
+            input_text, 
+            tokenize=True, 
+            add_generation_prompt=True,
             return_tensors="pt",
-        )
-        token_time = time.perf_counter() - token_start
-        num_input_tokens = tokenized_inputs["input_ids"].size(1)
+            return_dict=True,
+        ).to(self.device)
 
-        input_ids = tokenized_inputs["input_ids"].to(self.device)
-        attention_mask = tokenized_inputs["attention_mask"].to(self.device)
+        num_input_tokens = tokenized_inputs["input_ids"].size(1)
 
         logger.debug("GPU memory allocated: %s",
                      torch.cuda.memory_allocated() / (1024 ** 3))
@@ -329,18 +324,15 @@ class PulseLLMModel(PulseModel):
         # Set model-specific generation parameters
         output_scores = True if self.model_name == "DeepseekR1Model" else False
 
-
-
         with torch.no_grad():
             outputs = self.model.generate(
-                input_ids=input_ids,
-                attention_mask=attention_mask,
+                **tokenized_inputs,
                 max_new_tokens=self.params["max_new_tokens"],
                 return_dict_in_generate=True,
                 output_scores=output_scores,
                 output_hidden_states=False,
-                pad_token_id=self.tokenizer.pad_token_id,
-                eos_token_id=self.tokenizer.eos_token_id,
+                # pad_token_id=self.tokenizer.pad_token_id,
+                # eos_token_id=self.tokenizer.eos_token_id,
                 do_sample=self.params["do_sample"],
                 temperature=self.params["temperature"],
             )
@@ -397,7 +389,7 @@ class PulseLLMModel(PulseModel):
         result = {
             "generated_text": generated_text,
             "thinking_output": thinking_output,
-            "token_time": token_time,
+            "token_time": 0.0,  
             "infer_time": infer_time,
             "num_input_tokens": num_input_tokens,
             "num_output_tokens": num_output_tokens,

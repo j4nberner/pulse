@@ -8,6 +8,7 @@ from transformers import (
     AutoTokenizer,
     BitsAndBytesConfig,
     Gemma3ForConditionalGeneration,
+    AutoProcessor,
 )
 
 from src.models.pulse_model import PulseLLMModel
@@ -68,11 +69,9 @@ class Gemma3Model(PulseLLMModel):
                 return
 
             logger.debug(f"Loading model %s", self.model_id)
-            self.tokenizer = AutoTokenizer.from_pretrained(
+            self.tokenizer = AutoProcessor.from_pretrained(
                 self.model_id,
                 padding_side="left",
-                padding="longest",
-                pad_to_multiple_of=8,  # <-- ensures seq_len % 8 == 0
             )
             if self.quantization:
                 self.model = Gemma3ForConditionalGeneration.from_pretrained(
@@ -86,7 +85,7 @@ class Gemma3Model(PulseLLMModel):
                     self.model_id,
                     device_map="auto",
                     torch_dtype=torch.bfloat16,
-                    attn_implementation="eager",
+                    attn_implementation="sdpa",
                 )
 
             if self.params.get("tuning", False):
