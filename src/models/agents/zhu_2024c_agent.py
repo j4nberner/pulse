@@ -116,7 +116,8 @@ class Zhu2024cAgent(PulseAgent):
                 feature_summary = feature_result["output"]
 
             state["feature_analysis_output"] = feature_summary
-            logger.debug(f"Feature summary: {feature_summary[:100]}...")
+            #TODO: @sophiafe Uncomment. Throws error
+            # logger.debug(f"Feature summary: {feature_summary[:100]}...")
         except Exception as e:
             logger.error(f"Error in feature analysis step: {e}", exc_info=True)
             state["feature_analysis_output"] = "Error generating patient summary."

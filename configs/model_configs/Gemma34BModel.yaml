@@ -2,11 +2,11 @@ name: "Gemma3Model"
 pretrained_model_paths: null # Path to pretrained model (if any)
 params:
   trainer_name: "GemmaTrainer"
-  model_id: "google/gemma-3-12b-it" # Model ID for Gemma, path to pretrained model (if any)
+  model_id: "google/gemma-3-4b-it" # Model ID for Gemma, path to pretrained model (if any)
   type: "LLM" # Type of model (convML for conventional machine learning, convDL for conventional deep learning and LLM for large language models)
   mode: "inference" # Mode of operation (inference)
   verbose: 2
-  quantization: true # Whether to use quantization
+  quantization: false # Whether to use quantization
   tuning: false # Whether to use prompt tuning
   num_epochs: 10 # Number of epochs for training
   max_new_tokens: 300

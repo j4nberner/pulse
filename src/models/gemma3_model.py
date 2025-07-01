@@ -104,6 +104,9 @@ class Gemma3Model(PulseLLMModel):
 
             logger.info("Successfully loaded Gemma3 model: %s", self.model_id)
 
+            logger.debug("GPU memory allocated: %s",
+                         torch.cuda.memory_allocated() / (1024 ** 3))
+
             # Mark model as loaded after successful loading
             self.is_loaded = True
 

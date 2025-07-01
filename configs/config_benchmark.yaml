@@ -4,7 +4,7 @@
 general:
   app_name: "Pulse"
   app_version: "1.0.2"
-  app_mode: "debug" # "debug", "count_tokens", "benchmark"
+  app_mode: "benchmark" # "debug", "count_tokens", "benchmark"
   debug_data_length: 1 # Number of samples to use for debugging
   logging_level: "DEBUG" # "DEBUG", "INFO", "WARNING", "ERROR"
   use_scratch: true # Whether to use scratch space for temporary files
@@ -17,7 +17,7 @@ wandb:
 
 ###### Application specific settings ######
 base_path: "/cluster/project/bmds_lab/sepsis_sophia/pulse"
-original_base_path: "cluster/project/bmds_lab/sepsis_sophia/pulse"
+original_base_path: "cluster/project/bmds_lab/sepsis_jan/pulse"
 
 # Tasks to process
 tasks:
@@ -28,7 +28,7 @@ tasks:
 # Datasets to process
 dataset_path: "datasets/original_harmonized" #"/path/to/datasets"
 datasets:
-  # - "eicu"
+  - "eicu"
   - "hirid"
   # - "miiv"
 
@@ -37,7 +37,7 @@ datasets:
 preprocessing_baseline:
   replace_outliers: true # Whether to replace outliers with NaNs
   flag_na: true # Whether to flag NA values with binary indicators
-  standardize: true # Whether to standardize features (yes: convDL, not required: convML, LLM)
+  standardize: false # Whether to standardize features (yes: convDL, not required: convML, LLM)
   static_imputation: true # Whether to perform static feature imputation
   dynamic_imputation: true # Whether to perform dynamic feature imputation
   split_ratios: # Train/Val/Test split ratios
@@ -65,9 +65,9 @@ prompting:
     # - "sarvari_2024_aggregation_preprocessor"
     # - "zhu_2024b_zero_shot_preprocessor" # fixed shots = 0
     # - "zhu_2024b_one_shot_preprocessor" # fixed shots = 1
-    - "liu_2023_few_shot_preprocessor" # determine shots below
+    # - "liu_2023_few_shot_preprocessor" # determine shots below
     # - "zhu_2024a_cot_preprocessor" # determine shots below
-    # - "zhu_2024c_categorization_summary_agent_preprocessor"
+    - "zhu_2024c_categorization_summary_agent_preprocessor"
     # - "collaborative_reasoning_agent_preprocessor"
     # - "clinical_workflow_agent_preprocessor"
     # - "hybrid_reasoning_agent_preprocessor"
@@ -85,15 +85,16 @@ load_models:
   # - "configs/model_configs/XGBoostModel.yaml"
   # - "configs/model_configs/LightGBMModel.yaml"
 
-  - "configs/model_configs/CNNModel.yaml"
+  # - "configs/model_configs/CNNModel.yaml"
   # - "configs/model_configs/InceptionTimeModel.yaml"
   # - "configs/model_configs/LSTMModel.yaml"
   # - "configs/model_configs/GRUModel.yaml"
 
+  # - "configs/model_configs/Gemma34BModel.yaml"
   # - "configs/model_configs/MedGemma4bModel.yaml"
   # - "configs/model_configs/Gemma312BModel.yaml"
 
-  - "configs/model_configs/Llama3.yaml"
+  # - "configs/model_configs/Llama3.yaml"
   # - "configs/model_configs/Llama4.yaml" # not tested...
 
   # - "configs/model_configs/DeepseekR1Llama8bModel.yaml"
@@ -103,5 +104,5 @@ load_models:
   # - "configs/model_configs/MistralModel.yaml"
 
   # - "configs/model_configs/GPT4oModel.yaml" # use with caution
-  # - "configs/model_configs/Gemini2p5flashModel.yaml" # not yet implemented
+  - "configs/model_configs/Gemini2p5flashModel.yaml" # not yet implemented
   # - "configs/model_configs/ClaudeSonnet4Model.yaml" # not yet implemented

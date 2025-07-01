@@ -1,6 +1,7 @@
 # https://github.com/GoogleCloudPlatform/generative-ai/blob/main/gemini/getting-started/intro_gemini_2_5_flash.ipynb
 import logging
 import os
+import random
 import time
 import warnings
 from typing import Any, Dict
@@ -12,7 +13,7 @@ from google import genai
 from google.genai.types import GenerateContentConfig, ThinkingConfig
 
 from src.eval.metrics import MetricsTracker
-from src.models.pulse_model import PulseModel
+from src.models.pulse_model import PulseModel, PulseLLMModel
 from src.util.config_util import set_seeds
 from src.util.model_util import (
     parse_llm_output,
@@ -31,7 +32,7 @@ warnings.filterwarnings(
 logger = logging.getLogger("PULSE_logger")
 
 
-class Gemini2p5Model(PulseModel):
+class Gemini2p5Model(PulseLLMModel):
     """Gemini2p5 model wrapper."""
 
     def __init__(self, params: Dict[str, Any], **kwargs) -> None:
@@ -80,13 +81,14 @@ class Gemini2p5Model(PulseModel):
         # self.model = GenerativeModel(self.model_id)
         self.is_agent = False
         self.agent_instance = None
+        self.is_loaded = True # Gemini models are loaded by default
 
-    # TODO: Rename to generate_standard
-    def generate(
+    def _generate_standard(
         self,
         input_text: str,
         custom_system_message: str = None,
         parse_json: bool = True,
+        generate_raw_text: bool = False,
     ) -> Dict[str, Any]:
         """Standard generation logic for non-agent models."""
         # Set seed for deterministic generation
@@ -111,19 +113,43 @@ class Gemini2p5Model(PulseModel):
         incl_thought = True if self.thinking_budget > 0 else False
 
         infer_start = time.perf_counter()
-        response = self.client.models.generate_content(
-            model=self.model_id,
-            contents=input_text,
-            config=GenerateContentConfig(
-                max_output_tokens=max_output_tokens,
-                temperature=self.params.get("temperature", 0.4),
-                top_p=1.0,
-                top_k=32,
-                thinking_config=ThinkingConfig(
-                    thinking_budget=self.thinking_budget, include_thoughts=incl_thought
-                ),
-            ),
-        )
+        # Retry logic for rate limiting
+        max_retries = 3
+        base_delay = 30
+        
+        for attempt in range(max_retries + 1):
+            try:
+                infer_start = time.perf_counter()
+                response = self.client.models.generate_content(
+                    model=self.model_id,
+                    contents=input_text,
+                    config=GenerateContentConfig(
+                        max_output_tokens=max_output_tokens,
+                        temperature=self.params.get("temperature", 0.4),
+                        top_p=1.0,
+                        top_k=32,
+                        thinking_config=ThinkingConfig(
+                            thinking_budget=self.thinking_budget, include_thoughts=incl_thought
+                        ),
+                    ),
+                )
+                infer_time = time.perf_counter() - infer_start
+                break  # Success, exit retry loop
+                
+            except Exception as e:
+                error_message = str(e)
+                
+                if "429" in error_message and "RESOURCE_EXHAUSTED" in error_message:
+                    if attempt < max_retries:
+                        delay = base_delay * (2 ** attempt) + random.uniform(0, 5)
+                        logger.warning(f"Rate limit hit (429). Retrying in {delay:.1f} seconds... (attempt {attempt + 1}/{max_retries})")
+                        time.sleep(delay)
+                        continue
+                    else:
+                        logger.error(f"Max retries ({max_retries}) exceeded for rate limiting")
+                
+                # Re-raise the exception if it's not a rate limit error or max retries exceeded
+                raise e
         infer_time = time.perf_counter() - infer_start
 
         usage_metadata = response.usage_metadata
@@ -172,128 +198,26 @@ class Gemini2p5Model(PulseModel):
             "num_thinking_tokens": num_thinking_tokens,
         }
 
-    def evaluate(self, test_loader: Any, save_report: bool = False) -> float:
-        """Evaluates the model on a given test set.
-
-        Args:
-            test_loader: Tuple of (X, y) test data in DataFrame form.
-            save_report: Whether to save the evaluation report.
-
-        Returns:
-            The average validation loss across the test dataset.
+    def execute_with_retry(func, *args, **kwargs):
         """
-        logger.info("Starting test evaluation...")
-
-        metrics_tracker = MetricsTracker(
-            self.model_name,
-            self.task_name,
-            self.dataset_name,
-            self.save_dir,
-        )
-
-        # For agents: Initialize agent and set the metrics_tracker in the agent's memory manager
-        if self.is_agent:
-            if not self.agent_instance:
-                self._initialize_agent()
-            if self.agent_instance:
-                self.agent_instance.memory.metrics_tracker = metrics_tracker
-                logger.debug(
-                    "Set MetricsTracker in agent memory manager for %s", self.model_name
-                )
-
-        verbose: int = self.params.get("verbose", 1)
-
-        sys_msg = system_message_samples(task=self.task_name)[1]
-        logger.info("System Message:\n\n %s", sys_msg)
-
-        for X, y in zip(test_loader[0].iterrows(), test_loader[1].iterrows()):
-            idx = X[0]
-            if self.is_agent:
-                X_input = X[1]  # Full pandas Series with all patient features
-            else:
-                X_input = X[1].iloc[0]  # Single text prompt for standard models
-            y_true = y[1].iloc[0]
-
+        Execute a function with retry logic for 429 errors.
+        """
+        max_retries = 3
+        base_delay = 30
+        
+        for attempt in range(max_retries + 1):
             try:
-                # Set target for agent models
-                if self.is_agent and self.agent_instance:
-                    self.agent_instance.memory.set_current_sample_target(y_true)
-
-                # Get raw result from generation
-                result_dict = self.generate(X_input, custom_system_message=sys_msg)
-
+                return func(*args, **kwargs)
             except Exception as e:
-                logger.error(
-                    "Error during inference for sample %s: %s", idx, e, exc_info=True
-                )
-                # Create fallback result
-                result_dict = {
-                    "generated_text": {
-                        "diagnosis": "error",
-                        "probability": np.nan,
-                        "explanation": f"Error: {str(e)}",
-                    },
-                    "token_time": 0.0,
-                    "infer_time": 0.0,
-                    "num_input_tokens": 0,
-                    "num_output_tokens": 0,
-                    "num_thinking_tokens": 0,
-                    "thinking_output": "",
-                }
-
-            # Extract results
-            generated_text = result_dict["generated_text"]
-            token_time = result_dict["token_time"]
-            infer_time = result_dict["infer_time"]
-            num_input_tokens = result_dict["num_input_tokens"]
-            num_output_tokens = result_dict["num_output_tokens"]
-            num_thinking_tokens = result_dict["num_thinking_tokens"]
-            thinking_output = result_dict["thinking_output"]
-
-            predicted_probability = float(generated_text.get("probability", np.nan))
-
-            logger.info(
-                "Predicted probability: %s | True label: %s",
-                predicted_probability,
-                y_true,
-            )
-
-            if verbose > 1:
-                logger.info("Diagnosis for: %s", generated_text["diagnosis"])
-                logger.info(
-                    "Generated explanation: %s \n", generated_text["explanation"]
-                )
-            if verbose > 2:
-                logger.info("Input prompt: %s \n", X_input)
-
-            metrics_tracker.add_results(predicted_probability, y_true)
-
-            if not self.is_agent:  # Agent models handle metadata logging in add_step()
-                metrics_tracker.add_metadata_item(
-                    {
-                        "Input Prompt": X_input,
-                        "Target Label": y_true,
-                        "Predicted Probability": predicted_probability,
-                        "Predicted Diagnosis": generated_text.get("diagnosis", ""),
-                        "Predicted Explanation": generated_text.get("explanation", ""),
-                        "Tokenization Time": token_time,
-                        "Inference Time": infer_time,
-                        "Input Tokens": num_input_tokens,
-                        "Output Tokens": num_output_tokens,
-                        "Thinking Tokens": num_thinking_tokens,
-                        "Thinking Output": thinking_output,
-                    }
-                )
-            if len(metrics_tracker.items) > 100:
-                # Log metadata periodically to avoid memory issues
-                metrics_tracker.log_metadata()
-
-        metrics_tracker.log_metadata(save_to_file=self.save_metadata)
-        metrics_tracker.summary = metrics_tracker.compute_overall_metrics()
-        if save_report:
-            metrics_tracker.save_report(prompting_id=self.prompting_id)
-
-        logger.info("Test evaluation completed for %s", self.model_name)
-        logger.info("Test metrics: %s", metrics_tracker.summary)
-
-        return 0.0  # Return a dummy loss value for compatibility
+                error_message = str(e)
+                
+                if "429" in error_message and "RESOURCE_EXHAUSTED" in error_message:
+                    if attempt < max_retries:
+                        delay = base_delay * (2 ** attempt) + random.uniform(0, 5)
+                        print(f"Rate limit hit (429). Retrying in {delay:.1f} seconds... (attempt {attempt + 1}/{max_retries})")
+                        time.sleep(delay)
+                        continue
+                
+                raise e
+        
+        return None

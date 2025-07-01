@@ -18,3 +18,4 @@ app.py
 config_gui_adapted.yaml
 configs/config_ui.html
 *.DS_Store
+pulse/
