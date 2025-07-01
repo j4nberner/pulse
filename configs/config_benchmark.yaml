@@ -4,8 +4,8 @@
 general:
   app_name: "Pulse"
   app_version: "1.0.2"
-  app_mode: "benchmark" # "debug", "count_tokens", "benchmark"
-  debug_data_length: 1 # Number of samples to use for debugging
+  app_mode: "debug" # "debug", "count_tokens", "benchmark"
+  debug_data_length: 1000 # Number of samples to use for debugging
   logging_level: "DEBUG" # "DEBUG", "INFO", "WARNING", "ERROR"
   use_scratch: true # Whether to use scratch space for temporary files
   save_metadata: true # Whether to save the metadata file. Inludes prompts for LLMs
@@ -16,8 +16,8 @@ wandb:
   entity: "berner"
 
 ###### Application specific settings ######
-base_path: "/cluster/project/bmds_lab/sepsis_sophia/pulse"
-original_base_path: "cluster/project/bmds_lab/sepsis_jan/pulse"
+base_path: "" #"/cluster/project/bmds_lab/sepsis_sophia/pulse"
+original_base_path: "" #"cluster/project/bmds_lab/sepsis_jan/pulse"
 
 # Tasks to process
 tasks:
@@ -29,7 +29,7 @@ tasks:
 dataset_path: "datasets/original_harmonized" #"/path/to/datasets"
 datasets:
   - "eicu"
-  - "hirid"
+  # - "hirid"
   # - "miiv"
 
 # _______ Preprocessing Baseline _______
@@ -81,7 +81,7 @@ benchmark_settings:
   random_seed: 42
 
 load_models:
-  # - "configs/model_configs/RandomForestModel.yaml"
+  - "configs/model_configs/RandomForestModel.yaml"
   # - "configs/model_configs/XGBoostModel.yaml"
   # - "configs/model_configs/LightGBMModel.yaml"
 
@@ -104,5 +104,5 @@ load_models:
   # - "configs/model_configs/MistralModel.yaml"
 
   # - "configs/model_configs/GPT4oModel.yaml" # use with caution
-  - "configs/model_configs/Gemini2p5flashModel.yaml" # not yet implemented
+  # - "configs/model_configs/Gemini2p5flashModel.yaml" # not yet implemented
   # - "configs/model_configs/ClaudeSonnet4Model.yaml" # not yet implemented

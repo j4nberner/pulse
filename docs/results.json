@@ -2,94 +2,6 @@
   "results": [
     {
       "model_id": "CNN",
-      "task_id": "mortality",
-      "dataset": "eicu",
-      "run_id": "20250603_160304",
-      "metrics_summary": {
-        "overall": {
-          "auroc": 0.845,
-          "auprc": 0.452,
-          "normalized_auprc": 6.457,
-          "specificity": 0.86,
-          "f1_score": 0.4,
-          "accuracy": 0.85,
-          "balanced_accuracy": 0.787,
-          "precision": 0.278,
-          "recall": 0.714,
-          "mcc": 0.382,
-          "kappa": 0.333,
-          "minpse": 0.429
-        }
-      }
-    },
-    {
-      "model_id": "CNN",
-      "task_id": "mortality",
-      "dataset": "hirid",
-      "run_id": "20250603_160304",
-      "metrics_summary": {
-        "overall": {
-          "auroc": 0.844,
-          "auprc": 0.608,
-          "normalized_auprc": 5.531,
-          "specificity": 0.899,
-          "f1_score": 0.519,
-          "accuracy": 0.87,
-          "balanced_accuracy": 0.768,
-          "precision": 0.438,
-          "recall": 0.636,
-          "mcc": 0.457,
-          "kappa": 0.446,
-          "minpse": 0.545
-        }
-      }
-    },
-    {
-      "model_id": "CNN",
-      "task_id": "mortality",
-      "dataset": "miiv",
-      "run_id": "20250603_160304",
-      "metrics_summary": {
-        "overall": {
-          "auroc": 0.842,
-          "auprc": 0.43,
-          "normalized_auprc": 3.584,
-          "specificity": 0.841,
-          "f1_score": 0.471,
-          "accuracy": 0.82,
-          "balanced_accuracy": 0.754,
-          "precision": 0.364,
-          "recall": 0.667,
-          "mcc": 0.398,
-          "kappa": 0.373,
-          "minpse": 0.462
-        }
-      }
-    },
-    {
-      "model_id": "CNN",
-      "task_id": "aki",
-      "dataset": "eicu",
-      "run_id": "20250605_113136",
-      "metrics_summary": {
-        "overall": {
-          "auroc": 0.78,
-          "auprc": 0.625,
-          "normalized_auprc": 2.017,
-          "specificity": 0.761,
-          "f1_score": 0.626,
-          "accuracy": 0.742,
-          "balanced_accuracy": 0.73,
-          "precision": 0.568,
-          "recall": 0.698,
-          "mcc": 0.438,
-          "kappa": 0.432,
-          "minpse": 0.595
-        }
-      }
-    },
-    {
-      "model_id": "CNN",
       "task_id": "aki",
       "dataset": "hirid",
       "run_id": "20250605_113136",
@@ -1387,25 +1299,853 @@
       }
     },
     {
-      "model_id": "Llama3",
+      "model_id": "DeepseekR1Llama8b",
+      "task_id": "mortality",
+      "dataset": "eicu",
+      "run_id": "20250626_123125",
+      "prompting_id": "liu_2023_few_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.454,
+          "auprc": 0.058,
+          "normalized_auprc": 0.833,
+          "specificity": 0.634,
+          "f1_score": 0.093,
+          "accuracy": 0.61,
+          "balanced_accuracy": 0.46,
+          "precision": 0.056,
+          "recall": 0.286,
+          "mcc": -0.042,
+          "kappa": -0.027,
+          "minpse": 0.078
+        }
+      }
+    },
+    {
+      "model_id": "DeepseekR1Llama8b",
+      "task_id": "mortality",
+      "dataset": "hirid",
+      "run_id": "20250626_123125",
+      "prompting_id": "liu_2023_few_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.756,
+          "auprc": 0.416,
+          "normalized_auprc": 3.78,
+          "specificity": 0.685,
+          "f1_score": 0.375,
+          "accuracy": 0.7,
+          "balanced_accuracy": 0.752,
+          "precision": 0.243,
+          "recall": 0.818,
+          "mcc": 0.326,
+          "kappa": 0.247,
+          "minpse": 0.333
+        }
+      }
+    },
+    {
+      "model_id": "DeepseekR1Llama8b",
+      "task_id": "mortality",
+      "dataset": "miiv",
+      "run_id": "20250626_123125",
+      "prompting_id": "liu_2023_few_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.589,
+          "auprc": 0.319,
+          "normalized_auprc": 2.657,
+          "specificity": 0.807,
+          "f1_score": 0.294,
+          "accuracy": 0.76,
+          "balanced_accuracy": 0.612,
+          "precision": 0.227,
+          "recall": 0.417,
+          "mcc": 0.175,
+          "kappa": 0.164,
+          "minpse": 0.263
+        }
+      }
+    },
+    {
+      "model_id": "DeepseekR1Llama8b",
+      "task_id": "aki",
+      "dataset": "eicu",
+      "run_id": "20250626_123125",
+      "prompting_id": "liu_2023_few_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.501,
+          "auprc": 0.335,
+          "normalized_auprc": 1.081,
+          "specificity": 0.863,
+          "f1_score": 0.223,
+          "accuracy": 0.646,
+          "balanced_accuracy": 0.513,
+          "precision": 0.35,
+          "recall": 0.164,
+          "mcc": 0.035,
+          "kappa": 0.032,
+          "minpse": 0.31
+        }
+      }
+    },
+    {
+      "model_id": "DeepseekR1Llama8b",
+      "task_id": "aki",
+      "dataset": "hirid",
+      "run_id": "20250626_123125",
+      "prompting_id": "liu_2023_few_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.528,
+          "auprc": 0.187,
+          "normalized_auprc": 1.156,
+          "specificity": 0.889,
+          "f1_score": 0.182,
+          "accuracy": 0.771,
+          "balanced_accuracy": 0.523,
+          "precision": 0.216,
+          "recall": 0.157,
+          "mcc": 0.053,
+          "kappa": 0.052,
+          "minpse": 0.189
+        }
+      }
+    },
+    {
+      "model_id": "DeepseekR1Llama8b",
+      "task_id": "aki",
+      "dataset": "miiv",
+      "run_id": "20250626_123125",
+      "prompting_id": "liu_2023_few_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.565,
+          "auprc": 0.314,
+          "normalized_auprc": 1.35,
+          "specificity": 0.902,
+          "f1_score": 0.233,
+          "accuracy": 0.733,
+          "balanced_accuracy": 0.538,
+          "precision": 0.351,
+          "recall": 0.175,
+          "mcc": 0.101,
+          "kappa": 0.093,
+          "minpse": 0.249
+        }
+      }
+    },
+    {
+      "model_id": "DeepseekR1Llama8b",
+      "task_id": "sepsis",
+      "dataset": "eicu",
+      "run_id": "20250626_123125",
+      "prompting_id": "liu_2023_few_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.486,
+          "auprc": 0.045,
+          "normalized_auprc": 0.931,
+          "specificity": 0.852,
+          "f1_score": 0.053,
+          "accuracy": 0.816,
+          "balanced_accuracy": 0.479,
+          "precision": 0.035,
+          "recall": 0.106,
+          "mcc": -0.025,
+          "kappa": -0.021,
+          "minpse": 0.085
+        }
+      }
+    },
+    {
+      "model_id": "DeepseekR1Llama8b",
+      "task_id": "sepsis",
+      "dataset": "hirid",
+      "run_id": "20250626_123125",
+      "prompting_id": "liu_2023_few_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.543,
+          "auprc": 0.084,
+          "normalized_auprc": 1.116,
+          "specificity": 0.807,
+          "f1_score": 0.122,
+          "accuracy": 0.763,
+          "balanced_accuracy": 0.513,
+          "precision": 0.085,
+          "recall": 0.219,
+          "mcc": 0.017,
+          "kappa": 0.015,
+          "minpse": 0.137
+        }
+      }
+    },
+    {
+      "model_id": "DeepseekR1Llama8b",
       "task_id": "sepsis",
       "dataset": "miiv",
+      "run_id": "20250626_123125",
+      "prompting_id": "liu_2023_few_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.392,
+          "auprc": 0.019,
+          "normalized_auprc": 0.766,
+          "specificity": 0.866,
+          "f1_score": 0.026,
+          "accuracy": 0.846,
+          "balanced_accuracy": 0.473,
+          "precision": 0.015,
+          "recall": 0.08,
+          "mcc": -0.025,
+          "kappa": -0.018,
+          "minpse": 0.029
+        }
+      }
+    },
+    {
+      "model_id": "Gemini2p5flash",
+      "task_id": "mortality",
+      "dataset": "eicu",
+      "prompting_id": "liu_2023_few_shot_preprocessor",
+      "run_id": "20250623_140022",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.725,
+          "auprc": 0.389,
+          "normalized_auprc": 5.555,
+          "specificity": 0.452,
+          "f1_score": 0.159,
+          "accuracy": 0.47,
+          "balanced_accuracy": 0.583,
+          "precision": 0.089,
+          "recall": 0.714,
+          "mcc": 0.085,
+          "kappa": 0.039,
+          "minpse": 0.214
+        }
+      }
+    },
+    {
+      "model_id": "Gemini2p5flash",
+      "task_id": "mortality",
+      "dataset": "hirid",
+      "prompting_id": "liu_2023_few_shot_preprocessor",
+      "run_id": "20250623_140022",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.695,
+          "auprc": 0.415,
+          "normalized_auprc": 3.77,
+          "specificity": 0.393,
+          "f1_score": 0.243,
+          "accuracy": 0.44,
+          "balanced_accuracy": 0.606,
+          "precision": 0.143,
+          "recall": 0.818,
+          "mcc": 0.137,
+          "kappa": 0.069,
+          "minpse": 0.25
+        }
+      }
+    },
+    {
+      "model_id": "Gemini2p5flash",
+      "task_id": "mortality",
+      "dataset": "miiv",
+      "prompting_id": "liu_2023_few_shot_preprocessor",
+      "run_id": "20250623_140022",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.877,
+          "auprc": 0.628,
+          "normalized_auprc": 5.232,
+          "specificity": 0.75,
+          "f1_score": 0.419,
+          "accuracy": 0.75,
+          "balanced_accuracy": 0.75,
+          "precision": 0.29,
+          "recall": 0.75,
+          "mcc": 0.351,
+          "kappa": 0.297,
+          "minpse": 0.5
+        }
+      }
+    },
+    {
+      "model_id": "Gemini2p5flash",
+      "task_id": "aki",
+      "dataset": "eicu",
+      "prompting_id": "liu_2023_few_shot_preprocessor",
+      "run_id": "20250623_140022",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.627,
+          "auprc": 0.541,
+          "normalized_auprc": 1.746,
+          "specificity": 0.661,
+          "f1_score": 0.482,
+          "accuracy": 0.629,
+          "balanced_accuracy": 0.609,
+          "precision": 0.425,
+          "recall": 0.557,
+          "mcc": 0.206,
+          "kappa": 0.201,
+          "minpse": 0.469
+        }
+      }
+    },
+    {
+      "model_id": "Gemini2p5flash",
+      "task_id": "aki",
+      "dataset": "hirid",
+      "prompting_id": "liu_2023_few_shot_preprocessor",
+      "run_id": "20250623_140022",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.629,
+          "auprc": 0.302,
+          "normalized_auprc": 1.864,
+          "specificity": 0.951,
+          "f1_score": 0.199,
+          "accuracy": 0.82,
+          "balanced_accuracy": 0.545,
+          "precision": 0.355,
+          "recall": 0.138,
+          "mcc": 0.136,
+          "kappa": 0.119,
+          "minpse": 0.266
+        }
+      }
+    },
+    {
+      "model_id": "Gemini2p5flash",
+      "task_id": "aki",
+      "dataset": "miiv",
+      "prompting_id": "liu_2023_few_shot_preprocessor",
+      "run_id": "20250623_140022",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.6,
+          "auprc": 0.418,
+          "normalized_auprc": 1.794,
+          "specificity": 0.881,
+          "f1_score": 0.351,
+          "accuracy": 0.745,
+          "balanced_accuracy": 0.589,
+          "precision": 0.43,
+          "recall": 0.297,
+          "mcc": 0.205,
+          "kappa": 0.199,
+          "minpse": 0.349
+        }
+      }
+    },
+    {
+      "model_id": "Gemini2p5flash",
+      "task_id": "sepsis",
+      "dataset": "hirid",
+      "prompting_id": "liu_2023_few_shot_preprocessor",
+      "run_id": "20250623_140022",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.761,
+          "auprc": 0.282,
+          "normalized_auprc": 3.742,
+          "specificity": 0.614,
+          "f1_score": 0.239,
+          "accuracy": 0.626,
+          "balanced_accuracy": 0.697,
+          "precision": 0.141,
+          "recall": 0.781,
+          "mcc": 0.211,
+          "kappa": 0.128,
+          "minpse": 0.288
+        }
+      }
+    },
+    {
+      "model_id": "Gemini2p5flash",
+      "task_id": "sepsis",
+      "dataset": "miiv",
+      "prompting_id": "liu_2023_few_shot_preprocessor",
+      "run_id": "20250623_140022",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.546,
+          "auprc": 0.025,
+          "normalized_auprc": 0.988,
+          "specificity": 0.684,
+          "f1_score": 0.047,
+          "accuracy": 0.675,
+          "balanced_accuracy": 0.502,
+          "precision": 0.026,
+          "recall": 0.32,
+          "mcc": 0.001,
+          "kappa": 0.001,
+          "minpse": 0.032
+        }
+      }
+    },
+    {
+      "model_id": "Gemini2p5flash",
+      "task_id": "sepsis",
+      "dataset": "eicu",
+      "prompting_id": "liu_2023_few_shot_preprocessor",
+      "run_id": "20250623_140022",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.688,
+          "auprc": 0.067,
+          "normalized_auprc": 1.404,
+          "specificity": 0.591,
+          "f1_score": 0.163,
+          "accuracy": 0.602,
+          "balanced_accuracy": 0.7,
+          "precision": 0.091,
+          "recall": 0.809,
+          "mcc": 0.173,
+          "kappa": 0.084,
+          "minpse": 0.091
+        }
+      }
+    },
+    {
+      "model_id": "Gemma3",
+      "task_id": "mortality",
+      "dataset": "eicu",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
+      "run_id": "20250624_200322",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.78,
+          "auprc": 0.173,
+          "normalized_auprc": 2.469,
+          "specificity": 0.0,
+          "f1_score": 0.131,
+          "accuracy": 0.07,
+          "balanced_accuracy": 0.5,
+          "precision": 0.07,
+          "recall": 1.0,
+          "mcc": 0.0,
+          "kappa": 0.0,
+          "minpse": 0.308
+        }
+      }
+    },
+    {
+      "model_id": "Gemma3",
+      "task_id": "mortality",
+      "dataset": "hirid",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
+      "run_id": "20250624_200322",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.699,
+          "auprc": 0.319,
+          "normalized_auprc": 2.898,
+          "specificity": 0.0,
+          "f1_score": 0.198,
+          "accuracy": 0.11,
+          "balanced_accuracy": 0.5,
+          "precision": 0.11,
+          "recall": 1.0,
+          "mcc": 0.0,
+          "kappa": 0.0,
+          "minpse": 0.222
+        }
+      }
+    },
+    {
+      "model_id": "Gemma3",
+      "task_id": "mortality",
+      "dataset": "miiv",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
+      "run_id": "20250624_200322",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.79,
+          "auprc": 0.504,
+          "normalized_auprc": 4.204,
+          "specificity": 0.0,
+          "f1_score": 0.214,
+          "accuracy": 0.12,
+          "balanced_accuracy": 0.5,
+          "precision": 0.12,
+          "recall": 1.0,
+          "mcc": 0.0,
+          "kappa": 0.0,
+          "minpse": 0.538
+        }
+      }
+    },
+    {
+      "model_id": "Gemma3",
+      "task_id": "aki",
+      "dataset": "eicu",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
+      "run_id": "20250624_200322",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.615,
+          "auprc": 0.277,
+          "normalized_auprc": 0.893,
+          "specificity": 0.197,
+          "f1_score": 0.478,
+          "accuracy": 0.408,
+          "balanced_accuracy": 0.536,
+          "precision": 0.329,
+          "recall": 0.875,
+          "mcc": 0.089,
+          "kappa": 0.05,
+          "minpse": 0.413
+        }
+      }
+    },
+    {
+      "model_id": "Gemma3",
+      "task_id": "aki",
+      "dataset": "hirid",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
+      "run_id": "20250624_200322",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.586,
+          "auprc": 0.374,
+          "normalized_auprc": 2.307,
+          "specificity": 0.079,
+          "f1_score": 0.294,
+          "accuracy": 0.227,
+          "balanced_accuracy": 0.536,
+          "precision": 0.172,
+          "recall": 0.994,
+          "mcc": 0.107,
+          "kappa": 0.025,
+          "minpse": 0.205
+        }
+      }
+    },
+    {
+      "model_id": "Gemma3",
+      "task_id": "aki",
+      "dataset": "miiv",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
+      "run_id": "20250624_200322",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.569,
+          "auprc": 0.468,
+          "normalized_auprc": 2.012,
+          "specificity": 0.062,
+          "f1_score": 0.368,
+          "accuracy": 0.262,
+          "balanced_accuracy": 0.492,
+          "precision": 0.23,
+          "recall": 0.921,
+          "mcc": -0.028,
+          "kappa": -0.008,
+          "minpse": 0.296
+        }
+      }
+    },
+    {
+      "model_id": "Gemma3",
+      "task_id": "sepsis",
+      "dataset": "eicu",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
+      "run_id": "20250624_200322",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.61,
+          "auprc": 0.038,
+          "normalized_auprc": 0.787,
+          "specificity": 0.041,
+          "f1_score": 0.095,
+          "accuracy": 0.087,
+          "balanced_accuracy": 0.52,
+          "precision": 0.05,
+          "recall": 1.0,
+          "mcc": 0.045,
+          "kappa": 0.004,
+          "minpse": 0.067
+        }
+      }
+    },
+    {
+      "model_id": "Gemma3",
+      "task_id": "sepsis",
+      "dataset": "hirid",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
+      "run_id": "20250624_200322",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.618,
+          "auprc": 0.517,
+          "normalized_auprc": 6.869,
+          "specificity": 0.033,
+          "f1_score": 0.144,
+          "accuracy": 0.106,
+          "balanced_accuracy": 0.517,
+          "precision": 0.078,
+          "recall": 1.0,
+          "mcc": 0.051,
+          "kappa": 0.005,
+          "minpse": 0.098
+        }
+      }
+    },
+    {
+      "model_id": "Gemma3",
+      "task_id": "sepsis",
+      "dataset": "miiv",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
+      "run_id": "20250626_165736",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.477,
+          "auprc": 0.238,
+          "normalized_auprc": 9.434,
+          "specificity": 0.067,
+          "f1_score": 0.053,
+          "accuracy": 0.091,
+          "balanced_accuracy": 0.534,
+          "precision": 0.027,
+          "recall": 1.0,
+          "mcc": 0.043,
+          "kappa": 0.004,
+          "minpse": 0.027
+        }
+      }
+    },
+    {
+      "model_id": "GPT4o",
+      "task_id": "mortality",
+      "dataset": "eicu",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
+      "run_id": "20250622_142837",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.784,
+          "auprc": 0.39,
+          "normalized_auprc": 5.575,
+          "specificity": 0.258,
+          "f1_score": 0.146,
+          "accuracy": 0.3,
+          "balanced_accuracy": 0.558,
+          "precision": 0.08,
+          "recall": 0.857,
+          "mcc": 0.068,
+          "kappa": 0.021,
+          "minpse": 0.417
+        }
+      }
+    },
+    {
+      "model_id": "GPT4o",
+      "task_id": "mortality",
+      "dataset": "hirid",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
+      "run_id": "20250622_142837",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.666,
+          "auprc": 0.319,
+          "normalized_auprc": 2.903,
+          "specificity": 0.112,
+          "f1_score": 0.218,
+          "accuracy": 0.21,
+          "balanced_accuracy": 0.556,
+          "precision": 0.122,
+          "recall": 1.0,
+          "mcc": 0.117,
+          "kappa": 0.027,
+          "minpse": 0.273
+        }
+      }
+    },
+    {
+      "model_id": "GPT4o",
+      "task_id": "mortality",
+      "dataset": "miiv",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
+      "run_id": "20250622_142837",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.785,
+          "auprc": 0.614,
+          "normalized_auprc": 5.115,
+          "specificity": 0.33,
+          "f1_score": 0.268,
+          "accuracy": 0.4,
+          "balanced_accuracy": 0.623,
+          "precision": 0.157,
+          "recall": 0.917,
+          "mcc": 0.175,
+          "kappa": 0.08,
+          "minpse": 0.5
+        }
+      }
+    },
+    {
+      "model_id": "GPT4o",
+      "task_id": "aki",
+      "dataset": "eicu",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
+      "run_id": "20250622_142837",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.623,
+          "auprc": 0.431,
+          "normalized_auprc": 1.39,
+          "specificity": 0.739,
+          "f1_score": 0.407,
+          "accuracy": 0.635,
+          "balanced_accuracy": 0.571,
+          "precision": 0.41,
+          "recall": 0.403,
+          "mcc": 0.143,
+          "kappa": 0.143,
+          "minpse": 0.403
+        }
+      }
+    },
+    {
+      "model_id": "GPT4o",
+      "task_id": "aki",
+      "dataset": "hirid",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
+      "run_id": "20250622_142837",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.605,
+          "auprc": 0.276,
+          "normalized_auprc": 1.703,
+          "specificity": 0.923,
+          "f1_score": 0.202,
+          "accuracy": 0.799,
+          "balanced_accuracy": 0.54,
+          "precision": 0.284,
+          "recall": 0.157,
+          "mcc": 0.104,
+          "kappa": 0.098,
+          "minpse": 0.228
+        }
+      }
+    },
+    {
+      "model_id": "GPT4o",
+      "task_id": "aki",
+      "dataset": "miiv",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
+      "run_id": "20250622_142837",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.615,
+          "auprc": 0.437,
+          "normalized_auprc": 1.878,
+          "specificity": 0.793,
+          "f1_score": 0.386,
+          "accuracy": 0.702,
+          "balanced_accuracy": 0.598,
+          "precision": 0.371,
+          "recall": 0.402,
+          "mcc": 0.19,
+          "kappa": 0.19,
+          "minpse": 0.371
+        }
+      }
+    },
+    {
+      "model_id": "GPT4o",
+      "task_id": "sepsis",
+      "dataset": "eicu",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
+      "run_id": "20250622_142837",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.599,
+          "auprc": 0.059,
+          "normalized_auprc": 1.223,
+          "specificity": 0.36,
+          "f1_score": 0.117,
+          "accuracy": 0.384,
+          "balanced_accuracy": 0.606,
+          "precision": 0.063,
+          "recall": 0.851,
+          "mcc": 0.095,
+          "kappa": 0.03,
+          "minpse": 0.066
+        }
+      }
+    },
+    {
+      "model_id": "GPT4o",
+      "task_id": "sepsis",
+      "dataset": "hirid",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
+      "run_id": "20250622_142837",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.673,
+          "auprc": 0.249,
+          "normalized_auprc": 3.309,
+          "specificity": 0.125,
+          "f1_score": 0.155,
+          "accuracy": 0.19,
+          "balanced_accuracy": 0.556,
+          "precision": 0.084,
+          "recall": 0.986,
+          "mcc": 0.092,
+          "kappa": 0.019,
+          "minpse": 0.239
+        }
+      }
+    },
+    {
+      "model_id": "GPT4o",
+      "task_id": "sepsis",
+      "dataset": "miiv",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
+      "run_id": "20250622_142837",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.351,
+          "auprc": 0.016,
+          "normalized_auprc": 0.624,
+          "specificity": 0.413,
+          "f1_score": 0.02,
+          "accuracy": 0.409,
+          "balanced_accuracy": 0.327,
+          "precision": 0.01,
+          "recall": 0.24,
+          "mcc": -0.11,
+          "kappa": -0.03,
+          "minpse": 0.027
+        }
+      }
+    },
+    {
+      "model_id": "Llama3",
+      "task_id": "mortality",
+      "dataset": "eicu",
       "prompting_id": "liu_2023_few_shot_preprocessor",
       "run_id": "20250621_095219",
       "metrics_summary": {
         "overall": {
-          "auroc": 0.553,
-          "auprc": 0.098,
-          "normalized_auprc": 3.863,
-          "specificity": 0.954,
-          "f1_score": 0.056,
-          "accuracy": 0.932,
-          "balanced_accuracy": 0.517,
-          "precision": 0.043,
-          "recall": 0.08,
-          "mcc": 0.026,
-          "kappa": 0.024,
-          "minpse": 0.052
+          "auroc": 0.896,
+          "auprc": 0.585,
+          "normalized_auprc": 8.364,
+          "specificity": 0.538,
+          "f1_score": 0.246,
+          "accuracy": 0.57,
+          "balanced_accuracy": 0.769,
+          "precision": 0.14,
+          "recall": 1.0,
+          "mcc": 0.274,
+          "kappa": 0.14,
+          "minpse": 0.417
         }
       }
     },
@@ -1594,25 +2334,186 @@
       }
     },
     {
-      "model_id": "GPT4o",
-      "task_id": "sepsis",
-      "dataset": "miiv",
-      "prompting_id": "sarvari_2024_aggregation_preprocessor",
-      "run_id": "20250623_084058",
+      "model_id": "Mistral",
+      "task_id": "mortality",
+      "dataset": "eicu",
+      "run_id": "20250621_194738",
+      "prompting_id": "zhu_2024b_one_shot_preprocessor",
       "metrics_summary": {
         "overall": {
-          "auroc": 0.41,
-          "auprc": 0.018,
-          "normalized_auprc": 0.724,
-          "specificity": 0.83,
-          "f1_score": 0.011,
-          "accuracy": 0.81,
-          "balanced_accuracy": 0.435,
-          "precision": 0.006,
-          "recall": 0.04,
+          "auroc": 0.493,
+          "auprc": 0.468,
+          "normalized_auprc": 6.686,
+          "specificity": 0.0,
+          "f1_score": 0.131,
+          "accuracy": 0.07,
+          "balanced_accuracy": 0.5,
+          "precision": 0.07,
+          "recall": 1.0,
+          "mcc": 0.0,
+          "kappa": 0.0,
+          "minpse": 0.07
+        }
+      }
+    },
+    {
+      "model_id": "Mistral",
+      "task_id": "mortality",
+      "dataset": "hirid",
+      "run_id": "20250621_194738",
+      "prompting_id": "zhu_2024b_one_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.507,
+          "auprc": 0.272,
+          "normalized_auprc": 2.472,
+          "specificity": 0.0,
+          "f1_score": 0.198,
+          "accuracy": 0.11,
+          "balanced_accuracy": 0.5,
+          "precision": 0.11,
+          "recall": 1.0,
+          "mcc": 0.0,
+          "kappa": 0.0,
+          "minpse": 0.113
+        }
+      }
+    },
+    {
+      "model_id": "Mistral",
+      "task_id": "mortality",
+      "dataset": "miiv",
+      "run_id": "20250621_194738",
+      "prompting_id": "zhu_2024b_one_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.357,
+          "auprc": 0.169,
+          "normalized_auprc": 1.408,
+          "specificity": 0.0,
+          "f1_score": 0.214,
+          "accuracy": 0.12,
+          "balanced_accuracy": 0.5,
+          "precision": 0.12,
+          "recall": 1.0,
+          "mcc": 0.0,
+          "kappa": 0.0,
+          "minpse": 0.121
+        }
+      }
+    },
+    {
+      "model_id": "Mistral",
+      "task_id": "aki",
+      "dataset": "eicu",
+      "run_id": "20250621_194738",
+      "prompting_id": "zhu_2024b_one_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.43,
+          "auprc": 0.211,
+          "normalized_auprc": 0.679,
+          "specificity": 0.0,
+          "f1_score": 0.473,
+          "accuracy": 0.31,
+          "balanced_accuracy": 0.5,
+          "precision": 0.31,
+          "recall": 1.0,
+          "mcc": 0.0,
+          "kappa": 0.0,
+          "minpse": 0.31
+        }
+      }
+    },
+    {
+      "model_id": "Mistral",
+      "task_id": "aki",
+      "dataset": "hirid",
+      "run_id": "20250621_194738",
+      "prompting_id": "zhu_2024b_one_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.444,
+          "auprc": 0.16,
+          "normalized_auprc": 0.99,
+          "specificity": 0.0,
+          "f1_score": 0.279,
+          "accuracy": 0.162,
+          "balanced_accuracy": 0.5,
+          "precision": 0.162,
+          "recall": 1.0,
+          "mcc": 0.0,
+          "kappa": 0.0,
+          "minpse": 0.162
+        }
+      }
+    },
+    {
+      "model_id": "Mistral",
+      "task_id": "aki",
+      "dataset": "miiv",
+      "run_id": "20250621_194738",
+      "prompting_id": "zhu_2024b_one_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.378,
+          "auprc": 0.222,
+          "normalized_auprc": 0.954,
+          "specificity": 0.004,
+          "f1_score": 0.376,
+          "accuracy": 0.234,
+          "balanced_accuracy": 0.498,
+          "precision": 0.232,
+          "recall": 0.991,
+          "mcc": -0.028,
+          "kappa": -0.002,
+          "minpse": 0.233
+        }
+      }
+    },
+    {
+      "model_id": "Mistral",
+      "task_id": "sepsis",
+      "dataset": "eicu",
+      "run_id": "20250621_194738",
+      "prompting_id": "zhu_2024b_one_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.412,
+          "auprc": 0.031,
+          "normalized_auprc": 0.657,
+          "specificity": 0.326,
+          "f1_score": 0.074,
+          "accuracy": 0.337,
+          "balanced_accuracy": 0.44,
+          "precision": 0.04,
+          "recall": 0.553,
           "mcc": -0.055,
-          "kappa": -0.035,
-          "minpse": 0.027
+          "kappa": -0.017,
+          "minpse": 0.048
+        }
+      }
+    },
+    {
+      "model_id": "Mistral",
+      "task_id": "sepsis",
+      "dataset": "hirid",
+      "run_id": "20250621_194738",
+      "prompting_id": "zhu_2024b_one_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.415,
+          "auprc": 0.114,
+          "normalized_auprc": 1.516,
+          "specificity": 0.272,
+          "f1_score": 0.117,
+          "accuracy": 0.298,
+          "balanced_accuracy": 0.444,
+          "precision": 0.065,
+          "recall": 0.616,
+          "mcc": -0.065,
+          "kappa": -0.023,
+          "minpse": 0.082
         }
       }
     },
@@ -1620,113 +2521,21 @@
       "model_id": "Mistral",
       "task_id": "sepsis",
       "dataset": "miiv",
-      "run_id": "20250623_184546",
-      "prompting_id": "sarvari_2024_aggregation_preprocessor",
+      "run_id": "20250621_194738",
+      "prompting_id": "zhu_2024b_one_shot_preprocessor",
       "metrics_summary": {
         "overall": {
-          "auroc": 0.501,
-          "auprc": 0.513,
-          "normalized_auprc": 20.301,
-          "specificity": 0.0,
-          "f1_score": 0.049,
-          "accuracy": 0.025,
+          "auroc": 0.505,
+          "auprc": 0.045,
+          "normalized_auprc": 1.793,
+          "specificity": 0.4,
+          "f1_score": 0.048,
+          "accuracy": 0.405,
           "balanced_accuracy": 0.5,
           "precision": 0.025,
-          "recall": 1.0,
+          "recall": 0.6,
           "mcc": 0.0,
           "kappa": 0.0,
-          "minpse": 0.025
-        }
-      }
-    },
-    {
-      "model_id": "Gemma3",
-      "task_id": "sepsis",
-      "dataset": "miiv",
-      "prompting_id": "sarvari_2024_aggregation_preprocessor",
-      "run_id": "20250624_092106",
-      "metrics_summary": {
-        "overall": {
-          "auroc": 0.376,
-          "auprc": 0.018,
-          "normalized_auprc": 0.704,
-          "specificity": 0.669,
-          "f1_score": 0.029,
-          "accuracy": 0.658,
-          "balanced_accuracy": 0.435,
-          "precision": 0.015,
-          "recall": 0.2,
-          "mcc": -0.044,
-          "kappa": -0.019,
-          "minpse": 0.026
-        }
-      }
-    },
-    {
-      "model_id": "Gemma3",
-      "task_id": "aki",
-      "dataset": "miiv",
-      "prompting_id": "sarvari_2024_aggregation_preprocessor",
-      "run_id": "20250623_045848",
-      "metrics_summary": {
-        "overall": {
-          "auroc": 0.567,
-          "auprc": 0.322,
-          "normalized_auprc": 1.384,
-          "specificity": 0.956,
-          "f1_score": 0.212,
-          "accuracy": 0.765,
-          "balanced_accuracy": 0.546,
-          "precision": 0.484,
-          "recall": 0.135,
-          "mcc": 0.157,
-          "kappa": 0.122,
-          "minpse": 0.239
-        }
-      }
-    },
-    {
-      "model_id": "Gemini2p5flash",
-      "task_id": "sepsis",
-      "dataset": "eicu",
-      "prompting_id": "liu_2023_few_shot_preprocessor",
-      "run_id": "20250623_140022",
-      "metrics_summary": {
-        "overall": {
-          "auroc": 0.688,
-          "auprc": 0.067,
-          "normalized_auprc": 1.404,
-          "specificity": 0.591,
-          "f1_score": 0.163,
-          "accuracy": 0.602,
-          "balanced_accuracy": 0.7,
-          "precision": 0.091,
-          "recall": 0.809,
-          "mcc": 0.173,
-          "kappa": 0.084,
-          "minpse": 0.091
-        }
-      }
-    },
-    {
-      "model_id": "DeepseekR1Llama8b",
-      "task_id": "sepsis",
-      "dataset": "miiv",
-      "run_id": "20250620_211315",
-      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
-      "metrics_summary": {
-        "overall": {
-          "auroc": 0.5,
-          "auprc": 0.023,
-          "normalized_auprc": 0.912,
-          "specificity": 0.572,
-          "f1_score": 0.04,
-          "accuracy": 0.567,
-          "balanced_accuracy": 0.466,
-          "precision": 0.021,
-          "recall": 0.36,
-          "mcc": -0.022,
-          "kappa": -0.008,
           "minpse": 0.028
         }
       }

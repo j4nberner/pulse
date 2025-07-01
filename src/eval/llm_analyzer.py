@@ -202,7 +202,7 @@ class LLMAnalyzer:
         return df_results
 
     @staticmethod
-    def get_predictions(df, model=None, task=None, dataset=None):
+    def get_predictions(df, model=None, task=None, dataset=None, step_name=None):
         """
         Return filtered predictions DataFrame by model, task, and dataset if specified.
 
@@ -211,6 +211,7 @@ class LLMAnalyzer:
             model (str, optional): Model name to filter by.
             task (str, optional): Task name to filter by.
             dataset (str, optional): Dataset name to filter by.
+            step_name (str, optional): Step name to filter by for agents.
 
         Returns:
             pd.DataFrame: Filtered DataFrame according to specified parameters.
@@ -222,6 +223,8 @@ class LLMAnalyzer:
             filtered_df = filtered_df[filtered_df["task"] == task]
         if dataset is not None:
             filtered_df = filtered_df[filtered_df["dataset"] == dataset]
+        if step_name is not None:
+            filtered_df = filtered_df[filtered_df["step_name"] == step_name]
         return filtered_df
 
     @staticmethod
@@ -891,17 +894,21 @@ class LLMAnalyzer:
             # Create a unique identifier for comparison
             new_id = (
                 new_record.get("model_id", ""),
-                new_record.get("prompting_id", ""),
+                # new_record.get("prompting_id", ""),
                 new_record.get("run_id", ""),
+                new_record.get("task_id", ""),
+                new_record.get("dataset", ""),
             )
 
             # Look for existing record with same identifier
             existing_index = None
             for i, existing_record in enumerate(results_data["results"]):
                 existing_id = (
-                    existing_record.get("model_id", ""),
-                    existing_record.get("prompting_id", ""),
-                    existing_record.get("run_id", ""),
+                    new_record.get("model_id", ""),
+                    # new_record.get("prompting_id", ""),
+                    new_record.get("run_id", ""),
+                    new_record.get("task_id", ""),
+                    new_record.get("dataset", ""),
                 )
                 if existing_id == new_id:
                     existing_index = i
@@ -912,6 +919,8 @@ class LLMAnalyzer:
                 print(
                     f"Updating existing record: model_id='{new_record.get('model_id')}', "
                     f"prompting_id='{new_record.get('prompting_id')}', "
+                    f"task_id='{new_record.get('task_id')}', "
+                    f"dataset='{new_record.get('dataset')}', "
                     f"run_id='{new_record.get('run_id')}'"
                 )
                 results_data["results"][existing_index] = new_record
@@ -920,6 +929,8 @@ class LLMAnalyzer:
                 print(
                     f"Adding new record: model_id='{new_record.get('model_id')}', "
                     f"prompting_id='{new_record.get('prompting_id')}', "
+                    f"task_id='{new_record.get('task_id')}', "
+                    f"dataset='{new_record.get('dataset')}', "
                     f"run_id='{new_record.get('run_id')}'"
                 )
                 results_data["results"].append(new_record)
