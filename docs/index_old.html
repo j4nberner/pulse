@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>PULSE Benchmark Leaderboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="icon" href="favicon.ico" type="image/x-icon" />
+    <style>
+      :root {
+        --color-low: rgb(247, 180, 180);
+        --color-mid: rgb(252, 250, 180);
+        --color-high: rgb(168, 240, 181);
+      }
+
+      body {
+        font-family: "Segoe UI", sans-serif;
+        padding: 2em;
+        background-color: #f0f2f5;
+      }
+
+      h1 {
+        color: #222;
+        font-size: 2rem;
+        margin-bottom: 0.5em;
+      }
+
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1em;
+        align-items: center;
+        margin-bottom: 2em;
+      }
+
+      input,
+      select,
+      button {
+        padding: 0.5em;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        font-size: 1em;
+      }
+
+      select#taskFilter {
+        min-width: 140px;
+      }
+
+      .tabs {
+        display: flex;
+        gap: 8px;
+        margin: 0;
+      }
+
+      .tab-btn {
+        padding: 8px 16px;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        background-color: #f5f5f5;
+        cursor: pointer;
+        font-size: 1em;
+        transition: all 0.2s ease;
+      }
+
+      .tab-btn.active {
+        background-color: #1339ff;
+        color: white;
+        border-color: #1339ff;
+      }
+
+      .tab-btn:hover:not(.active) {
+        background-color: #e6e6e6;
+      }
+
+      /* widen All Tasks button */
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 1em;
+        background: #fff;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        border-radius: 10px;
+        overflow: hidden;
+        table-layout: fixed;
+        word-wrap: break-word;
+      }
+
+      th,
+      td {
+        padding: 12px 15px;
+        text-align: left;
+      }
+
+      th {
+        background-color: #f5f5f5;
+        cursor: pointer;
+      }
+
+      tr:nth-child(even) {
+        background-color: #fafafa;
+      }
+
+      .dataset-section {
+        margin-top: 2em;
+      }
+
+      .chart-container {
+        width: 100%;
+        max-width: 800px;
+        margin-top: 2em;
+      }
+
+      footer {
+        margin-top: 4em;
+        text-align: center;
+        color: #777;
+        font-size: 0.9em;
+      }
+
+      .logo {
+        position: absolute;
+        top: 2em;
+        right: 2em;
+        max-width: 250px;
+        height: auto;
+      }
+      .plot-container {
+        width: 100%;
+        height: 80vh;
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        margin-top: 2em;
+        margin-bottom: 1em;
+      }
+
+      .embedded-plot {
+        width: 100%;
+        height: 100%;
+        min-height: 350px;
+        min-width: 0;
+        max-width: 100%;
+        max-height: 100%;
+        margin: 0;
+        border: none;
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        background: #fff;
+        display: block;
+      }
+    </style>
+  </head>
+
+  <body>
+    <img src="pulse_logo.png" alt="PULSE Logo" class="logo" />
+    <h1>PULSE Benchmark Leaderboard</h1>
+    <p>Live leaderboard for AKI, Sepsis, and Mortality prediction tasks.</p>
+
+    <!-- <div class="plot-container">
+      <iframe
+        src="benchmark_plot.html"
+        class="embedded-plot"
+        allowfullscreen
+      ></iframe>
+    </div> -->
+
+    <div class="controls">
+      <input type="text" id="search" placeholder="Search model or task..." />
+      <div class="tabs">
+        <button class="tab-btn active" data-task="">All Tasks</button>
+        <button class="tab-btn" data-task="mortality">Mortality</button>
+        <button class="tab-btn" data-task="aki">AKI</button>
+        <button class="tab-btn" data-task="sepsis">Sepsis</button>
+      </div>
+      <button onclick="downloadCSV()">Download CSV</button>
+    </div>
+
+    <div id="leaderboards"></div>
+    <div class="chart-container">
+      <canvas id="auprcChart"></canvas>
+    </div>
+
+    <footer>
+      <p>
+        Maintained by
+        <a href="https://github.com/j4nberner/pulse" target="_blank"
+          >PULSE @ GitHub</a
+        >
+      </p>
+    </footer>
+
+    <script>
+      let allData = [];
+      let currentSort = { key: "", asc: true };
+      let currentTask = ""; // Track the current task
+
+      fetch("results.json")
+        .then((response) => response.json())
+        .then((json) => {
+          allData = json.results;
+          updatePage();
+        })
+        .catch((err) => console.error("Error loading results:", err));
+
+      function updatePage() {
+        const datasets = Array.from(new Set(allData.map((e) => e.dataset)));
+        const container = document.getElementById("leaderboards");
+        container.innerHTML = "";
+
+        const filtered = getFilteredSortedData();
+
+        // Dataset name mapping
+        const datasetDisplayNames = {
+          hirid: "HiRID",
+          miiv: "MIMIC-IV",
+          eicu: "eICU",
+        };
+
+        // Calculate min and max for each metric
+        const metrics = [
+          "auroc",
+          "auprc",
+          "normalized_auprc",
+          "balanced_accuracy",
+          "f1_score",
+          "mcc",
+        ];
+        const metricRanges = {};
+        metrics.forEach((metric) => {
+          const values = filtered
+            .map((e) => e.metrics_summary.overall[metric])
+            .filter((v) => v !== undefined);
+          metricRanges[metric] = {
+            min: Math.min(...values),
+            max: Math.max(...values),
+          };
+        });
+
+        datasets.forEach((dataset) => {
+          const section = document.createElement("div");
+          section.className = "dataset-section";
+          const title = document.createElement("h2");
+          // Use the display name from our mapping, or the original if not found
+          title.textContent = `Dataset: ${
+            datasetDisplayNames[dataset] || dataset
+          }`;
+          section.appendChild(title);
+
+          const table = document.createElement("table");
+          table.innerHTML = `
+          <thead>
+            <tr>
+              <th>Task</th>
+              <th>Model</th>
+              <th>AUROC</th>
+              <th>AUPRC</th>
+              <th>Normalized AUPRC</th>
+              <th>Balanced Accuracy</th>
+              <th>F1 Score</th>
+              <th>MCC</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${filtered
+              .filter((e) => e.dataset === dataset)
+              .map((entry) => {
+                const m = entry.metrics_summary.overall;
+
+                // Function to calculate color based on value (dynamic range per column)
+                const getColor = (value, metric) => {
+                  const { min, max } = metricRanges[metric];
+                  const lowColor = getComputedStyle(document.documentElement)
+                    .getPropertyValue("--color-low")
+                    .trim();
+                  const midColor = getComputedStyle(document.documentElement)
+                    .getPropertyValue("--color-mid")
+                    .trim();
+                  const highColor = getComputedStyle(document.documentElement)
+                    .getPropertyValue("--color-high")
+                    .trim();
+
+                  const parseColor = (color) => {
+                    const rgb = color.match(/\d+/g);
+                    return rgb ? rgb.map(Number) : [0, 0, 0];
+                  };
+
+                  const interpolateColor = (color1, color2, factor) => {
+                    const c1 = parseColor(color1);
+                    const c2 = parseColor(color2);
+                    const result = c1.map((c, i) =>
+                      Math.round(c + factor * (c2[i] - c))
+                    );
+                    return `rgb(${result.join(",")})`;
+                  };
+
+                  if (value <= min) return lowColor;
+                  if (value >= max) return highColor;
+
+                  const mid = (min + max) / 2;
+                  if (value < mid) {
+                    return interpolateColor(
+                      lowColor,
+                      midColor,
+                      (value - min) / (mid - min)
+                    );
+                  } else {
+                    return interpolateColor(
+                      midColor,
+                      highColor,
+                      (value - mid) / (max - mid)
+                    );
+                  }
+                };
+
+                return `<tr>
+                <td>${entry.task_id}</td>
+                <td>${entry.model_id}</td>
+                <td style="background-color: ${getColor(
+                  m.auroc,
+                  "auroc"
+                )}">${m.auroc?.toFixed(3)}</td>
+                <td style="background-color: ${getColor(
+                  m.auprc,
+                  "auprc"
+                )}">${m.auprc?.toFixed(3)}</td>
+                <td style="background-color: ${getColor(
+                  m.normalized_auprc,
+                  "normalized_auprc"
+                )}">${m.normalized_auprc?.toFixed(3)}</td>
+                <td style="background-color: ${getColor(
+                  m.balanced_accuracy,
+                  "balanced_accuracy"
+                )}">${m.balanced_accuracy?.toFixed(3)}</td>
+                <td style="background-color: ${getColor(
+                  m.f1_score,
+                  "f1_score"
+                )}">${m.f1_score?.toFixed(3)}</td>
+                <td style="background-color: ${getColor(
+                  m.mcc,
+                  "mcc"
+                )}">${m.mcc?.toFixed(3)}</td>
+              </tr>`;
+              })
+              .join("")}
+          </tbody>
+        `;
+          section.appendChild(table);
+          container.appendChild(section);
+        });
+
+        renderChart(filtered);
+      }
+
+      function getFilteredSortedData() {
+        const search = document.getElementById("search").value.toLowerCase();
+        let filtered = allData.filter(
+          (entry) =>
+            (!currentTask || entry.task_id.toLowerCase() === currentTask) &&
+            (entry.model_id.toLowerCase().includes(search) ||
+              entry.task_id.toLowerCase().includes(search))
+        );
+
+        if (currentSort.key) {
+          filtered.sort((a, b) => {
+            // Primary sorting by task_id
+            const taskOrder = { mortality: 0, aki: 1, sepsis: 2 };
+            const taskComparison = taskOrder[a.task_id] - taskOrder[b.task_id];
+            if (taskComparison !== 0) return taskComparison;
+
+            // Secondary sorting by the currentSort key
+            let valA = a[currentSort.key];
+            let valB = b[currentSort.key];
+            if (
+              ["auroc", "auprc", "balanced_accuracy"].includes(currentSort.key)
+            ) {
+              valA = a.metrics_summary.overall[currentSort.key];
+              valB = b.metrics_summary.overall[currentSort.key];
+            }
+            return typeof valA === "string"
+              ? currentSort.asc
+                ? valA.localeCompare(valB)
+                : valB.localeCompare(valA)
+              : currentSort.asc
+              ? valA - valB
+              : valB - valA;
+          });
+        } else {
+          // Default sorting by task_id
+          const taskOrder = { mortality: 0, aki: 1, sepsis: 2 };
+          filtered.sort((a, b) => taskOrder[a.task_id] - taskOrder[b.task_id]);
+        }
+        return filtered;
+      }
+
+      document.getElementById("search").addEventListener("input", updatePage);
+
+      // Handle tab clicks
+      document.querySelectorAll(".tab-btn").forEach((btn) => {
+        btn.addEventListener("click", function () {
+          // Remove active class from all tabs
+          document
+            .querySelectorAll(".tab-btn")
+            .forEach((b) => b.classList.remove("active"));
+          // Add active class to clicked tab
+          this.classList.add("active");
+          // Update current task
+          currentTask = this.getAttribute("data-task").toLowerCase();
+          updatePage();
+        });
+      });
+
+      function downloadCSV() {
+        const data = getFilteredSortedData();
+        const header = [
+          "Model",
+          "Task",
+          "Dataset",
+          "AUROC",
+          "AUPRC",
+          "Normalized AUPRC",
+          "Balanced Accuracy",
+          "F1 Score",
+          "MCC",
+        ];
+        const rows = data.map((e) => [
+          e.task_id,
+          e.model_id,
+          e.dataset,
+          e.metrics_summary.overall.auroc,
+          e.metrics_summary.overall.auprc,
+          e.metrics_summary.overall.normalized_auprc,
+          e.metrics_summary.overall.balanced_accuracy,
+          e.metrics_summary.overall.f1_score,
+          e.metrics_summary.overall.mcc,
+        ]);
+        const csv = [header, ...rows].map((e) => e.join(",")).join("\n");
+        const blob = new Blob([csv], { type: "text/csv" });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = "leaderboard.csv";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+
+      function renderChart(data) {
+        const ctx = document.getElementById("auprcChart")?.getContext("2d");
+        if (!ctx) return;
+        const models = data.map((e) => `${e.model_id} (${e.task_id})`);
+        const values = data.map((e) => e.metrics_summary.overall.auprc);
+        if (window.auprcChart) window.auprcChart.destroy();
+        window.auprcChart = new Chart(ctx, {
+          type: "bar",
+          data: {
+            labels: models,
+            datasets: [
+              {
+                label: "AUPRC",
+                data: values,
+                backgroundColor: "#4e79a7",
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              legend: { display: false },
+              title: {
+                display: true,
+                text: "AUPRC per Model",
+              },
+            },
+            scales: {
+              y: { beginAtZero: true, title: { display: true, text: "AUPRC" } },
+            },
+          },
+        });
+      }
+    </script>
+  </body>
+</html>

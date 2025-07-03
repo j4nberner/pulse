@@ -305,20 +305,18 @@ class PulseLLMModel(PulseModel):
         )
 
         # Tokenize with chat template
-        chat_prompt = self.tokenizer.apply_chat_template(
-            input_text, tokenize=False, add_generation_prompt=True
-        )
-
-        token_start = time.perf_counter()
-        tokenized_inputs = self.tokenizer(
-            chat_prompt,
+        tokenized_inputs = self.tokenizer.apply_chat_template(
+            input_text, 
+            tokenize=True, 
+            add_generation_prompt=True,
             return_tensors="pt",
-        )
-        token_time = time.perf_counter() - token_start
+            return_dict=True,
+        ).to(self.device)
+
         num_input_tokens = tokenized_inputs["input_ids"].size(1)
 
-        input_ids = tokenized_inputs["input_ids"].to(self.device)
-        attention_mask = tokenized_inputs["attention_mask"].to(self.device)
+        logger.debug("GPU memory allocated: %s",
+                     torch.cuda.memory_allocated() / (1024 ** 3))
 
         # Generate output with scores
         infer_start = time.perf_counter()
@@ -328,14 +326,13 @@ class PulseLLMModel(PulseModel):
 
         with torch.no_grad():
             outputs = self.model.generate(
-                input_ids=input_ids,
-                attention_mask=attention_mask,
+                **tokenized_inputs,
                 max_new_tokens=self.params["max_new_tokens"],
                 return_dict_in_generate=True,
                 output_scores=output_scores,
                 output_hidden_states=False,
-                pad_token_id=self.tokenizer.pad_token_id,
-                eos_token_id=self.tokenizer.eos_token_id,
+                # pad_token_id=self.tokenizer.pad_token_id,
+                # eos_token_id=self.tokenizer.eos_token_id,
                 do_sample=self.params["do_sample"],
                 temperature=self.params["temperature"],
             )
@@ -353,6 +350,7 @@ class PulseLLMModel(PulseModel):
 
         # Initialize thinking_output for models that don't use it
         thinking_output = ""
+        num_thinking_tokens = 0
 
         if self.model_name == "Gemma3Model":
             # Trim after first <end_of_turn>
@@ -362,6 +360,12 @@ class PulseLLMModel(PulseModel):
             if "</think>" in decoded_output:
                 thinking_output = decoded_output.split("</think>")[0]
                 decoded_output = decoded_output.split("</think>")[1]
+                num_thinking_tokens = len(
+                    self.tokenizer(
+                        thinking_output,
+                        return_tensors="pt",
+                    )["input_ids"][0]
+                )
             logger.debug("Answer output:\n %s", decoded_output)
 
         # Log the decoded output for debugging
@@ -374,25 +378,23 @@ class PulseLLMModel(PulseModel):
             generated_text = decoded_output
 
         logger.info(
-            "Tokenization time: %.4fs | Inference time: %.4fs | Input Tokens: %d | Output Tokens: %d",
-            token_time,
+            "Inference time: %.4fs | Input Tokens: %d | Output Tokens: %d | Thinking Budget: %d",
             infer_time,
             num_input_tokens,
             num_output_tokens,
+            num_thinking_tokens,
         )
 
         # Build result structure
         result = {
             "generated_text": generated_text,
-            "token_time": token_time,
+            "thinking_output": thinking_output,
+            "token_time": 0.0,  
             "infer_time": infer_time,
             "num_input_tokens": num_input_tokens,
             "num_output_tokens": num_output_tokens,
+            "num_thinking_tokens": num_thinking_tokens,
         }
-
-        # Add thinking_output for DeepSeek models
-        if self.model_name == "DeepseekR1Model":
-            result["thinking_output"] = thinking_output
 
         return result
 
@@ -436,8 +438,11 @@ class PulseLLMModel(PulseModel):
 
         verbose: int = self.params.get("verbose", 1)
         val_loss: list[float] = []
-
-        self.model.eval()
+        
+        try:
+            self.model.eval()
+        except Exception as e:
+            pass
 
         # Ensure sequential Sample IDs for agent models
         if self.is_agent:
@@ -477,6 +482,8 @@ class PulseLLMModel(PulseModel):
                     "infer_time": 0.0,
                     "num_input_tokens": 0,
                     "num_output_tokens": 0,
+                    "num_thinking_tokens": 0,
+                    "thinking_output": "",
                 }
 
             # Extract results
@@ -485,8 +492,14 @@ class PulseLLMModel(PulseModel):
             infer_time = result_dict["infer_time"]
             num_input_tokens = result_dict["num_input_tokens"]
             num_output_tokens = result_dict["num_output_tokens"]
+            num_thinking_tokens = result_dict["num_thinking_tokens"]
+            thinking_output = result_dict["thinking_output"]
 
-            predicted_probability = float(generated_text.get("probability", np.nan))
+            # Handle case where generated_text is a string instead of dict (when parsing fails)
+            if isinstance(generated_text, dict):
+                predicted_probability = float(generated_text.get("probability", np.nan))
+            else:
+                predicted_probability = np.nan
 
             logger.info(
                 "Predicted probability: %s | True label: %s",
@@ -502,15 +515,6 @@ class PulseLLMModel(PulseModel):
             if verbose > 2:
                 logger.info("Input prompt: %s \n", X_input)
 
-            predicted_label = torch.tensor(
-                predicted_probability, dtype=torch.float32
-            ).unsqueeze(0)
-            target = torch.tensor(float(y_true), dtype=torch.float32).unsqueeze(0)
-
-            # Criterion not needed for LLM inference
-            # loss = criterion(predicted_label, target)
-            val_loss.append(np.nan)
-
             if self.wandb:
                 wandb.log(
                     {
@@ -525,19 +529,32 @@ class PulseLLMModel(PulseModel):
             metrics_tracker.add_results(predicted_probability, y_true)
 
             if not self.is_agent:  # Agent models handle metadata logging in add_step()
+                # Handle case where generated_text is a string instead of dict
+                if isinstance(generated_text, dict):
+                    diagnosis = generated_text.get("diagnosis", "")
+                    explanation = generated_text.get("explanation", "")
+                else:
+                    diagnosis = ""
+                    explanation = str(generated_text) if generated_text else ""
+
                 metrics_tracker.add_metadata_item(
                     {
                         "Input Prompt": X_input,
                         "Target Label": y_true,
                         "Predicted Probability": predicted_probability,
-                        "Predicted Diagnosis": generated_text.get("diagnosis", ""),
-                        "Predicted Explanation": generated_text.get("explanation", ""),
+                        "Predicted Diagnosis": diagnosis,
+                        "Predicted Explanation": explanation,
                         "Tokenization Time": token_time,
                         "Inference Time": infer_time,
                         "Input Tokens": num_input_tokens,
                         "Output Tokens": num_output_tokens,
+                        "Thinking Tokens": num_thinking_tokens,
+                        "Thinking Output": thinking_output,
                     }
                 )
+            if len(metrics_tracker.items) > 100:
+                # Log metadata periodically to avoid memory issues
+                metrics_tracker.log_metadata()
 
         metrics_tracker.log_metadata(save_to_file=self.save_metadata)
         metrics_tracker.summary = metrics_tracker.compute_overall_metrics()
@@ -616,7 +633,11 @@ class PulseLLMModel(PulseModel):
                 num_input_tokens = result_dict["num_input_tokens"]
                 num_output_tokens = result_dict["num_output_tokens"]
 
-                predicted_probability = float(generated_text.get("probability", np.nan))
+                # Handle case where generated_text is a string instead of dict (when parsing fails)
+                if isinstance(generated_text, dict):
+                    predicted_probability = float(generated_text.get("probability", np.nan))
+                else:
+                    predicted_probability = np.nan
 
                 logger.info(
                     "Predicted probability: %s | True label: %s",
@@ -624,10 +645,13 @@ class PulseLLMModel(PulseModel):
                     y_true,
                 )
                 if verbose > 1:
-                    logger.info("Diagnosis for: %s", generated_text["diagnosis"])
-                    logger.info(
-                        "Generated explanation: %s \n", generated_text["explanation"]
-                    )
+                    if isinstance(generated_text, dict):
+                        logger.info("Diagnosis for: %s", generated_text.get("diagnosis", ""))
+                        logger.info(
+                            "Generated explanation: %s \n", generated_text.get("explanation", "")
+                        )
+                    else:
+                        logger.info("Raw output: %s", generated_text)
                 if verbose > 2:
                     logger.info("Input prompt: %s \n", X_input)
 
@@ -641,13 +665,21 @@ class PulseLLMModel(PulseModel):
                 val_loss.append(np.nan)
 
                 metrics_tracker.add_results(predicted_probability, y_true)
+                # Handle case where generated_text is a string instead of dict
+                if isinstance(generated_text, dict):
+                    diagnosis = generated_text.get("diagnosis", "")
+                    explanation = generated_text.get("explanation", "")
+                else:
+                    diagnosis = ""
+                    explanation = str(generated_text) if generated_text else ""
+
                 metrics_tracker.add_metadata_item(
                     {
                         "Input Prompt": X_input,
                         "Target Label": y_true,
                         "Predicted Probability": predicted_probability,
-                        "Predicted Diagnosis": generated_text.get("diagnosis", ""),
-                        "Predicted Explanation": generated_text.get("explanation", ""),
+                        "Predicted Diagnosis": diagnosis,
+                        "Predicted Explanation": explanation,
                         "Tokenization Time": token_time,
                         "Inference Time": infer_time,
                         "Input Tokens": num_input_tokens,
@@ -768,6 +800,12 @@ class PulseLLMModel(PulseModel):
 
             # Process through agent - returns raw unparsed output
             result = self.agent_instance.process_single(input_data)
+
+            #TODO: @sophiafe Need to add to all agents if we want to have this included.
+            # Adding default Thinking Output for compatibility
+            result["thinking_output"] = ""
+            result["num_thinking_tokens"] = 0
+            
             return result
 
         except Exception as e:

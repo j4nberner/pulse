@@ -1,11 +1,11 @@
 name: "CNNModel"
-pretrained_model_paths: /cluster/project/bmds_lab/sepsis_jan/pulse/output_to_keep/results_benchmark/20250603_160304_CNN/Models
+pretrained_model_paths: null #/cluster/project/bmds_lab/sepsis_jan/pulse/output_to_keep/results_benchmark/20250603_160304_CNN/Models
 params:
   # Basic configuration
   trainer_name: "CNNTrainer"
   type: "convDL" # Type of model (convML for conventional machine learning, convDL for conventional deep learning and LLM for large language models)
   architecture_type: "CNN" # Architecture type (CNN, RNN)
-  mode: "inference" # Mode of operation (inference, train)
+  mode: "train" # Mode of operation (inference, train)
   save_checkpoint: 0 # Save checkpoint every n epochs. Set to 0 to disable.
   verbose: 2 # Controls verbosity of output (0 = silent, 1 = log every 100 batches, 2 = log every batch)
 

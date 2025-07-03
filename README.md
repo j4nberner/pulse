@@ -84,6 +84,60 @@ Check https://j4nberner.github.io/pulse/ for Benchmark Results.
 Each benchmark run creates an output folder with a timestamp.
 A Metric Tracker is running alongside each training / evaluation process. Predictions are tracked and evaluated of all validation and test runs and saved to a json file in the output. Metadata with prompt infos and demographic distribution is saved as csv to output folder.
 
+## The PULSE Score Formula
+
+The PULSE score for a single outcome (e.g., sepsis) is calculated by multiplying a **Base Score** of classification performance by a **Confidence-Correctness Factor (CCF)**, then scaling to a 0-100 range.
+
+$$\text{PULSE}_{\text{outcome}} = 100 \times \underbrace{(\alpha \cdot \text{AUPRC} + \beta \cdot \text{AUROC} + (1-\alpha-\beta) \cdot \text{MCC})}_{\text{Base Score}} \times \underbrace{\text{CCF}}_{\text{Confidence-Correctness Factor}}$$
+
+The final benchmark score is the weighted average across all outcomes (AKI, sepsis, mortality):
+
+$$\text{PULSE}_{\text{total}} = \sum_{j=1}^{M} \gamma_j \cdot \text{PULSE}_{\text{outcome}_j}$$
+
+- **$\alpha$**: Weight for AUPRC (e.g., 0.4).
+- **$\beta$**: Weight for AUROC (e.g., 0.3).
+- **$(1-\alpha-\beta)$**: Weight for MCC (e.g., 0.3), where $\alpha + \beta + (1-\alpha-\beta) = 1$.
+- **$\gamma_j$**: The clinical importance weight for each outcome $j$.
+
+---
+
+### Calculating the Confidence-Correctness Factor (CCF)
+
+The CCF provides a single, unified way to evaluate the reliability of the predicted probabilities. It ranges from a maximum of 1 (no penalty) down to a lower value based on the severity of prediction errors.
+
+It is calculated in two parts:
+
+**1. Define a Penalty for Each Prediction**
+
+For every sample in the dataset, a `penalty` is calculated based on the model's output. Let `p` be the predicted probability for the positive class.
+
+The `penalty` is defined as:
+
+$$
+\text{penalty} =
+\begin{cases}
+|p - 0.5| & \text{if model is LLM and prediction is incorrect} \\
+0 & \text{if model is conventional ML} \\
+0 & \text{if prediction is correct}
+\end{cases}
+$$
+
+This rule penalizes an LLM for being confidently wrong. A wrong guess with a probability of 0.9 (`penalty = 0.4`) is punished more harshly than a wrong guess with a probability of 0.6 (`penalty = 0.1`). The maximum penalty is 0.5 (when p = 0 or p = 1 for an incorrect prediction).
+
+**2. Calculate the Final CCF**
+
+The CCF is 1 minus the average of all penalties calculated across the entire dataset.
+
+$$\text{CCF} = 1 - \frac{\sum \text{penalties}}{\text{Total Number of Samples}}$$
+
+### Score Interpretation
+
+- **PULSE Score = 100**: Perfect performance with optimal confidence calibration
+- **PULSE Score = 75-99**: Excellent performance with good confidence calibration
+- **PULSE Score = 50-74**: Good performance but may have confidence issues (for LLMs)
+- **PULSE Score = 25-49**: Moderate performance with significant room for improvement
+- **PULSE Score = 0-24**: Poor performance requiring substantial model improvements
+
 ## Train a model
 
 1. adjust config_benchmark.yaml
