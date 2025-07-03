@@ -318,6 +318,7 @@ class PULSEScoreCalculator:
         pred_col_candidates: List[str] = None,
         task_col_candidates: List[str] = None,
         dataset_col_candidates: List[str] = None,
+        verbose: bool = True,
     ) -> pd.DataFrame:
         """
         Prepare a DataFrame for PULSE score calculation by mapping and converting columns.
@@ -476,7 +477,8 @@ class PULSEScoreCalculator:
             df_prepared["dataset"] = "test"
 
         verification_results = self.verify_pulse_data_format(df_prepared)
-        self.print_data_verification_report(df_prepared, verification_results)
+        if verbose:
+            self.print_data_verification_report(df_prepared, verification_results)
 
         if not verification_results["ready_for_pulse"]:
             raise ValueError(
@@ -659,34 +661,68 @@ class PULSEScoreCalculator:
             dataset_col: Column name for dataset identifier
 
         Returns:
-            Dictionary with PULSE scores for each task and overall score
+            Dictionary with PULSE scores for each task, each task-dataset combination, and overall score
         """
         results = {}
         task_scores = {}
+        task_dataset_scores = {}
 
-        # Calculate scores for each task
+        # Calculate scores for each task-dataset combination
         for task in df[task_col].unique():
-            task_data = df[df[task_col] == task].copy()
+            for dataset in df[dataset_col].unique():
+                task_dataset_data = df[
+                    (df[task_col] == task) & (df[dataset_col] == dataset)
+                ].copy()
 
-            if len(task_data) == 0:
-                continue
+                if len(task_dataset_data) == 0:
+                    continue
 
-            # Extract arrays
-            y_true = task_data[target_col].values
-            y_prob = task_data[prob_col].values
-            y_pred = task_data[pred_col].values
+                # Extract arrays
+                y_true = task_dataset_data[target_col].values
+                y_prob = task_dataset_data[prob_col].values
+                y_pred = task_dataset_data[pred_col].values
 
-            # Validate data
-            if len(np.unique(y_true)) < 2:
-                warnings.warn(f"Task {task} has only one class. Skipping.")
-                continue
+                # Validate data
+                if len(np.unique(y_true)) < 2:
+                    warnings.warn(
+                        f"Task {task} on dataset {dataset} has only one class. Skipping."
+                    )
+                    continue
 
-            # Calculate PULSE score for this task
-            task_result = self.calculate_pulse_score_single_outcome(
-                y_true, y_prob, y_pred
-            )
-            task_scores[task] = task_result["pulse_score"]
-            results[task] = task_result
+                # Calculate PULSE score for this task-dataset combination
+                task_dataset_result = self.calculate_pulse_score_single_outcome(
+                    y_true, y_prob, y_pred
+                )
+
+                # Store result with combined key
+                combo_key = f"{task}_{dataset}"
+                task_dataset_scores[combo_key] = task_dataset_result["pulse_score"]
+                results[combo_key] = task_dataset_result
+
+        # Calculate aggregated scores for each task (mean of task-dataset combinations)
+        for task in df[task_col].unique():
+            # Get all task-dataset scores for this task
+            task_dataset_keys = [
+                key for key in task_dataset_scores.keys() if key.startswith(f"{task}_")
+            ]
+
+            if task_dataset_keys:
+                # Calculate mean score across datasets for this task
+                task_scores_list = [
+                    task_dataset_scores[key] for key in task_dataset_keys
+                ]
+                aggregated_score = np.mean(task_scores_list)
+                task_scores[task] = aggregated_score
+
+                # Create aggregated result dictionary
+                results[task] = {
+                    "pulse_score": aggregated_score,
+                    "dataset_scores": {
+                        key.split("_", 1)[1]: task_dataset_scores[key]
+                        for key in task_dataset_keys
+                    },
+                    "num_datasets": len(task_dataset_keys),
+                }
 
         # Calculate weighted overall score
         if task_scores:
@@ -703,6 +739,7 @@ class PULSEScoreCalculator:
             results["overall"] = {
                 "pulse_score": overall_score,
                 "task_scores": task_scores,
+                "task_dataset_scores": task_dataset_scores,
                 "weights_used": self.outcome_weights,
             }
 
@@ -745,18 +782,40 @@ class PULSEScoreCalculator:
         """
         comparison_data = []
         for task, result in pulse_results.items():
-            if task != "overall":
-                base_score_100 = result["base_score"] * 100
+            if task == "overall":
+                continue
+
+            # Handle both aggregated task results and task-dataset combination results
+            if "_" in task:
+                # Task-dataset combination result (has all metrics)
+                if "base_score" in result:
+                    base_score_100 = result["base_score"] * 100
+                    comparison_data.append(
+                        {
+                            "Task": task.capitalize(),
+                            "PULSE Score": result["pulse_score"],
+                            "Base Score (no penalties)": base_score_100,
+                            "AUPRC": result["auprc"],
+                            "AUROC": result["auroc"],
+                            "MCC (normalized)": result["mcc"],
+                            "CCF": result["ccf"],
+                            "Confidence Penalty": result["avg_penalty"],
+                        }
+                    )
+            else:
+                # Aggregated task result (only has pulse_score)
                 comparison_data.append(
                     {
                         "Task": task.capitalize(),
                         "PULSE Score": result["pulse_score"],
-                        "Base Score (no penalties)": base_score_100,
-                        "AUPRC": result["auprc"],
-                        "AUROC": result["auroc"],
-                        "MCC (normalized)": result["mcc"],
-                        "CCF": result["ccf"],
-                        "Confidence Penalty": result["avg_penalty"],
+                        "Base Score (no penalties)": result[
+                            "pulse_score"
+                        ],  # Use same as PULSE for aggregated
+                        "AUPRC": None,
+                        "AUROC": None,
+                        "MCC (normalized)": None,
+                        "CCF": None,
+                        "Confidence Penalty": None,
                     }
                 )
 
@@ -872,28 +931,61 @@ class PULSEScoreCalculator:
         )
         print()
 
-        # Print results for each task
-        for task, result in results.items():
-            if task == "overall":
-                continue
+        # Separate task-level and task-dataset-level results
+        task_results = {}
+        task_dataset_results = {}
 
-            print(f"Task: {task.upper()}")
-            print("-" * 30)
-            print(f"PULSE Score: {result['pulse_score']:.2f}")
-            print(
-                f"Interpretation: {self.get_score_interpretation(result['pulse_score'])}"
-            )
-            print(f"Base Score: {result['base_score']:.3f}")
-            print(f"CCF: {result['ccf']:.3f}")
-            print(f"AUPRC: {result['auprc']:.3f}")
-            print(f"AUROC: {result['auroc']:.3f}")
-            print(f"MCC (normalized): {result['mcc']:.3f}")
-            if self.is_llm_model:
-                print(f"Average Penalty: {result['avg_penalty']:.3f}")
+        for key, result in results.items():
+            if key == "overall":
+                continue
+            elif "_" in key:
+                task_dataset_results[key] = result
+            else:
+                task_results[key] = result
+
+        # Print results for each task (aggregated)
+        if task_results:
+            print("TASK-LEVEL SCORES (Mean across datasets)")
+            print("=" * 50)
+            for task, result in task_results.items():
+                print(f"Task: {task.upper()}")
+                print("-" * 30)
+                print(f"PULSE Score (Mean): {result['pulse_score']:.2f}")
                 print(
-                    f"Problematic Predictions: {result['num_penalized']} (inconsistent or invalid)"
+                    f"Interpretation: {self.get_score_interpretation(result['pulse_score'])}"
                 )
-            print()
+                print(f"Number of datasets: {result['num_datasets']}")
+                print(
+                    f"Dataset scores: {', '.join([f'{ds}={score:.1f}' for ds, score in result['dataset_scores'].items()])}"
+                )
+                print()
+
+        # Print results for each task-dataset combination
+        if task_dataset_results:
+            print("TASK-DATASET COMBINATION SCORES")
+            print("=" * 50)
+            # Group by task for better organization
+            task_groups = {}
+            for key, result in task_dataset_results.items():
+                task, dataset = key.split("_", 1)
+                if task not in task_groups:
+                    task_groups[task] = {}
+                task_groups[task][dataset] = result
+
+            for task, datasets in task_groups.items():
+                print(f"\n{task.upper()} by Dataset:")
+                print("-" * 40)
+                for dataset, result in datasets.items():
+                    print(f"  Dataset: {dataset}")
+                    print(f"    PULSE Score: {result['pulse_score']:.2f}")
+                    print(f"    Base Score: {result['base_score']:.3f}")
+                    print(f"    CCF: {result['ccf']:.3f}")
+                    print(f"    AUPRC: {result['auprc']:.3f}")
+                    print(f"    AUROC: {result['auroc']:.3f}")
+                    print(f"    MCC (norm): {result['mcc']:.3f}")
+                    if self.is_llm_model and result.get("num_penalized", 0) > 0:
+                        print(f"    Problematic Predictions: {result['num_penalized']}")
+                    print()
 
         # Print overall score
         if "overall" in results:
@@ -931,18 +1023,24 @@ class PULSEScoreCalculator:
             f"📈 Performance Category: {self.get_score_interpretation(overall_score)}"
         )
 
-        # Calculate impact of confidence penalties
-        total_penalty_impact = 0
-        total_base_score = 0
+        # Calculate impact of confidence penalties - only for task-dataset combinations
+        task_dataset_results = {
+            k: v
+            for k, v in pulse_results.items()
+            if k != "overall" and "_" in k and "base_score" in v
+        }
 
-        for task, result in pulse_results.items():
-            if task != "overall":
+        if task_dataset_results:
+            total_penalty_impact = 0
+            total_base_score = 0
+
+            for task_dataset, result in task_dataset_results.items():
                 base_without_penalty = result["base_score"] * 100
                 penalty_reduction = base_without_penalty - result["pulse_score"]
                 total_penalty_impact += penalty_reduction
                 total_base_score += base_without_penalty
 
-                print(f"\n📊 {task.upper()} Analysis:")
+                print(f"\n📊 {task_dataset.upper()} Analysis:")
                 print(f"   • Base performance: {base_without_penalty:.1f}/100")
                 print(f"   • Final PULSE score: {result['pulse_score']:.1f}/100")
                 print(f"   • Penalty impact: -{penalty_reduction:.1f} points")
@@ -951,23 +1049,33 @@ class PULSEScoreCalculator:
                         f"   • Problematic predictions: {result['num_penalized']} (inconsistent or invalid)"
                     )
 
-        if self.is_llm_model:
-            avg_penalty_impact = total_penalty_impact / len(
-                [k for k in pulse_results.keys() if k != "overall"]
-            )
-            print("\n⚠️  PREDICTION QUALITY:")
-            print(
-                f"   • Average penalty impact: -{avg_penalty_impact:.1f} points per task"
-            )
-            severity = (
-                "significant"
-                if avg_penalty_impact > 10
-                else "moderate" if avg_penalty_impact > 5 else "minimal"
-            )
-            print(f"   • This indicates {severity} issues with prediction quality")
-            print(
-                "   • Issues include: confidence-prediction inconsistency & invalid task understanding"
-            )
+            if self.is_llm_model and task_dataset_results:
+                avg_penalty_impact = total_penalty_impact / len(task_dataset_results)
+                print("\n⚠️  PREDICTION QUALITY:")
+                print(
+                    f"   • Average penalty impact: -{avg_penalty_impact:.1f} points per task-dataset"
+                )
+                severity = (
+                    "significant"
+                    if avg_penalty_impact > 10
+                    else "moderate" if avg_penalty_impact > 5 else "minimal"
+                )
+                print(f"   • This indicates {severity} issues with prediction quality")
+                print(
+                    "   • Issues include: confidence-prediction inconsistency & invalid task understanding"
+                )
+
+        # Show aggregated task scores
+        task_results = {
+            k: v for k, v in pulse_results.items() if k != "overall" and "_" not in k
+        }
+
+        if task_results:
+            print("\n📈 AGGREGATED TASK PERFORMANCE:")
+            for task, result in task_results.items():
+                print(
+                    f"   • {task.capitalize()}: {result['pulse_score']:.1f}/100 (mean across {result['num_datasets']} datasets)"
+                )
 
         print("\n🔬 CLINICAL IMPACT:")
         for task in ["sepsis", "mortality", "aki"]:
@@ -1027,9 +1135,10 @@ class PULSEScoreCalculator:
                 pred_col_candidates=pred_col_candidates,
                 task_col_candidates=task_col_candidates,
                 dataset_col_candidates=dataset_col_candidates,
+                verbose=show_detailed_report,
             )
 
-            # Step 3: Calculate PULSE scores
+            # Step 2: Calculate PULSE scores
             print("Calculating PULSE scores...")
             pulse_results = self.calculate_pulse_score_from_dataframe(
                 df_prepared,

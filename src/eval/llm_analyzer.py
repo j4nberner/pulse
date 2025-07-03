@@ -1,3 +1,4 @@
+import ast
 import glob
 import json
 import os
@@ -35,27 +36,155 @@ VARIABLE_NAMES = {
 COLORS = ["#2E86AB", "#A23B72", "#F18F01", "#C73E1D", "#8E44AD", "#27AE60"]
 
 
-class LLMAnalyzer:
+class ModelAnalyzer:
     """
-    A class to analyze the performance of a Pulse-LLM output.
+    A class to analyze the performance of conventional Pulse Models.
     """
 
     def __init__(self):
-        """
-        Initializes the LLM_Analyzer class.
-        """
         pass
 
-    def analyze_llm(self, outputfolder_path_list):
+    @staticmethod
+    def expand_full_dataset(df, prediction_col="prediction", label_col="label"):
         """
-        Analyze a single LLM output.
-        Loads all data from the output folder, creates a summary with plots and saves it to the output folder.
+        Expand the full dataset where predictions and labels are batched.
 
         Args:
-            outputfolder_path_list (list): List of output folder paths.
+            df: DataFrame with batched predictions and labels
+            prediction_col: Column name containing prediction strings
+            label_col: Column name containing label strings
 
+        Returns:
+            pd.DataFrame: Expanded DataFrame with only required columns
         """
-        pass
+        expanded_rows = []
+
+        for idx, row in df.iterrows():
+            try:
+                # Parse predictions
+                pred_str = row[prediction_col]
+                clean_pred_str = pred_str.replace("\n", " ").replace("  ", " ")
+                # Handle both Python list and NumPy array-like string formats
+                clean_pred_str = clean_pred_str.strip()
+                if (
+                    clean_pred_str.startswith("[")
+                    and " " in clean_pred_str
+                    and "," not in clean_pred_str
+                ):
+                    # If the string looks like '[[-1.3 ] [-1.4 ] ...]', remove all interior braces
+                    # and convert to a flat Python list string
+                    # Remove all occurrences of '][' and replace with ','
+                    clean_pred_str = clean_pred_str.replace("][", ",")
+                    # Remove all remaining '[' and ']'
+                    clean_pred_str = clean_pred_str.replace("[", "").replace("]", "")
+                    # Split by whitespace and join with commas
+                    clean_pred_str = "[" + ", ".join(clean_pred_str.split()) + "]"
+                clean_pred_str = re.sub(r"\]\s+\[", "], [", clean_pred_str)
+                parsed_predictions = np.array(
+                    ast.literal_eval(clean_pred_str)
+                ).flatten()
+
+                # Parse labels if they exist and are in similar format
+                labels = None
+                if label_col in row and pd.notna(row[label_col]):
+                    try:
+                        label_str = str(row[label_col]).strip()
+                        # If predictions were parsed as a list/array, expect labels to be in similar format
+                        if clean_pred_str.startswith("[") and label_str.startswith("["):
+                            # Clean up label string similar to prediction string
+                            clean_label_str = label_str.replace("\n", " ").replace(
+                                "  ", " "
+                            )
+                            if (
+                                clean_label_str.startswith("[")
+                                and " " in clean_label_str
+                                and "," not in clean_label_str
+                            ):
+                                clean_label_str = clean_label_str.replace("][", ",")
+                                clean_label_str = clean_label_str.replace(
+                                    "[", ""
+                                ).replace("]", "")
+                                clean_label_str = (
+                                    "[" + ", ".join(clean_label_str.split()) + "]"
+                                )
+                            clean_label_str = re.sub(
+                                r"\]\s+\[", "], [", clean_label_str
+                            )
+                            parsed_labels = np.array(
+                                ast.literal_eval(clean_label_str)
+                            ).flatten()
+                            labels = parsed_labels
+                        else:
+                            # Single label repeated for all predictions
+                            single_label = float(label_str)
+                            labels = np.full(len(parsed_predictions), single_label)
+                    except:
+                        # If parsing fails, assume single label for all predictions
+                        try:
+                            single_label = float(row[label_col])
+                            labels = np.full(len(parsed_predictions), single_label)
+                        except:
+                            labels = None
+
+                # Create expanded rows with only required columns
+                for i, pred_value in enumerate(parsed_predictions):
+                    new_row = {
+                        "batch": idx,
+                        "model_name": row.get("model_name", "Unknown"),
+                        "task": row.get("task", "Unknown"),
+                        "dataset": row.get("dataset", "Unknown"),
+                        "timestamp": row.get("timestamp", "Unknown"),
+                        "probability": float(
+                            1 / (1 + np.exp(-pred_value))
+                        ),  # Convert logit to probability
+                        "binary_prediction": int(
+                            1 / (1 + np.exp(-pred_value)) > 0.5
+                        ),  # Binary prediction
+                    }
+
+                    # Add label if available
+                    if labels is not None and i < len(labels):
+                        new_row["label_value"] = float(labels[i])
+                    elif label_col in row:
+                        # Use original label if available
+                        try:
+                            new_row["label_value"] = float(row[label_col])
+                        except:
+                            new_row["label_value"] = None
+                    else:
+                        new_row["label_value"] = None
+
+                    expanded_rows.append(new_row)
+
+            except Exception as e:
+                print(f"Error processing row {idx}: {e}")
+                continue
+
+        if expanded_rows:
+            expanded_df = pd.DataFrame(expanded_rows)
+
+            # Ensure we only have the required columns in the specified order
+            required_columns = [
+                "batch",
+                "model_name",
+                "task",
+                "dataset",
+                "timestamp",
+                "probability",
+                "label_value",
+                "binary_prediction",
+            ]
+
+            # Keep only columns that exist in the DataFrame
+            final_columns = [
+                col for col in required_columns if col in expanded_df.columns
+            ]
+            expanded_df = expanded_df[final_columns]
+
+            return expanded_df.reset_index(drop=True)
+        else:
+            print("No valid data found to expand")
+            return pd.DataFrame()
 
     @staticmethod
     def categorize_files(outputfolder_path_list: list, verbose: bool = True):
@@ -95,6 +224,23 @@ class LLMAnalyzer:
                 print(file)
 
         return categorized_files
+
+
+class LLMAnalyzer(ModelAnalyzer):
+    """
+    A class to analyze the performance of a Pulse-LLM output.
+    """
+
+    def analyze_llm(self, outputfolder_path_list):
+        """
+        Analyze a single LLM output.
+        Loads all data from the output folder, creates a summary with plots and saves it to the output folder.
+
+        Args:
+            outputfolder_path_list (list): List of output folder paths.
+
+        """
+        pass
 
     @staticmethod
     def load_metadata(metadata_path_list):
