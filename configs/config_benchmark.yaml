@@ -104,6 +104,6 @@ load_models:
   # - "configs/model_configs/MistralModel.yaml"
 
   # - "configs/model_configs/GPT4oModel.yaml" # use with caution
-  - "configs/model_configs/OpenAIo3Model.yaml"
+  # - "configs/model_configs/OpenAIo3Model.yaml"
   # - "configs/model_configs/Gemini2p5flashModel.yaml" # use with caution
-  # - "configs/model_configs/ClaudeSonnet4Model.yaml" # not yet implemented
+  - "configs/model_configs/ClaudeSonnet4Model.yaml" #

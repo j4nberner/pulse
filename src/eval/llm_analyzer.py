@@ -243,7 +243,7 @@ class LLMAnalyzer(ModelAnalyzer):
         pass
 
     @staticmethod
-    def load_metadata(metadata_path_list):
+    def load_metadata(metadata_path_list, verbose=True):
         """
         Load metadata from a CSV file into a DataFrame.
 
@@ -256,16 +256,17 @@ class LLMAnalyzer(ModelAnalyzer):
         df_mdata = pd.DataFrame()
         for m_path in metadata_path_list:
             try:
-                df = pd.read_csv(m_path)
+                df = pd.read_csv(m_path, on_bad_lines='skip')
                 # Extract model name, task, dataset, and timestamp from the metadata path
                 match = re.search(
                     r"\\([^\\]+)_([^_]+)_([^_]+)_(\d{8}_\d{6})_metadata\.csv$", m_path
                 )
                 if match:
                     model_name, task, dataset, timestamp = match.groups()
-                    print(
-                        f"Model Name: {model_name}, Task: {task}, Dataset: {dataset}, Timestamp: {timestamp}"
-                    )
+                    if verbose:
+                        print(
+                            f"Model Name: {model_name}, Task: {task}, Dataset: {dataset}, Timestamp: {timestamp}"
+                        )
                     # Add extracted metadata to the DataFrame
                     df["model_name"] = model_name
                     df["task"] = task

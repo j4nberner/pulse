@@ -60,7 +60,7 @@ class OpenAIo3Model(PulseLLMModel):
         # self.model = GenerativeModel(self.model_id)
         self.is_agent = False
         self.agent_instance = None
-        self.is_loaded = True # Gemini models are loaded by default
+        self.is_loaded = True  # Gemini models are loaded by default
 
     def _generate_standard(
         self,
@@ -86,9 +86,9 @@ class OpenAIo3Model(PulseLLMModel):
         infer_start = time.perf_counter()
         # Retry logic for rate limiting
         num_retries = 10
-        base_delay = 1
+        delay = 1
         exponential_base = 2.0
-        
+
         for attempt in range(num_retries + 1):
             try:
                 infer_start = time.perf_counter()
@@ -99,7 +99,7 @@ class OpenAIo3Model(PulseLLMModel):
                 )
                 infer_time = time.perf_counter() - infer_start
                 break  # Success, exit retry loop
-                
+
             except Exception as e:
                 error_message = str(e)
                 logger.info("Error during inference: %s", error_message)
@@ -118,8 +118,7 @@ class OpenAIo3Model(PulseLLMModel):
 
                 # Sleep for the delay
                 time.sleep(delay)
-                
-                
+
         infer_time = time.perf_counter() - infer_start
 
         num_input_tokens = response.usage.input_tokens
@@ -154,27 +153,3 @@ class OpenAIo3Model(PulseLLMModel):
             "num_output_tokens": num_output_tokens,
             "num_thinking_tokens": num_thinking_tokens,
         }
-
-    def execute_with_retry(func, *args, **kwargs):
-        """
-        Execute a function with retry logic for 429 errors.
-        """
-        max_retries = 3
-        base_delay = 30
-        
-        for attempt in range(max_retries + 1):
-            try:
-                return func(*args, **kwargs)
-            except Exception as e:
-                error_message = str(e)
-                
-                if "429" in error_message and "RESOURCE_EXHAUSTED" in error_message:
-                    if attempt < max_retries:
-                        delay = base_delay * (2 ** attempt) + random.uniform(0, 5)
-                        print(f"Rate limit hit (429). Retrying in {delay:.1f} seconds... (attempt {attempt + 1}/{max_retries})")
-                        time.sleep(delay)
-                        continue
-                
-                raise e
-        
-        return None

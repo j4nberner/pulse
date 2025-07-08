@@ -476,6 +476,7 @@ def calculate_mcc(
     y_true: Union[np.ndarray, torch.Tensor],
     y_pred: Union[np.ndarray, torch.Tensor],
     threshold: float = 0.5,
+    normalize: bool = False,
 ) -> float:
     """
     Calculate Matthews Correlation Coefficient (MCC) (-1: total disagreement,
@@ -498,7 +499,11 @@ def calculate_mcc(
     # Convert probabilities to binary predictions
     y_pred_binary = (y_pred >= threshold).astype(int)
 
-    return matthews_corrcoef(y_true, y_pred_binary)
+    mcc = matthews_corrcoef(y_true, y_pred_binary)
+    if normalize:
+        mcc = (mcc + 1) / 2
+
+    return mcc
 
 
 def calculate_kappa(
