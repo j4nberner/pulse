@@ -312,15 +312,20 @@ def prompt_template_hf(
                 "content": f"{system_message} Text:\n{input_text} <think>\n",
             },
         ]
-    elif model == "Gemini2p5flashModel":
+    elif model == "Gemini2p5flashModel" or model == "Gemini2p5proModel":
         formatted_prompt = [
             {"role": "user", "parts": [{"text": f"{system_message} \n\n{input_text}"}]},
         ]
-    else:
+    elif model == "ClaudeSonnet4Model":
         formatted_prompt = [
-            {"role": "system", "content": system_message},
+            {"role": "assistant", "content": system_message},
             {"role": "user", "content": input_text},
         ]
+    else:
+        formatted_prompt = [
+            {"role": "user", "content": input_text},
+        ]
+        return formatted_prompt, system_message
 
     return formatted_prompt
 

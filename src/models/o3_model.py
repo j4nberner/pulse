@@ -1,4 +1,3 @@
-# https://github.com/GoogleCloudPlatform/generative-ai/blob/main/gemini/getting-started/intro_gemini_2_5_flash.ipynb
 import logging
 import os
 import random
@@ -86,10 +85,11 @@ class OpenAIo3Model(PulseLLMModel):
 
         infer_start = time.perf_counter()
         # Retry logic for rate limiting
-        max_retries = 3
-        base_delay = 30
+        num_retries = 10
+        base_delay = 1
+        exponential_base = 2.0
         
-        for attempt in range(max_retries + 1):
+        for attempt in range(num_retries + 1):
             try:
                 infer_start = time.perf_counter()
                 response = self.client.responses.create(
@@ -102,18 +102,24 @@ class OpenAIo3Model(PulseLLMModel):
                 
             except Exception as e:
                 error_message = str(e)
+                logger.info("Error during inference: %s", error_message)
+
+                # Increment retries
+                num_retries += 1
+
+                # Check if max retries has been reached
+                if num_retries > num_retries:
+                    raise Exception(
+                        f"Maximum number of retries ({num_retries}) exceeded."
+                    )
+
+                # Increment the delay
+                delay *= exponential_base * (1 + random.random())
+
+                # Sleep for the delay
+                time.sleep(delay)
                 
-                if "429" in error_message and "RESOURCE_EXHAUSTED" in error_message:
-                    if attempt < max_retries:
-                        delay = base_delay * (2 ** attempt) + random.uniform(0, 5)
-                        logger.warning(f"Rate limit hit (429). Retrying in {delay:.1f} seconds... (attempt {attempt + 1}/{max_retries})")
-                        time.sleep(delay)
-                        continue
-                    else:
-                        logger.error(f"Max retries ({max_retries}) exceeded for rate limiting")
                 
-                # Re-raise the exception if it's not a rate limit error or max retries exceeded
-                raise e
         infer_time = time.perf_counter() - infer_start
 
         num_input_tokens = response.usage.input_tokens

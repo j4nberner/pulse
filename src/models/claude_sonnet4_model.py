@@ -1,25 +1,22 @@
 import logging
 import os
+import random
 import time
 import warnings
 from typing import Any, Dict
 
 import numpy as np
 
-# import vertexai
-from google import genai
-from google.genai.types import GenerateContentConfig, ThinkingConfig
+# import openai
+import anthropic
 
 from src.eval.metrics import MetricsTracker
-from src.models.pulse_model import PulseModel
+from src.models.pulse_model import PulseModel, PulseLLMModel
 from src.util.config_util import set_seeds
 from src.util.model_util import (
     parse_llm_output,
     prompt_template_hf,
-    system_message_samples,
 )
-
-# from vertexai.generative_models import (GenerationConfig, GenerativeModel, ThinkingConfig)
 
 
 warnings.filterwarnings(
@@ -30,8 +27,8 @@ warnings.filterwarnings(
 logger = logging.getLogger("PULSE_logger")
 
 
-class ClaudeSonnet4Model(PulseModel):
-    """ClaudeSonnet4 model wrapper."""
+class ClaudeSonnet4Model(PulseLLMModel):
+    """Claude Sonnet 4 model wrapper."""
 
     def __init__(self, params: Dict[str, Any], **kwargs) -> None:
         """Initializes the ClaudeSonnet4Model with parameters and paths.
@@ -48,44 +45,28 @@ class ClaudeSonnet4Model(PulseModel):
             "model_id",
             "thinking_budget",
             "temperature",
+            "api_key_name",
         ]
         self.check_required_params(params, required_params)
 
-        project_id = os.getenv("GOOGLE_CLOUD_PROJECT")
-        location = os.getenv("GOOGLE_CLOUD_LOCATION")
-        if not project_id or not location:
-            raise ValueError(
-                "GOOGLE_CLOUD_PROJECT and GOOGLE_CLOUD_LOCATION must be set in your .env file."
-            )
-        if not os.getenv("GOOGLE_APPLICATION_CREDENTIALS"):
-            raise ValueError(
-                "GOOGLE_APPLICATION_CREDENTIALS must be set in your .env file to the path of your service account key."
-            )
-
-        logger.info(
-            f"Initializing Vertex AI for project: {project_id}, location: {location}"
-        )
-        # Initialize Vertex AI. The SDK will automatically use the credentials from GOOGLE_APPLICATION_CREDENTIALS.
-        # vertexai.init(project=project_id, location=location)
-
-        self.client = genai.Client(
-            vertexai=True, project=params.get("project_id", None), location="global"
-        )
+        self.client = anthropic.Anthropic(api_key=os.getenv(params["api_key_name"]))
         self.model_id = params["model_id"]
         self.prompting_id = params.get("prompting_id", None)
         self.max_new_tokens = params["max_new_tokens"]
         self.thinking_budget = params["thinking_budget"]
+        self.temperature = params["temperature"]
 
         # self.model = GenerativeModel(self.model_id)
         self.is_agent = False
         self.agent_instance = None
+        self.is_loaded = True # Gemini models are loaded by default
 
-    # Rename to generate_standard
-    def generate(
+    def _generate_standard(
         self,
         input_text: str,
         custom_system_message: str = None,
         parse_json: bool = True,
+        generate_raw_text: bool = False,
     ) -> Dict[str, Any]:
         """Standard generation logic for non-agent models."""
         # Set seed for deterministic generation
@@ -97,54 +78,67 @@ class ClaudeSonnet4Model(PulseModel):
             input_text = str(input_text)
 
         # Format input using prompt template
-        input_text = prompt_template_hf(
-            input_text, custom_system_message, self.model_name
+        input_text, sys_msg = prompt_template_hf(
+            input_text, custom_system_message, self.model_name, task=self.task_name
         )
-
-        max_output_tokens = (
-            self.max_new_tokens + self.thinking_budget
-            if self.thinking_budget != -1
-            else 10000
-        )
-
-        incl_thought = True if self.thinking_budget > 0 else False
 
         infer_start = time.perf_counter()
-        response = self.client.models.generate_content(
-            model=self.model_id,
-            contents=input_text,
-            config=GenerateContentConfig(
-                max_output_tokens=max_output_tokens,
-                temperature=self.params.get("temperature", 0.4),
-                top_p=1.0,
-                top_k=32,
-                thinking_config=ThinkingConfig(
-                    thinking_budget=self.thinking_budget, include_thoughts=incl_thought
-                ),
-            ),
-        )
+        # Retry logic for rate limiting
+        num_retries = 10
+        base_delay = 1
+        exponential_base = 2.0
+        
+        for attempt in range(num_retries + 1):
+            try:
+                infer_start = time.perf_counter()
+                response = self.client.messages.create(
+                    model=self.model_id,
+                    system=sys_msg,
+                    messages=input_text,
+                    temperature=self.temperature,
+                    thinking={
+                        "type": "enabled",
+                        "budget_tokens": self.thinking_budget
+                    },
+                )
+                infer_time = time.perf_counter() - infer_start
+                break  # Success, exit retry loop
+                
+            except Exception as e:
+                error_message = str(e)
+                logger.info("Error during inference: %s", error_message)
+
+                # Increment retries
+                num_retries += 1
+
+                # Check if max retries has been reached
+                if num_retries > num_retries:
+                    raise Exception(
+                        f"Maximum number of retries ({num_retries}) exceeded."
+                    )
+
+                # Increment the delay
+                delay *= exponential_base * (1 + random.random())
+
+                # Sleep for the delay
+                time.sleep(delay)
+                
+                
         infer_time = time.perf_counter() - infer_start
 
-        usage_metadata = response.usage_metadata
-        num_input_tokens = usage_metadata.prompt_token_count
-        num_output_tokens = usage_metadata.candidates_token_count
-
-        if incl_thought:
-            num_thinking_tokens = usage_metadata.thoughts_token_count
-        else:
-            num_thinking_tokens = 0
+        num_input_tokens = response.usage.input_tokens
+        num_output_tokens = response.usage.output_tokens
+        num_thinking_tokens = 0 # Model provides a summary and not the actual reasoning tokens
 
         thinking_output = ""
         answer_output = ""
+        for block in response.content:
+            if block.type == "thinking":
+                thinking_output = block.thinking
+            elif block.type == "text":
+                answer_output = block.text
 
-        for part in response.candidates[0].content.parts:
-            if not part.text:
-                continue
-            if part.thought:
-                thinking_output = part.text
-            else:
-                answer_output = part.text
-                logger.debug("Decoded output:\n %s", answer_output)
+        logger.debug("Decoded output:\n %s", answer_output)
 
         # Parse the output if parse_json is True
         if parse_json:
@@ -171,128 +165,26 @@ class ClaudeSonnet4Model(PulseModel):
             "num_thinking_tokens": num_thinking_tokens,
         }
 
-    def evaluate(self, test_loader: Any, save_report: bool = False) -> float:
-        """Evaluates the model on a given test set.
-
-        Args:
-            test_loader: Tuple of (X, y) test data in DataFrame form.
-            save_report: Whether to save the evaluation report.
-
-        Returns:
-            The average validation loss across the test dataset.
+    def execute_with_retry(func, *args, **kwargs):
         """
-        logger.info("Starting test evaluation...")
-
-        metrics_tracker = MetricsTracker(
-            self.model_name,
-            self.task_name,
-            self.dataset_name,
-            self.save_dir,
-        )
-
-        # For agents: Initialize agent and set the metrics_tracker in the agent's memory manager
-        if self.is_agent:
-            if not self.agent_instance:
-                self._initialize_agent()
-            if self.agent_instance:
-                self.agent_instance.memory.metrics_tracker = metrics_tracker
-                logger.debug(
-                    "Set MetricsTracker in agent memory manager for %s", self.model_name
-                )
-
-        verbose: int = self.params.get("verbose", 1)
-
-        sys_msg = system_message_samples(task=self.task_name)[1]
-        logger.info("System Message:\n\n %s", sys_msg)
-
-        for X, y in zip(test_loader[0].iterrows(), test_loader[1].iterrows()):
-            idx = X[0]
-            if self.is_agent:
-                X_input = X[1]  # Full pandas Series with all patient features
-            else:
-                X_input = X[1].iloc[0]  # Single text prompt for standard models
-            y_true = y[1].iloc[0]
-
+        Execute a function with retry logic for 429 errors.
+        """
+        max_retries = 3
+        base_delay = 30
+        
+        for attempt in range(max_retries + 1):
             try:
-                # Set target for agent models
-                if self.is_agent and self.agent_instance:
-                    self.agent_instance.memory.set_current_sample_target(y_true)
-
-                # Get raw result from generation
-                result_dict = self.generate(X_input, custom_system_message=sys_msg)
-
+                return func(*args, **kwargs)
             except Exception as e:
-                logger.error(
-                    "Error during inference for sample %s: %s", idx, e, exc_info=True
-                )
-                # Create fallback result
-                result_dict = {
-                    "generated_text": {
-                        "diagnosis": "error",
-                        "probability": np.nan,
-                        "explanation": f"Error: {str(e)}",
-                    },
-                    "token_time": 0.0,
-                    "infer_time": 0.0,
-                    "num_input_tokens": 0,
-                    "num_output_tokens": 0,
-                    "num_thinking_tokens": 0,
-                    "thinking_output": "",
-                }
-
-            # Extract results
-            generated_text = result_dict["generated_text"]
-            token_time = result_dict["token_time"]
-            infer_time = result_dict["infer_time"]
-            num_input_tokens = result_dict["num_input_tokens"]
-            num_output_tokens = result_dict["num_output_tokens"]
-            num_thinking_tokens = result_dict["num_thinking_tokens"]
-            thinking_output = result_dict["thinking_output"]
-
-            predicted_probability = float(generated_text.get("probability", np.nan))
-
-            logger.info(
-                "Predicted probability: %s | True label: %s",
-                predicted_probability,
-                y_true,
-            )
-
-            if verbose > 1:
-                logger.info("Diagnosis for: %s", generated_text["diagnosis"])
-                logger.info(
-                    "Generated explanation: %s \n", generated_text["explanation"]
-                )
-            if verbose > 2:
-                logger.info("Input prompt: %s \n", X_input)
-
-            metrics_tracker.add_results(predicted_probability, y_true)
-
-            if not self.is_agent:  # Agent models handle metadata logging in add_step()
-                metrics_tracker.add_metadata_item(
-                    {
-                        "Input Prompt": X_input,
-                        "Target Label": y_true,
-                        "Predicted Probability": predicted_probability,
-                        "Predicted Diagnosis": generated_text.get("diagnosis", ""),
-                        "Predicted Explanation": generated_text.get("explanation", ""),
-                        "Tokenization Time": token_time,
-                        "Inference Time": infer_time,
-                        "Input Tokens": num_input_tokens,
-                        "Output Tokens": num_output_tokens,
-                        "Thinking Tokens": num_thinking_tokens,
-                        "Thinking Output": thinking_output,
-                    }
-                )
-            if len(metrics_tracker.items) > 100:
-                # Log metadata periodically to avoid memory issues
-                metrics_tracker.log_metadata()
-
-        metrics_tracker.log_metadata(save_to_file=self.save_metadata)
-        metrics_tracker.summary = metrics_tracker.compute_overall_metrics()
-        if save_report:
-            metrics_tracker.save_report(prompting_id=self.prompting_id)
-
-        logger.info("Test evaluation completed for %s", self.model_name)
-        logger.info("Test metrics: %s", metrics_tracker.summary)
-
-        return 0.0  # Return a dummy loss value for compatibility
+                error_message = str(e)
+                
+                if "429" in error_message and "RESOURCE_EXHAUSTED" in error_message:
+                    if attempt < max_retries:
+                        delay = base_delay * (2 ** attempt) + random.uniform(0, 5)
+                        print(f"Rate limit hit (429). Retrying in {delay:.1f} seconds... (attempt {attempt + 1}/{max_retries})")
+                        time.sleep(delay)
+                        continue
+                
+                raise e
+        
+        return None
