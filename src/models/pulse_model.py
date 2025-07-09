@@ -495,8 +495,8 @@ class PulseLLMModel(PulseModel):
             # Handle case where generated_text is a string instead of dict (when parsing fails)
             if isinstance(generated_text, dict):
                 predicted_probability = float(generated_text.get("probability", np.nan))
-                predicted_diagnosis = float(generated_text.get("diagnosis", "error"))
-                generated_explanation = float(generated_text.get("explanation", "error"))
+                predicted_diagnosis = generated_text.get("diagnosis", "error")
+                generated_explanation = generated_text.get("explanation", "error")
             else:
                 predicted_probability = np.nan
                 predicted_diagnosis = "error"
