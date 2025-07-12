@@ -110,7 +110,7 @@ class Gemini2p5Model(PulseLLMModel):
             else 10000
         )
 
-        incl_thought = True if self.thinking_budget > 0 else False
+        incl_thought = True if self.thinking_budget > 0 or self.thinking_budget == -1 else False
 
         infer_start = time.perf_counter()
         # Retry logic for rate limiting

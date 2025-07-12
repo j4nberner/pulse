@@ -318,14 +318,14 @@ def prompt_template_hf(
         ]
     elif model == "ClaudeSonnet4Model":
         formatted_prompt = [
-            {"role": "assistant", "content": system_message},
-            {"role": "user", "content": input_text},
-        ]
-    else:
-        formatted_prompt = [
             {"role": "user", "content": input_text},
         ]
         return formatted_prompt, system_message
+    else:
+        formatted_prompt = [
+            {"role": "assistant", "content": system_message},
+            {"role": "user", "content": input_text},
+        ]
 
     return formatted_prompt
 
