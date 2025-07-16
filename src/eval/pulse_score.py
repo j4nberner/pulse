@@ -1,18 +1,12 @@
+import json
 from matplotlib import pyplot as plt
 import pandas as pd
 import numpy as np
-from sklearn.metrics import (
-    precision_recall_curve,
-    auc,
-    roc_auc_score,
-    matthews_corrcoef,
-)
 from typing import Dict, List, Optional
 import warnings
 
 from src.eval.metrics import (
     calculate_accuracy,
-    calculate_all_metrics,
     calculate_auprc,
     calculate_auroc,
     calculate_balanced_accuracy,
@@ -270,7 +264,12 @@ class PULSEScoreCalculator:
                 task_lower = task.lower()
 
                 # Check if prediction mentions the correct condition
-                condition_mentioned = task_lower in pred_lower
+                conditions = [
+                    task_lower,
+                    f"not-{task_lower}",
+                    "diagnosis",
+                    "not-diagnosis",
+                ]  # also allowing to say diagnosis or not-diagnosis
 
                 # Check if it's a negation
                 is_negation = (
@@ -281,7 +280,7 @@ class PULSEScoreCalculator:
                 )
 
                 # If the condition is not mentioned at all, return NaN
-                if not condition_mentioned:
+                if pred_lower not in conditions:
                     return np.nan
 
                 # If condition is mentioned, determine positive/negative
@@ -695,6 +694,10 @@ class PULSEScoreCalculator:
                 task_dataset_result = self.calculate_pulse_score_single_outcome(
                     y_true, y_prob, y_pred
                 )
+                task_dataset_result["dataset"] = dataset
+                task_dataset_result["task_id"] = task
+                task_dataset_result["model_name"] = df["model_name"].iloc[0]
+                task_dataset_result["run_id"] = df["timestamp"].iloc[0]
 
                 # Store result with combined key
                 combo_key = f"{task}_{dataset}"
@@ -782,83 +785,6 @@ class PULSEScoreCalculator:
                 )
 
         return pd.DataFrame(comparison_data)
-
-    # def plot_pulse_analysis(
-    #     self, pulse_results: Dict[str, Dict[str, float]], model_name: str = "Model"
-    # ) -> None:
-    #     """
-    #     Create comprehensive PULSE score analysis plots.
-
-    #     Args:
-    #         pulse_results: Results from PULSE score calculation
-    #         model_name: Name of the model for plot titles
-    #     """
-
-    #     df_comparison = self.create_pulse_comparison_dataframe(pulse_results)
-
-    #     if df_comparison.empty:
-    #         print("No data available for plotting")
-    #         return
-
-    #     # Create the plots
-    #     fig, axes = plt.subplots(1, 2, figsize=(15, 5))
-    #     fig.suptitle(
-    #         f"{model_name} - PULSE Score Analysis", fontsize=16, fontweight="bold"
-    #     )
-
-    #     tasks = df_comparison["Task"]
-    #     pulse_scores = df_comparison["PULSE Score"]
-    #     base_scores = df_comparison["Base Score (no penalties)"]
-
-    #     # Plot 1: PULSE vs Base Score
-    #     axes[0].bar(
-    #         tasks,
-    #         base_scores,
-    #         alpha=0.7,
-    #         label="Base Score (no penalties)",
-    #         color="lightblue",
-    #     )
-    #     axes[0].bar(
-    #         tasks,
-    #         pulse_scores,
-    #         alpha=0.8,
-    #         label="PULSE Score (with penalties)",
-    #         color="darkblue",
-    #     )
-    #     axes[0].set_title("PULSE Score vs Base Score")
-    #     axes[0].set_ylabel("Score (0-100)")
-    #     axes[0].legend()
-    #     axes[0].tick_params(axis="x", rotation=45)
-
-    #     # Plot 2: Individual Metrics
-    #     x_pos = np.arange(len(tasks) - 3)
-    #     width = 0.25
-
-    #     axes[1].bar(
-    #         x_pos - width,
-    #         df_comparison["AUPRC"].iloc[:-3],
-    #         width,
-    #         label="AUPRC",
-    #         alpha=0.8,
-    #     )
-    #     axes[1].bar(
-    #         x_pos, df_comparison["AUROC"].iloc[:-3], width, label="AUROC", alpha=0.8
-    #     )
-    #     axes[1].bar(
-    #         x_pos + width,
-    #         df_comparison["MCC"].iloc[:-3],
-    #         width,
-    #         label="MCC (Normalized)",
-    #         alpha=0.8,
-    #     )
-    #     axes[1].set_title("Individual Metrics by Task")
-    #     axes[1].set_ylabel("Score")
-    #     axes[1].set_xticks(x_pos)
-    #     axes[1].set_xticklabels(tasks[:-3], rotation=45)
-    #     axes[1].legend()
-
-    #     plt.tight_layout()
-    #     plt.show()
 
     def print_detailed_report(self, results: Dict[str, Dict[str, float]]) -> None:
         """

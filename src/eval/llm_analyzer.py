@@ -1,12 +1,15 @@
 import ast
+from datetime import datetime
 import glob
 import json
 import os
+from pathlib import Path
 import re
 
 from matplotlib import pyplot as plt
 import numpy as np
 import pandas as pd
+import seaborn as sns
 from matplotlib.table import Table
 from matplotlib import gridspec
 from IPython.display import HTML, display
@@ -30,6 +33,22 @@ VARIABLE_NAMES = {
     "aki": "AKI",
     "mortality": "Mortality",
     "sepsis": "Sepsis",
+    "eicu": "eICU",
+    "miiv": "MIMIC-IV",
+    "hirid": "HiRID",
+    "deepseekr1llama8b": "DeepSeek-R1 (Llama-8B)",
+    "gemini2p5flash": "Gemini 2.5 Flash",
+    "gemini2p5pro": "Gemini 2.5 Pro",
+    "gemma3": "Gemma 3 4B",
+    "gpt4o": "GPT-4o",
+    "llama3p18b": "Llama 3 8B",
+    "medgemma": "MedGemma 4B",
+    "mistral7b": "Mistral 7B",
+    "claudesonnet4": "Claude Sonnet 4",
+    "o3": "OpenAI o3",
+    "hybrid_reasoning_agent_preprocessor": "Hybrid Reasoning Agent",
+    "collaborative_reasoning_agent_preprocessor": "Collaborative Reasoning Agent",
+    "clinical_workflow_agent_preprocessor": "Clinical Workflow Agent",
 }
 
 
@@ -254,9 +273,10 @@ class LLMAnalyzer(ModelAnalyzer):
             pd.DataFrame: DataFrame containing the metadata.
         """
         df_mdata = pd.DataFrame()
+        print("Extracting metadata from files:")
         for m_path in metadata_path_list:
             try:
-                df = pd.read_csv(m_path, on_bad_lines='skip')
+                df = pd.read_csv(m_path, on_bad_lines="skip")
                 # Extract model name, task, dataset, and timestamp from the metadata path
                 match = re.search(
                     r"\\([^\\]+)_([^_]+)_([^_]+)_(\d{8}_\d{6})_metadata\.csv$", m_path
@@ -288,6 +308,8 @@ class LLMAnalyzer(ModelAnalyzer):
             except Exception as e:
                 print(f"Error loading metadata: {e}")
                 continue
+
+        print("")
         return df_mdata
 
     @staticmethod
@@ -305,6 +327,10 @@ class LLMAnalyzer(ModelAnalyzer):
             with open(metrics_report_path, "r") as f:
                 metrics_report = json.load(f)
             df = pd.DataFrame(metrics_report)
+
+            # Expand each row if needed
+            # TODO
+
             # Expand the metrics_summary dict into separate columns
             if "metrics_summary" in df.columns:
                 metrics_expanded = df["metrics_summary"].apply(
@@ -425,32 +451,59 @@ class LLMAnalyzer(ModelAnalyzer):
             best_report_path = None
 
             # Walk through all subfolders to find metrics_report.json files
-            for root, dirs, files in os.walk(model_path):
-                for file in files:
-                    if "metrics_report.json" in file:
-                        report_path = os.path.join(root, file)
-                        try:
-                            with open(report_path, "r") as f:
-                                reports = json.load(f)
+            if ".json" not in model_path:
+                for root, dirs, files in os.walk(model_path):
+                    for file in files:
+                        if "metrics_report.json" in file or "results.json" in file:
+                            report_path = os.path.join(root, file)
+                            try:
+                                with open(report_path, "r") as f:
+                                    reports = json.load(f)
 
-                            # reports is a list of dicts, each with 'prompting_id' and metric keys
-                            metric_values = []
-                            prompting_id = None
-                            for report in reports:
-                                if prompting_id is None:
-                                    prompting_id = report.get("prompting_id", None)
-                                metrics = report["metrics_summary"]["overall"]
-                                value = metrics.get(metric, None)
-                                if value is not None:
-                                    metric_values.append(value)
-                            if metric_values:
-                                mean_metric = np.mean(metric_values)
-                                if mean_metric > best_metric:
-                                    best_metric = mean_metric
-                                    best_prompting_id = prompting_id
-                                    best_report_path = report_path
-                        except Exception as e:
-                            print(f"Error reading {report_path}: {e}")
+                                # reports is a list of dicts, each with 'prompting_id' and metric keys
+                                metric_values = []
+                                prompting_id = None
+                                for report in reports:
+                                    if prompting_id is None:
+                                        prompting_id = report.get("prompting_id", None)
+                                    metrics = report["metrics_summary"]["overall"]
+                                    value = metrics.get(metric, None)
+                                    if value is not None:
+                                        metric_values.append(value)
+                                if metric_values:
+                                    mean_metric = np.mean(metric_values)
+                                    if mean_metric > best_metric:
+                                        best_metric = mean_metric
+                                        best_prompting_id = prompting_id
+                                        best_report_path = report_path
+                            except Exception as e:
+                                print(f"Error reading {report_path}: {e}")
+            else:
+                # path is already a json file
+                if "metrics_report.json" in model_path or "results.json" in model_path:
+                    report_path = model_path
+                    try:
+                        with open(report_path, "r") as f:
+                            reports = json.load(f)
+
+                        # reports is a list of dicts, each with 'prompting_id' and metric keys
+                        metric_values = []
+                        prompting_id = None
+                        for report in reports["results"]:
+                            if prompting_id is None:
+                                prompting_id = report.get("prompting_id", None)
+                            metrics = report["metrics_summary"]["overall"]
+                            value = metrics.get(metric, None)
+                            if value is not None:
+                                metric_values.append(value)
+                        if metric_values:
+                            mean_metric = np.mean(metric_values)
+                            if mean_metric > best_metric:
+                                best_metric = mean_metric
+                                best_prompting_id = prompting_id
+                                best_report_path = report_path
+                    except Exception as e:
+                        print(f"Error reading {report_path}: {e}")
 
             if best_prompting_id is not None:
                 best_results[model] = {
@@ -466,13 +519,17 @@ class LLMAnalyzer(ModelAnalyzer):
         return df_best_results
 
     @staticmethod
-    def print_approach_summary(df, filters=None):
+    def print_approach_summary(
+        df, filters=None, input_token_cost=0, output_token_cost=0
+    ):
         """
         Print a summary of the approach from the metadata DataFrame.
 
         Parameters:
             df (pd.DataFrame): Metadata DataFrame (e.g., df_mdata).
             filters (dict): Optional. Dictionary of filters, e.g., {'task': ['aki', 'sepsis'], 'dataset': 'eicu'}.
+            input_token_cost (int): Cost per input token in Dollars.
+            output_token_cost (int): Cost per output token in Dollars.
 
         Prints:
             Number of samples, unique tasks, datasets, and a preview of predictions.
@@ -504,46 +561,66 @@ class LLMAnalyzer(ModelAnalyzer):
             .reset_index()
         )
 
-        summary_html = f"""
-        <h3>Summary of Approach</h3>
-        <ul>
-            <li><b>Number of samples:</b> {len(df_filtered):,}</li>
-            <li><b>Tasks:</b> {', '.join(map(str, df_filtered['task'].unique()))}</li>
-            <li><b>Datasets:</b> {', '.join(map(str, df_filtered['dataset'].unique()))}</li>
-            <li><b>Predicted diagnoses:</b> {', '.join(map(str, df_filtered['Predicted Diagnosis'].unique()))}</li>
-            <li><b>Total inference time:</b> {df_filtered['Inference Time'].sum() / 3600:,.2f} h</li>
-            <li><b>Total input tokens:</b> {df_filtered['Input Tokens'].sum():,}</li>
-            <li><b>Total output tokens:</b> {df_filtered['Output Tokens'].sum():,}</li>
-        </ul>
-        """
-        display(HTML(summary_html))
-
         # Calculate ratio of positive vs negative samples
         summary["pos_neg_ratio"] = summary["positive_samples"] / summary[
             "negative_samples"
         ].replace(0, np.nan)
 
-        # Display summary as a styled table for better readability
-        styled_summary = summary.style.format(
-            {
-                "mean_inference_time": "{:.2f}s",
-                "total_inference_time": "{:.2f}s",
-                "mean_input_tokens": "{:.0f}",
-                "total_input_tokens": "{:.0f}",
-                "mean_output_tokens": "{:.0f}",
-                "total_output_tokens": "{:.0f}",
-                "pos_neg_ratio": "{:.2f}",
-            }
-        ).background_gradient(
-            subset=[
-                "mean_inference_time",
-                "mean_input_tokens",
-                "mean_output_tokens",
-                "pos_neg_ratio",
-            ],
-            cmap="Blues",
+        if "Thinking Tokens" in df_filtered.columns:
+            summary["thinking_cost"] = (
+                df_filtered["Thinking Tokens"].sum() * output_token_cost / 10**6
+            )
+        else:
+            summary["thinking_cost"] = 0
+
+        if "Step Name" in df_filtered.columns:
+            df_final_predictions = df_filtered[
+                df_filtered["Step Name"] == "final_prediction"
+            ].reset_index(drop=True)
+        else:
+            df_final_predictions = df_filtered
+
+        # Calculate costs
+        summary["input_cost"] = summary["total_input_tokens"] * input_token_cost / 10**6
+        summary["output_cost"] = (
+            summary["total_output_tokens"] * output_token_cost / 10**6
         )
-        display(styled_summary)
+
+        summary["total_cost"] = (
+            summary["input_cost"] + summary["output_cost"] + summary["thinking_cost"]
+        )
+
+        # Print summary in a nicely formatted list
+        summary_items = [
+            ("Number of Samples", len(df_final_predictions)),
+            ("Number of Requests", summary["total_samples"].sum()),
+            ("Total Input Tokens", summary["total_input_tokens"].sum()),
+            ("Total Output Tokens", summary["total_output_tokens"].sum()),
+            (
+                "Total Thinking Tokens",
+                (
+                    df_filtered["Thinking Tokens"].sum()
+                    if "Thinking Tokens" in df_filtered.columns
+                    else 0
+                ),
+            ),
+            (
+                "Average Thinking Tokens",
+                (
+                    f"{df_filtered['Thinking Tokens'].mean():.2f}"
+                    if "Thinking Tokens" in df_filtered.columns
+                    else "0.00"
+                ),
+            ),
+            ("Total Cost (USD)", f"${summary['total_cost'].sum():.2f}"),
+        ]
+
+        print("\n--- Approach Summary ---")
+        for label, value in summary_items:
+            print(f"- {label}: {value}")
+        print("")
+
+        return summary
 
     @staticmethod
     def plot_prediction_distribution(
@@ -1094,3 +1171,552 @@ class LLMAnalyzer(ModelAnalyzer):
         print(f"Total records in results.json: {len(results_data['results'])}")
 
         return added_count, updated_count
+
+    @staticmethod
+    def save_results_dict_as_json(results_dict, base_output_dir, output_file_path):
+        """
+        Convert post processed results_dict to JSON format matching the specified structure.
+
+        Args:
+            results_dict: Dictionary containing PULSE score results for different prompting approaches
+            base_output_dir: Base directory path to extract model information from
+            output_file_path: Path where to save the JSON file
+        """
+        # Initialize results list
+        results_list = []
+
+        for a, data in results_dict.items():
+            prompting_id = data["prompting_id"]
+            model_id = data["model_id"]
+
+            # Get task_dataset_scores for detailed metrics
+            task_dataset_scores = data["task_dataset_scores"]
+
+            # Process each task_dataset combination
+            for _, metrics in task_dataset_scores.items():
+                task_id = metrics["task_id"]
+                dataset = metrics["dataset"]
+                run_id = metrics["run_id"]
+
+                # Create metrics summary with standard metrics and pulse score
+                metrics_summary = {
+                    "overall": {
+                        "auroc": round(metrics.get("auroc", 0), 3),
+                        "auprc": round(metrics.get("auprc", 0), 3),
+                        "normalized_auprc": round(
+                            metrics.get("normalized_auprc", 0), 3
+                        ),
+                        "specificity": round(metrics.get("specificity", 0), 3),
+                        "f1_score": round(metrics.get("f1_score", 0), 3),
+                        "accuracy": round(metrics.get("accuracy", 0), 3),
+                        "balanced_accuracy": round(
+                            metrics.get("balanced_accuracy", 0), 3
+                        ),
+                        "precision": round(metrics.get("precision", 0), 3),
+                        "recall": round(metrics.get("recall", 0), 3),
+                        "mcc": round(metrics.get("mcc", 0), 3),
+                        "kappa": round(metrics.get("kappa", 0), 3),
+                        "minpse": round(metrics.get("minpse", 0), 3),
+                        "task_dataset_score": round(metrics.get("pulse_score", 0), 3),
+                    },
+                    "task_pulse_scores": data.get("task_scores", {}),
+                    "dataset_pulse_scores": data.get("dataset_scores", {}),
+                    "overall_pulse_scores": data.get("overall", {}),
+                }
+
+                # Create result entry
+                result_entry = {
+                    "model_id": model_id,
+                    "task_id": task_id,
+                    "dataset": dataset,
+                    "run_id": run_id,
+                    "prompting_id": prompting_id,
+                    "metrics_summary": metrics_summary,
+                }
+
+                results_list.append(result_entry)
+
+            # Create final JSON structure
+            final_json = {"results": results_list}
+
+            # Save to file
+            with open(output_file_path, "w", encoding="utf-8") as f:
+                json.dump(final_json, f, indent=2, ensure_ascii=False)
+
+        print(f"Saved {len(results_list)} result entries to {output_file_path}")
+        return final_json
+
+    @staticmethod
+    def create_results_dataframe_from_pulse_results(result_dict):
+        """
+        Create a DataFrame from results_dict with one row per model_id, task, dataset, and prompting approach combination.
+        """
+        rows = []
+
+        for model_id, model_data in result_dict.items():
+            # Conventional models: direct 'score' key
+            if "score" in model_data and model_data["score"] is not None:
+                prompting_approach = ""  # Empty for conventional models
+                task_dataset_scores = model_data["score"]["task_dataset_scores"]
+
+                for task_dataset_key, score_dict in task_dataset_scores.items():
+                    row = {
+                        "model_id": model_id,
+                        "prompting_approach": prompting_approach,
+                        "task_dataset_key": task_dataset_key,
+                    }
+                    for k, v in score_dict.items():
+                        row[k] = v
+                    rows.append(row)
+
+            # LLM models: nested structure with approaches
+            elif isinstance(model_data, dict):
+                for approach, approach_data in model_data.items():
+                    if "score" in approach_data and approach_data["score"] is not None:
+                        prompting_approach = approach
+                        task_dataset_scores = approach_data["score"][
+                            "task_dataset_scores"
+                        ]
+
+                        for task_dataset_key, score_dict in task_dataset_scores.items():
+                            parts = task_dataset_key.split("_")
+                            if len(parts) >= 2:
+                                task = parts[0]
+                                dataset = "_".join(parts[1:])
+                            else:
+                                task = task_dataset_key
+                                dataset = "unknown"
+
+                            # Add all keys from score_dict to the row
+                            row = {
+                                "model_id": model_id,
+                                "task": task,
+                                "dataset": dataset,
+                                "prompting_approach": prompting_approach,
+                                "task_dataset_key": task_dataset_key,
+                            }
+                            for k, v in score_dict.items():
+                                row[k] = v
+                            rows.append(row)
+
+        return pd.DataFrame(rows)
+
+    @staticmethod
+    def create_results_heatmap(df, score_column="pulse_score", figsize=(16, 10)):
+        """
+        Create a heatmap showing PULSE scores for task-dataset combinations vs model-prompting approach combinations,
+        with aligned labels and horizontal separators for models.
+        """
+        # Make task-dataset combinations
+        df_plot = df.copy()
+        df_plot["task_dataset"] = (
+            df_plot["task_id"].map(lambda x: VARIABLE_NAMES.get(x, x)).astype(str)
+            + " - "
+            + df_plot["dataset"].map(lambda x: VARIABLE_NAMES.get(x, x)).astype(str)
+        )
+
+        df_plot["model_clean"] = df_plot["model_id"].map(
+            lambda x: VARIABLE_NAMES.get(x, x)
+        )
+        df_plot["approach_clean"] = (
+            df_plot["prompting_approach"]
+            .fillna("")
+            .map(lambda x: VARIABLE_NAMES.get(x, x) if x else "")
+        )
+        df_plot["model_approach"] = (
+            df_plot["model_clean"] + "|" + df_plot["approach_clean"]
+        )
+
+        # Pivot
+        heatmap_data = df_plot.pivot_table(
+            index="model_approach",
+            columns="task_dataset",
+            values=score_column,
+            aggfunc="mean",
+        )
+
+        # Add Overall column (mean of all task-dataset combinations)
+        heatmap_data["Overall"] = heatmap_data.mean(axis=1)
+
+        # Sort heatmap_data by the Overall column in descending order
+        heatmap_data = heatmap_data.sort_values(by="Overall", ascending=False)
+
+        # Move Overall column to the end if not already
+        cols = list(heatmap_data.columns)
+        if "Overall" in cols:
+            cols = [c for c in cols if c != "Overall"] + ["Overall"]
+            heatmap_data = heatmap_data[cols]
+
+        # Split model and approach for table
+        labels_df = heatmap_data.index.to_frame(index=False)
+        labels_df[["model", "approach"]] = labels_df["model_approach"].str.split(
+            "|", expand=True
+        )
+        labels_df = labels_df.fillna("")
+
+        matrix = heatmap_data.copy()
+
+        # Make figure: give table more width
+        fig = plt.figure(figsize=figsize)
+        gs = fig.add_gridspec(
+            1, 2, width_ratios=[2.5, 4], wspace=-0.1
+        )  # More room for table
+
+        # Table axis (left)
+        ax_table = fig.add_subplot(gs[0])
+        ax_table.axis("off")
+
+        # Heatmap axis (right)
+        ax_heatmap = fig.add_subplot(gs[1])
+
+        # Plot heatmap without y-ticks
+        sns.heatmap(
+            matrix,
+            annot=True,
+            fmt=".1f",
+            cmap="RdYlBu_r",
+            vmin=0,
+            vmax=100,
+            cbar_kws={"label": "PULSE Score"},
+            linewidths=0.5,
+            linecolor="gray",
+            ax=ax_heatmap,
+        )
+
+        ax_heatmap.set_yticks([])
+        ax_heatmap.set_ylabel("")
+        ax_heatmap.set_xlabel("Task - Dataset", fontsize=14, fontweight="bold")
+        ax_heatmap.set_xticklabels(
+            ax_heatmap.get_xticklabels(), rotation=45, ha="right", fontsize=12
+        )
+
+        # Adjust table text positions: more horizontal spacing
+        x_model = 0.0
+        x_approach = 2.7  # More space to prevent overlap
+        num_rows = matrix.shape[0]
+
+        ax_table.text(x_model, num_rows + 2, "Model", fontsize=14, ha="left")
+        ax_table.text(
+            x_approach,
+            num_rows + 2,
+            "Approach",
+            fontsize=14,
+            ha="left",
+        )
+
+        # Add custom labels and long horizontal lines
+        last_model = None
+        for i, (model, approach) in enumerate(
+            zip(labels_df["model"], labels_df["approach"])
+        ):
+            y = i + 0.5  # Changed from: num_rows - i - 0.5
+
+            ax_table.text(
+                x_model,
+                y,
+                model,
+                va="center",
+                ha="left",
+                fontsize=9,
+            )
+            ax_table.text(x_approach, y, approach, va="center", ha="left", fontsize=9)
+
+            # if i > 0 and model != last_model and model != "Overall":
+            #     # Draw hline in BOTH axes so it spans full width
+            #     ax_table.hlines(
+            #         y - 0.5, x_model, x_approach + 5, color="black", linewidth=1.5
+            #     )  # Changed from: y + 0.5
+            #     ax_heatmap.hlines(
+            #         y - 0.5, *ax_heatmap.get_xlim(), color="black", linewidth=1.5
+            #     )  # Changed from: y + 0.5
+
+            last_model = model
+
+        # Match y-limits
+        ax_table.set_ylim(ax_heatmap.get_ylim())
+
+        fig.suptitle(
+            "PULSE Scores: Task-Dataset Combinations vs Model-Prompting Approaches",
+            fontsize=18,
+            fontweight="bold",
+            y=1.02,
+        )
+
+        plt.tight_layout()
+        plt.show()
+
+        return matrix
+
+    @staticmethod
+    def plot_per_model_results_from_json(
+        json_data, save_plots=True, output_dir="plots"
+    ):
+        """
+        Create comprehensive plots from the JSON results data.
+
+        Args:
+            json_data: Dictionary containing the results data or path to JSON file
+            save_plots: Whether to save plots to files
+            output_dir: Directory to save plots
+        """
+
+        # Load data if it's a file path
+        if isinstance(json_data, (str, Path)):
+            with open(json_data, "r") as f:
+                data = json.load(f)
+        else:
+            data = json_data
+
+        # Convert to DataFrame
+        results = data["results"]
+        df = pd.DataFrame(results)
+
+        # Extract metrics from the nested structure
+        metrics_df = pd.json_normalize(df["metrics_summary"])
+
+        # Combine with main dataframe
+        plot_df = pd.concat(
+            [df[["model_id", "task_id", "dataset", "prompting_id"]], metrics_df], axis=1
+        )
+
+        # Convert labels to nice plot labels
+        plot_df["prompting_id"] = [
+            VARIABLE_NAMES.get(id, id) for id in plot_df["prompting_id"]
+        ]
+        plot_df["dataset"] = [VARIABLE_NAMES.get(id, id) for id in plot_df["dataset"]]
+        plot_df["task_id"] = [VARIABLE_NAMES.get(id, id) for id in plot_df["task_id"]]
+
+        # Create output directory if saving
+        if save_plots:
+            Path(output_dir).mkdir(exist_ok=True)
+
+        # Set up the plotting style
+        plt.style.use("default")
+        sns.set_palette("husl")
+
+        # 1. PULSE Score Heatmap by Task and Dataset
+        fig, ax = plt.subplots(figsize=(12, 8))
+
+        # Create pivot table for task_dataset_score
+        heatmap_data = plot_df.pivot_table(
+            values="overall.task_dataset_score",
+            index="prompting_id",
+            columns=["task_id", "dataset"],
+            aggfunc="mean",
+        )
+
+        sns.heatmap(
+            heatmap_data,
+            annot=True,
+            fmt=".1f",
+            cmap="RdYlBu_r",
+            center=50,
+            ax=ax,
+            cbar_kws={"label": "PULSE Score"},
+        )
+        ax.set_title(
+            "PULSE Scores by Prompting Approach, Task, and Dataset",
+            fontsize=14,
+            fontweight="bold",
+        )
+        ax.set_xlabel("Task - Dataset", fontsize=12)
+        ax.set_ylabel("Prompting Approach", fontsize=12)
+        plt.xticks(rotation=45, ha="right")
+        plt.yticks(rotation=0)
+        plt.tight_layout()
+
+        if save_plots:
+            plt.savefig(
+                f"{output_dir}/pulse_scores_heatmap.png", dpi=300, bbox_inches="tight"
+            )
+        plt.show()
+
+        # 2. Performance Metrics Comparison
+        metrics_to_plot = [
+            "overall.auroc",
+            "overall.auprc",
+            "overall.mcc",
+        ]
+
+        fig, axes = plt.subplots(2, 3, figsize=(18, 12))
+        axes = axes.flatten()
+
+        for i, metric in enumerate(metrics_to_plot):
+            metric_name = metric.split(".")[-1].upper()
+
+            # Create boxplot by prompting approach
+            sns.boxplot(data=plot_df, x="prompting_id", y=metric, ax=axes[i])
+            axes[i].set_title(f"{metric_name} by Prompting Approach", fontweight="bold")
+            axes[i].set_xlabel("")
+            axes[i].set_ylabel(metric_name)
+            axes[i].tick_params(axis="x", rotation=45)
+
+        plt.tight_layout()
+        if save_plots:
+            plt.savefig(
+                f"{output_dir}/performance_metrics_comparison.png",
+                dpi=300,
+                bbox_inches="tight",
+            )
+        plt.show()
+
+        # Average PULSE scores by prompting approach
+        avg_pulse = (
+            plot_df.groupby("prompting_id")["overall.task_dataset_score"]
+            .mean()
+            .sort_values(ascending=True)
+        )
+
+        # Average AUROC by prompting approach
+        avg_auroc = (
+            plot_df.groupby("prompting_id")["overall.auroc"]
+            .mean()
+            .sort_values(ascending=True)
+        )
+
+        # Performance by dataset
+        dataset_perf = plot_df.groupby("dataset")[
+            ["overall.task_dataset_score", "overall.auroc"]
+        ].mean()
+
+        # Performance by task
+        task_perf = plot_df.groupby("task_id")[
+            ["overall.task_dataset_score", "overall.auroc"]
+        ].mean()
+
+        # 5. Correlation Analysis
+        fig, ax = plt.subplots(figsize=(10, 8))
+
+        # Select numeric columns for correlation
+        numeric_cols = [
+            col
+            for col in plot_df.columns
+            if col.startswith("overall.") and plot_df[col].dtype in ["float64", "int64"]
+        ]
+
+        corr_matrix = plot_df[numeric_cols].corr()
+
+        # Create a mask for the upper triangle
+        mask = np.triu(np.ones_like(corr_matrix, dtype=bool))
+
+        sns.heatmap(
+            corr_matrix,
+            mask=mask,
+            annot=True,
+            fmt=".2f",
+            cmap="coolwarm",
+            center=0,
+            ax=ax,
+            cbar_kws={"label": "Correlation"},
+        )
+        ax.set_title(
+            "Correlation Matrix of Performance Metrics", fontsize=14, fontweight="bold"
+        )
+
+        # Clean up labels
+        labels = [
+            label.replace("overall.", "").upper() for label in corr_matrix.columns
+        ]
+        ax.set_xticklabels(labels, rotation=45, ha="right")
+        ax.set_yticklabels(labels, rotation=0)
+
+        plt.tight_layout()
+        if save_plots:
+            plt.savefig(
+                f"{output_dir}/correlation_matrix.png", dpi=300, bbox_inches="tight"
+            )
+        plt.show()
+
+        # 6. Top Performers Analysis
+        fig, axes = plt.subplots(1, 2, figsize=(16, 6))
+
+        # Top 10 performers by PULSE score
+        top_pulse = plot_df.nlargest(10, "overall.task_dataset_score")
+        top_pulse_labels = [
+            f"{row['prompting_id'][:20]}...\n{row['task_id']}-{row['dataset']}"
+            for _, row in top_pulse.iterrows()
+        ]
+
+        bars1 = axes[0].barh(
+            range(len(top_pulse)),
+            top_pulse["overall.task_dataset_score"],
+            color="lightgreen",
+        )
+        axes[0].set_yticks(range(len(top_pulse)))
+        axes[0].set_yticklabels(top_pulse_labels, fontsize=9)
+        axes[0].set_xlabel("PULSE Score")
+        axes[0].set_title("Top 10 Performers by PULSE Score", fontweight="bold")
+        axes[0].invert_yaxis()
+
+        # Add value labels on bars
+        for i, bar in enumerate(bars1):
+            width = bar.get_width()
+            axes[0].text(
+                width + 0.5,
+                bar.get_y() + bar.get_height() / 2,
+                f"{width:.1f}",
+                ha="left",
+                va="center",
+                fontsize=8,
+            )
+
+        # Top 10 performers by AUROC
+        top_auroc = plot_df.nlargest(10, "overall.auroc")
+        top_auroc_labels = [
+            f"{row['prompting_id'][:20]}...\n{row['task_id']}-{row['dataset']}"
+            for _, row in top_auroc.iterrows()
+        ]
+
+        bars2 = axes[1].barh(
+            range(len(top_auroc)), top_auroc["overall.auroc"], color="lightblue"
+        )
+        axes[1].set_yticks(range(len(top_auroc)))
+        axes[1].set_yticklabels(top_auroc_labels, fontsize=9)
+        axes[1].set_xlabel("AUROC")
+        axes[1].set_title("Top 10 Performers by AUROC", fontweight="bold")
+        axes[1].invert_yaxis()
+
+        # Add value labels on bars
+        for i, bar in enumerate(bars2):
+            width = bar.get_width()
+            axes[1].text(
+                width + 0.01,
+                bar.get_y() + bar.get_height() / 2,
+                f"{width:.3f}",
+                ha="left",
+                va="center",
+                fontsize=8,
+            )
+
+        plt.tight_layout()
+        if save_plots:
+            plt.savefig(
+                f"{output_dir}/top_performers.png", dpi=300, bbox_inches="tight"
+            )
+        plt.show()
+
+        # Print summary statistics
+        print("=" * 60)
+        print("PERFORMANCE SUMMARY")
+        print("=" * 60)
+
+        print(
+            f"\nBest Overall PULSE Score: {plot_df['overall.task_dataset_score'].max():.2f}"
+        )
+        best_pulse_row = plot_df.loc[plot_df["overall.task_dataset_score"].idxmax()]
+        print(f"  - Prompting: {best_pulse_row['prompting_id']}")
+        print(f"  - Task: {best_pulse_row['task_id']}")
+        print(f"  - Dataset: {best_pulse_row['dataset']}")
+
+        print(f"\nBest Overall AUROC: {plot_df['overall.auroc'].max():.3f}")
+        best_auroc_row = plot_df.loc[plot_df["overall.auroc"].idxmax()]
+        print(f"  - Prompting: {best_auroc_row['prompting_id']}")
+        print(f"  - Task: {best_auroc_row['task_id']}")
+        print(f"  - Dataset: {best_auroc_row['dataset']}")
+
+        print(f"\nPrompting Approach Rankings (by average PULSE score):")
+        n = len(avg_pulse.items())
+        for i, (approach, score) in enumerate(avg_pulse.items(), 0):
+            print(f"  {n-i}. {approach}: {score:.2f}")
+
+        return plot_df
