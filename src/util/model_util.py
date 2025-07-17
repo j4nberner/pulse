@@ -321,6 +321,8 @@ def prompt_template_hf(
             {"role": "user", "content": input_text},
         ]
         return formatted_prompt, system_message
+    elif model == "Grok4Model":
+        return input_text, system_message
     else:
         formatted_prompt = [
             {"role": "assistant", "content": system_message},

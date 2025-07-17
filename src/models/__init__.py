@@ -5,6 +5,7 @@ from .gemma3_model import Gemma3Model
 from .gpt_model import GPTModel
 from .o3_model import OpenAIo3Model
 from .claude_sonnet4_model import ClaudeSonnet4Model
+from .grok4_model import Grok4Model
 from .gru_model import GRUModel, GRUTrainer
 from .inceptiontime_model import InceptionTimeModel, InceptionTimeTrainer
 from .lightgbm_model import LightGBMModel, LightGBMTrainer
@@ -34,6 +35,7 @@ model_cls_name_dict = {
     "GPT4oModel": GPTModel,
     "ClaudeSonnet4Model": ClaudeSonnet4Model,
     "OpenAIo3Model": OpenAIo3Model,
+    "Grok4Model": Grok4Model,
 }
 
 trainer_cls_name_dict = {
