@@ -245,8 +245,9 @@ class PulseBenchmark:
                             )
                             model.trainer.train()
                         # Evaluate the model
-                        model.evaluate(test_loader, save_report=True)
+                        # model.evaluate(test_loader, save_report=True)
                         # model.evaluate_sys_msgs(test_loader, save_report=True)
+                        model.evaluate_batched(test_loader, save_report=True)
 
                 except Exception as e:
                     logger.error(

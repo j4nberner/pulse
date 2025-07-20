@@ -323,6 +323,11 @@ def prompt_template_hf(
         return formatted_prompt, system_message
     elif model == "Grok4Model":
         return input_text, system_message
+    elif model == "OpenAIo3Model":
+        formatted_prompt = [
+            {"role": "system", "content": system_message},
+            {"role": "user", "content": input_text},
+        ]
     else:
         formatted_prompt = [
             {"role": "assistant", "content": system_message},
