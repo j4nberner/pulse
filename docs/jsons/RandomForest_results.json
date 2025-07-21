@@ -1,0 +1,607 @@
+{
+  "results": [
+    {
+      "model_id": "RandomForest",
+      "task_id": "aki",
+      "dataset": "eicu",
+      "run_id": "20250604_151406",
+      "prompting_id": "",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.757,
+          "auprc": 0.71,
+          "normalized_auprc": 1.714,
+          "specificity": 0.0,
+          "f1_score": 0.586,
+          "accuracy": 0.414,
+          "balanced_accuracy": 0.5,
+          "precision": 0.414,
+          "recall": 1.0,
+          "mcc": 0.5,
+          "kappa": 0.0,
+          "minpse": 0.638,
+          "task_dataset_score": 65.405
+        },
+        "task_pulse_scores": {
+          "aki": [
+            65.40514809110032,
+            57.53281917718185,
+            61.81332376522438
+          ],
+          "mortality": [
+            58.01054406544033,
+            67.03530363830924,
+            65.6741440978699
+          ],
+          "sepsis": [
+            39.326561985020945,
+            54.87387735702913,
+            38.99290607587786
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            65.40514809110032,
+            58.01054406544033,
+            39.326561985020945
+          ],
+          "miiv": [
+            61.81332376522438,
+            65.6741440978699,
+            38.99290607587786
+          ],
+          "hirid": [
+            57.53281917718185,
+            67.03530363830924,
+            54.87387735702913
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 56.5182920281171,
+          "overall_aki": 61.58376367783552,
+          "overall_eicu": 54.2474180471872,
+          "overall_mortality": 63.573330600539826,
+          "overall_hirid": 59.814000057506746,
+          "overall_sepsis": 44.397781805975974,
+          "overall_miiv": 55.493457979657386
+        }
+      }
+    },
+    {
+      "model_id": "RandomForest",
+      "task_id": "aki",
+      "dataset": "hirid",
+      "run_id": "20250604_151406",
+      "prompting_id": "",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.729,
+          "auprc": 0.5,
+          "normalized_auprc": 2.63,
+          "specificity": 0.0,
+          "f1_score": 0.319,
+          "accuracy": 0.19,
+          "balanced_accuracy": 0.5,
+          "precision": 0.19,
+          "recall": 1.0,
+          "mcc": 0.5,
+          "kappa": 0.0,
+          "minpse": 0.406,
+          "task_dataset_score": 57.533
+        },
+        "task_pulse_scores": {
+          "aki": [
+            65.40514809110032,
+            57.53281917718185,
+            61.81332376522438
+          ],
+          "mortality": [
+            58.01054406544033,
+            67.03530363830924,
+            65.6741440978699
+          ],
+          "sepsis": [
+            39.326561985020945,
+            54.87387735702913,
+            38.99290607587786
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            65.40514809110032,
+            58.01054406544033,
+            39.326561985020945
+          ],
+          "miiv": [
+            61.81332376522438,
+            65.6741440978699,
+            38.99290607587786
+          ],
+          "hirid": [
+            57.53281917718185,
+            67.03530363830924,
+            54.87387735702913
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 56.5182920281171,
+          "overall_aki": 61.58376367783552,
+          "overall_eicu": 54.2474180471872,
+          "overall_mortality": 63.573330600539826,
+          "overall_hirid": 59.814000057506746,
+          "overall_sepsis": 44.397781805975974,
+          "overall_miiv": 55.493457979657386
+        }
+      }
+    },
+    {
+      "model_id": "RandomForest",
+      "task_id": "aki",
+      "dataset": "miiv",
+      "run_id": "20250604_151406",
+      "prompting_id": "",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.755,
+          "auprc": 0.603,
+          "normalized_auprc": 1.896,
+          "specificity": 0.0,
+          "f1_score": 0.483,
+          "accuracy": 0.318,
+          "balanced_accuracy": 0.5,
+          "precision": 0.318,
+          "recall": 1.0,
+          "mcc": 0.5,
+          "kappa": 0.0,
+          "minpse": 0.523,
+          "task_dataset_score": 61.813
+        },
+        "task_pulse_scores": {
+          "aki": [
+            65.40514809110032,
+            57.53281917718185,
+            61.81332376522438
+          ],
+          "mortality": [
+            58.01054406544033,
+            67.03530363830924,
+            65.6741440978699
+          ],
+          "sepsis": [
+            39.326561985020945,
+            54.87387735702913,
+            38.99290607587786
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            65.40514809110032,
+            58.01054406544033,
+            39.326561985020945
+          ],
+          "miiv": [
+            61.81332376522438,
+            65.6741440978699,
+            38.99290607587786
+          ],
+          "hirid": [
+            57.53281917718185,
+            67.03530363830924,
+            54.87387735702913
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 56.5182920281171,
+          "overall_aki": 61.58376367783552,
+          "overall_eicu": 54.2474180471872,
+          "overall_mortality": 63.573330600539826,
+          "overall_hirid": 59.814000057506746,
+          "overall_sepsis": 44.397781805975974,
+          "overall_miiv": 55.493457979657386
+        }
+      }
+    },
+    {
+      "model_id": "RandomForest",
+      "task_id": "mortality",
+      "dataset": "eicu",
+      "run_id": "20250604_151406",
+      "prompting_id": "",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.773,
+          "auprc": 0.469,
+          "normalized_auprc": 6.705,
+          "specificity": 0.0,
+          "f1_score": 0.131,
+          "accuracy": 0.07,
+          "balanced_accuracy": 0.5,
+          "precision": 0.07,
+          "recall": 1.0,
+          "mcc": 0.5,
+          "kappa": 0.0,
+          "minpse": 0.429,
+          "task_dataset_score": 58.011
+        },
+        "task_pulse_scores": {
+          "aki": [
+            65.40514809110032,
+            57.53281917718185,
+            61.81332376522438
+          ],
+          "mortality": [
+            58.01054406544033,
+            67.03530363830924,
+            65.6741440978699
+          ],
+          "sepsis": [
+            39.326561985020945,
+            54.87387735702913,
+            38.99290607587786
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            65.40514809110032,
+            58.01054406544033,
+            39.326561985020945
+          ],
+          "miiv": [
+            61.81332376522438,
+            65.6741440978699,
+            38.99290607587786
+          ],
+          "hirid": [
+            57.53281917718185,
+            67.03530363830924,
+            54.87387735702913
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 56.5182920281171,
+          "overall_aki": 61.58376367783552,
+          "overall_eicu": 54.2474180471872,
+          "overall_mortality": 63.573330600539826,
+          "overall_hirid": 59.814000057506746,
+          "overall_sepsis": 44.397781805975974,
+          "overall_miiv": 55.493457979657386
+        }
+      }
+    },
+    {
+      "model_id": "RandomForest",
+      "task_id": "mortality",
+      "dataset": "hirid",
+      "run_id": "20250604_151406",
+      "prompting_id": "",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.902,
+          "auprc": 0.614,
+          "normalized_auprc": 5.58,
+          "specificity": 0.0,
+          "f1_score": 0.198,
+          "accuracy": 0.11,
+          "balanced_accuracy": 0.5,
+          "precision": 0.11,
+          "recall": 1.0,
+          "mcc": 0.5,
+          "kappa": 0.0,
+          "minpse": 0.5,
+          "task_dataset_score": 67.035
+        },
+        "task_pulse_scores": {
+          "aki": [
+            65.40514809110032,
+            57.53281917718185,
+            61.81332376522438
+          ],
+          "mortality": [
+            58.01054406544033,
+            67.03530363830924,
+            65.6741440978699
+          ],
+          "sepsis": [
+            39.326561985020945,
+            54.87387735702913,
+            38.99290607587786
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            65.40514809110032,
+            58.01054406544033,
+            39.326561985020945
+          ],
+          "miiv": [
+            61.81332376522438,
+            65.6741440978699,
+            38.99290607587786
+          ],
+          "hirid": [
+            57.53281917718185,
+            67.03530363830924,
+            54.87387735702913
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 56.5182920281171,
+          "overall_aki": 61.58376367783552,
+          "overall_eicu": 54.2474180471872,
+          "overall_mortality": 63.573330600539826,
+          "overall_hirid": 59.814000057506746,
+          "overall_sepsis": 44.397781805975974,
+          "overall_miiv": 55.493457979657386
+        }
+      }
+    },
+    {
+      "model_id": "RandomForest",
+      "task_id": "mortality",
+      "dataset": "miiv",
+      "run_id": "20250604_151406",
+      "prompting_id": "",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.823,
+          "auprc": 0.652,
+          "normalized_auprc": 5.434,
+          "specificity": 0.0,
+          "f1_score": 0.214,
+          "accuracy": 0.12,
+          "balanced_accuracy": 0.5,
+          "precision": 0.12,
+          "recall": 1.0,
+          "mcc": 0.5,
+          "kappa": 0.0,
+          "minpse": 0.667,
+          "task_dataset_score": 65.674
+        },
+        "task_pulse_scores": {
+          "aki": [
+            65.40514809110032,
+            57.53281917718185,
+            61.81332376522438
+          ],
+          "mortality": [
+            58.01054406544033,
+            67.03530363830924,
+            65.6741440978699
+          ],
+          "sepsis": [
+            39.326561985020945,
+            54.87387735702913,
+            38.99290607587786
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            65.40514809110032,
+            58.01054406544033,
+            39.326561985020945
+          ],
+          "miiv": [
+            61.81332376522438,
+            65.6741440978699,
+            38.99290607587786
+          ],
+          "hirid": [
+            57.53281917718185,
+            67.03530363830924,
+            54.87387735702913
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 56.5182920281171,
+          "overall_aki": 61.58376367783552,
+          "overall_eicu": 54.2474180471872,
+          "overall_mortality": 63.573330600539826,
+          "overall_hirid": 59.814000057506746,
+          "overall_sepsis": 44.397781805975974,
+          "overall_miiv": 55.493457979657386
+        }
+      }
+    },
+    {
+      "model_id": "RandomForest",
+      "task_id": "sepsis",
+      "dataset": "eicu",
+      "run_id": "20250604_151406",
+      "prompting_id": "",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.583,
+          "auprc": 0.094,
+          "normalized_auprc": 1.674,
+          "specificity": 0.0,
+          "f1_score": 0.106,
+          "accuracy": 0.056,
+          "balanced_accuracy": 0.5,
+          "precision": 0.056,
+          "recall": 1.0,
+          "mcc": 0.5,
+          "kappa": 0.0,
+          "minpse": 0.214,
+          "task_dataset_score": 39.327
+        },
+        "task_pulse_scores": {
+          "aki": [
+            65.40514809110032,
+            57.53281917718185,
+            61.81332376522438
+          ],
+          "mortality": [
+            58.01054406544033,
+            67.03530363830924,
+            65.6741440978699
+          ],
+          "sepsis": [
+            39.326561985020945,
+            54.87387735702913,
+            38.99290607587786
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            65.40514809110032,
+            58.01054406544033,
+            39.326561985020945
+          ],
+          "miiv": [
+            61.81332376522438,
+            65.6741440978699,
+            38.99290607587786
+          ],
+          "hirid": [
+            57.53281917718185,
+            67.03530363830924,
+            54.87387735702913
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 56.5182920281171,
+          "overall_aki": 61.58376367783552,
+          "overall_eicu": 54.2474180471872,
+          "overall_mortality": 63.573330600539826,
+          "overall_hirid": 59.814000057506746,
+          "overall_sepsis": 44.397781805975974,
+          "overall_miiv": 55.493457979657386
+        }
+      }
+    },
+    {
+      "model_id": "RandomForest",
+      "task_id": "sepsis",
+      "dataset": "hirid",
+      "run_id": "20250604_151406",
+      "prompting_id": "",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.839,
+          "auprc": 0.309,
+          "normalized_auprc": 3.399,
+          "specificity": 0.0,
+          "f1_score": 0.167,
+          "accuracy": 0.091,
+          "balanced_accuracy": 0.5,
+          "precision": 0.091,
+          "recall": 1.0,
+          "mcc": 0.5,
+          "kappa": 0.0,
+          "minpse": 0.365,
+          "task_dataset_score": 54.874
+        },
+        "task_pulse_scores": {
+          "aki": [
+            65.40514809110032,
+            57.53281917718185,
+            61.81332376522438
+          ],
+          "mortality": [
+            58.01054406544033,
+            67.03530363830924,
+            65.6741440978699
+          ],
+          "sepsis": [
+            39.326561985020945,
+            54.87387735702913,
+            38.99290607587786
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            65.40514809110032,
+            58.01054406544033,
+            39.326561985020945
+          ],
+          "miiv": [
+            61.81332376522438,
+            65.6741440978699,
+            38.99290607587786
+          ],
+          "hirid": [
+            57.53281917718185,
+            67.03530363830924,
+            54.87387735702913
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 56.5182920281171,
+          "overall_aki": 61.58376367783552,
+          "overall_eicu": 54.2474180471872,
+          "overall_mortality": 63.573330600539826,
+          "overall_hirid": 59.814000057506746,
+          "overall_sepsis": 44.397781805975974,
+          "overall_miiv": 55.493457979657386
+        }
+      }
+    },
+    {
+      "model_id": "RandomForest",
+      "task_id": "sepsis",
+      "dataset": "miiv",
+      "run_id": "20250604_151406",
+      "prompting_id": "",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.62,
+          "auprc": 0.046,
+          "normalized_auprc": 1.291,
+          "specificity": 0.0,
+          "f1_score": 0.069,
+          "accuracy": 0.036,
+          "balanced_accuracy": 0.5,
+          "precision": 0.036,
+          "recall": 1.0,
+          "mcc": 0.5,
+          "kappa": 0.0,
+          "minpse": 0.059,
+          "task_dataset_score": 38.993
+        },
+        "task_pulse_scores": {
+          "aki": [
+            65.40514809110032,
+            57.53281917718185,
+            61.81332376522438
+          ],
+          "mortality": [
+            58.01054406544033,
+            67.03530363830924,
+            65.6741440978699
+          ],
+          "sepsis": [
+            39.326561985020945,
+            54.87387735702913,
+            38.99290607587786
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            65.40514809110032,
+            58.01054406544033,
+            39.326561985020945
+          ],
+          "miiv": [
+            61.81332376522438,
+            65.6741440978699,
+            38.99290607587786
+          ],
+          "hirid": [
+            57.53281917718185,
+            67.03530363830924,
+            54.87387735702913
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 56.5182920281171,
+          "overall_aki": 61.58376367783552,
+          "overall_eicu": 54.2474180471872,
+          "overall_mortality": 63.573330600539826,
+          "overall_hirid": 59.814000057506746,
+          "overall_sepsis": 44.397781805975974,
+          "overall_miiv": 55.493457979657386
+        }
+      }
+    }
+  ]
+}

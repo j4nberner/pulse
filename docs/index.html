@@ -859,7 +859,7 @@
         for (const fileName of modelFiles) {
           try {
             console.log(`Loading ${fileName}...`);
-            const response = await fetch(`../output_to_keep/results_benchmark/results_output/jsons/${fileName}`);
+            const response = await fetch(`jsons/${fileName}`);
             
             if (!response.ok) {
               console.warn(`Failed to load ${fileName}: ${response.status}`);
