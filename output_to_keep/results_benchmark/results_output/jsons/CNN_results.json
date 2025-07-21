@@ -1,0 +1,607 @@
+{
+  "results": [
+    {
+      "model_id": "CNN",
+      "task_id": "aki",
+      "dataset": "eicu",
+      "run_id": "20250605_113136",
+      "prompting_id": "",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.78,
+          "auprc": 0.625,
+          "normalized_auprc": 2.017,
+          "specificity": 0.761,
+          "f1_score": 0.626,
+          "accuracy": 0.742,
+          "balanced_accuracy": 0.73,
+          "precision": 0.568,
+          "recall": 0.698,
+          "mcc": 0.719,
+          "kappa": 0.432,
+          "minpse": 0.595,
+          "task_dataset_score": 70.804
+        },
+        "task_pulse_scores": {
+          "aki": [
+            70.80411327912887,
+            63.2571298151861,
+            68.60782981213747
+          ],
+          "mortality": [
+            66.28240037139268,
+            72.68594892638772,
+            65.74179400642319
+          ],
+          "sepsis": [
+            35.567144181063135,
+            51.890051409269645,
+            39.315536071713844
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            70.80411327912887,
+            66.28240037139268,
+            35.567144181063135
+          ],
+          "miiv": [
+            68.60782981213747,
+            65.74179400642319,
+            39.315536071713844
+          ],
+          "hirid": [
+            63.2571298151861,
+            72.68594892638772,
+            51.890051409269645
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 59.35021643030031,
+          "overall_aki": 67.55635763548413,
+          "overall_eicu": 57.551219277194896,
+          "overall_mortality": 68.23671443473454,
+          "overall_hirid": 62.61104338361449,
+          "overall_sepsis": 42.25757722068221,
+          "overall_miiv": 57.888386630091496
+        }
+      }
+    },
+    {
+      "model_id": "CNN",
+      "task_id": "aki",
+      "dataset": "hirid",
+      "run_id": "20250605_113136",
+      "prompting_id": "",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.807,
+          "auprc": 0.418,
+          "normalized_auprc": 2.582,
+          "specificity": 0.878,
+          "f1_score": 0.454,
+          "accuracy": 0.814,
+          "balanced_accuracy": 0.678,
+          "precision": 0.432,
+          "recall": 0.478,
+          "mcc": 0.671,
+          "kappa": 0.342,
+          "minpse": 0.448,
+          "task_dataset_score": 63.257
+        },
+        "task_pulse_scores": {
+          "aki": [
+            70.80411327912887,
+            63.2571298151861,
+            68.60782981213747
+          ],
+          "mortality": [
+            66.28240037139268,
+            72.68594892638772,
+            65.74179400642319
+          ],
+          "sepsis": [
+            35.567144181063135,
+            51.890051409269645,
+            39.315536071713844
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            70.80411327912887,
+            66.28240037139268,
+            35.567144181063135
+          ],
+          "miiv": [
+            68.60782981213747,
+            65.74179400642319,
+            39.315536071713844
+          ],
+          "hirid": [
+            63.2571298151861,
+            72.68594892638772,
+            51.890051409269645
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 59.35021643030031,
+          "overall_aki": 67.55635763548413,
+          "overall_eicu": 57.551219277194896,
+          "overall_mortality": 68.23671443473454,
+          "overall_hirid": 62.61104338361449,
+          "overall_sepsis": 42.25757722068221,
+          "overall_miiv": 57.888386630091496
+        }
+      }
+    },
+    {
+      "model_id": "CNN",
+      "task_id": "aki",
+      "dataset": "miiv",
+      "run_id": "20250605_113136",
+      "prompting_id": "",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.774,
+          "auprc": 0.601,
+          "normalized_auprc": 2.581,
+          "specificity": 0.846,
+          "f1_score": 0.516,
+          "accuracy": 0.771,
+          "balanced_accuracy": 0.685,
+          "precision": 0.508,
+          "recall": 0.524,
+          "mcc": 0.683,
+          "kappa": 0.366,
+          "minpse": 0.511,
+          "task_dataset_score": 68.608
+        },
+        "task_pulse_scores": {
+          "aki": [
+            70.80411327912887,
+            63.2571298151861,
+            68.60782981213747
+          ],
+          "mortality": [
+            66.28240037139268,
+            72.68594892638772,
+            65.74179400642319
+          ],
+          "sepsis": [
+            35.567144181063135,
+            51.890051409269645,
+            39.315536071713844
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            70.80411327912887,
+            66.28240037139268,
+            35.567144181063135
+          ],
+          "miiv": [
+            68.60782981213747,
+            65.74179400642319,
+            39.315536071713844
+          ],
+          "hirid": [
+            63.2571298151861,
+            72.68594892638772,
+            51.890051409269645
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 59.35021643030031,
+          "overall_aki": 67.55635763548413,
+          "overall_eicu": 57.551219277194896,
+          "overall_mortality": 68.23671443473454,
+          "overall_hirid": 62.61104338361449,
+          "overall_sepsis": 42.25757722068221,
+          "overall_miiv": 57.888386630091496
+        }
+      }
+    },
+    {
+      "model_id": "CNN",
+      "task_id": "mortality",
+      "dataset": "eicu",
+      "run_id": "20250605_113136",
+      "prompting_id": "",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.845,
+          "auprc": 0.452,
+          "normalized_auprc": 6.457,
+          "specificity": 0.86,
+          "f1_score": 0.4,
+          "accuracy": 0.85,
+          "balanced_accuracy": 0.787,
+          "precision": 0.278,
+          "recall": 0.714,
+          "mcc": 0.691,
+          "kappa": 0.333,
+          "minpse": 0.429,
+          "task_dataset_score": 66.282
+        },
+        "task_pulse_scores": {
+          "aki": [
+            70.80411327912887,
+            63.2571298151861,
+            68.60782981213747
+          ],
+          "mortality": [
+            66.28240037139268,
+            72.68594892638772,
+            65.74179400642319
+          ],
+          "sepsis": [
+            35.567144181063135,
+            51.890051409269645,
+            39.315536071713844
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            70.80411327912887,
+            66.28240037139268,
+            35.567144181063135
+          ],
+          "miiv": [
+            68.60782981213747,
+            65.74179400642319,
+            39.315536071713844
+          ],
+          "hirid": [
+            63.2571298151861,
+            72.68594892638772,
+            51.890051409269645
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 59.35021643030031,
+          "overall_aki": 67.55635763548413,
+          "overall_eicu": 57.551219277194896,
+          "overall_mortality": 68.23671443473454,
+          "overall_hirid": 62.61104338361449,
+          "overall_sepsis": 42.25757722068221,
+          "overall_miiv": 57.888386630091496
+        }
+      }
+    },
+    {
+      "model_id": "CNN",
+      "task_id": "mortality",
+      "dataset": "hirid",
+      "run_id": "20250605_113136",
+      "prompting_id": "",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.844,
+          "auprc": 0.608,
+          "normalized_auprc": 5.531,
+          "specificity": 0.899,
+          "f1_score": 0.519,
+          "accuracy": 0.87,
+          "balanced_accuracy": 0.768,
+          "precision": 0.438,
+          "recall": 0.636,
+          "mcc": 0.728,
+          "kappa": 0.446,
+          "minpse": 0.545,
+          "task_dataset_score": 72.686
+        },
+        "task_pulse_scores": {
+          "aki": [
+            70.80411327912887,
+            63.2571298151861,
+            68.60782981213747
+          ],
+          "mortality": [
+            66.28240037139268,
+            72.68594892638772,
+            65.74179400642319
+          ],
+          "sepsis": [
+            35.567144181063135,
+            51.890051409269645,
+            39.315536071713844
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            70.80411327912887,
+            66.28240037139268,
+            35.567144181063135
+          ],
+          "miiv": [
+            68.60782981213747,
+            65.74179400642319,
+            39.315536071713844
+          ],
+          "hirid": [
+            63.2571298151861,
+            72.68594892638772,
+            51.890051409269645
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 59.35021643030031,
+          "overall_aki": 67.55635763548413,
+          "overall_eicu": 57.551219277194896,
+          "overall_mortality": 68.23671443473454,
+          "overall_hirid": 62.61104338361449,
+          "overall_sepsis": 42.25757722068221,
+          "overall_miiv": 57.888386630091496
+        }
+      }
+    },
+    {
+      "model_id": "CNN",
+      "task_id": "mortality",
+      "dataset": "miiv",
+      "run_id": "20250605_113136",
+      "prompting_id": "",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.842,
+          "auprc": 0.43,
+          "normalized_auprc": 3.584,
+          "specificity": 0.841,
+          "f1_score": 0.471,
+          "accuracy": 0.82,
+          "balanced_accuracy": 0.754,
+          "precision": 0.364,
+          "recall": 0.667,
+          "mcc": 0.699,
+          "kappa": 0.373,
+          "minpse": 0.462,
+          "task_dataset_score": 65.742
+        },
+        "task_pulse_scores": {
+          "aki": [
+            70.80411327912887,
+            63.2571298151861,
+            68.60782981213747
+          ],
+          "mortality": [
+            66.28240037139268,
+            72.68594892638772,
+            65.74179400642319
+          ],
+          "sepsis": [
+            35.567144181063135,
+            51.890051409269645,
+            39.315536071713844
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            70.80411327912887,
+            66.28240037139268,
+            35.567144181063135
+          ],
+          "miiv": [
+            68.60782981213747,
+            65.74179400642319,
+            39.315536071713844
+          ],
+          "hirid": [
+            63.2571298151861,
+            72.68594892638772,
+            51.890051409269645
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 59.35021643030031,
+          "overall_aki": 67.55635763548413,
+          "overall_eicu": 57.551219277194896,
+          "overall_mortality": 68.23671443473454,
+          "overall_hirid": 62.61104338361449,
+          "overall_sepsis": 42.25757722068221,
+          "overall_miiv": 57.888386630091496
+        }
+      }
+    },
+    {
+      "model_id": "CNN",
+      "task_id": "sepsis",
+      "dataset": "eicu",
+      "run_id": "20250605_113136",
+      "prompting_id": "",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.529,
+          "auprc": 0.051,
+          "normalized_auprc": 1.057,
+          "specificity": 0.979,
+          "f1_score": 0.0,
+          "accuracy": 0.932,
+          "balanced_accuracy": 0.489,
+          "precision": 0.0,
+          "recall": 0.0,
+          "mcc": 0.484,
+          "kappa": -0.029,
+          "minpse": 0.085,
+          "task_dataset_score": 35.567
+        },
+        "task_pulse_scores": {
+          "aki": [
+            70.80411327912887,
+            63.2571298151861,
+            68.60782981213747
+          ],
+          "mortality": [
+            66.28240037139268,
+            72.68594892638772,
+            65.74179400642319
+          ],
+          "sepsis": [
+            35.567144181063135,
+            51.890051409269645,
+            39.315536071713844
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            70.80411327912887,
+            66.28240037139268,
+            35.567144181063135
+          ],
+          "miiv": [
+            68.60782981213747,
+            65.74179400642319,
+            39.315536071713844
+          ],
+          "hirid": [
+            63.2571298151861,
+            72.68594892638772,
+            51.890051409269645
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 59.35021643030031,
+          "overall_aki": 67.55635763548413,
+          "overall_eicu": 57.551219277194896,
+          "overall_mortality": 68.23671443473454,
+          "overall_hirid": 62.61104338361449,
+          "overall_sepsis": 42.25757722068221,
+          "overall_miiv": 57.888386630091496
+        }
+      }
+    },
+    {
+      "model_id": "CNN",
+      "task_id": "sepsis",
+      "dataset": "hirid",
+      "run_id": "20250605_113136",
+      "prompting_id": "",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.694,
+          "auprc": 0.24,
+          "normalized_auprc": 3.184,
+          "specificity": 0.973,
+          "f1_score": 0.268,
+          "accuracy": 0.915,
+          "balanced_accuracy": 0.589,
+          "precision": 0.385,
+          "recall": 0.205,
+          "mcc": 0.62,
+          "kappa": 0.227,
+          "minpse": 0.222,
+          "task_dataset_score": 51.89
+        },
+        "task_pulse_scores": {
+          "aki": [
+            70.80411327912887,
+            63.2571298151861,
+            68.60782981213747
+          ],
+          "mortality": [
+            66.28240037139268,
+            72.68594892638772,
+            65.74179400642319
+          ],
+          "sepsis": [
+            35.567144181063135,
+            51.890051409269645,
+            39.315536071713844
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            70.80411327912887,
+            66.28240037139268,
+            35.567144181063135
+          ],
+          "miiv": [
+            68.60782981213747,
+            65.74179400642319,
+            39.315536071713844
+          ],
+          "hirid": [
+            63.2571298151861,
+            72.68594892638772,
+            51.890051409269645
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 59.35021643030031,
+          "overall_aki": 67.55635763548413,
+          "overall_eicu": 57.551219277194896,
+          "overall_mortality": 68.23671443473454,
+          "overall_hirid": 62.61104338361449,
+          "overall_sepsis": 42.25757722068221,
+          "overall_miiv": 57.888386630091496
+        }
+      }
+    },
+    {
+      "model_id": "CNN",
+      "task_id": "sepsis",
+      "dataset": "miiv",
+      "run_id": "20250605_113136",
+      "prompting_id": "",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.624,
+          "auprc": 0.035,
+          "normalized_auprc": 1.367,
+          "specificity": 0.987,
+          "f1_score": 0.051,
+          "accuracy": 0.963,
+          "balanced_accuracy": 0.513,
+          "precision": 0.071,
+          "recall": 0.04,
+          "mcc": 0.518,
+          "kappa": 0.034,
+          "minpse": 0.05,
+          "task_dataset_score": 39.316
+        },
+        "task_pulse_scores": {
+          "aki": [
+            70.80411327912887,
+            63.2571298151861,
+            68.60782981213747
+          ],
+          "mortality": [
+            66.28240037139268,
+            72.68594892638772,
+            65.74179400642319
+          ],
+          "sepsis": [
+            35.567144181063135,
+            51.890051409269645,
+            39.315536071713844
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            70.80411327912887,
+            66.28240037139268,
+            35.567144181063135
+          ],
+          "miiv": [
+            68.60782981213747,
+            65.74179400642319,
+            39.315536071713844
+          ],
+          "hirid": [
+            63.2571298151861,
+            72.68594892638772,
+            51.890051409269645
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 59.35021643030031,
+          "overall_aki": 67.55635763548413,
+          "overall_eicu": 57.551219277194896,
+          "overall_mortality": 68.23671443473454,
+          "overall_hirid": 62.61104338361449,
+          "overall_sepsis": 42.25757722068221,
+          "overall_miiv": 57.888386630091496
+        }
+      }
+    }
+  ]
+}

@@ -15,9 +15,9 @@
 
       body {
         font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: #ffffff;
         min-height: 100vh;
-        color: #333;
+        color: #2c2c2c;
       }
 
       .container {
@@ -27,13 +27,13 @@
       }
 
       .header {
-        background: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(10px);
+        background: #ffffff;
         border-radius: 20px;
         padding: 30px;
         margin-bottom: 30px;
         text-align: center;
-        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        border: 1px solid #e8e8e8;
       }
 
       .header h1 {
@@ -78,7 +78,7 @@
 
       .header p {
         font-size: 1.2em;
-        color: #666;
+        color: #5a5a5a;
         margin-bottom: 20px;
       }
 
@@ -99,7 +99,7 @@
 
       .control-group label {
         font-weight: 600;
-        color: #555;
+        color: #444;
         font-size: 0.9em;
       }
 
@@ -128,26 +128,26 @@
       }
 
       .card {
-        background: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(10px);
+        background: #fafafa;
         border-radius: 20px;
         padding: 25px;
-        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
         transition: transform 0.3s ease, box-shadow 0.3s ease;
+        border: 1px solid #e8e8e8;
       }
 
       .card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+        transform: translateY(-3px);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
       }
 
       .card h3 {
         font-size: 1.4em;
         margin-bottom: 20px;
-        color: #333;
+        color: #2c2c2c;
         text-align: center;
         padding-bottom: 10px;
-        border-bottom: 2px solid #f0f0f0;
+        border-bottom: 2px solid #e8e8e8;
       }
 
       .chart-container {
@@ -164,17 +164,17 @@
       table {
         width: 100%;
         border-collapse: collapse;
-        background: white;
+        background: #ffffff;
         border-radius: 10px;
         overflow: hidden;
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
       }
 
       th,
       td {
         padding: 12px 15px;
         text-align: left;
-        border-bottom: 1px solid #f0f0f0;
+        border-bottom: 1px solid #e8e8e8;
       }
 
       th {
@@ -187,7 +187,7 @@
       }
 
       tr:hover {
-        background-color: #f8f9ff;
+        background-color: #f8f8f8;
       }
 
       .metric-value {
@@ -199,19 +199,19 @@
         text-align: center;
       }
 
-      .metric-high {
-        background: linear-gradient(135deg, #4facfe, #00f2fe);
-        color: white;
+      .metric-medium {
+        /* background: linear-gradient(135deg, #4facfe, #0026fe); */
+        color: rgb(73, 73, 73);
       }
 
-      .metric-medium {
-        background: linear-gradient(135deg, #43e97b, #38f9d7);
-        color: white;
+      .metric-high {
+        /* background: linear-gradient(135deg, #43e97b, #38f9d7); */
+        color: rgb(73, 73, 73);
       }
 
       .metric-low {
-        background: linear-gradient(135deg, #fa709a, #fee140);
-        color: white;
+        /* background: linear-gradient(135deg, #fa709a, #ffffff); */
+        color: rgb(73, 73, 73);
       }
 
       .summary-stats {
@@ -265,14 +265,57 @@
         text-align: center;
         padding: 50px;
         font-size: 1.2em;
-        color: #666;
+        color: #5a5a5a;
       }
 
       .no-data {
         text-align: center;
         padding: 40px;
-        color: #888;
+        color: #777;
         font-style: italic;
+      }
+
+      /* Tab Styles */
+      .tabs {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 20px;
+        background: #f5f5f5;
+        border-radius: 15px;
+        padding: 5px;
+        border: 1px solid #e8e8e8;
+      }
+
+      .tab-button {
+        background: transparent;
+        border: none;
+        padding: 12px 24px;
+        cursor: pointer;
+        border-radius: 10px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #5a5a5a;
+      }
+
+      .tab-button.active {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: white;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+      }
+
+      .tab-button:hover:not(.active) {
+        background: rgba(102, 126, 234, 0.1);
+        color: #667eea;
+      }
+
+      .tab-content {
+        display: none;
+      }
+
+      .tab-content.active {
+        display: block;
       }
 
       @media (max-width: 768px) {
@@ -302,6 +345,15 @@
         .pulse-logo {
           height: 40px;
         }
+
+        .tabs {
+          flex-direction: column;
+        }
+
+        .tab-button {
+          border-radius: 10px !important;
+          margin-bottom: 5px;
+        }
       }
     </style>
   </head>
@@ -317,123 +369,430 @@
           tasks
         </p>
 
-        <div class="controls">
-          <div class="control-group">
-            <label>Task</label>
-            <select id="taskFilter">
-              <option value="all">All Tasks</option>
-            </select>
-          </div>
-          <div class="control-group">
-            <label>Dataset</label>
-            <select id="datasetFilter">
-              <option value="all">All Datasets</option>
-            </select>
-          </div>
-          <div class="control-group">
-            <label>Model Type</label>
-            <select id="modelTypeFilter">
-              <option value="all">All Models</option>
-              <option value="llm">LLMs Only</option>
-              <option value="baseline">Baselines Only</option>
-            </select>
-          </div>
-          <div class="control-group">
-            <label>Primary Metric</label>
-            <select id="primaryMetric">
-              <option value="auroc">AUROC</option>
-              <option value="auprc">AUPRC</option>
-              <option value="mcc">MCC</option>
-              <option value="f1_score">F1 Score</option>
-            </select>
-          </div>
+        <!-- Tab Navigation -->
+        <div class="tabs">
+          <button class="tab-button active" onclick="switchTab('overall')">Overall</button>
+          <button class="tab-button" onclick="switchTab('aki')">AKI</button>
+          <button class="tab-button" onclick="switchTab('mortality')">Mortality</button>
+          <button class="tab-button" onclick="switchTab('sepsis')">Sepsis</button>
         </div>
       </div>
 
-      <div class="summary-stats" id="summaryStats">
-        <div class="stat-card">
-          <div class="stat-value" id="totalModels">-</div>
-          <div class="stat-label">Total Models</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value" id="totalTasks">-</div>
-          <div class="stat-label">Tasks</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value" id="totalDatasets">-</div>
-          <div class="stat-label">Datasets</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value" id="bestModel">-</div>
-          <div class="stat-label">Best Model</div>
-        </div>
-      </div>
-
-      <div class="dashboard">
-        <div class="card">
-          <h3>Model Performance Comparison</h3>
-          <div class="chart-container">
-            <canvas id="performanceChart"></canvas>
+      <!-- Tab Contents -->
+      <div id="overall-tab" class="tab-content active">
+        <!-- Summary Stats -->
+        <div class="summary-stats" id="overallSummaryStats">
+          <div class="stat-card">
+            <div class="stat-value" id="overallTotalModels">-</div>
+            <div class="stat-label">Total Models</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="overallTotalTasks">-</div>
+            <div class="stat-label">Tasks</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="overallBestModel">-</div>
+            <div class="stat-label">Best Model</div>
           </div>
         </div>
 
-        <div class="card">
-          <h3>Task-wise Performance</h3>
-          <div class="chart-container">
-            <canvas id="taskChart"></canvas>
+        <!-- Filters -->
+        <div class="header">
+          <h2>Overall Performance Across All Tasks</h2>
+          <div class="controls">
+            <div class="control-group">
+              <label>Model Type</label>
+              <select id="overallModelTypeFilter">
+                <option value="all">All Models</option>
+                <option value="llm">LLMs Only</option>
+                <option value="baseline">Baselines Only</option>
+              </select>
+            </div>
+            <div class="control-group">
+              <label>Primary Metric</label>
+              <select id="overallPrimaryMetric">
+                <option value="auroc">AUROC</option>
+                <option value="auprc">AUPRC</option>
+                <option value="normalized_auprc">Normalized AUPRC</option>
+                <option value="mcc">MCC</option>
+                <option value="specificity">Specificity</option>
+                <option value="f1_score">F1 Score</option>
+                <option value="accuracy">Accuracy</option>
+                <option value="balanced_accuracy">Balanced Accuracy</option>
+                <option value="precision">Precision</option>
+                <option value="recall">Recall</option>
+                <option value="kappa">Kappa</option>
+                <option value="minpse">MinPSE</option>
+                <option value="task_dataset_score" selected>PULSE Score</option>
+              </select>
+            </div>
           </div>
         </div>
 
-        <div class="card">
-          <h3>LLM vs Baseline Comparison</h3>
+        <!-- Performance Chart -->
+        <div class="card" style="margin-bottom: 25px;">
+          <h3>Overall Model Performance Comparison</h3>
           <div class="chart-container">
-            <canvas id="comparisonChart"></canvas>
+            <canvas id="overallPerformanceChart"></canvas>
           </div>
         </div>
 
+        <!-- Results Table (Full Width) -->
         <div class="card">
-          <h3>Detailed Results Table</h3>
+          <h3>Overall Detailed Results Table</h3>
           <div class="table-container">
-            <table id="resultsTable">
+            <table id="overallResultsTable">
               <thead>
                 <tr>
                   <th>Model</th>
                   <th>Type</th>
-                  <th>Task</th>
-                  <th>Dataset</th>
+                  <th>PULSE Score</th>
                   <th>AUROC</th>
                   <th>AUPRC</th>
                   <th>MCC</th>
+                  <th>Norm AUPRC</th>
+                  <th>Specificity</th>
                   <th>F1 Score</th>
+                  <th>Accuracy</th>
+                  <th>Bal Accuracy</th>
+                  <th>Precision</th>
+                  <th>Recall</th>
+                  <th>Kappa</th>
+                  <th>MinPSE</th>
                 </tr>
               </thead>
-              <tbody id="resultsTableBody">
+              <tbody id="overallResultsTableBody">
                 <tr>
-                  <td colspan="8" class="loading">
-                    Load your JSON data to see results
-                  </td>
+                  <td colspan="15" class="loading">Loading overall results...</td>
                 </tr>
               </tbody>
             </table>
           </div>
         </div>
       </div>
+
+      <div id="aki-tab" class="tab-content">
+        <!-- Summary Stats -->
+        <div class="summary-stats" id="akiSummaryStats">
+          <div class="stat-card">
+            <div class="stat-value" id="akiTotalModels">-</div>
+            <div class="stat-label">Total Models</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="akiTotalDatasets">-</div>
+            <div class="stat-label">Datasets</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="akiBestModel">-</div>
+            <div class="stat-label">Best Model</div>
+          </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="header">
+          <h2>Acute Kidney Injury (AKI) Prediction</h2>
+          <div class="controls">
+            <div class="control-group">
+              <label>Dataset</label>
+              <select id="akiDatasetFilter">
+                <option value="all">All Datasets</option>
+                <option value="hirid">HiRID</option>
+                <option value="eicu">eICU</option>
+                <option value="miiv">MIMIC-IV</option>
+              </select>
+            </div>
+            <div class="control-group">
+              <label>Model Type</label>
+              <select id="akiModelTypeFilter">
+                <option value="all">All Models</option>
+                <option value="llm">LLMs Only</option>
+                <option value="baseline">Baselines Only</option>
+              </select>
+            </div>
+            <div class="control-group">
+              <label>Primary Metric</label>
+              <select id="akiPrimaryMetric">
+                <option value="auroc">AUROC</option>
+                <option value="auprc">AUPRC</option>
+                <option value="normalized_auprc">Normalized AUPRC</option>
+                <option value="mcc">MCC</option>
+                <option value="specificity">Specificity</option>
+                <option value="f1_score">F1 Score</option>
+                <option value="accuracy">Accuracy</option>
+                <option value="balanced_accuracy">Balanced Accuracy</option>
+                <option value="precision">Precision</option>
+                <option value="recall">Recall</option>
+                <option value="kappa">Kappa</option>
+                <option value="minpse">MinPSE</option>
+                <option value="task_dataset_score" selected>PULSE Score</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Performance Chart -->
+        <div class="card" style="margin-bottom: 25px;">
+          <h3>AKI Model Performance Comparison</h3>
+          <div class="chart-container">
+            <canvas id="akiPerformanceChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Results Table (Full Width) -->
+        <div class="card">
+          <h3>AKI Detailed Results Table</h3>
+          <div class="table-container">
+            <table id="akiResultsTable">
+              <thead>
+                <tr>
+                  <th>Model</th>
+                  <th>Type</th>
+                  <th>Dataset</th>
+                  <th>AUROC</th>
+                  <th>AUPRC</th>
+                  <th>Norm AUPRC</th>
+                  <th>MCC</th>
+                  <th>Specificity</th>
+                  <th>F1 Score</th>
+                  <th>Accuracy</th>
+                  <th>Bal Accuracy</th>
+                  <th>Precision</th>
+                  <th>Recall</th>
+                  <th>Kappa</th>
+                  <th>MinPSE</th>
+                  <th>PULSE Score</th>
+                </tr>
+              </thead>
+              <tbody id="akiResultsTableBody">
+                <tr>
+                  <td colspan="16" class="loading">Loading AKI results...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div id="mortality-tab" class="tab-content">
+        <!-- Summary Stats -->
+        <div class="summary-stats" id="mortalitySummaryStats">
+          <div class="stat-card">
+            <div class="stat-value" id="mortalityTotalModels">-</div>
+            <div class="stat-label">Total Models</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="mortalityTotalDatasets">-</div>
+            <div class="stat-label">Datasets</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="mortalityBestModel">-</div>
+            <div class="stat-label">Best Model</div>
+          </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="header">
+          <h2>Mortality Prediction</h2>
+          <div class="controls">
+            <div class="control-group">
+              <label>Dataset</label>
+              <select id="mortalityDatasetFilter">
+                <option value="all">All Datasets</option>
+                <option value="hirid">HiRID</option>
+                <option value="eicu">eICU</option>
+                <option value="miiv">MIMIC-IV</option>
+              </select>
+            </div>
+            <div class="control-group">
+              <label>Model Type</label>
+              <select id="mortalityModelTypeFilter">
+                <option value="all">All Models</option>
+                <option value="llm">LLMs Only</option>
+                <option value="baseline">Baselines Only</option>
+              </select>
+            </div>
+            <div class="control-group">
+              <label>Primary Metric</label>
+              <select id="mortalityPrimaryMetric">
+                <option value="auroc">AUROC</option>
+                <option value="auprc">AUPRC</option>
+                <option value="normalized_auprc">Normalized AUPRC</option>
+                <option value="mcc">MCC</option>
+                <option value="specificity">Specificity</option>
+                <option value="f1_score">F1 Score</option>
+                <option value="accuracy">Accuracy</option>
+                <option value="balanced_accuracy">Balanced Accuracy</option>
+                <option value="precision">Precision</option>
+                <option value="recall">Recall</option>
+                <option value="kappa">Kappa</option>
+                <option value="minpse">MinPSE</option>
+                <option value="task_dataset_score" selected>PULSE Score</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Performance Chart -->
+        <div class="card" style="margin-bottom: 25px;">
+          <h3>Mortality Model Performance Comparison</h3>
+          <div class="chart-container">
+            <canvas id="mortalityPerformanceChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Results Table (Full Width) -->
+        <div class="card">
+          <h3>Mortality Detailed Results Table</h3>
+          <div class="table-container">
+            <table id="mortalityResultsTable">
+              <thead>
+                <tr>
+                  <th>Model</th>
+                  <th>Type</th>
+                  <th>Dataset</th>
+                  <th>AUROC</th>
+                  <th>AUPRC</th>
+                  <th>Norm AUPRC</th>
+                  <th>MCC</th>
+                  <th>Specificity</th>
+                  <th>F1 Score</th>
+                  <th>Accuracy</th>
+                  <th>Bal Accuracy</th>
+                  <th>Precision</th>
+                  <th>Recall</th>
+                  <th>Kappa</th>
+                  <th>MinPSE</th>
+                  <th>PULSE Score</th>
+                </tr>
+              </thead>
+              <tbody id="mortalityResultsTableBody">
+                <tr>
+                  <td colspan="16" class="loading">Loading mortality results...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div id="sepsis-tab" class="tab-content">
+        <!-- Summary Stats -->
+        <div class="summary-stats" id="sepsisSummaryStats">
+          <div class="stat-card">
+            <div class="stat-value" id="sepsisTotalModels">-</div>
+            <div class="stat-label">Total Models</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="sepsisTotalDatasets">-</div>
+            <div class="stat-label">Datasets</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="sepsisBestModel">-</div>
+            <div class="stat-label">Best Model</div>
+          </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="header">
+          <h2>Sepsis Prediction</h2>
+          <div class="controls">
+            <div class="control-group">
+              <label>Dataset</label>
+              <select id="sepsisDatasetFilter">
+                <option value="all">All Datasets</option>
+                <option value="hirid">HiRID</option>
+                <option value="eicu">eICU</option>
+                <option value="miiv">MIMIC-IV</option>
+              </select>
+            </div>
+            <div class="control-group">
+              <label>Model Type</label>
+              <select id="sepsisModelTypeFilter">
+                <option value="all">All Models</option>
+                <option value="llm">LLMs Only</option>
+                <option value="baseline">Baselines Only</option>
+              </select>
+            </div>
+            <div class="control-group">
+              <label>Primary Metric</label>
+              <select id="sepsisPrimaryMetric">
+                <option value="auroc">AUROC</option>
+                <option value="auprc">AUPRC</option>
+                <option value="normalized_auprc">Normalized AUPRC</option>
+                <option value="mcc">MCC</option>
+                <option value="specificity">Specificity</option>
+                <option value="f1_score">F1 Score</option>
+                <option value="accuracy">Accuracy</option>
+                <option value="balanced_accuracy">Balanced Accuracy</option>
+                <option value="precision">Precision</option>
+                <option value="recall">Recall</option>
+                <option value="kappa">Kappa</option>
+                <option value="minpse">MinPSE</option>
+                <option value="task_dataset_score" selected>PULSE Score</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Performance Chart -->
+        <div class="card" style="margin-bottom: 25px;">
+          <h3>Sepsis Model Performance Comparison</h3>
+          <div class="chart-container">
+            <canvas id="sepsisPerformanceChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Results Table (Full Width) -->
+        <div class="card">
+          <h3>Sepsis Detailed Results Table</h3>
+          <div class="table-container">
+            <table id="sepsisResultsTable">
+              <thead>
+                <tr>
+                  <th>Model</th>
+                  <th>Type</th>
+                  <th>Dataset</th>
+                  <th>AUROC</th>
+                  <th>AUPRC</th>
+                  <th>Norm AUPRC</th>
+                  <th>MCC</th>
+                  <th>Specificity</th>
+                  <th>F1 Score</th>
+                  <th>Accuracy</th>
+                  <th>Bal Accuracy</th>
+                  <th>Precision</th>
+                  <th>Recall</th>
+                  <th>Kappa</th>
+                  <th>MinPSE</th>
+                  <th>PULSE Score</th>
+                </tr>
+              </thead>
+              <tbody id="sepsisResultsTableBody">
+                <tr>
+                  <td colspan="16" class="loading">Loading sepsis results...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      }
     </div>
 
     <script>
       console.log("Script loaded successfully");
-      let benchmarkData = [];
+      let allData = [];
       let charts = {};
+      let currentTask = 'overall';
 
       // Baseline model identifiers
       const baselineModels = [
         "CNN",
-        "LSTM",
+        "LSTM", 
         "GRU",
         "XGBoost",
         "LightGBM",
         "RandomForest",
-        "Inceptiontime",
+        "InceptionTime",
       ];
 
       function isBaselineModel(modelId) {
@@ -446,187 +805,174 @@
         return isBaselineModel(modelId) ? "baseline" : "llm";
       }
 
-      // Auto-load results.json on page load
-      async function loadResultsJSON() {
-        console.log("Attempting to load results.json...");
-        try {
-          const response = await fetch("results.json");
-          console.log("Fetch response:", response);
-          console.log("Response status:", response.status);
-          console.log("Response ok:", response.ok);
+      // Switch between tabs
+      function switchTab(task) {
+        // Hide all tab contents
+        document.querySelectorAll('.tab-content').forEach(content => {
+          content.classList.remove('active');
+        });
+        
+        // Remove active class from all tab buttons
+        document.querySelectorAll('.tab-button').forEach(button => {
+          button.classList.remove('active');
+        });
+        
+        // Show selected tab content
+        document.getElementById(`${task}-tab`).classList.add('active');
+        
+        // Add active class to selected tab button
+        event.target.classList.add('active');
+        
+        currentTask = task;
+        
+        // Update the current tab's content
+        updateCurrentTab();
+      }
 
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+      // Load all JSON files from the jsons folder
+      async function loadAllResults() {
+        console.log("Loading all result files...");
+        
+        // List of all model files based on the directory listing
+        const modelFiles = [
+          "claudesonnet4_results.json",
+          "CNN_results.json", 
+          "deepseekr1llama8b_results.json",
+          "gemini2p5flash_results.json",
+          "gemini2p5pro_results.json",
+          "gemma3_results.json",
+          "gpt4o_results.json",
+          "GRU_results.json",
+          "InceptionTime_results.json",
+          "LightGBM_results.json",
+          "llama3p18b_results.json",
+          "LSTM_results.json",
+          "medgemma_results.json",
+          "mistral7b_results.json",
+          "o3_results.json",
+          "RandomForest_results.json",
+          "XGBoost_results.json"
+        ];
+
+        allData = [];
+        
+        for (const fileName of modelFiles) {
+          try {
+            console.log(`Loading ${fileName}...`);
+            const response = await fetch(`../output_to_keep/results_benchmark/results_output/jsons/${fileName}`);
+            
+            if (!response.ok) {
+              console.warn(`Failed to load ${fileName}: ${response.status}`);
+              continue;
+            }
+            
+            const data = await response.json();
+            console.log(`Loaded ${fileName}:`, data);
+            
+            // Extract results array
+            let results = [];
+            if (Array.isArray(data)) {
+              results = data;
+            } else if (data.results && Array.isArray(data.results)) {
+              results = data.results;
+            } else {
+              console.warn(`Invalid format in ${fileName}`);
+              continue;
+            }
+            
+            // Add each result to allData
+            results.forEach(result => {
+              if (result.metrics_summary && result.metrics_summary.overall) {
+                allData.push({
+                  model_id: result.model_id,
+                  task_id: result.task_id, 
+                  dataset: result.dataset,
+                  metrics: result.metrics_summary.overall,
+                  fileName: fileName
+                });
+              }
+            });
+            
+          } catch (error) {
+            console.error(`Error loading ${fileName}:`, error);
           }
-
-          const data = await response.json();
-          console.log("Data loaded successfully:", data);
-          console.log("Data type:", typeof data);
-          console.log("Is array?", Array.isArray(data));
-          console.log("Has results property?", data.hasOwnProperty("results"));
-
-          // Handle both array format and {results: [...]} format
-          if (Array.isArray(data)) {
-            benchmarkData = data;
-            console.log("Using data directly as array");
-          } else if (data.results && Array.isArray(data.results)) {
-            benchmarkData = data.results;
-            console.log("Using data.results as array");
-          } else {
-            throw new Error(
-              "Invalid JSON format. Expected array or {results: [...]}"
-            );
-          }
-
-          console.log("Benchmark data:", benchmarkData);
-          console.log("Benchmark data length:", benchmarkData.length);
-          initializeDashboard();
-        } catch (error) {
-          console.error("Error loading results.json:", error);
-
-          // Show error message in the table
-          const tbody = document.getElementById("resultsTableBody");
-          tbody.innerHTML = `
-                    <tr>
-                        <td colspan="8" class="no-data">
-                            Error loading results.json: ${error.message}<br>
-                            Please ensure results.json is in the same folder as index.html
-                        </td>
-                    </tr>
-                `;
-
-          // Also show in summary stats
-          document.getElementById("totalModels").textContent = "Error";
-          document.getElementById("totalTasks").textContent = "Error";
-          document.getElementById("totalDatasets").textContent = "Error";
-          document.getElementById("bestModel").textContent = "Error";
         }
+        
+        console.log("All data loaded:", allData);
+        console.log("Total entries:", allData.length);
+        
+        // Initialize the dashboard
+        initializeDashboard();
       }
 
       // Load data when page loads
       window.addEventListener("load", () => {
         console.log("Window load event fired");
-        loadResultsJSON();
+        loadAllResults();
       });
 
       function initializeDashboard() {
-        console.log("Initializing dashboard with data:", benchmarkData);
-        console.log("Data length:", benchmarkData.length);
-        populateFilters();
-        updateSummaryStats();
-        createCharts();
-        updateTable();
+        console.log("Initializing dashboard with data:", allData);
+        updateCurrentTab();
         setupEventListeners();
       }
 
-      function populateFilters() {
-        console.log("Populating filters with data:", benchmarkData);
-
-        // Filter out any entries with missing task_id or dataset and log them
-        const validData = benchmarkData.filter((d, index) => {
-          if (!d.task_id || !d.dataset) {
-            console.warn(`Entry ${index} missing required fields:`, d);
-            return false;
-          }
-          return true;
-        });
-
-        console.log(
-          "Valid data count:",
-          validData.length,
-          "out of",
-          benchmarkData.length
-        );
-
-        const tasks = [...new Set(validData.map((d) => d.task_id))];
-        const datasets = [...new Set(validData.map((d) => d.dataset))];
-
-        console.log("Unique tasks:", tasks);
-        console.log("Unique datasets:", datasets);
-
-        const taskFilter = document.getElementById("taskFilter");
-        const datasetFilter = document.getElementById("datasetFilter");
-
-        taskFilter.innerHTML = '<option value="all">All Tasks</option>';
-        datasetFilter.innerHTML = '<option value="all">All Datasets</option>';
-
-        tasks.forEach((task) => {
-          if (task) {
-            // Additional safety check
-            taskFilter.innerHTML += `<option value="${task}">${
-              task.charAt(0).toUpperCase() + task.slice(1)
-            }</option>`;
-          }
-        });
-
-        datasets.forEach((dataset) => {
-          if (dataset) {
-            // Additional safety check
-            datasetFilter.innerHTML += `<option value="${dataset}">${dataset.toUpperCase()}</option>`;
-          }
-        });
+      function updateCurrentTab() {
+        updateSummaryStats(currentTask);
+        createPerformanceChart(currentTask);
+        updateTable(currentTask);
       }
 
-      function getFilteredData() {
-        const taskFilter = document.getElementById("taskFilter").value;
-        const datasetFilter = document.getElementById("datasetFilter").value;
-        const modelTypeFilter =
-          document.getElementById("modelTypeFilter").value;
+      function getFilteredData(task) {
+        if (task === 'overall') {
+          return getOverallFilteredData();
+        }
+        
+        const datasetFilter = document.getElementById(`${task}DatasetFilter`).value;
+        const modelTypeFilter = document.getElementById(`${task}ModelTypeFilter`).value;
 
-        return benchmarkData.filter((d) => {
-          // Safety checks for undefined values
-          if (!d.task_id || !d.dataset || !d.model_id) {
-            return false;
-          }
-
-          const taskMatch = taskFilter === "all" || d.task_id === taskFilter;
-          const datasetMatch =
-            datasetFilter === "all" || d.dataset === datasetFilter;
+        return allData.filter((d) => {
+          // Filter by task
+          if (d.task_id !== task) return false;
+          
+          // Filter by dataset
+          const datasetMatch = datasetFilter === "all" || d.dataset === datasetFilter;
+          
+          // Filter by model type
           const modelType = getModelType(d.model_id);
-          const modelTypeMatch =
-            modelTypeFilter === "all" || modelType === modelTypeFilter;
+          const modelTypeMatch = modelTypeFilter === "all" || modelType === modelTypeFilter;
 
-          return taskMatch && datasetMatch && modelTypeMatch;
+          return datasetMatch && modelTypeMatch;
         });
       }
 
-      function updateSummaryStats() {
-        const filteredData = getFilteredData();
+      function getOverallFilteredData() {
+        const modelTypeFilter = document.getElementById('overallModelTypeFilter').value;
+        
+        return allData.filter((d) => {
+          // Filter by model type
+          const modelType = getModelType(d.model_id);
+          const modelTypeMatch = modelTypeFilter === "all" || modelType === modelTypeFilter;
+          return modelTypeMatch;
+        });
+      }
+
+      function updateSummaryStats(task) {
+        if (task === 'overall') {
+          updateOverallSummaryStats();
+          return;
+        }
+        
+        const filteredData = getFilteredData(task);
         const models = [...new Set(filteredData.map((d) => d.model_id))];
-        const tasks = [...new Set(filteredData.map((d) => d.task_id))];
         const datasets = [...new Set(filteredData.map((d) => d.dataset))];
 
-        const primaryMetric = document.getElementById("primaryMetric").value;
-        console.log(
-          "Updating summary stats with primary metric:",
-          primaryMetric
-        );
+        const primaryMetric = document.getElementById(`${task}PrimaryMetric`).value;
 
-        // Debug: Log all scores for the selected metric
-        const allScores = filteredData.map((d) => ({
-          model: d.model_id,
-          score: d.metrics_summary?.overall?.[primaryMetric],
-          rawMetrics: d.metrics_summary?.overall,
-        }));
-        console.log(`All ${primaryMetric} scores:`, allScores);
-
-        const bestResult = filteredData.reduce((best, current) => {
-          const currentScore =
-            current.metrics_summary?.overall?.[primaryMetric];
-          const bestScore = best?.metrics_summary?.overall?.[primaryMetric];
-
-          // Handle cases where scores might be null/undefined
-          if (currentScore === undefined || currentScore === null) return best;
-          if (best === null || bestScore === undefined || bestScore === null)
-            return current;
-
-          return currentScore > bestScore ? current : best;
-        }, null);
-
-        // Alternative approach: Find the model with the highest average score
+        // Find best model by average score
         const modelAverages = {};
         filteredData.forEach((d) => {
-          const score = d.metrics_summary?.overall?.[primaryMetric];
+          const score = d.metrics[primaryMetric];
           if (score !== undefined && score !== null) {
             if (!modelAverages[d.model_id]) {
               modelAverages[d.model_id] = { scores: [], entries: [] };
@@ -636,70 +982,89 @@
           }
         });
 
-        // Find model with highest average score
         let bestModelByAverage = null;
         let bestAverageScore = -Infinity;
         Object.keys(modelAverages).forEach((modelId) => {
           const scores = modelAverages[modelId].scores;
-          const avgScore =
-            scores.reduce((sum, score) => sum + score, 0) / scores.length;
+          const avgScore = scores.reduce((sum, score) => sum + score, 0) / scores.length;
           if (avgScore > bestAverageScore) {
             bestAverageScore = avgScore;
             bestModelByAverage = modelId;
           }
         });
 
-        console.log(
-          "Best result by single entry:",
-          bestResult?.model_id,
-          "with score:",
-          bestResult?.metrics_summary?.overall?.[primaryMetric]
-        );
-        console.log(
-          "Best model by average score:",
-          bestModelByAverage,
-          "with avg score:",
-          bestAverageScore
-        );
+        document.getElementById(`${task}TotalModels`).textContent = models.length;
+        document.getElementById(`${task}TotalDatasets`).textContent = datasets.length;
 
-        // Use the model with best average score for display
-        const displayBestModel = bestModelByAverage || bestResult?.model_id;
-
-        document.getElementById("totalModels").textContent = models.length;
-        document.getElementById("totalTasks").textContent = tasks.length;
-        document.getElementById("totalDatasets").textContent = datasets.length;
-
-        // Display best model with gold cup
-        const bestModelElement = document.getElementById("bestModel");
-        if (displayBestModel) {
-          bestModelElement.innerHTML = `${displayBestModel} <span class="gold-cup">🏆</span>`;
+        const bestModelElement = document.getElementById(`${task}BestModel`);
+        if (bestModelByAverage) {
+          bestModelElement.innerHTML = `${bestModelByAverage} <span class="gold-cup">🏆</span>`;
         } else {
           bestModelElement.textContent = "-";
         }
       }
 
-      async function createCharts() {
-        await createPerformanceChart();
-        createTaskChart();
-        createComparisonChart();
+      function updateOverallSummaryStats() {
+        const filteredData = getOverallFilteredData();
+        const models = [...new Set(filteredData.map((d) => d.model_id))];
+        const tasks = [...new Set(filteredData.map((d) => d.task_id))];
+        
+        const primaryMetric = document.getElementById('overallPrimaryMetric').value;
+        
+        // Calculate averages for each model across all tasks and datasets
+        const modelAverages = {};
+        filteredData.forEach((d) => {
+          const score = d.metrics[primaryMetric];
+          if (score !== undefined && score !== null) {
+            if (!modelAverages[d.model_id]) {
+              modelAverages[d.model_id] = { scores: [] };
+            }
+            modelAverages[d.model_id].scores.push(score);
+          }
+        });
+
+        let bestModelByAverage = null;
+        let bestAverageScore = -Infinity;
+        Object.keys(modelAverages).forEach((modelId) => {
+          const scores = modelAverages[modelId].scores;
+          const avgScore = scores.reduce((sum, score) => sum + score, 0) / scores.length;
+          if (avgScore > bestAverageScore) {
+            bestAverageScore = avgScore;
+            bestModelByAverage = modelId;
+          }
+        });
+
+        document.getElementById('overallTotalModels').textContent = models.length;
+        document.getElementById('overallTotalTasks').textContent = tasks.length;
+
+        const bestModelElement = document.getElementById('overallBestModel');
+        if (bestModelByAverage) {
+          bestModelElement.innerHTML = `${bestModelByAverage} <span class="gold-cup">🏆</span>`;
+        } else {
+          bestModelElement.textContent = "-";
+        }
       }
 
-      // Logo mapping for proprietary LLMs - using local logos
+      // Logo mapping for proprietary LLMs
       const modelLogos = {
         "GPT-4o": "llm_logos/Openai_logo.svg",
         GPT4o: "llm_logos/Openai_logo.svg",
         gpt4o: "llm_logos/Openai_logo.svg",
+        o3: "llm_logos/Openai_logo.svg",
+        O3: "llm_logos/Openai_logo.svg",
         OpenAI: "llm_logos/Openai_logo.svg",
         openai: "llm_logos/Openai_logo.svg",
+        Claude: "llm_logos/Claude_logo.svg",
+        claude: "llm_logos/Claude_logo.svg",
+        claudesonnet4: "llm_logos/Claude_logo.svg",
+        "claude-sonnet": "llm_logos/Claude_logo.svg",
         Gemini: "llm_logos/Google-gemini-icon.svg",
-        gemini: "llm_logos/Google-gemini-icon.svg",
+        gemini: "llm_logos/Google-gemini-icon.svg", 
         Gemini2p5: "llm_logos/Google-gemini-icon.svg",
         gemini2p5: "llm_logos/Google-gemini-icon.svg",
-        Claude: "https://avatars.githubusercontent.com/u/33663932?s=200&v=4",
-        claude: "https://avatars.githubusercontent.com/u/33663932?s=200&v=4",
         Llama: "llm_logos/Meta_logo.svg",
         llama: "llm_logos/Meta_logo.svg",
-        Llama3: "llm_logos/Meta_logo.svg",
+        Llama3: "llm_logos/Meta_logo.svg", 
         llama3: "llm_logos/Meta_logo.svg",
         Meta: "llm_logos/Meta_logo.svg",
         meta: "llm_logos/Meta_logo.svg",
@@ -712,23 +1077,16 @@
       };
 
       function getModelLogo(modelId) {
-        // Check for exact match first
         if (modelLogos[modelId]) return modelLogos[modelId];
 
-        // Check for partial matches - order matters, most specific first
         const modelIdLower = modelId.toLowerCase();
-
-        // Check for DeepSeek first (before other matches)
+        if (modelIdLower.includes("o3")) return modelLogos["o3"];
         if (modelIdLower.includes("deepseek")) return modelLogos["DeepSeek"];
-
-        // Check for other models
-        if (modelIdLower.includes("gpt") || modelIdLower.includes("openai"))
-          return modelLogos["OpenAI"];
+        if (modelIdLower.includes("gpt") || modelIdLower.includes("openai")) return modelLogos["OpenAI"];
+        if (modelIdLower.includes("claude")) return modelLogos["Claude"];
         if (modelIdLower.includes("gemini")) return modelLogos["Gemini"];
         if (modelIdLower.includes("gemma")) return modelLogos["Gemma"];
-        if (modelIdLower.includes("claude")) return modelLogos["Claude"];
-        if (modelIdLower.includes("llama") || modelIdLower.includes("meta"))
-          return modelLogos["Llama"];
+        if (modelIdLower.includes("llama") || modelIdLower.includes("meta")) return modelLogos["Llama"];
         if (modelIdLower.includes("mistral")) return modelLogos["Mistral"];
 
         return null;
@@ -739,17 +1097,20 @@
           const img = new Image();
           img.crossOrigin = "anonymous";
           img.onload = () => resolve(img);
-          img.onerror = () => resolve(null); // Return null if image fails to load
+          img.onerror = () => resolve(null);
           img.src = src;
         });
       }
 
-      async function createPerformanceChart() {
-        const ctx = document
-          .getElementById("performanceChart")
-          .getContext("2d");
-        const filteredData = getFilteredData();
-        const primaryMetric = document.getElementById("primaryMetric").value;
+      async function createPerformanceChart(task) {
+        if (task === 'overall') {
+          await createOverallPerformanceChart();
+          return;
+        }
+        
+        const ctx = document.getElementById(`${task}PerformanceChart`).getContext("2d");
+        const filteredData = getFilteredData(task);
+        const primaryMetric = document.getElementById(`${task}PrimaryMetric`).value;
 
         // Group by model and calculate average performance
         const modelPerformance = {};
@@ -760,7 +1121,7 @@
               type: getModelType(d.model_id),
             };
           }
-          const score = d.metrics_summary?.overall?.[primaryMetric];
+          const score = d.metrics[primaryMetric];
           if (score !== undefined) {
             modelPerformance[d.model_id].scores.push(score);
           }
@@ -772,35 +1133,46 @@
           return scores.reduce((sum, score) => sum + score, 0) / scores.length;
         });
 
-        const colors = models.map((model) =>
-          modelPerformance[model].type === "llm"
-            ? "rgba(102, 126, 234, 0.8)"
-            : "rgba(252, 182, 159, 0.8)"
+        // Create array of model data for sorting
+        const modelData = models.map((model, index) => ({
+          model: model,
+          score: avgScores[index],
+          type: modelPerformance[model].type
+        }));
+
+        // Sort by score descending
+        modelData.sort((a, b) => b.score - a.score);
+
+        // Extract sorted arrays
+        const sortedModels = modelData.map(d => d.model);
+        const sortedScores = modelData.map(d => d.score);
+        const sortedColors = modelData.map(d => 
+          d.type === "llm" ? "rgba(102, 126, 234, 0.8)" : "rgba(252, 182, 159, 0.8)"
         );
 
         // Load logos for models that have them
         const modelImages = {};
-        for (const model of models) {
+        for (const model of sortedModels) {
           const logoUrl = getModelLogo(model);
           if (logoUrl) {
             modelImages[model] = await loadImage(logoUrl);
           }
         }
 
-        if (charts.performance) {
-          charts.performance.destroy();
+        if (charts[`${task}Performance`]) {
+          charts[`${task}Performance`].destroy();
         }
 
-        charts.performance = new Chart(ctx, {
+        charts[`${task}Performance`] = new Chart(ctx, {
           type: "bar",
           data: {
-            labels: models,
+            labels: sortedModels,
             datasets: [
               {
                 label: primaryMetric.toUpperCase(),
-                data: avgScores,
-                backgroundColor: colors,
-                borderColor: colors.map((color) => color.replace("0.8", "1")),
+                data: sortedScores,
+                backgroundColor: sortedColors,
+                borderColor: sortedColors.map((color) => color.replace("0.8", "1")),
                 borderWidth: 2,
                 borderRadius: 8,
               },
@@ -813,43 +1185,12 @@
               legend: {
                 display: false,
               },
-              // Custom plugin to draw logos
-              beforeDraw: function (chart) {
-                const ctx = chart.ctx;
-                const chartArea = chart.chartArea;
-                const xAxis = chart.scales.x;
-
-                models.forEach((model, index) => {
-                  const image = modelImages[model];
-                  if (image) {
-                    const x = xAxis.getPixelForValue(index);
-                    const logoSize = 24;
-
-                    // Position logo above the bar
-                    const datasetMeta = chart.getDatasetMeta(0);
-                    const bar = datasetMeta.data[index];
-                    const y = bar.y - logoSize - 10;
-
-                    // Draw logo
-                    ctx.save();
-                    ctx.globalAlpha = 0.8;
-                    ctx.drawImage(
-                      image,
-                      x - logoSize / 2,
-                      y,
-                      logoSize,
-                      logoSize
-                    );
-                    ctx.restore();
-                  }
-                });
-              },
             },
             scales: {
               y: {
                 beginAtZero: primaryMetric === "mcc" ? false : true,
                 min: primaryMetric === "mcc" ? -1 : 0,
-                max: 1,
+                max: primaryMetric === "task_dataset_score" ? 100 : 1,
               },
               x: {
                 ticks: {
@@ -863,30 +1204,20 @@
               id: "logoRenderer",
               beforeDraw: function (chart) {
                 const ctx = chart.ctx;
-                const chartArea = chart.chartArea;
                 const xAxis = chart.scales.x;
 
-                models.forEach((model, index) => {
+                sortedModels.forEach((model, index) => {
                   const image = modelImages[model];
                   if (image) {
                     const x = xAxis.getPixelForValue(index);
                     const logoSize = 24;
-
-                    // Position logo above the bar
                     const datasetMeta = chart.getDatasetMeta(0);
                     const bar = datasetMeta.data[index];
                     const y = bar.y - logoSize - 10;
 
-                    // Draw logo
                     ctx.save();
                     ctx.globalAlpha = 0.8;
-                    ctx.drawImage(
-                      image,
-                      x - logoSize / 2,
-                      y,
-                      logoSize,
-                      logoSize
-                    );
+                    ctx.drawImage(image, x - logoSize / 2, y, logoSize, logoSize);
                     ctx.restore();
                   }
                 });
@@ -896,117 +1227,72 @@
         });
       }
 
-      function createTaskChart() {
-        const ctx = document.getElementById("taskChart").getContext("2d");
-        const filteredData = getFilteredData();
-        const primaryMetric = document.getElementById("primaryMetric").value;
+      async function createOverallPerformanceChart() {
+        const ctx = document.getElementById('overallPerformanceChart').getContext("2d");
+        const filteredData = getOverallFilteredData();
+        const primaryMetric = document.getElementById('overallPrimaryMetric').value;
 
-        // Group by task and calculate average performance
-        const taskPerformance = {};
+        // Group by model and calculate average performance across all tasks and datasets
+        const modelPerformance = {};
         filteredData.forEach((d) => {
-          if (!taskPerformance[d.task_id]) {
-            taskPerformance[d.task_id] = [];
+          if (!modelPerformance[d.model_id]) {
+            modelPerformance[d.model_id] = {
+              scores: [],
+              type: getModelType(d.model_id),
+            };
           }
-          const score = d.metrics_summary?.overall?.[primaryMetric];
+          const score = d.metrics[primaryMetric];
           if (score !== undefined) {
-            taskPerformance[d.task_id].push(score);
+            modelPerformance[d.model_id].scores.push(score);
           }
         });
 
-        const tasks = Object.keys(taskPerformance);
-        const avgScores = tasks.map((task) => {
-          const scores = taskPerformance[task];
+        const models = Object.keys(modelPerformance);
+        const avgScores = models.map((model) => {
+          const scores = modelPerformance[model].scores;
           return scores.reduce((sum, score) => sum + score, 0) / scores.length;
         });
 
-        if (charts.task) {
-          charts.task.destroy();
-        }
+        // Create array of model data for sorting
+        const modelData = models.map((model, index) => ({
+          model: model,
+          score: avgScores[index],
+          type: modelPerformance[model].type
+        }));
 
-        charts.task = new Chart(ctx, {
-          type: "doughnut",
-          data: {
-            labels: tasks.map(
-              (task) => task.charAt(0).toUpperCase() + task.slice(1)
-            ),
-            datasets: [
-              {
-                data: avgScores,
-                backgroundColor: [
-                  "rgba(102, 126, 234, 0.8)",
-                  "rgba(118, 75, 162, 0.8)",
-                  "rgba(255, 99, 132, 0.8)",
-                  "rgba(54, 162, 235, 0.8)",
-                  "rgba(255, 205, 86, 0.8)",
-                ],
-                borderWidth: 3,
-                borderColor: "#fff",
-              },
-            ],
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: {
-                position: "bottom",
-              },
-            },
-          },
-        });
-      }
+        // Sort by score descending
+        modelData.sort((a, b) => b.score - a.score);
 
-      function createComparisonChart() {
-        const ctx = document.getElementById("comparisonChart").getContext("2d");
-        const filteredData = getFilteredData();
-        const primaryMetric = document.getElementById("primaryMetric").value;
+        // Extract sorted arrays
+        const sortedModels = modelData.map(d => d.model);
+        const sortedScores = modelData.map(d => d.score);
+        const sortedColors = modelData.map(d => 
+          d.type === "llm" ? "rgba(102, 126, 234, 0.8)" : "rgba(252, 182, 159, 0.8)"
+        );
 
-        // Separate LLMs and baselines
-        const llmScores = [];
-        const baselineScores = [];
-
-        filteredData.forEach((d) => {
-          const score = d.metrics_summary?.overall?.[primaryMetric];
-          if (score !== undefined) {
-            if (getModelType(d.model_id) === "llm") {
-              llmScores.push(score);
-            } else {
-              baselineScores.push(score);
-            }
+        // Load logos for models that have them
+        const modelImages = {};
+        for (const model of sortedModels) {
+          const logoUrl = getModelLogo(model);
+          if (logoUrl) {
+            modelImages[model] = await loadImage(logoUrl);
           }
-        });
-
-        const llmAvg =
-          llmScores.length > 0
-            ? llmScores.reduce((sum, score) => sum + score, 0) /
-              llmScores.length
-            : 0;
-        const baselineAvg =
-          baselineScores.length > 0
-            ? baselineScores.reduce((sum, score) => sum + score, 0) /
-              baselineScores.length
-            : 0;
-
-        if (charts.comparison) {
-          charts.comparison.destroy();
         }
 
-        charts.comparison = new Chart(ctx, {
+        if (charts['overallPerformance']) {
+          charts['overallPerformance'].destroy();
+        }
+
+        charts['overallPerformance'] = new Chart(ctx, {
           type: "bar",
           data: {
-            labels: ["LLMs", "Baseline Models"],
+            labels: sortedModels,
             datasets: [
               {
-                label: `Average ${primaryMetric.toUpperCase()}`,
-                data: [llmAvg, baselineAvg],
-                backgroundColor: [
-                  "rgba(102, 126, 234, 0.8)",
-                  "rgba(252, 182, 159, 0.8)",
-                ],
-                borderColor: [
-                  "rgba(102, 126, 234, 1)",
-                  "rgba(252, 182, 159, 1)",
-                ],
+                label: primaryMetric.toUpperCase(),
+                data: sortedScores,
+                backgroundColor: sortedColors,
+                borderColor: sortedColors.map((color) => color.replace("0.8", "1")),
                 borderWidth: 2,
                 borderRadius: 8,
               },
@@ -1024,86 +1310,250 @@
               y: {
                 beginAtZero: primaryMetric === "mcc" ? false : true,
                 min: primaryMetric === "mcc" ? -1 : 0,
-                max: 1,
+                max: primaryMetric === "task_dataset_score" ? 100 : 1,
+              },
+              x: {
+                ticks: {
+                  maxRotation: 45,
+                },
               },
             },
           },
+          plugins: [
+            {
+              id: "logoRenderer",
+              beforeDraw: function (chart) {
+                const ctx = chart.ctx;
+                const xAxis = chart.scales.x;
+
+                sortedModels.forEach((model, index) => {
+                  const image = modelImages[model];
+                  if (image) {
+                    const x = xAxis.getPixelForValue(index);
+                    const logoSize = 24;
+                    const datasetMeta = chart.getDatasetMeta(0);
+                    const bar = datasetMeta.data[index];
+                    const y = bar.y - logoSize - 10;
+
+                    ctx.save();
+                    ctx.globalAlpha = 0.8;
+                    ctx.drawImage(image, x - logoSize / 2, y, logoSize, logoSize);
+                    ctx.restore();
+                  }
+                });
+              },
+            },
+          ],
         });
       }
 
-      function updateTable() {
-        const filteredData = getFilteredData();
-        const tbody = document.getElementById("resultsTableBody");
+      function updateTable(task) {
+        if (task === 'overall') {
+          updateOverallTable();
+          return;
+        }
+        
+        const filteredData = getFilteredData(task);
+        const tbody = document.getElementById(`${task}ResultsTableBody`);
 
         if (filteredData.length === 0) {
-          tbody.innerHTML =
-            '<tr><td colspan="8" class="no-data">No data matches the current filters</td></tr>';
+          tbody.innerHTML = `<tr><td colspan="16" class="no-data">No data matches the current filters</td></tr>`;
           return;
         }
 
         tbody.innerHTML = "";
 
         // Sort by primary metric descending
-        const primaryMetric = document.getElementById("primaryMetric").value;
+        const primaryMetric = document.getElementById(`${task}PrimaryMetric`).value;
         filteredData.sort((a, b) => {
-          const aScore = a.metrics_summary?.overall?.[primaryMetric] || 0;
-          const bScore = b.metrics_summary?.overall?.[primaryMetric] || 0;
+          const aScore = a.metrics[primaryMetric] || 0;
+          const bScore = b.metrics[primaryMetric] || 0;
           return bScore - aScore;
         });
 
         filteredData.forEach((d) => {
-          const metrics = d.metrics_summary?.overall || {};
+          const metrics = d.metrics;
           const modelType = getModelType(d.model_id);
-
-          // Safety check for required fields
-          if (!d.model_id || !d.task_id || !d.dataset) {
-            console.warn("Skipping entry with missing required fields:", d);
-            return;
-          }
 
           const row = document.createElement("tr");
           row.innerHTML = `
-                    <td>${d.model_id}</td>
-                    <td><span class="model-type-badge ${modelType}-badge">${modelType.toUpperCase()}</span></td>
-                    <td>${
-                      d.task_id.charAt(0).toUpperCase() + d.task_id.slice(1)
-                    }</td>
-                    <td>${d.dataset.toUpperCase()}</td>
-                    <td><span class="metric-value ${getMetricClass(
-                      metrics.auroc
-                    )}">${(metrics.auroc || 0).toFixed(3)}</span></td>
-                    <td><span class="metric-value ${getMetricClass(
-                      metrics.auprc
-                    )}">${(metrics.auprc || 0).toFixed(3)}</span></td>
-                    <td><span class="metric-value ${getMetricClass(
-                      metrics.mcc
-                    )}">${(metrics.mcc || 0).toFixed(3)}</span></td>
-                    <td><span class="metric-value ${getMetricClass(
-                      metrics.f1_score
-                    )}">${(metrics.f1_score || 0).toFixed(3)}</span></td>
-                `;
+            <td>${d.model_id}</td>
+            <td><span class="model-type-badge ${modelType}-badge">${modelType.toUpperCase()}</span></td>
+            <td>${d.dataset.toUpperCase()}</td>
+            <td><span class="metric-value ${getMetricClass(metrics.auroc)}">${(metrics.auroc || 0).toFixed(3)}</span></td>
+            <td><span class="metric-value ${getMetricClass(metrics.auprc)}">${(metrics.auprc || 0).toFixed(3)}</span></td>
+            <td><span class="metric-value ${getMetricClass(metrics.normalized_auprc)}">${(metrics.normalized_auprc || 0).toFixed(3)}</span></td>
+            <td><span class="metric-value ${getMetricClass(metrics.mcc)}">${(metrics.mcc || 0).toFixed(3)}</span></td>
+            <td><span class="metric-value ${getMetricClass(metrics.specificity)}">${(metrics.specificity || 0).toFixed(3)}</span></td>
+            <td><span class="metric-value ${getMetricClass(metrics.f1_score)}">${(metrics.f1_score || 0).toFixed(3)}</span></td>
+            <td><span class="metric-value ${getMetricClass(metrics.accuracy)}">${(metrics.accuracy || 0).toFixed(3)}</span></td>
+            <td><span class="metric-value ${getMetricClass(metrics.balanced_accuracy)}">${(metrics.balanced_accuracy || 0).toFixed(3)}</span></td>
+            <td><span class="metric-value ${getMetricClass(metrics.precision)}">${(metrics.precision || 0).toFixed(3)}</span></td>
+            <td><span class="metric-value ${getMetricClass(metrics.recall)}">${(metrics.recall || 0).toFixed(3)}</span></td>
+            <td><span class="metric-value ${getMetricClass(metrics.kappa)}">${(metrics.kappa || 0).toFixed(3)}</span></td>
+            <td><span class="metric-value ${getMetricClass(metrics.minpse)}">${(metrics.minpse || 0).toFixed(3)}</span></td>
+            <td><span class="metric-value ${getMetricClass(metrics.task_dataset_score, true)}">${(metrics.task_dataset_score || 0).toFixed(1)}</span></td>
+          `;
           tbody.appendChild(row);
         });
       }
 
-      function getMetricClass(value) {
-        if (value >= 0.8) return "metric-high";
-        if (value >= 0.6) return "metric-medium";
-        if (value >= 0.0) return "metric-low";
-        return "metric-low"; // For negative values (like MCC)
+      function updateOverallTable() {
+        const filteredData = getOverallFilteredData();
+        const tbody = document.getElementById('overallResultsTableBody');
+
+        if (filteredData.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="15" class="no-data">No data matches the current filters</td></tr>`;
+          return;
+        }
+
+        // Calculate averages for each model across all tasks and datasets
+        const modelAverages = {};
+        filteredData.forEach((d) => {
+          if (!modelAverages[d.model_id]) {
+            modelAverages[d.model_id] = {
+              auroc: [],
+              auprc: [],
+              normalized_auprc: [],
+              mcc: [],
+              specificity: [],
+              f1_score: [],
+              accuracy: [],
+              balanced_accuracy: [],
+              precision: [],
+              recall: [],
+              kappa: [],
+              minpse: [],
+              task_dataset_score: [],
+              type: getModelType(d.model_id)
+            };
+          }
+          
+          if (d.metrics.auroc !== undefined) modelAverages[d.model_id].auroc.push(d.metrics.auroc);
+          if (d.metrics.auprc !== undefined) modelAverages[d.model_id].auprc.push(d.metrics.auprc);
+          if (d.metrics.normalized_auprc !== undefined) modelAverages[d.model_id].normalized_auprc.push(d.metrics.normalized_auprc);
+          if (d.metrics.mcc !== undefined) modelAverages[d.model_id].mcc.push(d.metrics.mcc);
+          if (d.metrics.specificity !== undefined) modelAverages[d.model_id].specificity.push(d.metrics.specificity);
+          if (d.metrics.f1_score !== undefined) modelAverages[d.model_id].f1_score.push(d.metrics.f1_score);
+          if (d.metrics.accuracy !== undefined) modelAverages[d.model_id].accuracy.push(d.metrics.accuracy);
+          if (d.metrics.balanced_accuracy !== undefined) modelAverages[d.model_id].balanced_accuracy.push(d.metrics.balanced_accuracy);
+          if (d.metrics.precision !== undefined) modelAverages[d.model_id].precision.push(d.metrics.precision);
+          if (d.metrics.recall !== undefined) modelAverages[d.model_id].recall.push(d.metrics.recall);
+          if (d.metrics.kappa !== undefined) modelAverages[d.model_id].kappa.push(d.metrics.kappa);
+          if (d.metrics.minpse !== undefined) modelAverages[d.model_id].minpse.push(d.metrics.minpse);
+          if (d.metrics.task_dataset_score !== undefined) modelAverages[d.model_id].task_dataset_score.push(d.metrics.task_dataset_score);
+        });
+
+        // Calculate averages and create table rows
+        const models = Object.keys(modelAverages);
+        const primaryMetric = document.getElementById('overallPrimaryMetric').value;
+        
+        const modelResults = models.map(modelId => {
+          const data = modelAverages[modelId];
+          const avgAuroc = data.auroc.length > 0 ? data.auroc.reduce((sum, val) => sum + val, 0) / data.auroc.length : 0;
+          const avgAuprc = data.auprc.length > 0 ? data.auprc.reduce((sum, val) => sum + val, 0) / data.auprc.length : 0;
+          const avgNormAuprc = data.normalized_auprc.length > 0 ? data.normalized_auprc.reduce((sum, val) => sum + val, 0) / data.normalized_auprc.length : 0;
+          const avgMcc = data.mcc.length > 0 ? data.mcc.reduce((sum, val) => sum + val, 0) / data.mcc.length : 0;
+          const avgSpecificity = data.specificity.length > 0 ? data.specificity.reduce((sum, val) => sum + val, 0) / data.specificity.length : 0;
+          const avgF1 = data.f1_score.length > 0 ? data.f1_score.reduce((sum, val) => sum + val, 0) / data.f1_score.length : 0;
+          const avgAccuracy = data.accuracy.length > 0 ? data.accuracy.reduce((sum, val) => sum + val, 0) / data.accuracy.length : 0;
+          const avgBalAccuracy = data.balanced_accuracy.length > 0 ? data.balanced_accuracy.reduce((sum, val) => sum + val, 0) / data.balanced_accuracy.length : 0;
+          const avgPrecision = data.precision.length > 0 ? data.precision.reduce((sum, val) => sum + val, 0) / data.precision.length : 0;
+          const avgRecall = data.recall.length > 0 ? data.recall.reduce((sum, val) => sum + val, 0) / data.recall.length : 0;
+          const avgKappa = data.kappa.length > 0 ? data.kappa.reduce((sum, val) => sum + val, 0) / data.kappa.length : 0;
+          const avgMinpse = data.minpse.length > 0 ? data.minpse.reduce((sum, val) => sum + val, 0) / data.minpse.length : 0;
+          const avgPulse = data.task_dataset_score.length > 0 ? data.task_dataset_score.reduce((sum, val) => sum + val, 0) / data.task_dataset_score.length : 0;
+          
+          return {
+            model_id: modelId,
+            type: data.type,
+            avgAuroc,
+            avgAuprc,
+            avgNormAuprc,
+            avgMcc,
+            avgSpecificity,
+            avgF1,
+            avgAccuracy,
+            avgBalAccuracy,
+            avgPrecision,
+            avgRecall,
+            avgKappa,
+            avgMinpse,
+            avgPulse,
+            primaryScore: primaryMetric === 'auroc' ? avgAuroc : 
+                         primaryMetric === 'auprc' ? avgAuprc :
+                         primaryMetric === 'normalized_auprc' ? avgNormAuprc :
+                         primaryMetric === 'mcc' ? avgMcc :
+                         primaryMetric === 'specificity' ? avgSpecificity :
+                         primaryMetric === 'f1_score' ? avgF1 :
+                         primaryMetric === 'accuracy' ? avgAccuracy :
+                         primaryMetric === 'balanced_accuracy' ? avgBalAccuracy :
+                         primaryMetric === 'precision' ? avgPrecision :
+                         primaryMetric === 'recall' ? avgRecall :
+                         primaryMetric === 'kappa' ? avgKappa :
+                         primaryMetric === 'minpse' ? avgMinpse : avgPulse
+          };
+        });
+
+        // Sort by primary metric descending
+        modelResults.sort((a, b) => b.primaryScore - a.primaryScore);
+
+        tbody.innerHTML = "";
+
+        modelResults.forEach((result) => {
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td>${result.model_id}</td>
+            <td><span class="model-type-badge ${result.type}-badge">${result.type.toUpperCase()}</span></td>
+            <td><span class="metric-value ${getMetricClass(result.avgPulse, true)}">${result.avgPulse.toFixed(1)}</span></td>
+            <td><span class="metric-value ${getMetricClass(result.avgAuroc)}">${result.avgAuroc.toFixed(3)}</span></td>
+            <td><span class="metric-value ${getMetricClass(result.avgAuprc)}">${result.avgAuprc.toFixed(3)}</span></td>
+            <td><span class="metric-value ${getMetricClass(result.avgMcc)}">${result.avgMcc.toFixed(3)}</span></td>
+            <td><span class="metric-value ${getMetricClass(result.avgNormAuprc)}">${result.avgNormAuprc.toFixed(3)}</span></td>
+            <td><span class="metric-value ${getMetricClass(result.avgSpecificity)}">${result.avgSpecificity.toFixed(3)}</span></td>
+            <td><span class="metric-value ${getMetricClass(result.avgF1)}">${result.avgF1.toFixed(3)}</span></td>
+            <td><span class="metric-value ${getMetricClass(result.avgAccuracy)}">${result.avgAccuracy.toFixed(3)}</span></td>
+            <td><span class="metric-value ${getMetricClass(result.avgBalAccuracy)}">${result.avgBalAccuracy.toFixed(3)}</span></td>
+            <td><span class="metric-value ${getMetricClass(result.avgPrecision)}">${result.avgPrecision.toFixed(3)}</span></td>
+            <td><span class="metric-value ${getMetricClass(result.avgRecall)}">${result.avgRecall.toFixed(3)}</span></td>
+            <td><span class="metric-value ${getMetricClass(result.avgKappa)}">${result.avgKappa.toFixed(3)}</span></td>
+            <td><span class="metric-value ${getMetricClass(result.avgMinpse)}">${result.avgMinpse.toFixed(3)}</span></td>
+          `;
+          tbody.appendChild(row);
+        });
+      }
+
+      function getMetricClass(value, isPulseScore = false) {
+        if (isPulseScore) {
+          if (value >= 70) return "metric-high";
+          if (value >= 50) return "metric-medium";
+          return "metric-low";
+        } else {
+          if (value >= 0.8) return "metric-high";
+          if (value >= 0.6) return "metric-medium";
+          return "metric-low";
+        }
       }
 
       function setupEventListeners() {
-        [
-          "taskFilter",
-          "datasetFilter",
-          "modelTypeFilter",
-          "primaryMetric",
-        ].forEach((id) => {
+        const tasks = ['aki', 'mortality', 'sepsis'];
+        
+        tasks.forEach(task => {
+          [`${task}DatasetFilter`, `${task}ModelTypeFilter`, `${task}PrimaryMetric`].forEach((id) => {
+            document.getElementById(id).addEventListener("change", async () => {
+              if (currentTask === task) {
+                updateCurrentTab();
+              }
+            });
+          });
+        });
+
+        // Add event listeners for overall tab
+        ['overallModelTypeFilter', 'overallPrimaryMetric'].forEach((id) => {
           document.getElementById(id).addEventListener("change", async () => {
-            updateSummaryStats();
-            await createCharts();
-            updateTable();
+            if (currentTask === 'overall') {
+              updateCurrentTab();
+            }
           });
         });
       }

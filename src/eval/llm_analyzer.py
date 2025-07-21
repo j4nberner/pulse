@@ -51,6 +51,20 @@ VARIABLE_NAMES = {
     "clinical_workflow_agent_preprocessor": "Clinical Workflow Agent",
 }
 
+MODEL_IDS = {
+    "gemini2p5flash": "gemini-2.5-flash-preview-05-20",
+    "gemini2p5pro": "gemini-2.5-pro",
+    "claudesonnet4": "claude-sonnet-4-20250514",
+    "gpt4o": "GPT-4o-2024-08-06",
+    "o3": "o3-2025-04-16",
+    "grok4": "grok-4-0709",
+    "llama3p18b": "Llama-3.1-8B-Instruct",
+    "gemma3": "gemma-3-4b-it",
+    "medgemma": "medgemma-4b-it",
+    "deepseekr1llama8b": "DeepSeek-R1-Distill-Llama-8B",
+    "mistral7b": "Mistral-7B-Instruct-v0.3",
+}
+
 
 COLORS = ["#2E86AB", "#A23B72", "#F18F01", "#C73E1D", "#8E44AD", "#27AE60"]
 
@@ -1188,6 +1202,7 @@ class LLMAnalyzer(ModelAnalyzer):
         for a, data in results_dict.items():
             prompting_id = data["prompting_id"]
             model_id = data["model_id"]
+            model_id = MODEL_IDS.get(model_id, model_id)
 
             # Get task_dataset_scores for detailed metrics
             task_dataset_scores = data["task_dataset_scores"]

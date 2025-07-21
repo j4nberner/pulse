@@ -1,0 +1,607 @@
+{
+  "results": [
+    {
+      "model_id": "InceptionTime",
+      "task_id": "aki",
+      "dataset": "eicu",
+      "run_id": "20250617_131406",
+      "prompting_id": "",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.631,
+          "auprc": 0.429,
+          "normalized_auprc": 1.385,
+          "specificity": 0.779,
+          "f1_score": 0.439,
+          "accuracy": 0.668,
+          "balanced_accuracy": 0.599,
+          "precision": 0.46,
+          "recall": 0.42,
+          "mcc": 0.602,
+          "kappa": 0.204,
+          "minpse": 0.449,
+          "task_dataset_score": 55.44
+        },
+        "task_pulse_scores": {
+          "aki": [
+            55.43982358028112,
+            62.31183022793078,
+            49.654287886316595
+          ],
+          "mortality": [
+            66.31384013396651,
+            57.92774085814607,
+            61.620055146605864
+          ],
+          "sepsis": [
+            37.98416048444512,
+            33.68860415828321,
+            37.71918162253267
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            55.43982358028112,
+            66.31384013396651,
+            37.98416048444512
+          ],
+          "miiv": [
+            49.654287886316595,
+            61.620055146605864,
+            37.71918162253267
+          ],
+          "hirid": [
+            62.31183022793078,
+            57.92774085814607,
+            33.68860415828321
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 51.40661378872311,
+          "overall_aki": 55.801980564842836,
+          "overall_eicu": 53.24594139956425,
+          "overall_mortality": 61.953878712906146,
+          "overall_hirid": 51.30939174812002,
+          "overall_sepsis": 36.46398208842034,
+          "overall_miiv": 49.66450821848505
+        }
+      }
+    },
+    {
+      "model_id": "InceptionTime",
+      "task_id": "aki",
+      "dataset": "hirid",
+      "run_id": "20250617_131406",
+      "prompting_id": "",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.8,
+          "auprc": 0.393,
+          "normalized_auprc": 2.429,
+          "specificity": 0.764,
+          "f1_score": 0.465,
+          "accuracy": 0.749,
+          "balanced_accuracy": 0.719,
+          "precision": 0.355,
+          "recall": 0.673,
+          "mcc": 0.675,
+          "kappa": 0.321,
+          "minpse": 0.376,
+          "task_dataset_score": 62.312
+        },
+        "task_pulse_scores": {
+          "aki": [
+            55.43982358028112,
+            62.31183022793078,
+            49.654287886316595
+          ],
+          "mortality": [
+            66.31384013396651,
+            57.92774085814607,
+            61.620055146605864
+          ],
+          "sepsis": [
+            37.98416048444512,
+            33.68860415828321,
+            37.71918162253267
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            55.43982358028112,
+            66.31384013396651,
+            37.98416048444512
+          ],
+          "miiv": [
+            49.654287886316595,
+            61.620055146605864,
+            37.71918162253267
+          ],
+          "hirid": [
+            62.31183022793078,
+            57.92774085814607,
+            33.68860415828321
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 51.40661378872311,
+          "overall_aki": 55.801980564842836,
+          "overall_eicu": 53.24594139956425,
+          "overall_mortality": 61.953878712906146,
+          "overall_hirid": 51.30939174812002,
+          "overall_sepsis": 36.46398208842034,
+          "overall_miiv": 49.66450821848505
+        }
+      }
+    },
+    {
+      "model_id": "InceptionTime",
+      "task_id": "aki",
+      "dataset": "miiv",
+      "run_id": "20250617_131406",
+      "prompting_id": "",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.581,
+          "auprc": 0.333,
+          "normalized_auprc": 1.432,
+          "specificity": 0.75,
+          "f1_score": 0.364,
+          "accuracy": 0.67,
+          "balanced_accuracy": 0.578,
+          "precision": 0.33,
+          "recall": 0.406,
+          "mcc": 0.573,
+          "kappa": 0.144,
+          "minpse": 0.354,
+          "task_dataset_score": 49.654
+        },
+        "task_pulse_scores": {
+          "aki": [
+            55.43982358028112,
+            62.31183022793078,
+            49.654287886316595
+          ],
+          "mortality": [
+            66.31384013396651,
+            57.92774085814607,
+            61.620055146605864
+          ],
+          "sepsis": [
+            37.98416048444512,
+            33.68860415828321,
+            37.71918162253267
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            55.43982358028112,
+            66.31384013396651,
+            37.98416048444512
+          ],
+          "miiv": [
+            49.654287886316595,
+            61.620055146605864,
+            37.71918162253267
+          ],
+          "hirid": [
+            62.31183022793078,
+            57.92774085814607,
+            33.68860415828321
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 51.40661378872311,
+          "overall_aki": 55.801980564842836,
+          "overall_eicu": 53.24594139956425,
+          "overall_mortality": 61.953878712906146,
+          "overall_hirid": 51.30939174812002,
+          "overall_sepsis": 36.46398208842034,
+          "overall_miiv": 49.66450821848505
+        }
+      }
+    },
+    {
+      "model_id": "InceptionTime",
+      "task_id": "mortality",
+      "dataset": "eicu",
+      "run_id": "20250617_131406",
+      "prompting_id": "",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.851,
+          "auprc": 0.462,
+          "normalized_auprc": 6.595,
+          "specificity": 0.839,
+          "f1_score": 0.37,
+          "accuracy": 0.83,
+          "balanced_accuracy": 0.776,
+          "precision": 0.25,
+          "recall": 0.714,
+          "mcc": 0.676,
+          "kappa": 0.298,
+          "minpse": 0.429,
+          "task_dataset_score": 66.314
+        },
+        "task_pulse_scores": {
+          "aki": [
+            55.43982358028112,
+            62.31183022793078,
+            49.654287886316595
+          ],
+          "mortality": [
+            66.31384013396651,
+            57.92774085814607,
+            61.620055146605864
+          ],
+          "sepsis": [
+            37.98416048444512,
+            33.68860415828321,
+            37.71918162253267
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            55.43982358028112,
+            66.31384013396651,
+            37.98416048444512
+          ],
+          "miiv": [
+            49.654287886316595,
+            61.620055146605864,
+            37.71918162253267
+          ],
+          "hirid": [
+            62.31183022793078,
+            57.92774085814607,
+            33.68860415828321
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 51.40661378872311,
+          "overall_aki": 55.801980564842836,
+          "overall_eicu": 53.24594139956425,
+          "overall_mortality": 61.953878712906146,
+          "overall_hirid": 51.30939174812002,
+          "overall_sepsis": 36.46398208842034,
+          "overall_miiv": 49.66450821848505
+        }
+      }
+    },
+    {
+      "model_id": "InceptionTime",
+      "task_id": "mortality",
+      "dataset": "hirid",
+      "run_id": "20250617_131406",
+      "prompting_id": "",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.769,
+          "auprc": 0.378,
+          "normalized_auprc": 3.434,
+          "specificity": 0.854,
+          "f1_score": 0.286,
+          "accuracy": 0.8,
+          "balanced_accuracy": 0.609,
+          "precision": 0.235,
+          "recall": 0.364,
+          "mcc": 0.591,
+          "kappa": 0.176,
+          "minpse": 0.364,
+          "task_dataset_score": 57.928
+        },
+        "task_pulse_scores": {
+          "aki": [
+            55.43982358028112,
+            62.31183022793078,
+            49.654287886316595
+          ],
+          "mortality": [
+            66.31384013396651,
+            57.92774085814607,
+            61.620055146605864
+          ],
+          "sepsis": [
+            37.98416048444512,
+            33.68860415828321,
+            37.71918162253267
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            55.43982358028112,
+            66.31384013396651,
+            37.98416048444512
+          ],
+          "miiv": [
+            49.654287886316595,
+            61.620055146605864,
+            37.71918162253267
+          ],
+          "hirid": [
+            62.31183022793078,
+            57.92774085814607,
+            33.68860415828321
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 51.40661378872311,
+          "overall_aki": 55.801980564842836,
+          "overall_eicu": 53.24594139956425,
+          "overall_mortality": 61.953878712906146,
+          "overall_hirid": 51.30939174812002,
+          "overall_sepsis": 36.46398208842034,
+          "overall_miiv": 49.66450821848505
+        }
+      }
+    },
+    {
+      "model_id": "InceptionTime",
+      "task_id": "mortality",
+      "dataset": "miiv",
+      "run_id": "20250617_131406",
+      "prompting_id": "",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.77,
+          "auprc": 0.465,
+          "normalized_auprc": 3.872,
+          "specificity": 0.739,
+          "f1_score": 0.333,
+          "accuracy": 0.72,
+          "balanced_accuracy": 0.661,
+          "precision": 0.233,
+          "recall": 0.583,
+          "mcc": 0.614,
+          "kappa": 0.195,
+          "minpse": 0.417,
+          "task_dataset_score": 61.62
+        },
+        "task_pulse_scores": {
+          "aki": [
+            55.43982358028112,
+            62.31183022793078,
+            49.654287886316595
+          ],
+          "mortality": [
+            66.31384013396651,
+            57.92774085814607,
+            61.620055146605864
+          ],
+          "sepsis": [
+            37.98416048444512,
+            33.68860415828321,
+            37.71918162253267
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            55.43982358028112,
+            66.31384013396651,
+            37.98416048444512
+          ],
+          "miiv": [
+            49.654287886316595,
+            61.620055146605864,
+            37.71918162253267
+          ],
+          "hirid": [
+            62.31183022793078,
+            57.92774085814607,
+            33.68860415828321
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 51.40661378872311,
+          "overall_aki": 55.801980564842836,
+          "overall_eicu": 53.24594139956425,
+          "overall_mortality": 61.953878712906146,
+          "overall_hirid": 51.30939174812002,
+          "overall_sepsis": 36.46398208842034,
+          "overall_miiv": 49.66450821848505
+        }
+      }
+    },
+    {
+      "model_id": "InceptionTime",
+      "task_id": "sepsis",
+      "dataset": "eicu",
+      "run_id": "20250617_131406",
+      "prompting_id": "",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.559,
+          "auprc": 0.052,
+          "normalized_auprc": 1.092,
+          "specificity": 0.738,
+          "f1_score": 0.11,
+          "accuracy": 0.72,
+          "balanced_accuracy": 0.55,
+          "precision": 0.065,
+          "recall": 0.362,
+          "mcc": 0.524,
+          "kappa": 0.032,
+          "minpse": 0.067,
+          "task_dataset_score": 37.984
+        },
+        "task_pulse_scores": {
+          "aki": [
+            55.43982358028112,
+            62.31183022793078,
+            49.654287886316595
+          ],
+          "mortality": [
+            66.31384013396651,
+            57.92774085814607,
+            61.620055146605864
+          ],
+          "sepsis": [
+            37.98416048444512,
+            33.68860415828321,
+            37.71918162253267
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            55.43982358028112,
+            66.31384013396651,
+            37.98416048444512
+          ],
+          "miiv": [
+            49.654287886316595,
+            61.620055146605864,
+            37.71918162253267
+          ],
+          "hirid": [
+            62.31183022793078,
+            57.92774085814607,
+            33.68860415828321
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 51.40661378872311,
+          "overall_aki": 55.801980564842836,
+          "overall_eicu": 53.24594139956425,
+          "overall_mortality": 61.953878712906146,
+          "overall_hirid": 51.30939174812002,
+          "overall_sepsis": 36.46398208842034,
+          "overall_miiv": 49.66450821848505
+        }
+      }
+    },
+    {
+      "model_id": "InceptionTime",
+      "task_id": "sepsis",
+      "dataset": "hirid",
+      "run_id": "20250617_131406",
+      "prompting_id": "",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.444,
+          "auprc": 0.064,
+          "normalized_auprc": 0.856,
+          "specificity": 0.691,
+          "f1_score": 0.118,
+          "accuracy": 0.662,
+          "balanced_accuracy": 0.496,
+          "precision": 0.074,
+          "recall": 0.301,
+          "mcc": 0.498,
+          "kappa": -0.003,
+          "minpse": 0.077,
+          "task_dataset_score": 33.689
+        },
+        "task_pulse_scores": {
+          "aki": [
+            55.43982358028112,
+            62.31183022793078,
+            49.654287886316595
+          ],
+          "mortality": [
+            66.31384013396651,
+            57.92774085814607,
+            61.620055146605864
+          ],
+          "sepsis": [
+            37.98416048444512,
+            33.68860415828321,
+            37.71918162253267
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            55.43982358028112,
+            66.31384013396651,
+            37.98416048444512
+          ],
+          "miiv": [
+            49.654287886316595,
+            61.620055146605864,
+            37.71918162253267
+          ],
+          "hirid": [
+            62.31183022793078,
+            57.92774085814607,
+            33.68860415828321
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 51.40661378872311,
+          "overall_aki": 55.801980564842836,
+          "overall_eicu": 53.24594139956425,
+          "overall_mortality": 61.953878712906146,
+          "overall_hirid": 51.30939174812002,
+          "overall_sepsis": 36.46398208842034,
+          "overall_miiv": 49.66450821848505
+        }
+      }
+    },
+    {
+      "model_id": "InceptionTime",
+      "task_id": "sepsis",
+      "dataset": "miiv",
+      "run_id": "20250617_131406",
+      "prompting_id": "",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.556,
+          "auprc": 0.051,
+          "normalized_auprc": 2.014,
+          "specificity": 0.682,
+          "f1_score": 0.064,
+          "accuracy": 0.676,
+          "balanced_accuracy": 0.561,
+          "precision": 0.035,
+          "recall": 0.44,
+          "mcc": 0.52,
+          "kappa": 0.018,
+          "minpse": 0.133,
+          "task_dataset_score": 37.719
+        },
+        "task_pulse_scores": {
+          "aki": [
+            55.43982358028112,
+            62.31183022793078,
+            49.654287886316595
+          ],
+          "mortality": [
+            66.31384013396651,
+            57.92774085814607,
+            61.620055146605864
+          ],
+          "sepsis": [
+            37.98416048444512,
+            33.68860415828321,
+            37.71918162253267
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            55.43982358028112,
+            66.31384013396651,
+            37.98416048444512
+          ],
+          "miiv": [
+            49.654287886316595,
+            61.620055146605864,
+            37.71918162253267
+          ],
+          "hirid": [
+            62.31183022793078,
+            57.92774085814607,
+            33.68860415828321
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 51.40661378872311,
+          "overall_aki": 55.801980564842836,
+          "overall_eicu": 53.24594139956425,
+          "overall_mortality": 61.953878712906146,
+          "overall_hirid": 51.30939174812002,
+          "overall_sepsis": 36.46398208842034,
+          "overall_miiv": 49.66450821848505
+        }
+      }
+    }
+  ]
+}
