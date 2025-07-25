@@ -85,7 +85,7 @@ class Gemma3Model(PulseLLMModel):
                     self.model_id,
                     device_map="auto",
                     torch_dtype=torch.bfloat16,
-                    attn_implementation="sdpa",
+                    attn_implementation="eager",
                 )
 
             if self.params.get("tuning", False):
