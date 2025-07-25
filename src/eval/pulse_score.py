@@ -1,23 +1,15 @@
-import json
-from matplotlib import pyplot as plt
-import pandas as pd
-import numpy as np
-from typing import Dict, List, Optional
 import warnings
+from typing import Dict, List, Optional
 
-from src.eval.metrics import (
-    calculate_accuracy,
-    calculate_auprc,
-    calculate_auroc,
-    calculate_balanced_accuracy,
-    calculate_f1_score,
-    calculate_kappa,
-    calculate_mcc,
-    calculate_minpse,
-    calculate_precision,
-    calculate_recall,
-    calculate_specificity,
-)
+import numpy as np
+import pandas as pd
+
+from src.eval.metrics import (calculate_accuracy, calculate_auprc,
+                              calculate_auroc, calculate_balanced_accuracy,
+                              calculate_f1_score, calculate_kappa,
+                              calculate_mcc, calculate_minpse,
+                              calculate_precision, calculate_recall,
+                              calculate_specificity)
 
 
 class PULSEScoreCalculator:

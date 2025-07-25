@@ -5,18 +5,12 @@ import time
 import warnings
 from typing import Any, Dict
 
-import numpy as np
-
 from xai_sdk import Client
 from xai_sdk.chat import system, user
 
 from src.models.pulse_model import PulseLLMModel
 from src.util.config_util import set_seeds
-from src.util.model_util import (
-    parse_llm_output,
-    prompt_template_hf,
-)
-
+from src.util.model_util import parse_llm_output, prompt_template_hf
 
 warnings.filterwarnings(
     "ignore",

@@ -3,24 +3,18 @@ import os
 import random
 import time
 import warnings
-import json
 from typing import Any, Dict
-
-import numpy as np
 
 # import openai
 import anthropic
-from anthropic.types.messages.batch_create_params import Request
+import numpy as np
 from anthropic.types.message_create_params import MessageCreateParamsNonStreaming
+from anthropic.types.messages.batch_create_params import Request
 
 from src.eval.metrics import MetricsTracker
-from src.models.pulse_model import PulseModel, PulseLLMModel
+from src.models.pulse_model import PulseLLMModel
 from src.util.config_util import set_seeds
-from src.util.model_util import (
-    parse_llm_output,
-    prompt_template_hf,
-)
-
+from src.util.model_util import parse_llm_output, prompt_template_hf
 
 warnings.filterwarnings(
     "ignore",
@@ -49,6 +43,7 @@ class ClaudeSonnet4Model(PulseLLMModel):
             "thinking_budget",
             "temperature",
             "api_key_name",
+            "batch_processing",
         ]
         self.check_required_params(params, required_params)
 
@@ -58,6 +53,7 @@ class ClaudeSonnet4Model(PulseLLMModel):
         self.max_new_tokens = params["max_new_tokens"]
         self.thinking_budget = params["thinking_budget"]
         self.temperature = params["temperature"]
+        self.batch_processing = params["batch_processing"]
 
         # self.model = GenerativeModel(self.model_id)
         self.is_agent = False
@@ -234,7 +230,9 @@ class ClaudeSonnet4Model(PulseLLMModel):
         for r in results:
             idx = int(r.custom_id.split("-")[1])
             if idx not in test_loader[1].index or idx not in test_loader[0].index:
-                logger.warning(f"Result index {idx} not found in test_loader, skipping.")
+                logger.warning(
+                    f"Result index {idx} not found in test_loader, skipping."
+                )
                 continue
             y_true = test_loader[1].loc[idx].iloc[0]
             X_input = test_loader[0].loc[idx].iloc[0]
@@ -338,7 +336,9 @@ class ClaudeSonnet4Model(PulseLLMModel):
         logger.info("Test evaluation completed for %s", self.model_name)
         logger.info("Test metrics: %s", metrics_tracker.summary)
 
-    def evaluate_batched_offline(self, test_loader: Any, save_report: bool = False, batch_id=None) -> float:
+    def evaluate_batched_offline(
+        self, test_loader: Any, save_report: bool = False, batch_id=None
+    ) -> float:
         """Evaluates the model on a given test set using batch processing when available.
 
         Args:
@@ -405,7 +405,9 @@ class ClaudeSonnet4Model(PulseLLMModel):
         )
 
         X_df = test_loader[0]
-        y_df = test_loader[1].reset_index(drop=True)  # was not sorted in prompt preprocessing
+        y_df = test_loader[1].reset_index(
+            drop=True
+        )  # was not sorted in prompt preprocessing
 
         for r in results:
             idx_str = r.custom_id.split("-", 1)[1]
@@ -422,7 +424,9 @@ class ClaudeSonnet4Model(PulseLLMModel):
             if idx is None and idx_str in y_df.index and idx_str in X_df.index:
                 idx = idx_str
             if idx is None:
-                logger.warning(f"Result index {idx_str} not found in test_loader, skipping.")
+                logger.warning(
+                    f"Result index {idx_str} not found in test_loader, skipping."
+                )
                 continue
             y_true = y_df.loc[idx].iloc[0]
             X_input = X_df.loc[idx].iloc[0]

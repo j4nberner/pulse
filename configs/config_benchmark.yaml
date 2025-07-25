@@ -105,5 +105,6 @@ load_models:
 
   # - "configs/model_configs/GPT4oModel.yaml" # use with caution
   # - "configs/model_configs/OpenAIo3Model.yaml"
-  # - "configs/model_configs/Gemini2p5flashModel.yaml" # use with caution
-  - "configs/model_configs/ClaudeSonnet4Model.yaml" #
+  - "configs/model_configs/Gemini2p5flashModel.yaml" # use with caution
+  # - "configs/model_configs/ClaudeSonnet4Model.yaml" #
+  # - "configs/model_configs/Grok4.yaml" # Grok4 model, requires XAI_API_KEY

@@ -11,3 +11,4 @@ params:
   max_new_tokens: 10000
   max_length: 30000 # Maximum length of input sequences
   temperature: 0.4 # Temperature for sampling (0.0 = greedy sampling)
+  batch_processing: true # Whether to use batch processing

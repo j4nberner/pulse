@@ -1,10 +1,9 @@
+from .claude_sonnet4_model import ClaudeSonnet4Model
 from .cnn_model import CNNModel, CNNTrainer
 from .deepseekr1_model import DeepseekR1Model
 from .gemini2p5flash_model import Gemini2p5Model
 from .gemma3_model import Gemma3Model
 from .gpt_model import GPTModel
-from .o3_model import OpenAIo3Model
-from .claude_sonnet4_model import ClaudeSonnet4Model
 from .grok4_model import Grok4Model
 from .gru_model import GRUModel, GRUTrainer
 from .inceptiontime_model import InceptionTimeModel, InceptionTimeTrainer
@@ -13,6 +12,7 @@ from .llama3_model import Llama3Model
 from .llama4_model import Llama4Model
 from .lstm_model import LSTMModel, LSTMTrainer
 from .mistral_model import MistralModel
+from .o3_model import OpenAIo3Model
 from .randomforest_model import RandomForestModel, RandomForestTrainer
 from .xgboost_model import XGBoostModel, XGBoostTrainer
 

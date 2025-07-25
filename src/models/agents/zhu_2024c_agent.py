@@ -4,11 +4,10 @@ from typing import Any, Dict, Optional
 import pandas as pd
 
 from src.models.agents.pulse_agent import PulseAgent
-from src.preprocessing.preprocessing_advanced.preprocessing_advanced import (
-    PreprocessorAdvanced,
-)
-from src.util.data_util import get_feature_name
+from src.preprocessing.preprocessing_advanced.preprocessing_advanced import \
+    PreprocessorAdvanced
 from src.util.agent_util import get_task_specific_content
+from src.util.data_util import get_feature_name
 
 logger = logging.getLogger("PULSE_logger")
 

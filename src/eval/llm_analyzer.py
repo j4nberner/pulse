@@ -1,18 +1,13 @@
 import ast
-from datetime import datetime
-import glob
 import json
 import os
-from pathlib import Path
 import re
+from pathlib import Path
 
-from matplotlib import pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from matplotlib.table import Table
-from matplotlib import gridspec
-from IPython.display import HTML, display
+from matplotlib import pyplot as plt
 
 from src.eval.metrics import calculate_auprc
 
@@ -264,17 +259,6 @@ class LLMAnalyzer(ModelAnalyzer):
     A class to analyze the performance of a Pulse-LLM output.
     """
 
-    def analyze_llm(self, outputfolder_path_list):
-        """
-        Analyze a single LLM output.
-        Loads all data from the output folder, creates a summary with plots and saves it to the output folder.
-
-        Args:
-            outputfolder_path_list (list): List of output folder paths.
-
-        """
-        pass
-
     @staticmethod
     def load_metadata(metadata_path_list, verbose=True):
         """
@@ -466,12 +450,12 @@ class LLMAnalyzer(ModelAnalyzer):
 
             # Walk through all subfolders to find metrics_report.json files
             if ".json" not in model_path:
-                for root, dirs, files in os.walk(model_path):
+                for root, _, files in os.walk(model_path):
                     for file in files:
                         if "metrics_report.json" in file or "results.json" in file:
                             report_path = os.path.join(root, file)
                             try:
-                                with open(report_path, "r") as f:
+                                with open(report_path, "r", encoding="utf-8") as f:
                                     reports = json.load(f)
 
                                 # reports is a list of dicts, each with 'prompting_id' and metric keys
@@ -678,7 +662,7 @@ class LLMAnalyzer(ModelAnalyzer):
         if data_filter:
             filter_parts = []
             for column, values in data_filter.items():
-                display_key = VARIABLE_NAMES.get(str(column), str(column))
+                VARIABLE_NAMES.get(str(column), str(column))
 
                 if isinstance(values, list):
                     values_display = [
@@ -691,7 +675,7 @@ class LLMAnalyzer(ModelAnalyzer):
 
             filter_config = " | ".join(filter_parts)
 
-        fig, ax = plt.subplots(
+        _, ax = plt.subplots(
             figsize=(6, 4)
         )  # Slightly larger figure for better readability
 
@@ -777,37 +761,11 @@ class LLMAnalyzer(ModelAnalyzer):
             linewidth=1.0,
         )
 
-        # Add vertical line at 0.5 for decision threshold
-        # ax.axvline(
-        #     x=0.5,
-        #     color="gray",
-        #     linestyle="-",
-        #     alpha=0.8,
-        #     linewidth=1.5,
-        #     label="Decision Threshold (0.5)",
-        # )
-
         # Ground truth positive rate line
         ground_truth_positive_rate = df["Target Label"].mean()
-        # ax.axvline(
-        #     x=ground_truth_positive_rate,
-        #     color="black",
-        #     linestyle="dotted",
-        #     alpha=0.8,
-        #     linewidth=1.5,
-        #     label=f"Ground Truth Positive Rate ({ground_truth_positive_rate:.3f})",
-        # )
 
         # Mean predicted probability line
         mean_predicted_probability = df["Predicted Probability"].mean()
-        # ax.axvline(
-        #     x=mean_predicted_probability,
-        #     color="black",
-        #     linestyle="--",
-        #     alpha=0.8,
-        #     linewidth=1.5,
-        #     label=f"Mean Predicted Probability ({mean_predicted_probability:.3f})",
-        # )
 
         ax.set_xlabel("Predicted Probability", fontsize=10)
         ax.set_ylabel("Count", fontsize=10)
@@ -823,7 +781,7 @@ class LLMAnalyzer(ModelAnalyzer):
             calibration_error = abs(
                 mean_predicted_probability - ground_truth_positive_rate
             )
-            print(f"--- Prediction Distribution Statistics ---")
+            print("--- Prediction Distribution Statistics ---")
             print(f"Total Records: {len(df)}")
             print(f"Ground Truth Positive Samples: {len(positive_samples)}")
             print(f"Ground Truth Negative Samples: {len(negative_samples)}")
@@ -923,7 +881,7 @@ class LLMAnalyzer(ModelAnalyzer):
 
         # Prepare data for plotting
         plot_data = []
-        for idx, row in df.iterrows():
+        for _, row in df.iterrows():
             for m, label in zip(metrics, metric_labels):
                 if m in df.columns:
                     group_key = ", ".join(
@@ -997,7 +955,6 @@ class LLMAnalyzer(ModelAnalyzer):
         short_labels = [
             name[:20] + "..." if len(name) > 30 else name for name in group_names
         ]
-        show_table = False
 
         ax.set_xticklabels(
             short_labels, rotation=45, ha="right", fontsize=11, fontweight="medium"
@@ -1140,7 +1097,7 @@ class LLMAnalyzer(ModelAnalyzer):
 
             # Look for existing record with same identifier
             existing_index = None
-            for i, existing_record in enumerate(results_data["results"]):
+            for i, _ in enumerate(results_data["results"]):
                 existing_id = (
                     new_record.get("model_id", ""),
                     # new_record.get("prompting_id", ""),
@@ -1187,19 +1144,18 @@ class LLMAnalyzer(ModelAnalyzer):
         return added_count, updated_count
 
     @staticmethod
-    def save_results_dict_as_json(results_dict, base_output_dir, output_file_path):
+    def save_results_dict_as_json(results_dict, output_file_path):
         """
         Convert post processed results_dict to JSON format matching the specified structure.
 
         Args:
             results_dict: Dictionary containing PULSE score results for different prompting approaches
-            base_output_dir: Base directory path to extract model information from
             output_file_path: Path where to save the JSON file
         """
         # Initialize results list
         results_list = []
 
-        for a, data in results_dict.items():
+        for _, data in results_dict.items():
             prompting_id = data["prompting_id"]
             model_id = data["model_id"]
             model_id = MODEL_IDS.get(model_id, model_id)
@@ -1420,7 +1376,6 @@ class LLMAnalyzer(ModelAnalyzer):
         )
 
         # Add custom labels and long horizontal lines
-        last_model = None
         for i, (model, approach) in enumerate(
             zip(labels_df["model"], labels_df["approach"])
         ):
@@ -1435,17 +1390,6 @@ class LLMAnalyzer(ModelAnalyzer):
                 fontsize=9,
             )
             ax_table.text(x_approach, y, approach, va="center", ha="left", fontsize=9)
-
-            # if i > 0 and model != last_model and model != "Overall":
-            #     # Draw hline in BOTH axes so it spans full width
-            #     ax_table.hlines(
-            #         y - 0.5, x_model, x_approach + 5, color="black", linewidth=1.5
-            #     )  # Changed from: y + 0.5
-            #     ax_heatmap.hlines(
-            #         y - 0.5, *ax_heatmap.get_xlim(), color="black", linewidth=1.5
-            #     )  # Changed from: y + 0.5
-
-            last_model = model
 
         # Match y-limits
         ax_table.set_ylim(ax_heatmap.get_ylim())
@@ -1477,7 +1421,7 @@ class LLMAnalyzer(ModelAnalyzer):
 
         # Load data if it's a file path
         if isinstance(json_data, (str, Path)):
-            with open(json_data, "r") as f:
+            with open(json_data, "r", encoding="utf-8") as f:
                 data = json.load(f)
         else:
             data = json_data
@@ -1510,7 +1454,7 @@ class LLMAnalyzer(ModelAnalyzer):
         sns.set_palette("husl")
 
         # 1. PULSE Score Heatmap by Task and Dataset
-        fig, ax = plt.subplots(figsize=(12, 8))
+        _, ax = plt.subplots(figsize=(12, 8))
 
         # Create pivot table for task_dataset_score
         heatmap_data = plot_df.pivot_table(
@@ -1582,25 +1526,8 @@ class LLMAnalyzer(ModelAnalyzer):
             .sort_values(ascending=True)
         )
 
-        # Average AUROC by prompting approach
-        avg_auroc = (
-            plot_df.groupby("prompting_id")["overall.auroc"]
-            .mean()
-            .sort_values(ascending=True)
-        )
-
-        # Performance by dataset
-        dataset_perf = plot_df.groupby("dataset")[
-            ["overall.task_dataset_score", "overall.auroc"]
-        ].mean()
-
-        # Performance by task
-        task_perf = plot_df.groupby("task_id")[
-            ["overall.task_dataset_score", "overall.auroc"]
-        ].mean()
-
         # 5. Correlation Analysis
-        fig, ax = plt.subplots(figsize=(10, 8))
+        _, ax = plt.subplots(figsize=(10, 8))
 
         # Select numeric columns for correlation
         numeric_cols = [
@@ -1643,7 +1570,7 @@ class LLMAnalyzer(ModelAnalyzer):
         plt.show()
 
         # 6. Top Performers Analysis
-        fig, axes = plt.subplots(1, 2, figsize=(16, 6))
+        _, axes = plt.subplots(1, 2, figsize=(16, 6))
 
         # Top 10 performers by PULSE score
         top_pulse = plot_df.nlargest(10, "overall.task_dataset_score")
@@ -1729,7 +1656,7 @@ class LLMAnalyzer(ModelAnalyzer):
         print(f"  - Task: {best_auroc_row['task_id']}")
         print(f"  - Dataset: {best_auroc_row['dataset']}")
 
-        print(f"\nPrompting Approach Rankings (by average PULSE score):")
+        print("\nPrompting Approach Rankings (by average PULSE score):")
         n = len(avg_pulse.items())
         for i, (approach, score) in enumerate(avg_pulse.items(), 0):
             print(f"  {n-i}. {approach}: {score:.2f}")

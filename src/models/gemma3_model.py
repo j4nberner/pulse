@@ -4,12 +4,7 @@ from typing import Any, Dict
 
 import torch
 from peft import PromptTuningConfig, PromptTuningInit, TaskType, get_peft_model
-from transformers import (
-    AutoTokenizer,
-    BitsAndBytesConfig,
-    Gemma3ForConditionalGeneration,
-    AutoProcessor,
-)
+from transformers import (AutoProcessor, BitsAndBytesConfig, Gemma3ForConditionalGeneration)
 
 from src.models.pulse_model import PulseLLMModel
 

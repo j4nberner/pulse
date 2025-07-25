@@ -73,15 +73,10 @@ class PulseBenchmark:
         """Run the benchmark process for all configured models and datasets."""
         logger.info("Starting benchmark process...")
         timestamp = pd.Timestamp.now().strftime("%Y%m%d_%H%M%S")
-        batch_ids = ["msgbatch_01XHUduPqh6qkdU5oVmd64XW"]
         # Train and/or evaluate each model on each dataset
-        i = 0
         for task_dataset_name, _ in self.dm.datasets.items():
-            batch_id = batch_ids[i]
-            i += 1
             logger.info("#" * 60)
             logger.info("Processing dataset: %s", task_dataset_name)
-            logger.info(f"Batch Id {batch_id}")
 
             # Extract task from dataset_name (format: task_dataset)
             task_name = self.dm.datasets[task_dataset_name]["task"]
@@ -248,15 +243,29 @@ class PulseBenchmark:
                                 val_loader,
                             )
                             model.trainer.train()
-                        # Evaluate the model
-                        # model.evaluate(test_loader, save_report=True)
+
+                        if model.batch_processing:
+                            # If batch processing is enabled, evaluate in batches
+                            logger.info(
+                                "Batch processing enabled for %s on %s",
+                                model.model_name,
+                                task_dataset_name,
+                            )
+                            model.evaluate_batched(test_loader, save_report=True)
+
+                        else:
+                            model.evaluate(test_loader, save_report=True)
+
+                        ### Uncomment to use for system message test.
                         # model.evaluate_sys_msgs(test_loader, save_report=True)
-                        model.evaluate_batched(test_loader, save_report=True)
+
+                        ### Offline evaluation option for claude if batch processing was used and not evaluated ###
+                        # -> pass batch_id to the model from here.
                         # model.evaluate_batched_offline(test_loader, save_report=True, batch_id=batch_id)
 
                 except Exception as e:
                     logger.error(
-                        "Error running %s on %s: %s",
+                        "Unexpected error running %s on %s: %s",
                         model.model_name,
                         task_dataset_name,
                         str(e),

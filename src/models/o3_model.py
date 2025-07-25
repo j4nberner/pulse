@@ -1,4 +1,3 @@
-import json
 import logging
 import os
 import random
@@ -6,20 +5,12 @@ import time
 import warnings
 from typing import Any, Dict
 
-import numpy as np
-
 # import openai
 from openai import OpenAI
 
-from src.eval.metrics import MetricsTracker
-from src.models.pulse_model import PulseModel, PulseLLMModel
+from src.models.pulse_model import PulseLLMModel
 from src.util.config_util import set_seeds
-from src.util.model_util import (
-    parse_llm_output,
-    prompt_template_hf,
-    system_message_samples,
-)
-
+from src.util.model_util import (parse_llm_output, prompt_template_hf)
 
 warnings.filterwarnings(
     "ignore",

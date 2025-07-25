@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, Any, Dict, Optional
 import joblib
 import numpy as np
 import torch
-import torch.nn as nn
 from peft import PromptTuningConfig, PromptTuningInit, TaskType, get_peft_model
 from torch.utils.data import DataLoader
 from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -20,11 +19,8 @@ if TYPE_CHECKING:
 from src.eval.metrics import MetricsTracker
 from src.models.agents import create_agent_instance
 from src.util.config_util import set_seeds
-from src.util.model_util import (
-    parse_llm_output,
-    prompt_template_hf,
-    system_message_samples,
-)
+from src.util.model_util import (parse_llm_output, prompt_template_hf,
+                                 system_message_samples)
 
 logger = logging.getLogger("PULSE_logger")
 
