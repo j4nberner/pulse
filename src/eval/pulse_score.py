@@ -4,12 +4,19 @@ from typing import Dict, List, Optional
 import numpy as np
 import pandas as pd
 
-from src.eval.metrics import (calculate_accuracy, calculate_auprc,
-                              calculate_auroc, calculate_balanced_accuracy,
-                              calculate_f1_score, calculate_kappa,
-                              calculate_mcc, calculate_minpse,
-                              calculate_precision, calculate_recall,
-                              calculate_specificity)
+from src.eval.metrics import (
+    calculate_accuracy,
+    calculate_auprc,
+    calculate_auroc,
+    calculate_balanced_accuracy,
+    calculate_f1_score,
+    calculate_kappa,
+    calculate_mcc,
+    calculate_minpse,
+    calculate_precision,
+    calculate_recall,
+    calculate_specificity,
+)
 
 
 class PULSEScoreCalculator:
@@ -94,7 +101,6 @@ class PULSEScoreCalculator:
             "auprc": auprc_results["auprc"],
             "mcc_raw": calculate_mcc(y_true, y_prob, threshold, normalize=False),
             "mcc": calculate_mcc(y_true, y_prob, threshold, normalize=True),
-            "auroc": calculate_auroc(y_true, y_prob),
             "normalized_auprc": auprc_results["normalized_auprc"],
             "specificity": calculate_specificity(y_true, y_prob, threshold),
             "f1_score": calculate_f1_score(y_true, y_prob, threshold),
@@ -366,7 +372,12 @@ class PULSEScoreCalculator:
         target_col = None
         for col in target_col_candidates:
             if col in df_prepared.columns:
-                df_prepared["Target Label"] = df_prepared[col].astype(int)
+                df_prepared["Target Label"] = (
+                    pd.to_numeric(df_prepared[col], errors="coerce")
+                    .fillna(-1)
+                    .astype(int)
+                )
+                df_prepared = df_prepared[df_prepared["Target Label"] != -1]
                 target_col = col
                 break
 
@@ -558,6 +569,12 @@ class PULSEScoreCalculator:
         """
         print(f"Model Type: {'LLM' if self.is_llm_model else 'Conventional ML'}")
 
+        total_samples = {
+            "aki": 2950,
+            "mortality": 300,
+            "sepsis": 2939,
+        }
+
         # Show NaN predictions if any
         if (
             "nan_predictions" in verification_results
@@ -584,7 +601,7 @@ class PULSEScoreCalculator:
             for task in df["task"].unique():
                 task_data = df[df["task"] == task]
                 print(f"\n{task.upper()}:")
-                print(f"  Total samples: {len(task_data)}")
+                print(f"  Total samples: {len(task_data)}/{total_samples[task]}")
                 print(f"  Positive labels: {task_data['Target Label'].sum()}")
                 valid_preds = task_data["Predicted Binary"].dropna()
                 print(f"  Valid predictions: {len(valid_preds)}")
@@ -627,6 +644,7 @@ class PULSEScoreCalculator:
         print(f"  • Total samples: {len(df)}")
         print(f"  • Tasks: {', '.join(df['task'].unique())}")
         print(f"  • Datasets: {', '.join(df['dataset'].unique())}")
+        print("")
 
     def calculate_pulse_score_from_dataframe(
         self,
@@ -865,7 +883,6 @@ class PULSEScoreCalculator:
             )
 
             # Step 2: Calculate PULSE scores
-            print("Calculating PULSE scores...")
             pulse_results = self.calculate_pulse_score_from_dataframe(
                 df_prepared,
                 target_col="Target Label",

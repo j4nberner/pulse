@@ -1,4 +1,5 @@
 import ast
+import csv
 import json
 import os
 import re
@@ -260,24 +261,77 @@ class LLMAnalyzer(ModelAnalyzer):
     """
 
     @staticmethod
-    def load_metadata(metadata_path_list, verbose=True):
+    def load_metadata(metadata_path_list, verbose=False, fix_csv=True):
         """
         Load metadata from a CSV file into a DataFrame.
 
         Args:
             metadata_path_list (list): Path list with the metadata CSV files
+            verbose (bool): Whether to print verbose output
+            fix_csv (bool): Whether to fix broken CSV files before loading
 
         Returns:
             pd.DataFrame: DataFrame containing the metadata.
         """
+        # EXPECTED_COLS = 43
+        # EXTRA_HEADER = [
+        #     "metadata_investigation_triggered",
+        #     "metadata_ml_confidence_low",
+        #     "metadata_high_disagreement",
+        #     "metadata_agreement_threshold",
+        # ]
+
         df_mdata = pd.DataFrame()
         print("Extracting metadata from files:")
+
         for m_path in metadata_path_list:
             try:
-                df = pd.read_csv(m_path, on_bad_lines="skip")
+                actual_path = m_path
+
+                # # Fix CSV if needed
+                # if fix_csv:
+                #     fixed_path = m_path.replace(".csv", ".csv")
+                #     extended_rows = 0
+                #     all_rows = []
+
+                #     with open(m_path, "r", encoding="utf-8") as fin:
+                #         reader = csv.reader(fin)
+                #         try:
+                #             header = next(reader)
+                #             # If header is missing the last 4 columns, add them
+                #             if len(header) < EXPECTED_COLS:
+                #                 header += EXTRA_HEADER[-(EXPECTED_COLS - len(header)) :]
+                #             elif len(header) > EXPECTED_COLS:
+                #                 header = header[:EXPECTED_COLS]
+                #             all_rows.append(header)
+
+                #             for _, row in enumerate(reader, start=2):
+                #                 if len(row) < EXPECTED_COLS:
+                #                     row += [""] * (EXPECTED_COLS - len(row))
+                #                     extended_rows += 1
+                #                 elif len(row) > EXPECTED_COLS:
+                #                     row = row[:EXPECTED_COLS]
+                #                 all_rows.append(row)
+                #         except StopIteration:
+                #             print(f"Empty CSV file: {m_path}")
+                #             continue
+
+                #     if extended_rows > 0:
+                #         # If the fixed file exists, just replace it
+                #         with open(
+                #             fixed_path, "w", encoding="utf-8", newline=""
+                #         ) as fout:
+                #             writer = csv.writer(fout)
+                #             writer.writerows(all_rows)
+                #         actual_path = fixed_path
+
+                # Load the CSV (either original or fixed)
+                df = pd.read_csv(actual_path, encoding="utf-8")
+
                 # Extract model name, task, dataset, and timestamp from the metadata path
                 match = re.search(
-                    r"\\([^\\]+)_([^_]+)_([^_]+)_(\d{8}_\d{6})_metadata\.csv$", m_path
+                    r"\\([^\\]+)_([^_]+)_([^_]+)_(\d{8}_\d{6})_metadata(?:_fixed|_reconstructed)?\.csv$",
+                    m_path,
                 )
                 if match:
                     model_name, task, dataset, timestamp = match.groups()
@@ -304,7 +358,7 @@ class LLMAnalyzer(ModelAnalyzer):
                 df_mdata = pd.concat([df_mdata, df], ignore_index=True)
 
             except Exception as e:
-                print(f"Error loading metadata: {e}")
+                print(f"Error loading metadata from {m_path}: {e}")
                 continue
 
         print("")
@@ -532,6 +586,9 @@ class LLMAnalyzer(ModelAnalyzer):
         Prints:
             Number of samples, unique tasks, datasets, and a preview of predictions.
         """
+        nr_samples_mortality = 100
+        nr_samples_aki = 9
+
         df_filtered = df.copy()
         if filters:
             for key, value in filters.items():
@@ -590,7 +647,7 @@ class LLMAnalyzer(ModelAnalyzer):
 
         # Print summary in a nicely formatted list
         summary_items = [
-            ("Number of Samples", len(df_final_predictions)),
+            ("Number of Samples", f"{len(df_final_predictions)}"),
             ("Number of Requests", summary["total_samples"].sum()),
             ("Total Input Tokens", summary["total_input_tokens"].sum()),
             ("Total Output Tokens", summary["total_output_tokens"].sum()),
@@ -613,10 +670,10 @@ class LLMAnalyzer(ModelAnalyzer):
             ("Total Cost (USD)", f"${summary['total_cost'].sum():.2f}"),
         ]
 
-        print("\n--- Approach Summary ---")
+        print("=====Overall=====:")
         for label, value in summary_items:
-            print(f"- {label}: {value}")
-        print("")
+            print(f"{label}: {value}")
+        print("=================")
 
         return summary
 

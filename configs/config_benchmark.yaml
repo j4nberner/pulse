@@ -3,8 +3,8 @@
 # General settings
 general:
   app_name: "Pulse"
-  app_version: "1.0.2"
-  app_mode: "debug" # "debug", "count_tokens", "benchmark"
+  app_version: "1.0.3"
+  app_mode: "benchmark" # "debug", "count_tokens", "benchmark"
   debug_data_length: 10 # Number of samples to use for debugging
   logging_level: "DEBUG" # "DEBUG", "INFO", "WARNING", "ERROR"
   use_scratch: true # Whether to use scratch space for temporary files
@@ -13,11 +13,11 @@ general:
 # Weight and Biases (wandb) logging configuration
 wandb:
   enabled: false
-  entity: "berner"
+  entity: ""
 
 ###### Application specific settings ######
-base_path: "" #"/cluster/project/bmds_lab/sepsis_sophia/pulse"
-original_base_path: "" #"cluster/project/bmds_lab/sepsis_jan/pulse"
+base_path: ""
+original_base_path: ""
 
 # Tasks to process
 tasks:
@@ -95,16 +95,14 @@ load_models:
   # - "configs/model_configs/Gemma312BModel.yaml"
 
   # - "configs/model_configs/Llama3.yaml"
-  # - "configs/model_configs/Llama4.yaml" # not tested...
 
   # - "configs/model_configs/DeepseekR1Llama8bModel.yaml"
   # - "configs/model_configs/DeepseekR1Qwen7bModel.yaml"
-  # - "configs/model_configs/DeepseekR1Qwen14bModel.yaml" # needs testing. min 80GB GPU
 
   # - "configs/model_configs/MistralModel.yaml"
 
-  # - "configs/model_configs/GPT4oModel.yaml" # use with caution
+  # - "configs/model_configs/GPT4oModel.yaml" #
   # - "configs/model_configs/OpenAIo3Model.yaml"
-  - "configs/model_configs/Gemini2p5flashModel.yaml" # use with caution
+  - "configs/model_configs/Gemini2p5flashModel.yaml" #
   # - "configs/model_configs/ClaudeSonnet4Model.yaml" #
-  # - "configs/model_configs/Grok4.yaml" # Grok4 model, requires XAI_API_KEY
+  # - "configs/model_configs/Grok4.yaml" #
