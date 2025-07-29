@@ -1,0 +1,5431 @@
+{
+  "results": [
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "aki",
+      "dataset": "eicu",
+      "run_id": "20250702_034243",
+      "prompting_id": "clinical_workflow_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.494,
+          "auprc": 0.315,
+          "normalized_auprc": 1.017,
+          "specificity": 0.074,
+          "f1_score": 0.457,
+          "accuracy": 0.332,
+          "balanced_accuracy": 0.491,
+          "precision": 0.306,
+          "recall": 0.908,
+          "mcc": 0.484,
+          "kappa": -0.012,
+          "minpse": 0.312,
+          "task_dataset_score": 35.141
+        },
+        "task_pulse_scores": {
+          "aki": [
+            35.141035765743915,
+            33.04569378551153,
+            35.270107431683954
+          ],
+          "mortality": [
+            47.381010030977336,
+            43.83371075466464,
+            50.70195208747618
+          ],
+          "sepsis": [
+            39.256542707213015,
+            39.60865023556155,
+            35.27282507740513
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            35.141035765743915,
+            47.381010030977336,
+            39.256542707213015
+          ],
+          "miiv": [
+            35.270107431683954,
+            50.70195208747618,
+            35.27282507740513
+          ],
+          "hirid": [
+            33.04569378551153,
+            43.83371075466464,
+            39.60865023556155
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 39.94572531958192,
+          "overall_aki": 34.485612327646464,
+          "overall_eicu": 40.592862834644755,
+          "overall_mortality": 47.30555762437272,
+          "overall_hirid": 38.82935159191257,
+          "overall_sepsis": 38.046006006726564,
+          "overall_miiv": 40.41496153218842
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "aki",
+      "dataset": "hirid",
+      "run_id": "20250702_034243",
+      "prompting_id": "clinical_workflow_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.514,
+          "auprc": 0.212,
+          "normalized_auprc": 1.308,
+          "specificity": 0.101,
+          "f1_score": 0.271,
+          "accuracy": 0.228,
+          "balanced_accuracy": 0.494,
+          "precision": 0.16,
+          "recall": 0.887,
+          "mcc": 0.493,
+          "kappa": -0.004,
+          "minpse": 0.171,
+          "task_dataset_score": 33.046
+        },
+        "task_pulse_scores": {
+          "aki": [
+            35.141035765743915,
+            33.04569378551153,
+            35.270107431683954
+          ],
+          "mortality": [
+            47.381010030977336,
+            43.83371075466464,
+            50.70195208747618
+          ],
+          "sepsis": [
+            39.256542707213015,
+            39.60865023556155,
+            35.27282507740513
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            35.141035765743915,
+            47.381010030977336,
+            39.256542707213015
+          ],
+          "miiv": [
+            35.270107431683954,
+            50.70195208747618,
+            35.27282507740513
+          ],
+          "hirid": [
+            33.04569378551153,
+            43.83371075466464,
+            39.60865023556155
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 39.94572531958192,
+          "overall_aki": 34.485612327646464,
+          "overall_eicu": 40.592862834644755,
+          "overall_mortality": 47.30555762437272,
+          "overall_hirid": 38.82935159191257,
+          "overall_sepsis": 38.046006006726564,
+          "overall_miiv": 40.41496153218842
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "aki",
+      "dataset": "miiv",
+      "run_id": "20250702_034243",
+      "prompting_id": "clinical_workflow_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.525,
+          "auprc": 0.264,
+          "normalized_auprc": 1.135,
+          "specificity": 0.09,
+          "f1_score": 0.373,
+          "accuracy": 0.283,
+          "balanced_accuracy": 0.504,
+          "precision": 0.234,
+          "recall": 0.917,
+          "mcc": 0.505,
+          "kappa": 0.004,
+          "minpse": 0.246,
+          "task_dataset_score": 35.27
+        },
+        "task_pulse_scores": {
+          "aki": [
+            35.141035765743915,
+            33.04569378551153,
+            35.270107431683954
+          ],
+          "mortality": [
+            47.381010030977336,
+            43.83371075466464,
+            50.70195208747618
+          ],
+          "sepsis": [
+            39.256542707213015,
+            39.60865023556155,
+            35.27282507740513
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            35.141035765743915,
+            47.381010030977336,
+            39.256542707213015
+          ],
+          "miiv": [
+            35.270107431683954,
+            50.70195208747618,
+            35.27282507740513
+          ],
+          "hirid": [
+            33.04569378551153,
+            43.83371075466464,
+            39.60865023556155
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 39.94572531958192,
+          "overall_aki": 34.485612327646464,
+          "overall_eicu": 40.592862834644755,
+          "overall_mortality": 47.30555762437272,
+          "overall_hirid": 38.82935159191257,
+          "overall_sepsis": 38.046006006726564,
+          "overall_miiv": 40.41496153218842
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "mortality",
+      "dataset": "eicu",
+      "run_id": "20250702_034243",
+      "prompting_id": "clinical_workflow_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.803,
+          "auprc": 0.168,
+          "normalized_auprc": 2.407,
+          "specificity": 0.065,
+          "f1_score": 0.139,
+          "accuracy": 0.13,
+          "balanced_accuracy": 0.532,
+          "precision": 0.074,
+          "recall": 1.0,
+          "mcc": 0.535,
+          "kappa": 0.01,
+          "minpse": 0.214,
+          "task_dataset_score": 47.381
+        },
+        "task_pulse_scores": {
+          "aki": [
+            35.141035765743915,
+            33.04569378551153,
+            35.270107431683954
+          ],
+          "mortality": [
+            47.381010030977336,
+            43.83371075466464,
+            50.70195208747618
+          ],
+          "sepsis": [
+            39.256542707213015,
+            39.60865023556155,
+            35.27282507740513
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            35.141035765743915,
+            47.381010030977336,
+            39.256542707213015
+          ],
+          "miiv": [
+            35.270107431683954,
+            50.70195208747618,
+            35.27282507740513
+          ],
+          "hirid": [
+            33.04569378551153,
+            43.83371075466464,
+            39.60865023556155
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 39.94572531958192,
+          "overall_aki": 34.485612327646464,
+          "overall_eicu": 40.592862834644755,
+          "overall_mortality": 47.30555762437272,
+          "overall_hirid": 38.82935159191257,
+          "overall_sepsis": 38.046006006726564,
+          "overall_miiv": 40.41496153218842
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "mortality",
+      "dataset": "hirid",
+      "run_id": "20250702_034243",
+      "prompting_id": "clinical_workflow_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.596,
+          "auprc": 0.235,
+          "normalized_auprc": 2.135,
+          "specificity": 0.0,
+          "f1_score": 0.198,
+          "accuracy": 0.11,
+          "balanced_accuracy": 0.5,
+          "precision": 0.11,
+          "recall": 1.0,
+          "mcc": 0.5,
+          "kappa": 0.0,
+          "minpse": 0.182,
+          "task_dataset_score": 43.834
+        },
+        "task_pulse_scores": {
+          "aki": [
+            35.141035765743915,
+            33.04569378551153,
+            35.270107431683954
+          ],
+          "mortality": [
+            47.381010030977336,
+            43.83371075466464,
+            50.70195208747618
+          ],
+          "sepsis": [
+            39.256542707213015,
+            39.60865023556155,
+            35.27282507740513
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            35.141035765743915,
+            47.381010030977336,
+            39.256542707213015
+          ],
+          "miiv": [
+            35.270107431683954,
+            50.70195208747618,
+            35.27282507740513
+          ],
+          "hirid": [
+            33.04569378551153,
+            43.83371075466464,
+            39.60865023556155
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 39.94572531958192,
+          "overall_aki": 34.485612327646464,
+          "overall_eicu": 40.592862834644755,
+          "overall_mortality": 47.30555762437272,
+          "overall_hirid": 38.82935159191257,
+          "overall_sepsis": 38.046006006726564,
+          "overall_miiv": 40.41496153218842
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "mortality",
+      "dataset": "miiv",
+      "run_id": "20250702_034243",
+      "prompting_id": "clinical_workflow_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.707,
+          "auprc": 0.388,
+          "normalized_auprc": 3.235,
+          "specificity": 0.023,
+          "f1_score": 0.202,
+          "accuracy": 0.13,
+          "balanced_accuracy": 0.47,
+          "precision": 0.113,
+          "recall": 0.917,
+          "mcc": 0.442,
+          "kappa": -0.015,
+          "minpse": 0.381,
+          "task_dataset_score": 50.702
+        },
+        "task_pulse_scores": {
+          "aki": [
+            35.141035765743915,
+            33.04569378551153,
+            35.270107431683954
+          ],
+          "mortality": [
+            47.381010030977336,
+            43.83371075466464,
+            50.70195208747618
+          ],
+          "sepsis": [
+            39.256542707213015,
+            39.60865023556155,
+            35.27282507740513
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            35.141035765743915,
+            47.381010030977336,
+            39.256542707213015
+          ],
+          "miiv": [
+            35.270107431683954,
+            50.70195208747618,
+            35.27282507740513
+          ],
+          "hirid": [
+            33.04569378551153,
+            43.83371075466464,
+            39.60865023556155
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 39.94572531958192,
+          "overall_aki": 34.485612327646464,
+          "overall_eicu": 40.592862834644755,
+          "overall_mortality": 47.30555762437272,
+          "overall_hirid": 38.82935159191257,
+          "overall_sepsis": 38.046006006726564,
+          "overall_miiv": 40.41496153218842
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "sepsis",
+      "dataset": "eicu",
+      "run_id": "20250702_034243",
+      "prompting_id": "clinical_workflow_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.578,
+          "auprc": 0.081,
+          "normalized_auprc": 1.687,
+          "specificity": 0.229,
+          "f1_score": 0.097,
+          "accuracy": 0.258,
+          "balanced_accuracy": 0.53,
+          "precision": 0.051,
+          "recall": 0.83,
+          "mcc": 0.515,
+          "kappa": 0.007,
+          "minpse": 0.073,
+          "task_dataset_score": 39.257
+        },
+        "task_pulse_scores": {
+          "aki": [
+            35.141035765743915,
+            33.04569378551153,
+            35.270107431683954
+          ],
+          "mortality": [
+            47.381010030977336,
+            43.83371075466464,
+            50.70195208747618
+          ],
+          "sepsis": [
+            39.256542707213015,
+            39.60865023556155,
+            35.27282507740513
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            35.141035765743915,
+            47.381010030977336,
+            39.256542707213015
+          ],
+          "miiv": [
+            35.270107431683954,
+            50.70195208747618,
+            35.27282507740513
+          ],
+          "hirid": [
+            33.04569378551153,
+            43.83371075466464,
+            39.60865023556155
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 39.94572531958192,
+          "overall_aki": 34.485612327646464,
+          "overall_eicu": 40.592862834644755,
+          "overall_mortality": 47.30555762437272,
+          "overall_hirid": 38.82935159191257,
+          "overall_sepsis": 38.046006006726564,
+          "overall_miiv": 40.41496153218842
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "sepsis",
+      "dataset": "hirid",
+      "run_id": "20250702_034243",
+      "prompting_id": "clinical_workflow_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.551,
+          "auprc": 0.103,
+          "normalized_auprc": 1.363,
+          "specificity": 0.161,
+          "f1_score": 0.152,
+          "accuracy": 0.219,
+          "balanced_accuracy": 0.546,
+          "precision": 0.083,
+          "recall": 0.932,
+          "mcc": 0.534,
+          "kappa": 0.016,
+          "minpse": 0.088,
+          "task_dataset_score": 39.609
+        },
+        "task_pulse_scores": {
+          "aki": [
+            35.141035765743915,
+            33.04569378551153,
+            35.270107431683954
+          ],
+          "mortality": [
+            47.381010030977336,
+            43.83371075466464,
+            50.70195208747618
+          ],
+          "sepsis": [
+            39.256542707213015,
+            39.60865023556155,
+            35.27282507740513
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            35.141035765743915,
+            47.381010030977336,
+            39.256542707213015
+          ],
+          "miiv": [
+            35.270107431683954,
+            50.70195208747618,
+            35.27282507740513
+          ],
+          "hirid": [
+            33.04569378551153,
+            43.83371075466464,
+            39.60865023556155
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 39.94572531958192,
+          "overall_aki": 34.485612327646464,
+          "overall_eicu": 40.592862834644755,
+          "overall_mortality": 47.30555762437272,
+          "overall_hirid": 38.82935159191257,
+          "overall_sepsis": 38.046006006726564,
+          "overall_miiv": 40.41496153218842
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "sepsis",
+      "dataset": "miiv",
+      "run_id": "20250702_034243",
+      "prompting_id": "clinical_workflow_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.522,
+          "auprc": 0.023,
+          "normalized_auprc": 0.903,
+          "specificity": 0.252,
+          "f1_score": 0.052,
+          "accuracy": 0.266,
+          "balanced_accuracy": 0.526,
+          "precision": 0.027,
+          "recall": 0.8,
+          "mcc": 0.509,
+          "kappa": 0.003,
+          "minpse": 0.03,
+          "task_dataset_score": 35.273
+        },
+        "task_pulse_scores": {
+          "aki": [
+            35.141035765743915,
+            33.04569378551153,
+            35.270107431683954
+          ],
+          "mortality": [
+            47.381010030977336,
+            43.83371075466464,
+            50.70195208747618
+          ],
+          "sepsis": [
+            39.256542707213015,
+            39.60865023556155,
+            35.27282507740513
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            35.141035765743915,
+            47.381010030977336,
+            39.256542707213015
+          ],
+          "miiv": [
+            35.270107431683954,
+            50.70195208747618,
+            35.27282507740513
+          ],
+          "hirid": [
+            33.04569378551153,
+            43.83371075466464,
+            39.60865023556155
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 39.94572531958192,
+          "overall_aki": 34.485612327646464,
+          "overall_eicu": 40.592862834644755,
+          "overall_mortality": 47.30555762437272,
+          "overall_hirid": 38.82935159191257,
+          "overall_sepsis": 38.046006006726564,
+          "overall_miiv": 40.41496153218842
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "aki",
+      "dataset": "eicu",
+      "run_id": "20250628_161008",
+      "prompting_id": "collaborative_reasoning_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.508,
+          "auprc": 0.315,
+          "normalized_auprc": 1.015,
+          "specificity": 0.097,
+          "f1_score": 0.473,
+          "accuracy": 0.356,
+          "balanced_accuracy": 0.514,
+          "precision": 0.317,
+          "recall": 0.931,
+          "mcc": 0.523,
+          "kappa": 0.018,
+          "minpse": 0.32,
+          "task_dataset_score": 41.549
+        },
+        "task_pulse_scores": {
+          "aki": [
+            41.548502724913185,
+            39.619765728370524,
+            43.221587660435944
+          ],
+          "mortality": [
+            46.243332007077015,
+            41.381615984192756,
+            54.1702981241055
+          ],
+          "sepsis": [
+            34.84687024645613,
+            42.92845020755496,
+            26.29770184780793
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            41.548502724913185,
+            46.243332007077015,
+            34.84687024645613
+          ],
+          "miiv": [
+            43.221587660435944,
+            54.1702981241055,
+            26.29770184780793
+          ],
+          "hirid": [
+            39.619765728370524,
+            41.381615984192756,
+            42.92845020755496
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 41.139791614546,
+          "overall_aki": 41.463285371239884,
+          "overall_eicu": 40.87956832614878,
+          "overall_mortality": 47.265082038458424,
+          "overall_hirid": 41.30994397337275,
+          "overall_sepsis": 34.69100743393967,
+          "overall_miiv": 41.22986254411646
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "aki",
+      "dataset": "hirid",
+      "run_id": "20250628_161008",
+      "prompting_id": "collaborative_reasoning_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.487,
+          "auprc": 0.206,
+          "normalized_auprc": 1.273,
+          "specificity": 0.013,
+          "f1_score": 0.278,
+          "accuracy": 0.171,
+          "balanced_accuracy": 0.5,
+          "precision": 0.162,
+          "recall": 0.987,
+          "mcc": 0.501,
+          "kappa": 0.0,
+          "minpse": 0.166,
+          "task_dataset_score": 39.62
+        },
+        "task_pulse_scores": {
+          "aki": [
+            41.548502724913185,
+            39.619765728370524,
+            43.221587660435944
+          ],
+          "mortality": [
+            46.243332007077015,
+            41.381615984192756,
+            54.1702981241055
+          ],
+          "sepsis": [
+            34.84687024645613,
+            42.92845020755496,
+            26.29770184780793
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            41.548502724913185,
+            46.243332007077015,
+            34.84687024645613
+          ],
+          "miiv": [
+            43.221587660435944,
+            54.1702981241055,
+            26.29770184780793
+          ],
+          "hirid": [
+            39.619765728370524,
+            41.381615984192756,
+            42.92845020755496
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 41.139791614546,
+          "overall_aki": 41.463285371239884,
+          "overall_eicu": 40.87956832614878,
+          "overall_mortality": 47.265082038458424,
+          "overall_hirid": 41.30994397337275,
+          "overall_sepsis": 34.69100743393967,
+          "overall_miiv": 41.22986254411646
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "aki",
+      "dataset": "miiv",
+      "run_id": "20250628_161008",
+      "prompting_id": "collaborative_reasoning_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.553,
+          "auprc": 0.295,
+          "normalized_auprc": 1.268,
+          "specificity": 0.058,
+          "f1_score": 0.379,
+          "accuracy": 0.268,
+          "balanced_accuracy": 0.509,
+          "precision": 0.236,
+          "recall": 0.961,
+          "mcc": 0.518,
+          "kappa": 0.009,
+          "minpse": 0.288,
+          "task_dataset_score": 43.222
+        },
+        "task_pulse_scores": {
+          "aki": [
+            41.548502724913185,
+            39.619765728370524,
+            43.221587660435944
+          ],
+          "mortality": [
+            46.243332007077015,
+            41.381615984192756,
+            54.1702981241055
+          ],
+          "sepsis": [
+            34.84687024645613,
+            42.92845020755496,
+            26.29770184780793
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            41.548502724913185,
+            46.243332007077015,
+            34.84687024645613
+          ],
+          "miiv": [
+            43.221587660435944,
+            54.1702981241055,
+            26.29770184780793
+          ],
+          "hirid": [
+            39.619765728370524,
+            41.381615984192756,
+            42.92845020755496
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 41.139791614546,
+          "overall_aki": 41.463285371239884,
+          "overall_eicu": 40.87956832614878,
+          "overall_mortality": 47.265082038458424,
+          "overall_hirid": 41.30994397337275,
+          "overall_sepsis": 34.69100743393967,
+          "overall_miiv": 41.22986254411646
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "mortality",
+      "dataset": "eicu",
+      "run_id": "20250628_161008",
+      "prompting_id": "collaborative_reasoning_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.674,
+          "auprc": 0.217,
+          "normalized_auprc": 3.096,
+          "specificity": 0.0,
+          "f1_score": 0.131,
+          "accuracy": 0.07,
+          "balanced_accuracy": 0.5,
+          "precision": 0.07,
+          "recall": 1.0,
+          "mcc": 0.5,
+          "kappa": 0.0,
+          "minpse": 0.25,
+          "task_dataset_score": 46.243
+        },
+        "task_pulse_scores": {
+          "aki": [
+            41.548502724913185,
+            39.619765728370524,
+            43.221587660435944
+          ],
+          "mortality": [
+            46.243332007077015,
+            41.381615984192756,
+            54.1702981241055
+          ],
+          "sepsis": [
+            34.84687024645613,
+            42.92845020755496,
+            26.29770184780793
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            41.548502724913185,
+            46.243332007077015,
+            34.84687024645613
+          ],
+          "miiv": [
+            43.221587660435944,
+            54.1702981241055,
+            26.29770184780793
+          ],
+          "hirid": [
+            39.619765728370524,
+            41.381615984192756,
+            42.92845020755496
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 41.139791614546,
+          "overall_aki": 41.463285371239884,
+          "overall_eicu": 40.87956832614878,
+          "overall_mortality": 47.265082038458424,
+          "overall_hirid": 41.30994397337275,
+          "overall_sepsis": 34.69100743393967,
+          "overall_miiv": 41.22986254411646
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "mortality",
+      "dataset": "hirid",
+      "run_id": "20250628_161008",
+      "prompting_id": "collaborative_reasoning_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.558,
+          "auprc": 0.181,
+          "normalized_auprc": 1.642,
+          "specificity": 0.0,
+          "f1_score": 0.198,
+          "accuracy": 0.11,
+          "balanced_accuracy": 0.5,
+          "precision": 0.11,
+          "recall": 1.0,
+          "mcc": 0.5,
+          "kappa": 0.0,
+          "minpse": 0.143,
+          "task_dataset_score": 41.382
+        },
+        "task_pulse_scores": {
+          "aki": [
+            41.548502724913185,
+            39.619765728370524,
+            43.221587660435944
+          ],
+          "mortality": [
+            46.243332007077015,
+            41.381615984192756,
+            54.1702981241055
+          ],
+          "sepsis": [
+            34.84687024645613,
+            42.92845020755496,
+            26.29770184780793
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            41.548502724913185,
+            46.243332007077015,
+            34.84687024645613
+          ],
+          "miiv": [
+            43.221587660435944,
+            54.1702981241055,
+            26.29770184780793
+          ],
+          "hirid": [
+            39.619765728370524,
+            41.381615984192756,
+            42.92845020755496
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 41.139791614546,
+          "overall_aki": 41.463285371239884,
+          "overall_eicu": 40.87956832614878,
+          "overall_mortality": 47.265082038458424,
+          "overall_hirid": 41.30994397337275,
+          "overall_sepsis": 34.69100743393967,
+          "overall_miiv": 41.22986254411646
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "mortality",
+      "dataset": "miiv",
+      "run_id": "20250628_161008",
+      "prompting_id": "collaborative_reasoning_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.756,
+          "auprc": 0.371,
+          "normalized_auprc": 3.089,
+          "specificity": 0.0,
+          "f1_score": 0.214,
+          "accuracy": 0.12,
+          "balanced_accuracy": 0.5,
+          "precision": 0.12,
+          "recall": 1.0,
+          "mcc": 0.5,
+          "kappa": 0.0,
+          "minpse": 0.375,
+          "task_dataset_score": 54.17
+        },
+        "task_pulse_scores": {
+          "aki": [
+            41.548502724913185,
+            39.619765728370524,
+            43.221587660435944
+          ],
+          "mortality": [
+            46.243332007077015,
+            41.381615984192756,
+            54.1702981241055
+          ],
+          "sepsis": [
+            34.84687024645613,
+            42.92845020755496,
+            26.29770184780793
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            41.548502724913185,
+            46.243332007077015,
+            34.84687024645613
+          ],
+          "miiv": [
+            43.221587660435944,
+            54.1702981241055,
+            26.29770184780793
+          ],
+          "hirid": [
+            39.619765728370524,
+            41.381615984192756,
+            42.92845020755496
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 41.139791614546,
+          "overall_aki": 41.463285371239884,
+          "overall_eicu": 40.87956832614878,
+          "overall_mortality": 47.265082038458424,
+          "overall_hirid": 41.30994397337275,
+          "overall_sepsis": 34.69100743393967,
+          "overall_miiv": 41.22986254411646
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "sepsis",
+      "dataset": "eicu",
+      "run_id": "20250628_161008",
+      "prompting_id": "collaborative_reasoning_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.534,
+          "auprc": 0.049,
+          "normalized_auprc": 1.02,
+          "specificity": 0.107,
+          "f1_score": 0.095,
+          "accuracy": 0.147,
+          "balanced_accuracy": 0.522,
+          "precision": 0.05,
+          "recall": 0.936,
+          "mcc": 0.515,
+          "kappa": 0.005,
+          "minpse": 0.064,
+          "task_dataset_score": 34.847
+        },
+        "task_pulse_scores": {
+          "aki": [
+            41.548502724913185,
+            39.619765728370524,
+            43.221587660435944
+          ],
+          "mortality": [
+            46.243332007077015,
+            41.381615984192756,
+            54.1702981241055
+          ],
+          "sepsis": [
+            34.84687024645613,
+            42.92845020755496,
+            26.29770184780793
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            41.548502724913185,
+            46.243332007077015,
+            34.84687024645613
+          ],
+          "miiv": [
+            43.221587660435944,
+            54.1702981241055,
+            26.29770184780793
+          ],
+          "hirid": [
+            39.619765728370524,
+            41.381615984192756,
+            42.92845020755496
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 41.139791614546,
+          "overall_aki": 41.463285371239884,
+          "overall_eicu": 40.87956832614878,
+          "overall_mortality": 47.265082038458424,
+          "overall_hirid": 41.30994397337275,
+          "overall_sepsis": 34.69100743393967,
+          "overall_miiv": 41.22986254411646
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "sepsis",
+      "dataset": "hirid",
+      "run_id": "20250628_161008",
+      "prompting_id": "collaborative_reasoning_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.662,
+          "auprc": 0.132,
+          "normalized_auprc": 1.755,
+          "specificity": 0.023,
+          "f1_score": 0.141,
+          "accuracy": 0.096,
+          "balanced_accuracy": 0.505,
+          "precision": 0.076,
+          "recall": 0.986,
+          "mcc": 0.509,
+          "kappa": 0.001,
+          "minpse": 0.185,
+          "task_dataset_score": 42.928
+        },
+        "task_pulse_scores": {
+          "aki": [
+            41.548502724913185,
+            39.619765728370524,
+            43.221587660435944
+          ],
+          "mortality": [
+            46.243332007077015,
+            41.381615984192756,
+            54.1702981241055
+          ],
+          "sepsis": [
+            34.84687024645613,
+            42.92845020755496,
+            26.29770184780793
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            41.548502724913185,
+            46.243332007077015,
+            34.84687024645613
+          ],
+          "miiv": [
+            43.221587660435944,
+            54.1702981241055,
+            26.29770184780793
+          ],
+          "hirid": [
+            39.619765728370524,
+            41.381615984192756,
+            42.92845020755496
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 41.139791614546,
+          "overall_aki": 41.463285371239884,
+          "overall_eicu": 40.87956832614878,
+          "overall_mortality": 47.265082038458424,
+          "overall_hirid": 41.30994397337275,
+          "overall_sepsis": 34.69100743393967,
+          "overall_miiv": 41.22986254411646
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "sepsis",
+      "dataset": "miiv",
+      "run_id": "20250628_161008",
+      "prompting_id": "collaborative_reasoning_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.341,
+          "auprc": 0.02,
+          "normalized_auprc": 0.802,
+          "specificity": 0.041,
+          "f1_score": 0.043,
+          "accuracy": 0.062,
+          "balanced_accuracy": 0.441,
+          "precision": 0.022,
+          "recall": 0.84,
+          "mcc": 0.455,
+          "kappa": -0.006,
+          "minpse": 0.04,
+          "task_dataset_score": 26.298
+        },
+        "task_pulse_scores": {
+          "aki": [
+            41.548502724913185,
+            39.619765728370524,
+            43.221587660435944
+          ],
+          "mortality": [
+            46.243332007077015,
+            41.381615984192756,
+            54.1702981241055
+          ],
+          "sepsis": [
+            34.84687024645613,
+            42.92845020755496,
+            26.29770184780793
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            41.548502724913185,
+            46.243332007077015,
+            34.84687024645613
+          ],
+          "miiv": [
+            43.221587660435944,
+            54.1702981241055,
+            26.29770184780793
+          ],
+          "hirid": [
+            39.619765728370524,
+            41.381615984192756,
+            42.92845020755496
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 41.139791614546,
+          "overall_aki": 41.463285371239884,
+          "overall_eicu": 40.87956832614878,
+          "overall_mortality": 47.265082038458424,
+          "overall_hirid": 41.30994397337275,
+          "overall_sepsis": 34.69100743393967,
+          "overall_miiv": 41.22986254411646
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "aki",
+      "dataset": "eicu",
+      "run_id": "20250704_012550",
+      "prompting_id": "hybrid_reasoning_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.505,
+          "auprc": 0.284,
+          "normalized_auprc": 0.915,
+          "specificity": 0.38,
+          "f1_score": 0.444,
+          "accuracy": 0.473,
+          "balanced_accuracy": 0.529,
+          "precision": 0.33,
+          "recall": 0.679,
+          "mcc": 0.528,
+          "kappa": 0.045,
+          "minpse": 0.356,
+          "task_dataset_score": 39.285
+        },
+        "task_pulse_scores": {
+          "aki": [
+            39.28511471908139,
+            31.629110386329234,
+            37.194374397104724
+          ],
+          "mortality": [
+            18.51346153148158,
+            27.335707910876806,
+            23.038964481715013
+          ],
+          "sepsis": [
+            26.13325610355577,
+            28.317843181662877,
+            30.571323295488046
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            39.28511471908139,
+            18.51346153148158,
+            26.13325610355577
+          ],
+          "miiv": [
+            37.194374397104724,
+            23.038964481715013,
+            30.571323295488046
+          ],
+          "hirid": [
+            31.629110386329234,
+            27.335707910876806,
+            28.317843181662877
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 29.113239556366164,
+          "overall_aki": 36.03619983417178,
+          "overall_eicu": 27.977277451372913,
+          "overall_mortality": 22.962711308024467,
+          "overall_hirid": 29.094220492956307,
+          "overall_sepsis": 28.34080752690223,
+          "overall_miiv": 30.26822072476926
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "aki",
+      "dataset": "hirid",
+      "run_id": "20250704_012550",
+      "prompting_id": "hybrid_reasoning_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.47,
+          "auprc": 0.138,
+          "normalized_auprc": 0.851,
+          "specificity": 0.425,
+          "f1_score": 0.271,
+          "accuracy": 0.457,
+          "balanced_accuracy": 0.524,
+          "precision": 0.173,
+          "recall": 0.623,
+          "mcc": 0.518,
+          "kappa": 0.023,
+          "minpse": 0.202,
+          "task_dataset_score": 31.629
+        },
+        "task_pulse_scores": {
+          "aki": [
+            39.28511471908139,
+            31.629110386329234,
+            37.194374397104724
+          ],
+          "mortality": [
+            18.51346153148158,
+            27.335707910876806,
+            23.038964481715013
+          ],
+          "sepsis": [
+            26.13325610355577,
+            28.317843181662877,
+            30.571323295488046
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            39.28511471908139,
+            18.51346153148158,
+            26.13325610355577
+          ],
+          "miiv": [
+            37.194374397104724,
+            23.038964481715013,
+            30.571323295488046
+          ],
+          "hirid": [
+            31.629110386329234,
+            27.335707910876806,
+            28.317843181662877
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 29.113239556366164,
+          "overall_aki": 36.03619983417178,
+          "overall_eicu": 27.977277451372913,
+          "overall_mortality": 22.962711308024467,
+          "overall_hirid": 29.094220492956307,
+          "overall_sepsis": 28.34080752690223,
+          "overall_miiv": 30.26822072476926
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "aki",
+      "dataset": "miiv",
+      "run_id": "20250704_012550",
+      "prompting_id": "hybrid_reasoning_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.509,
+          "auprc": 0.214,
+          "normalized_auprc": 0.922,
+          "specificity": 0.371,
+          "f1_score": 0.374,
+          "accuracy": 0.449,
+          "balanced_accuracy": 0.539,
+          "precision": 0.254,
+          "recall": 0.707,
+          "mcc": 0.535,
+          "kappa": 0.048,
+          "minpse": 0.261,
+          "task_dataset_score": 37.194
+        },
+        "task_pulse_scores": {
+          "aki": [
+            39.28511471908139,
+            31.629110386329234,
+            37.194374397104724
+          ],
+          "mortality": [
+            18.51346153148158,
+            27.335707910876806,
+            23.038964481715013
+          ],
+          "sepsis": [
+            26.13325610355577,
+            28.317843181662877,
+            30.571323295488046
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            39.28511471908139,
+            18.51346153148158,
+            26.13325610355577
+          ],
+          "miiv": [
+            37.194374397104724,
+            23.038964481715013,
+            30.571323295488046
+          ],
+          "hirid": [
+            31.629110386329234,
+            27.335707910876806,
+            28.317843181662877
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 29.113239556366164,
+          "overall_aki": 36.03619983417178,
+          "overall_eicu": 27.977277451372913,
+          "overall_mortality": 22.962711308024467,
+          "overall_hirid": 29.094220492956307,
+          "overall_sepsis": 28.34080752690223,
+          "overall_miiv": 30.26822072476926
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "mortality",
+      "dataset": "eicu",
+      "run_id": "20250704_012550",
+      "prompting_id": "hybrid_reasoning_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.253,
+          "auprc": 0.044,
+          "normalized_auprc": 0.636,
+          "specificity": 0.204,
+          "f1_score": 0.116,
+          "accuracy": 0.24,
+          "balanced_accuracy": 0.459,
+          "precision": 0.063,
+          "recall": 0.714,
+          "mcc": 0.475,
+          "kappa": -0.014,
+          "minpse": 0.073,
+          "task_dataset_score": 18.513
+        },
+        "task_pulse_scores": {
+          "aki": [
+            39.28511471908139,
+            31.629110386329234,
+            37.194374397104724
+          ],
+          "mortality": [
+            18.51346153148158,
+            27.335707910876806,
+            23.038964481715013
+          ],
+          "sepsis": [
+            26.13325610355577,
+            28.317843181662877,
+            30.571323295488046
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            39.28511471908139,
+            18.51346153148158,
+            26.13325610355577
+          ],
+          "miiv": [
+            37.194374397104724,
+            23.038964481715013,
+            30.571323295488046
+          ],
+          "hirid": [
+            31.629110386329234,
+            27.335707910876806,
+            28.317843181662877
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 29.113239556366164,
+          "overall_aki": 36.03619983417178,
+          "overall_eicu": 27.977277451372913,
+          "overall_mortality": 22.962711308024467,
+          "overall_hirid": 29.094220492956307,
+          "overall_sepsis": 28.34080752690223,
+          "overall_miiv": 30.26822072476926
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "mortality",
+      "dataset": "hirid",
+      "run_id": "20250704_012550",
+      "prompting_id": "hybrid_reasoning_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.442,
+          "auprc": 0.09,
+          "normalized_auprc": 0.814,
+          "specificity": 0.18,
+          "f1_score": 0.213,
+          "accuracy": 0.26,
+          "balanced_accuracy": 0.544,
+          "precision": 0.12,
+          "recall": 0.909,
+          "mcc": 0.537,
+          "kappa": 0.023,
+          "minpse": 0.126,
+          "task_dataset_score": 27.336
+        },
+        "task_pulse_scores": {
+          "aki": [
+            39.28511471908139,
+            31.629110386329234,
+            37.194374397104724
+          ],
+          "mortality": [
+            18.51346153148158,
+            27.335707910876806,
+            23.038964481715013
+          ],
+          "sepsis": [
+            26.13325610355577,
+            28.317843181662877,
+            30.571323295488046
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            39.28511471908139,
+            18.51346153148158,
+            26.13325610355577
+          ],
+          "miiv": [
+            37.194374397104724,
+            23.038964481715013,
+            30.571323295488046
+          ],
+          "hirid": [
+            31.629110386329234,
+            27.335707910876806,
+            28.317843181662877
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 29.113239556366164,
+          "overall_aki": 36.03619983417178,
+          "overall_eicu": 27.977277451372913,
+          "overall_mortality": 22.962711308024467,
+          "overall_hirid": 29.094220492956307,
+          "overall_sepsis": 28.34080752690223,
+          "overall_miiv": 30.26822072476926
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "mortality",
+      "dataset": "miiv",
+      "run_id": "20250704_012550",
+      "prompting_id": "hybrid_reasoning_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.331,
+          "auprc": 0.083,
+          "normalized_auprc": 0.694,
+          "specificity": 0.17,
+          "f1_score": 0.211,
+          "accuracy": 0.25,
+          "balanced_accuracy": 0.502,
+          "precision": 0.12,
+          "recall": 0.833,
+          "mcc": 0.502,
+          "kappa": 0.001,
+          "minpse": 0.131,
+          "task_dataset_score": 23.039
+        },
+        "task_pulse_scores": {
+          "aki": [
+            39.28511471908139,
+            31.629110386329234,
+            37.194374397104724
+          ],
+          "mortality": [
+            18.51346153148158,
+            27.335707910876806,
+            23.038964481715013
+          ],
+          "sepsis": [
+            26.13325610355577,
+            28.317843181662877,
+            30.571323295488046
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            39.28511471908139,
+            18.51346153148158,
+            26.13325610355577
+          ],
+          "miiv": [
+            37.194374397104724,
+            23.038964481715013,
+            30.571323295488046
+          ],
+          "hirid": [
+            31.629110386329234,
+            27.335707910876806,
+            28.317843181662877
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 29.113239556366164,
+          "overall_aki": 36.03619983417178,
+          "overall_eicu": 27.977277451372913,
+          "overall_mortality": 22.962711308024467,
+          "overall_hirid": 29.094220492956307,
+          "overall_sepsis": 28.34080752690223,
+          "overall_miiv": 30.26822072476926
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "sepsis",
+      "dataset": "eicu",
+      "run_id": "20250704_012550",
+      "prompting_id": "hybrid_reasoning_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.47,
+          "auprc": 0.037,
+          "normalized_auprc": 0.832,
+          "specificity": 0.523,
+          "f1_score": 0.07,
+          "accuracy": 0.517,
+          "balanced_accuracy": 0.464,
+          "precision": 0.038,
+          "recall": 0.405,
+          "mcc": 0.485,
+          "kappa": -0.013,
+          "minpse": 0.049,
+          "task_dataset_score": 26.133
+        },
+        "task_pulse_scores": {
+          "aki": [
+            39.28511471908139,
+            31.629110386329234,
+            37.194374397104724
+          ],
+          "mortality": [
+            18.51346153148158,
+            27.335707910876806,
+            23.038964481715013
+          ],
+          "sepsis": [
+            26.13325610355577,
+            28.317843181662877,
+            30.571323295488046
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            39.28511471908139,
+            18.51346153148158,
+            26.13325610355577
+          ],
+          "miiv": [
+            37.194374397104724,
+            23.038964481715013,
+            30.571323295488046
+          ],
+          "hirid": [
+            31.629110386329234,
+            27.335707910876806,
+            28.317843181662877
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 29.113239556366164,
+          "overall_aki": 36.03619983417178,
+          "overall_eicu": 27.977277451372913,
+          "overall_mortality": 22.962711308024467,
+          "overall_hirid": 29.094220492956307,
+          "overall_sepsis": 28.34080752690223,
+          "overall_miiv": 30.26822072476926
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "sepsis",
+      "dataset": "hirid",
+      "run_id": "20250704_012550",
+      "prompting_id": "hybrid_reasoning_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.474,
+          "auprc": 0.065,
+          "normalized_auprc": 0.863,
+          "specificity": 0.435,
+          "f1_score": 0.15,
+          "accuracy": 0.451,
+          "balanced_accuracy": 0.54,
+          "precision": 0.085,
+          "recall": 0.644,
+          "mcc": 0.521,
+          "kappa": 0.02,
+          "minpse": 0.095,
+          "task_dataset_score": 28.318
+        },
+        "task_pulse_scores": {
+          "aki": [
+            39.28511471908139,
+            31.629110386329234,
+            37.194374397104724
+          ],
+          "mortality": [
+            18.51346153148158,
+            27.335707910876806,
+            23.038964481715013
+          ],
+          "sepsis": [
+            26.13325610355577,
+            28.317843181662877,
+            30.571323295488046
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            39.28511471908139,
+            18.51346153148158,
+            26.13325610355577
+          ],
+          "miiv": [
+            37.194374397104724,
+            23.038964481715013,
+            30.571323295488046
+          ],
+          "hirid": [
+            31.629110386329234,
+            27.335707910876806,
+            28.317843181662877
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 29.113239556366164,
+          "overall_aki": 36.03619983417178,
+          "overall_eicu": 27.977277451372913,
+          "overall_mortality": 22.962711308024467,
+          "overall_hirid": 29.094220492956307,
+          "overall_sepsis": 28.34080752690223,
+          "overall_miiv": 30.26822072476926
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "sepsis",
+      "dataset": "miiv",
+      "run_id": "20250704_012550",
+      "prompting_id": "hybrid_reasoning_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.565,
+          "auprc": 0.025,
+          "normalized_auprc": 0.987,
+          "specificity": 0.62,
+          "f1_score": 0.05,
+          "accuracy": 0.614,
+          "balanced_accuracy": 0.51,
+          "precision": 0.027,
+          "recall": 0.4,
+          "mcc": 0.503,
+          "kappa": 0.003,
+          "minpse": 0.032,
+          "task_dataset_score": 30.571
+        },
+        "task_pulse_scores": {
+          "aki": [
+            39.28511471908139,
+            31.629110386329234,
+            37.194374397104724
+          ],
+          "mortality": [
+            18.51346153148158,
+            27.335707910876806,
+            23.038964481715013
+          ],
+          "sepsis": [
+            26.13325610355577,
+            28.317843181662877,
+            30.571323295488046
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            39.28511471908139,
+            18.51346153148158,
+            26.13325610355577
+          ],
+          "miiv": [
+            37.194374397104724,
+            23.038964481715013,
+            30.571323295488046
+          ],
+          "hirid": [
+            31.629110386329234,
+            27.335707910876806,
+            28.317843181662877
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 29.113239556366164,
+          "overall_aki": 36.03619983417178,
+          "overall_eicu": 27.977277451372913,
+          "overall_mortality": 22.962711308024467,
+          "overall_hirid": 29.094220492956307,
+          "overall_sepsis": 28.34080752690223,
+          "overall_miiv": 30.26822072476926
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "aki",
+      "dataset": "eicu",
+      "run_id": "20250625_032111",
+      "prompting_id": "liu_2023_few_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.454,
+          "auprc": 0.466,
+          "normalized_auprc": 1.502,
+          "specificity": 0.0,
+          "f1_score": 0.473,
+          "accuracy": 0.31,
+          "balanced_accuracy": 0.5,
+          "precision": 0.31,
+          "recall": 1.0,
+          "mcc": 0.5,
+          "kappa": 0.0,
+          "minpse": 0.31,
+          "task_dataset_score": 28.492
+        },
+        "task_pulse_scores": {
+          "aki": [
+            28.492256842836255,
+            21.82894629157651,
+            26.355355721091193
+          ],
+          "mortality": [
+            21.612983640552994,
+            21.520259412304867,
+            25.676120559210524
+          ],
+          "sepsis": [
+            32.94878714636985,
+            33.125609499081456,
+            32.2495327697582
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            28.492256842836255,
+            21.612983640552994,
+            32.94878714636985
+          ],
+          "miiv": [
+            26.355355721091193,
+            25.676120559210524,
+            32.2495327697582
+          ],
+          "hirid": [
+            21.82894629157651,
+            21.520259412304867,
+            33.125609499081456
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 27.089983542531318,
+          "overall_aki": 25.558852951834655,
+          "overall_eicu": 27.68467587658637,
+          "overall_mortality": 22.936454537356127,
+          "overall_hirid": 25.49160506765428,
+          "overall_sepsis": 32.77464313840317,
+          "overall_miiv": 28.0936696833533
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "aki",
+      "dataset": "hirid",
+      "run_id": "20250625_032111",
+      "prompting_id": "liu_2023_few_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.443,
+          "auprc": 0.147,
+          "normalized_auprc": 0.905,
+          "specificity": 0.03,
+          "f1_score": 0.28,
+          "accuracy": 0.184,
+          "balanced_accuracy": 0.506,
+          "precision": 0.164,
+          "recall": 0.981,
+          "mcc": 0.513,
+          "kappa": 0.004,
+          "minpse": 0.164,
+          "task_dataset_score": 21.829
+        },
+        "task_pulse_scores": {
+          "aki": [
+            28.492256842836255,
+            21.82894629157651,
+            26.355355721091193
+          ],
+          "mortality": [
+            21.612983640552994,
+            21.520259412304867,
+            25.676120559210524
+          ],
+          "sepsis": [
+            32.94878714636985,
+            33.125609499081456,
+            32.2495327697582
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            28.492256842836255,
+            21.612983640552994,
+            32.94878714636985
+          ],
+          "miiv": [
+            26.355355721091193,
+            25.676120559210524,
+            32.2495327697582
+          ],
+          "hirid": [
+            21.82894629157651,
+            21.520259412304867,
+            33.125609499081456
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 27.089983542531318,
+          "overall_aki": 25.558852951834655,
+          "overall_eicu": 27.68467587658637,
+          "overall_mortality": 22.936454537356127,
+          "overall_hirid": 25.49160506765428,
+          "overall_sepsis": 32.77464313840317,
+          "overall_miiv": 28.0936696833533
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "aki",
+      "dataset": "miiv",
+      "run_id": "20250625_032111",
+      "prompting_id": "liu_2023_few_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.495,
+          "auprc": 0.439,
+          "normalized_auprc": 1.888,
+          "specificity": 0.007,
+          "f1_score": 0.379,
+          "accuracy": 0.238,
+          "balanced_accuracy": 0.503,
+          "precision": 0.234,
+          "recall": 1.0,
+          "mcc": 0.52,
+          "kappa": 0.003,
+          "minpse": 0.241,
+          "task_dataset_score": 26.355
+        },
+        "task_pulse_scores": {
+          "aki": [
+            28.492256842836255,
+            21.82894629157651,
+            26.355355721091193
+          ],
+          "mortality": [
+            21.612983640552994,
+            21.520259412304867,
+            25.676120559210524
+          ],
+          "sepsis": [
+            32.94878714636985,
+            33.125609499081456,
+            32.2495327697582
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            28.492256842836255,
+            21.612983640552994,
+            32.94878714636985
+          ],
+          "miiv": [
+            26.355355721091193,
+            25.676120559210524,
+            32.2495327697582
+          ],
+          "hirid": [
+            21.82894629157651,
+            21.520259412304867,
+            33.125609499081456
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 27.089983542531318,
+          "overall_aki": 25.558852951834655,
+          "overall_eicu": 27.68467587658637,
+          "overall_mortality": 22.936454537356127,
+          "overall_hirid": 25.49160506765428,
+          "overall_sepsis": 32.77464313840317,
+          "overall_miiv": 28.0936696833533
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "mortality",
+      "dataset": "eicu",
+      "run_id": "20250625_032111",
+      "prompting_id": "liu_2023_few_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.56,
+          "auprc": 0.197,
+          "normalized_auprc": 2.81,
+          "specificity": 0.0,
+          "f1_score": 0.131,
+          "accuracy": 0.07,
+          "balanced_accuracy": 0.5,
+          "precision": 0.07,
+          "recall": 1.0,
+          "mcc": 0.5,
+          "kappa": 0.0,
+          "minpse": 0.143,
+          "task_dataset_score": 21.613
+        },
+        "task_pulse_scores": {
+          "aki": [
+            28.492256842836255,
+            21.82894629157651,
+            26.355355721091193
+          ],
+          "mortality": [
+            21.612983640552994,
+            21.520259412304867,
+            25.676120559210524
+          ],
+          "sepsis": [
+            32.94878714636985,
+            33.125609499081456,
+            32.2495327697582
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            28.492256842836255,
+            21.612983640552994,
+            32.94878714636985
+          ],
+          "miiv": [
+            26.355355721091193,
+            25.676120559210524,
+            32.2495327697582
+          ],
+          "hirid": [
+            21.82894629157651,
+            21.520259412304867,
+            33.125609499081456
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 27.089983542531318,
+          "overall_aki": 25.558852951834655,
+          "overall_eicu": 27.68467587658637,
+          "overall_mortality": 22.936454537356127,
+          "overall_hirid": 25.49160506765428,
+          "overall_sepsis": 32.77464313840317,
+          "overall_miiv": 28.0936696833533
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "mortality",
+      "dataset": "hirid",
+      "run_id": "20250625_032111",
+      "prompting_id": "liu_2023_few_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.534,
+          "auprc": 0.217,
+          "normalized_auprc": 1.955,
+          "specificity": 0.0,
+          "f1_score": 0.2,
+          "accuracy": 0.111,
+          "balanced_accuracy": 0.5,
+          "precision": 0.111,
+          "recall": 1.0,
+          "mcc": 0.5,
+          "kappa": 0.0,
+          "minpse": 0.111,
+          "task_dataset_score": 21.52
+        },
+        "task_pulse_scores": {
+          "aki": [
+            28.492256842836255,
+            21.82894629157651,
+            26.355355721091193
+          ],
+          "mortality": [
+            21.612983640552994,
+            21.520259412304867,
+            25.676120559210524
+          ],
+          "sepsis": [
+            32.94878714636985,
+            33.125609499081456,
+            32.2495327697582
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            28.492256842836255,
+            21.612983640552994,
+            32.94878714636985
+          ],
+          "miiv": [
+            26.355355721091193,
+            25.676120559210524,
+            32.2495327697582
+          ],
+          "hirid": [
+            21.82894629157651,
+            21.520259412304867,
+            33.125609499081456
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 27.089983542531318,
+          "overall_aki": 25.558852951834655,
+          "overall_eicu": 27.68467587658637,
+          "overall_mortality": 22.936454537356127,
+          "overall_hirid": 25.49160506765428,
+          "overall_sepsis": 32.77464313840317,
+          "overall_miiv": 28.0936696833533
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "mortality",
+      "dataset": "miiv",
+      "run_id": "20250625_032111",
+      "prompting_id": "liu_2023_few_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.506,
+          "auprc": 0.204,
+          "normalized_auprc": 1.7,
+          "specificity": 0.0,
+          "f1_score": 0.214,
+          "accuracy": 0.12,
+          "balanced_accuracy": 0.5,
+          "precision": 0.12,
+          "recall": 1.0,
+          "mcc": 0.5,
+          "kappa": 0.0,
+          "minpse": 0.158,
+          "task_dataset_score": 25.676
+        },
+        "task_pulse_scores": {
+          "aki": [
+            28.492256842836255,
+            21.82894629157651,
+            26.355355721091193
+          ],
+          "mortality": [
+            21.612983640552994,
+            21.520259412304867,
+            25.676120559210524
+          ],
+          "sepsis": [
+            32.94878714636985,
+            33.125609499081456,
+            32.2495327697582
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            28.492256842836255,
+            21.612983640552994,
+            32.94878714636985
+          ],
+          "miiv": [
+            26.355355721091193,
+            25.676120559210524,
+            32.2495327697582
+          ],
+          "hirid": [
+            21.82894629157651,
+            21.520259412304867,
+            33.125609499081456
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 27.089983542531318,
+          "overall_aki": 25.558852951834655,
+          "overall_eicu": 27.68467587658637,
+          "overall_mortality": 22.936454537356127,
+          "overall_hirid": 25.49160506765428,
+          "overall_sepsis": 32.77464313840317,
+          "overall_miiv": 28.0936696833533
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "sepsis",
+      "dataset": "eicu",
+      "run_id": "20250625_032111",
+      "prompting_id": "liu_2023_few_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.493,
+          "auprc": 0.14,
+          "normalized_auprc": 2.918,
+          "specificity": 0.695,
+          "f1_score": 0.081,
+          "accuracy": 0.676,
+          "balanced_accuracy": 0.496,
+          "precision": 0.047,
+          "recall": 0.298,
+          "mcc": 0.498,
+          "kappa": -0.002,
+          "minpse": 0.073,
+          "task_dataset_score": 32.949
+        },
+        "task_pulse_scores": {
+          "aki": [
+            28.492256842836255,
+            21.82894629157651,
+            26.355355721091193
+          ],
+          "mortality": [
+            21.612983640552994,
+            21.520259412304867,
+            25.676120559210524
+          ],
+          "sepsis": [
+            32.94878714636985,
+            33.125609499081456,
+            32.2495327697582
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            28.492256842836255,
+            21.612983640552994,
+            32.94878714636985
+          ],
+          "miiv": [
+            26.355355721091193,
+            25.676120559210524,
+            32.2495327697582
+          ],
+          "hirid": [
+            21.82894629157651,
+            21.520259412304867,
+            33.125609499081456
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 27.089983542531318,
+          "overall_aki": 25.558852951834655,
+          "overall_eicu": 27.68467587658637,
+          "overall_mortality": 22.936454537356127,
+          "overall_hirid": 25.49160506765428,
+          "overall_sepsis": 32.77464313840317,
+          "overall_miiv": 28.0936696833533
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "sepsis",
+      "dataset": "hirid",
+      "run_id": "20250625_032111",
+      "prompting_id": "liu_2023_few_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.418,
+          "auprc": 0.066,
+          "normalized_auprc": 0.876,
+          "specificity": 0.944,
+          "f1_score": 0.108,
+          "accuracy": 0.88,
+          "balanced_accuracy": 0.52,
+          "precision": 0.123,
+          "recall": 0.096,
+          "mcc": 0.522,
+          "kappa": 0.045,
+          "minpse": 0.096,
+          "task_dataset_score": 33.126
+        },
+        "task_pulse_scores": {
+          "aki": [
+            28.492256842836255,
+            21.82894629157651,
+            26.355355721091193
+          ],
+          "mortality": [
+            21.612983640552994,
+            21.520259412304867,
+            25.676120559210524
+          ],
+          "sepsis": [
+            32.94878714636985,
+            33.125609499081456,
+            32.2495327697582
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            28.492256842836255,
+            21.612983640552994,
+            32.94878714636985
+          ],
+          "miiv": [
+            26.355355721091193,
+            25.676120559210524,
+            32.2495327697582
+          ],
+          "hirid": [
+            21.82894629157651,
+            21.520259412304867,
+            33.125609499081456
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 27.089983542531318,
+          "overall_aki": 25.558852951834655,
+          "overall_eicu": 27.68467587658637,
+          "overall_mortality": 22.936454537356127,
+          "overall_hirid": 25.49160506765428,
+          "overall_sepsis": 32.77464313840317,
+          "overall_miiv": 28.0936696833533
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "sepsis",
+      "dataset": "miiv",
+      "run_id": "20250625_032111",
+      "prompting_id": "liu_2023_few_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.55,
+          "auprc": 0.035,
+          "normalized_auprc": 1.39,
+          "specificity": 0.706,
+          "f1_score": 0.063,
+          "accuracy": 0.698,
+          "balanced_accuracy": 0.553,
+          "precision": 0.034,
+          "recall": 0.4,
+          "mcc": 0.518,
+          "kappa": 0.017,
+          "minpse": 0.041,
+          "task_dataset_score": 32.25
+        },
+        "task_pulse_scores": {
+          "aki": [
+            28.492256842836255,
+            21.82894629157651,
+            26.355355721091193
+          ],
+          "mortality": [
+            21.612983640552994,
+            21.520259412304867,
+            25.676120559210524
+          ],
+          "sepsis": [
+            32.94878714636985,
+            33.125609499081456,
+            32.2495327697582
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            28.492256842836255,
+            21.612983640552994,
+            32.94878714636985
+          ],
+          "miiv": [
+            26.355355721091193,
+            25.676120559210524,
+            32.2495327697582
+          ],
+          "hirid": [
+            21.82894629157651,
+            21.520259412304867,
+            33.125609499081456
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 27.089983542531318,
+          "overall_aki": 25.558852951834655,
+          "overall_eicu": 27.68467587658637,
+          "overall_mortality": 22.936454537356127,
+          "overall_hirid": 25.49160506765428,
+          "overall_sepsis": 32.77464313840317,
+          "overall_miiv": 28.0936696833533
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "aki",
+      "dataset": "eicu",
+      "run_id": "20250623_184546",
+      "prompting_id": "sarvari_2024_aggregation_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.479,
+          "auprc": 0.365,
+          "normalized_auprc": 1.178,
+          "specificity": 0.0,
+          "f1_score": 0.473,
+          "accuracy": 0.31,
+          "balanced_accuracy": 0.5,
+          "precision": 0.31,
+          "recall": 1.0,
+          "mcc": 0.5,
+          "kappa": 0.0,
+          "minpse": 0.31,
+          "task_dataset_score": 26.414
+        },
+        "task_pulse_scores": {
+          "aki": [
+            26.41413904919977,
+            26.463333250607185,
+            26.111370533395156
+          ],
+          "mortality": [
+            37.401147649769584,
+            49.94171132238547,
+            35.89937047697369
+          ],
+          "sepsis": [
+            26.49413323347785,
+            26.885116672588143,
+            26.229852424695927
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            26.41413904919977,
+            37.401147649769584,
+            26.49413323347785
+          ],
+          "miiv": [
+            26.111370533395156,
+            35.89937047697369,
+            26.229852424695927
+          ],
+          "hirid": [
+            26.463333250607185,
+            49.94171132238547,
+            26.885116672588143
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 31.315574957010313,
+          "overall_aki": 26.329614277734038,
+          "overall_eicu": 30.1031399774824,
+          "overall_mortality": 41.08074314970958,
+          "overall_hirid": 34.43005374852694,
+          "overall_sepsis": 26.536367443587306,
+          "overall_miiv": 29.41353114502159
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "aki",
+      "dataset": "hirid",
+      "run_id": "20250623_184546",
+      "prompting_id": "sarvari_2024_aggregation_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.532,
+          "auprc": 0.21,
+          "normalized_auprc": 1.298,
+          "specificity": 0.0,
+          "f1_score": 0.279,
+          "accuracy": 0.162,
+          "balanced_accuracy": 0.5,
+          "precision": 0.162,
+          "recall": 1.0,
+          "mcc": 0.5,
+          "kappa": 0.0,
+          "minpse": 0.177,
+          "task_dataset_score": 26.463
+        },
+        "task_pulse_scores": {
+          "aki": [
+            26.41413904919977,
+            26.463333250607185,
+            26.111370533395156
+          ],
+          "mortality": [
+            37.401147649769584,
+            49.94171132238547,
+            35.89937047697369
+          ],
+          "sepsis": [
+            26.49413323347785,
+            26.885116672588143,
+            26.229852424695927
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            26.41413904919977,
+            37.401147649769584,
+            26.49413323347785
+          ],
+          "miiv": [
+            26.111370533395156,
+            35.89937047697369,
+            26.229852424695927
+          ],
+          "hirid": [
+            26.463333250607185,
+            49.94171132238547,
+            26.885116672588143
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 31.315574957010313,
+          "overall_aki": 26.329614277734038,
+          "overall_eicu": 30.1031399774824,
+          "overall_mortality": 41.08074314970958,
+          "overall_hirid": 34.43005374852694,
+          "overall_sepsis": 26.536367443587306,
+          "overall_miiv": 29.41353114502159
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "aki",
+      "dataset": "miiv",
+      "run_id": "20250623_184546",
+      "prompting_id": "sarvari_2024_aggregation_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.44,
+          "auprc": 0.258,
+          "normalized_auprc": 1.109,
+          "specificity": 0.0,
+          "f1_score": 0.378,
+          "accuracy": 0.233,
+          "balanced_accuracy": 0.5,
+          "precision": 0.233,
+          "recall": 1.0,
+          "mcc": 0.5,
+          "kappa": 0.0,
+          "minpse": 0.233,
+          "task_dataset_score": 26.111
+        },
+        "task_pulse_scores": {
+          "aki": [
+            26.41413904919977,
+            26.463333250607185,
+            26.111370533395156
+          ],
+          "mortality": [
+            37.401147649769584,
+            49.94171132238547,
+            35.89937047697369
+          ],
+          "sepsis": [
+            26.49413323347785,
+            26.885116672588143,
+            26.229852424695927
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            26.41413904919977,
+            37.401147649769584,
+            26.49413323347785
+          ],
+          "miiv": [
+            26.111370533395156,
+            35.89937047697369,
+            26.229852424695927
+          ],
+          "hirid": [
+            26.463333250607185,
+            49.94171132238547,
+            26.885116672588143
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 31.315574957010313,
+          "overall_aki": 26.329614277734038,
+          "overall_eicu": 30.1031399774824,
+          "overall_mortality": 41.08074314970958,
+          "overall_hirid": 34.43005374852694,
+          "overall_sepsis": 26.536367443587306,
+          "overall_miiv": 29.41353114502159
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "mortality",
+      "dataset": "eicu",
+      "run_id": "20250623_184546",
+      "prompting_id": "sarvari_2024_aggregation_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.604,
+          "auprc": 0.065,
+          "normalized_auprc": 0.935,
+          "specificity": 0.0,
+          "f1_score": 0.131,
+          "accuracy": 0.07,
+          "balanced_accuracy": 0.5,
+          "precision": 0.07,
+          "recall": 1.0,
+          "mcc": 0.5,
+          "kappa": 0.0,
+          "minpse": 0.093,
+          "task_dataset_score": 37.401
+        },
+        "task_pulse_scores": {
+          "aki": [
+            26.41413904919977,
+            26.463333250607185,
+            26.111370533395156
+          ],
+          "mortality": [
+            37.401147649769584,
+            49.94171132238547,
+            35.89937047697369
+          ],
+          "sepsis": [
+            26.49413323347785,
+            26.885116672588143,
+            26.229852424695927
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            26.41413904919977,
+            37.401147649769584,
+            26.49413323347785
+          ],
+          "miiv": [
+            26.111370533395156,
+            35.89937047697369,
+            26.229852424695927
+          ],
+          "hirid": [
+            26.463333250607185,
+            49.94171132238547,
+            26.885116672588143
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 31.315574957010313,
+          "overall_aki": 26.329614277734038,
+          "overall_eicu": 30.1031399774824,
+          "overall_mortality": 41.08074314970958,
+          "overall_hirid": 34.43005374852694,
+          "overall_sepsis": 26.536367443587306,
+          "overall_miiv": 29.41353114502159
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "mortality",
+      "dataset": "hirid",
+      "run_id": "20250623_184546",
+      "prompting_id": "sarvari_2024_aggregation_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.521,
+          "auprc": 0.477,
+          "normalized_auprc": 4.334,
+          "specificity": 0.0,
+          "f1_score": 0.198,
+          "accuracy": 0.11,
+          "balanced_accuracy": 0.5,
+          "precision": 0.11,
+          "recall": 1.0,
+          "mcc": 0.5,
+          "kappa": 0.0,
+          "minpse": 0.115,
+          "task_dataset_score": 49.942
+        },
+        "task_pulse_scores": {
+          "aki": [
+            26.41413904919977,
+            26.463333250607185,
+            26.111370533395156
+          ],
+          "mortality": [
+            37.401147649769584,
+            49.94171132238547,
+            35.89937047697369
+          ],
+          "sepsis": [
+            26.49413323347785,
+            26.885116672588143,
+            26.229852424695927
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            26.41413904919977,
+            37.401147649769584,
+            26.49413323347785
+          ],
+          "miiv": [
+            26.111370533395156,
+            35.89937047697369,
+            26.229852424695927
+          ],
+          "hirid": [
+            26.463333250607185,
+            49.94171132238547,
+            26.885116672588143
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 31.315574957010313,
+          "overall_aki": 26.329614277734038,
+          "overall_eicu": 30.1031399774824,
+          "overall_mortality": 41.08074314970958,
+          "overall_hirid": 34.43005374852694,
+          "overall_sepsis": 26.536367443587306,
+          "overall_miiv": 29.41353114502159
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "mortality",
+      "dataset": "miiv",
+      "run_id": "20250623_184546",
+      "prompting_id": "sarvari_2024_aggregation_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.538,
+          "auprc": 0.085,
+          "normalized_auprc": 0.709,
+          "specificity": 0.0,
+          "f1_score": 0.214,
+          "accuracy": 0.12,
+          "balanced_accuracy": 0.5,
+          "precision": 0.12,
+          "recall": 1.0,
+          "mcc": 0.5,
+          "kappa": 0.0,
+          "minpse": 0.138,
+          "task_dataset_score": 35.899
+        },
+        "task_pulse_scores": {
+          "aki": [
+            26.41413904919977,
+            26.463333250607185,
+            26.111370533395156
+          ],
+          "mortality": [
+            37.401147649769584,
+            49.94171132238547,
+            35.89937047697369
+          ],
+          "sepsis": [
+            26.49413323347785,
+            26.885116672588143,
+            26.229852424695927
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            26.41413904919977,
+            37.401147649769584,
+            26.49413323347785
+          ],
+          "miiv": [
+            26.111370533395156,
+            35.89937047697369,
+            26.229852424695927
+          ],
+          "hirid": [
+            26.463333250607185,
+            49.94171132238547,
+            26.885116672588143
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 31.315574957010313,
+          "overall_aki": 26.329614277734038,
+          "overall_eicu": 30.1031399774824,
+          "overall_mortality": 41.08074314970958,
+          "overall_hirid": 34.43005374852694,
+          "overall_sepsis": 26.536367443587306,
+          "overall_miiv": 29.41353114502159
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "sepsis",
+      "dataset": "eicu",
+      "run_id": "20250623_184546",
+      "prompting_id": "sarvari_2024_aggregation_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.503,
+          "auprc": 0.524,
+          "normalized_auprc": 10.929,
+          "specificity": 0.0,
+          "f1_score": 0.092,
+          "accuracy": 0.048,
+          "balanced_accuracy": 0.5,
+          "precision": 0.048,
+          "recall": 1.0,
+          "mcc": 0.5,
+          "kappa": 0.0,
+          "minpse": 0.048,
+          "task_dataset_score": 26.494
+        },
+        "task_pulse_scores": {
+          "aki": [
+            26.41413904919977,
+            26.463333250607185,
+            26.111370533395156
+          ],
+          "mortality": [
+            37.401147649769584,
+            49.94171132238547,
+            35.89937047697369
+          ],
+          "sepsis": [
+            26.49413323347785,
+            26.885116672588143,
+            26.229852424695927
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            26.41413904919977,
+            37.401147649769584,
+            26.49413323347785
+          ],
+          "miiv": [
+            26.111370533395156,
+            35.89937047697369,
+            26.229852424695927
+          ],
+          "hirid": [
+            26.463333250607185,
+            49.94171132238547,
+            26.885116672588143
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 31.315574957010313,
+          "overall_aki": 26.329614277734038,
+          "overall_eicu": 30.1031399774824,
+          "overall_mortality": 41.08074314970958,
+          "overall_hirid": 34.43005374852694,
+          "overall_sepsis": 26.536367443587306,
+          "overall_miiv": 29.41353114502159
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "sepsis",
+      "dataset": "hirid",
+      "run_id": "20250623_184546",
+      "prompting_id": "sarvari_2024_aggregation_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.509,
+          "auprc": 0.538,
+          "normalized_auprc": 7.146,
+          "specificity": 0.0,
+          "f1_score": 0.14,
+          "accuracy": 0.075,
+          "balanced_accuracy": 0.5,
+          "precision": 0.075,
+          "recall": 1.0,
+          "mcc": 0.5,
+          "kappa": 0.0,
+          "minpse": 0.077,
+          "task_dataset_score": 26.885
+        },
+        "task_pulse_scores": {
+          "aki": [
+            26.41413904919977,
+            26.463333250607185,
+            26.111370533395156
+          ],
+          "mortality": [
+            37.401147649769584,
+            49.94171132238547,
+            35.89937047697369
+          ],
+          "sepsis": [
+            26.49413323347785,
+            26.885116672588143,
+            26.229852424695927
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            26.41413904919977,
+            37.401147649769584,
+            26.49413323347785
+          ],
+          "miiv": [
+            26.111370533395156,
+            35.89937047697369,
+            26.229852424695927
+          ],
+          "hirid": [
+            26.463333250607185,
+            49.94171132238547,
+            26.885116672588143
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 31.315574957010313,
+          "overall_aki": 26.329614277734038,
+          "overall_eicu": 30.1031399774824,
+          "overall_mortality": 41.08074314970958,
+          "overall_hirid": 34.43005374852694,
+          "overall_sepsis": 26.536367443587306,
+          "overall_miiv": 29.41353114502159
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "sepsis",
+      "dataset": "miiv",
+      "run_id": "20250623_184546",
+      "prompting_id": "sarvari_2024_aggregation_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.501,
+          "auprc": 0.513,
+          "normalized_auprc": 20.301,
+          "specificity": 0.0,
+          "f1_score": 0.049,
+          "accuracy": 0.025,
+          "balanced_accuracy": 0.5,
+          "precision": 0.025,
+          "recall": 1.0,
+          "mcc": 0.5,
+          "kappa": 0.0,
+          "minpse": 0.025,
+          "task_dataset_score": 26.23
+        },
+        "task_pulse_scores": {
+          "aki": [
+            26.41413904919977,
+            26.463333250607185,
+            26.111370533395156
+          ],
+          "mortality": [
+            37.401147649769584,
+            49.94171132238547,
+            35.89937047697369
+          ],
+          "sepsis": [
+            26.49413323347785,
+            26.885116672588143,
+            26.229852424695927
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            26.41413904919977,
+            37.401147649769584,
+            26.49413323347785
+          ],
+          "miiv": [
+            26.111370533395156,
+            35.89937047697369,
+            26.229852424695927
+          ],
+          "hirid": [
+            26.463333250607185,
+            49.94171132238547,
+            26.885116672588143
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 31.315574957010313,
+          "overall_aki": 26.329614277734038,
+          "overall_eicu": 30.1031399774824,
+          "overall_mortality": 41.08074314970958,
+          "overall_hirid": 34.43005374852694,
+          "overall_sepsis": 26.536367443587306,
+          "overall_miiv": 29.41353114502159
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "aki",
+      "dataset": "eicu",
+      "run_id": "20250622_033525",
+      "prompting_id": "zhu_2024a_cot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.51,
+          "auprc": 0.271,
+          "normalized_auprc": 0.875,
+          "specificity": 0.982,
+          "f1_score": 0.019,
+          "accuracy": 0.681,
+          "balanced_accuracy": 0.496,
+          "precision": 0.2,
+          "recall": 0.01,
+          "mcc": 0.485,
+          "kappa": -0.011,
+          "minpse": 0.317,
+          "task_dataset_score": 42.177
+        },
+        "task_pulse_scores": {
+          "aki": [
+            42.176512982579176,
+            46.87760050044555,
+            45.50061204918318
+          ],
+          "mortality": [
+            25.489160286663488,
+            28.038055956625136,
+            23.15726097238662
+          ],
+          "sepsis": [
+            34.08341166826126,
+            54.82167783117522,
+            50.416666666666664
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            42.176512982579176,
+            25.489160286663488,
+            34.08341166826126
+          ],
+          "miiv": [
+            45.50061204918318,
+            23.15726097238662,
+            50.416666666666664
+          ],
+          "hirid": [
+            46.87760050044555,
+            28.038055956625136,
+            54.82167783117522
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 38.951217657109595,
+          "overall_aki": 44.851575177402644,
+          "overall_eicu": 33.91636164583464,
+          "overall_mortality": 25.56149240522508,
+          "overall_hirid": 43.24577809608197,
+          "overall_sepsis": 46.440585388701045,
+          "overall_miiv": 39.69151322941215
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "aki",
+      "dataset": "hirid",
+      "run_id": "20250622_033525",
+      "prompting_id": "zhu_2024a_cot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.562,
+          "auprc": 0.264,
+          "normalized_auprc": 1.629,
+          "specificity": 0.947,
+          "f1_score": 0.227,
+          "accuracy": 0.82,
+          "balanced_accuracy": 0.555,
+          "precision": 0.371,
+          "recall": 0.164,
+          "mcc": 0.579,
+          "kappa": 0.142,
+          "minpse": 0.167,
+          "task_dataset_score": 46.878
+        },
+        "task_pulse_scores": {
+          "aki": [
+            42.176512982579176,
+            46.87760050044555,
+            45.50061204918318
+          ],
+          "mortality": [
+            25.489160286663488,
+            28.038055956625136,
+            23.15726097238662
+          ],
+          "sepsis": [
+            34.08341166826126,
+            54.82167783117522,
+            50.416666666666664
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            42.176512982579176,
+            25.489160286663488,
+            34.08341166826126
+          ],
+          "miiv": [
+            45.50061204918318,
+            23.15726097238662,
+            50.416666666666664
+          ],
+          "hirid": [
+            46.87760050044555,
+            28.038055956625136,
+            54.82167783117522
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 38.951217657109595,
+          "overall_aki": 44.851575177402644,
+          "overall_eicu": 33.91636164583464,
+          "overall_mortality": 25.56149240522508,
+          "overall_hirid": 43.24577809608197,
+          "overall_sepsis": 46.440585388701045,
+          "overall_miiv": 39.69151322941215
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "aki",
+      "dataset": "miiv",
+      "run_id": "20250622_033525",
+      "prompting_id": "zhu_2024a_cot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.517,
+          "auprc": 0.318,
+          "normalized_auprc": 1.365,
+          "specificity": 0.991,
+          "f1_score": 0.05,
+          "accuracy": 0.766,
+          "balanced_accuracy": 0.508,
+          "precision": 0.462,
+          "recall": 0.026,
+          "mcc": 0.531,
+          "kappa": 0.025,
+          "minpse": 0.239,
+          "task_dataset_score": 45.501
+        },
+        "task_pulse_scores": {
+          "aki": [
+            42.176512982579176,
+            46.87760050044555,
+            45.50061204918318
+          ],
+          "mortality": [
+            25.489160286663488,
+            28.038055956625136,
+            23.15726097238662
+          ],
+          "sepsis": [
+            34.08341166826126,
+            54.82167783117522,
+            50.416666666666664
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            42.176512982579176,
+            25.489160286663488,
+            34.08341166826126
+          ],
+          "miiv": [
+            45.50061204918318,
+            23.15726097238662,
+            50.416666666666664
+          ],
+          "hirid": [
+            46.87760050044555,
+            28.038055956625136,
+            54.82167783117522
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 38.951217657109595,
+          "overall_aki": 44.851575177402644,
+          "overall_eicu": 33.91636164583464,
+          "overall_mortality": 25.56149240522508,
+          "overall_hirid": 43.24577809608197,
+          "overall_sepsis": 46.440585388701045,
+          "overall_miiv": 39.69151322941215
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "mortality",
+      "dataset": "eicu",
+      "run_id": "20250622_033525",
+      "prompting_id": "zhu_2024a_cot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.43,
+          "auprc": 0.048,
+          "normalized_auprc": 0.682,
+          "specificity": 0.376,
+          "f1_score": 0.116,
+          "accuracy": 0.39,
+          "balanced_accuracy": 0.474,
+          "precision": 0.065,
+          "recall": 0.571,
+          "mcc": 0.486,
+          "kappa": -0.011,
+          "minpse": 0.07,
+          "task_dataset_score": 25.489
+        },
+        "task_pulse_scores": {
+          "aki": [
+            42.176512982579176,
+            46.87760050044555,
+            45.50061204918318
+          ],
+          "mortality": [
+            25.489160286663488,
+            28.038055956625136,
+            23.15726097238662
+          ],
+          "sepsis": [
+            34.08341166826126,
+            54.82167783117522,
+            50.416666666666664
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            42.176512982579176,
+            25.489160286663488,
+            34.08341166826126
+          ],
+          "miiv": [
+            45.50061204918318,
+            23.15726097238662,
+            50.416666666666664
+          ],
+          "hirid": [
+            46.87760050044555,
+            28.038055956625136,
+            54.82167783117522
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 38.951217657109595,
+          "overall_aki": 44.851575177402644,
+          "overall_eicu": 33.91636164583464,
+          "overall_mortality": 25.56149240522508,
+          "overall_hirid": 43.24577809608197,
+          "overall_sepsis": 46.440585388701045,
+          "overall_miiv": 39.69151322941215
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "mortality",
+      "dataset": "hirid",
+      "run_id": "20250622_033525",
+      "prompting_id": "zhu_2024a_cot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.394,
+          "auprc": 0.255,
+          "normalized_auprc": 2.319,
+          "specificity": 0.213,
+          "f1_score": 0.159,
+          "accuracy": 0.26,
+          "balanced_accuracy": 0.425,
+          "precision": 0.091,
+          "recall": 0.636,
+          "mcc": 0.444,
+          "kappa": -0.041,
+          "minpse": 0.11,
+          "task_dataset_score": 28.038
+        },
+        "task_pulse_scores": {
+          "aki": [
+            42.176512982579176,
+            46.87760050044555,
+            45.50061204918318
+          ],
+          "mortality": [
+            25.489160286663488,
+            28.038055956625136,
+            23.15726097238662
+          ],
+          "sepsis": [
+            34.08341166826126,
+            54.82167783117522,
+            50.416666666666664
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            42.176512982579176,
+            25.489160286663488,
+            34.08341166826126
+          ],
+          "miiv": [
+            45.50061204918318,
+            23.15726097238662,
+            50.416666666666664
+          ],
+          "hirid": [
+            46.87760050044555,
+            28.038055956625136,
+            54.82167783117522
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 38.951217657109595,
+          "overall_aki": 44.851575177402644,
+          "overall_eicu": 33.91636164583464,
+          "overall_mortality": 25.56149240522508,
+          "overall_hirid": 43.24577809608197,
+          "overall_sepsis": 46.440585388701045,
+          "overall_miiv": 39.69151322941215
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "mortality",
+      "dataset": "miiv",
+      "run_id": "20250622_033525",
+      "prompting_id": "zhu_2024a_cot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.304,
+          "auprc": 0.197,
+          "normalized_auprc": 1.64,
+          "specificity": 0.318,
+          "f1_score": 0.105,
+          "accuracy": 0.32,
+          "balanced_accuracy": 0.326,
+          "precision": 0.062,
+          "recall": 0.333,
+          "mcc": 0.382,
+          "kappa": -0.121,
+          "minpse": 0.12,
+          "task_dataset_score": 23.157
+        },
+        "task_pulse_scores": {
+          "aki": [
+            42.176512982579176,
+            46.87760050044555,
+            45.50061204918318
+          ],
+          "mortality": [
+            25.489160286663488,
+            28.038055956625136,
+            23.15726097238662
+          ],
+          "sepsis": [
+            34.08341166826126,
+            54.82167783117522,
+            50.416666666666664
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            42.176512982579176,
+            25.489160286663488,
+            34.08341166826126
+          ],
+          "miiv": [
+            45.50061204918318,
+            23.15726097238662,
+            50.416666666666664
+          ],
+          "hirid": [
+            46.87760050044555,
+            28.038055956625136,
+            54.82167783117522
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 38.951217657109595,
+          "overall_aki": 44.851575177402644,
+          "overall_eicu": 33.91636164583464,
+          "overall_mortality": 25.56149240522508,
+          "overall_hirid": 43.24577809608197,
+          "overall_sepsis": 46.440585388701045,
+          "overall_miiv": 39.69151322941215
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "sepsis",
+      "dataset": "eicu",
+      "run_id": "20250622_033525",
+      "prompting_id": "zhu_2024a_cot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.499,
+          "auprc": 0.024,
+          "normalized_auprc": 0.5,
+          "specificity": 0.998,
+          "f1_score": 0.0,
+          "accuracy": 0.95,
+          "balanced_accuracy": 0.499,
+          "precision": 0.0,
+          "recall": 0.0,
+          "mcc": 0.495,
+          "kappa": -0.004,
+          "minpse": 0.048,
+          "task_dataset_score": 34.083
+        },
+        "task_pulse_scores": {
+          "aki": [
+            42.176512982579176,
+            46.87760050044555,
+            45.50061204918318
+          ],
+          "mortality": [
+            25.489160286663488,
+            28.038055956625136,
+            23.15726097238662
+          ],
+          "sepsis": [
+            34.08341166826126,
+            54.82167783117522,
+            50.416666666666664
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            42.176512982579176,
+            25.489160286663488,
+            34.08341166826126
+          ],
+          "miiv": [
+            45.50061204918318,
+            23.15726097238662,
+            50.416666666666664
+          ],
+          "hirid": [
+            46.87760050044555,
+            28.038055956625136,
+            54.82167783117522
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 38.951217657109595,
+          "overall_aki": 44.851575177402644,
+          "overall_eicu": 33.91636164583464,
+          "overall_mortality": 25.56149240522508,
+          "overall_hirid": 43.24577809608197,
+          "overall_sepsis": 46.440585388701045,
+          "overall_miiv": 39.69151322941215
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "sepsis",
+      "dataset": "hirid",
+      "run_id": "20250622_033525",
+      "prompting_id": "zhu_2024a_cot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.514,
+          "auprc": 0.55,
+          "normalized_auprc": 7.305,
+          "specificity": 1.0,
+          "f1_score": 0.053,
+          "accuracy": 0.927,
+          "balanced_accuracy": 0.514,
+          "precision": 1.0,
+          "recall": 0.027,
+          "mcc": 0.58,
+          "kappa": 0.05,
+          "minpse": 0.075,
+          "task_dataset_score": 54.822
+        },
+        "task_pulse_scores": {
+          "aki": [
+            42.176512982579176,
+            46.87760050044555,
+            45.50061204918318
+          ],
+          "mortality": [
+            25.489160286663488,
+            28.038055956625136,
+            23.15726097238662
+          ],
+          "sepsis": [
+            34.08341166826126,
+            54.82167783117522,
+            50.416666666666664
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            42.176512982579176,
+            25.489160286663488,
+            34.08341166826126
+          ],
+          "miiv": [
+            45.50061204918318,
+            23.15726097238662,
+            50.416666666666664
+          ],
+          "hirid": [
+            46.87760050044555,
+            28.038055956625136,
+            54.82167783117522
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 38.951217657109595,
+          "overall_aki": 44.851575177402644,
+          "overall_eicu": 33.91636164583464,
+          "overall_mortality": 25.56149240522508,
+          "overall_hirid": 43.24577809608197,
+          "overall_sepsis": 46.440585388701045,
+          "overall_miiv": 39.69151322941215
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "sepsis",
+      "dataset": "miiv",
+      "run_id": "20250622_033525",
+      "prompting_id": "zhu_2024a_cot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.5,
+          "auprc": 0.513,
+          "normalized_auprc": 20.3,
+          "specificity": 1.0,
+          "f1_score": 0.0,
+          "accuracy": 0.975,
+          "balanced_accuracy": 0.5,
+          "precision": 0.0,
+          "recall": 0.0,
+          "mcc": 0.5,
+          "kappa": 0.0,
+          "minpse": 0.025,
+          "task_dataset_score": 50.417
+        },
+        "task_pulse_scores": {
+          "aki": [
+            42.176512982579176,
+            46.87760050044555,
+            45.50061204918318
+          ],
+          "mortality": [
+            25.489160286663488,
+            28.038055956625136,
+            23.15726097238662
+          ],
+          "sepsis": [
+            34.08341166826126,
+            54.82167783117522,
+            50.416666666666664
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            42.176512982579176,
+            25.489160286663488,
+            34.08341166826126
+          ],
+          "miiv": [
+            45.50061204918318,
+            23.15726097238662,
+            50.416666666666664
+          ],
+          "hirid": [
+            46.87760050044555,
+            28.038055956625136,
+            54.82167783117522
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 38.951217657109595,
+          "overall_aki": 44.851575177402644,
+          "overall_eicu": 33.91636164583464,
+          "overall_mortality": 25.56149240522508,
+          "overall_hirid": 43.24577809608197,
+          "overall_sepsis": 46.440585388701045,
+          "overall_miiv": 39.69151322941215
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "aki",
+      "dataset": "eicu",
+      "run_id": "20250621_194738",
+      "prompting_id": "zhu_2024b_one_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.43,
+          "auprc": 0.211,
+          "normalized_auprc": 0.679,
+          "specificity": 0.0,
+          "f1_score": 0.473,
+          "accuracy": 0.31,
+          "balanced_accuracy": 0.5,
+          "precision": 0.31,
+          "recall": 1.0,
+          "mcc": 0.5,
+          "kappa": 0.0,
+          "minpse": 0.31,
+          "task_dataset_score": 22.824
+        },
+        "task_pulse_scores": {
+          "aki": [
+            22.824352096343446,
+            22.621332873589793,
+            20.69231339814186
+          ],
+          "mortality": [
+            27.111387572302554,
+            24.964264156082407,
+            25.08500759445441
+          ],
+          "sepsis": [
+            22.472839168514376,
+            24.36533578868706,
+            26.705733383046308
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            22.824352096343446,
+            27.111387572302554,
+            22.472839168514376
+          ],
+          "miiv": [
+            20.69231339814186,
+            25.08500759445441,
+            26.705733383046308
+          ],
+          "hirid": [
+            22.621332873589793,
+            24.964264156082407,
+            24.36533578868706
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 24.093618447906913,
+          "overall_aki": 22.045999456025033,
+          "overall_eicu": 24.136192945720126,
+          "overall_mortality": 25.720219774279787,
+          "overall_hirid": 23.98364427278642,
+          "overall_sepsis": 24.514636113415914,
+          "overall_miiv": 24.161018125214195
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "aki",
+      "dataset": "hirid",
+      "run_id": "20250621_194738",
+      "prompting_id": "zhu_2024b_one_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.444,
+          "auprc": 0.16,
+          "normalized_auprc": 0.99,
+          "specificity": 0.0,
+          "f1_score": 0.279,
+          "accuracy": 0.162,
+          "balanced_accuracy": 0.5,
+          "precision": 0.162,
+          "recall": 1.0,
+          "mcc": 0.5,
+          "kappa": 0.0,
+          "minpse": 0.162,
+          "task_dataset_score": 22.621
+        },
+        "task_pulse_scores": {
+          "aki": [
+            22.824352096343446,
+            22.621332873589793,
+            20.69231339814186
+          ],
+          "mortality": [
+            27.111387572302554,
+            24.964264156082407,
+            25.08500759445441
+          ],
+          "sepsis": [
+            22.472839168514376,
+            24.36533578868706,
+            26.705733383046308
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            22.824352096343446,
+            27.111387572302554,
+            22.472839168514376
+          ],
+          "miiv": [
+            20.69231339814186,
+            25.08500759445441,
+            26.705733383046308
+          ],
+          "hirid": [
+            22.621332873589793,
+            24.964264156082407,
+            24.36533578868706
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 24.093618447906913,
+          "overall_aki": 22.045999456025033,
+          "overall_eicu": 24.136192945720126,
+          "overall_mortality": 25.720219774279787,
+          "overall_hirid": 23.98364427278642,
+          "overall_sepsis": 24.514636113415914,
+          "overall_miiv": 24.161018125214195
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "aki",
+      "dataset": "miiv",
+      "run_id": "20250621_194738",
+      "prompting_id": "zhu_2024b_one_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.378,
+          "auprc": 0.222,
+          "normalized_auprc": 0.954,
+          "specificity": 0.004,
+          "f1_score": 0.376,
+          "accuracy": 0.234,
+          "balanced_accuracy": 0.498,
+          "precision": 0.232,
+          "recall": 0.991,
+          "mcc": 0.486,
+          "kappa": -0.002,
+          "minpse": 0.233,
+          "task_dataset_score": 20.692
+        },
+        "task_pulse_scores": {
+          "aki": [
+            22.824352096343446,
+            22.621332873589793,
+            20.69231339814186
+          ],
+          "mortality": [
+            27.111387572302554,
+            24.964264156082407,
+            25.08500759445441
+          ],
+          "sepsis": [
+            22.472839168514376,
+            24.36533578868706,
+            26.705733383046308
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            22.824352096343446,
+            27.111387572302554,
+            22.472839168514376
+          ],
+          "miiv": [
+            20.69231339814186,
+            25.08500759445441,
+            26.705733383046308
+          ],
+          "hirid": [
+            22.621332873589793,
+            24.964264156082407,
+            24.36533578868706
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 24.093618447906913,
+          "overall_aki": 22.045999456025033,
+          "overall_eicu": 24.136192945720126,
+          "overall_mortality": 25.720219774279787,
+          "overall_hirid": 23.98364427278642,
+          "overall_sepsis": 24.514636113415914,
+          "overall_miiv": 24.161018125214195
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "mortality",
+      "dataset": "eicu",
+      "run_id": "20250621_194738",
+      "prompting_id": "zhu_2024b_one_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.493,
+          "auprc": 0.468,
+          "normalized_auprc": 6.686,
+          "specificity": 0.0,
+          "f1_score": 0.131,
+          "accuracy": 0.07,
+          "balanced_accuracy": 0.5,
+          "precision": 0.07,
+          "recall": 1.0,
+          "mcc": 0.5,
+          "kappa": 0.0,
+          "minpse": 0.07,
+          "task_dataset_score": 27.111
+        },
+        "task_pulse_scores": {
+          "aki": [
+            22.824352096343446,
+            22.621332873589793,
+            20.69231339814186
+          ],
+          "mortality": [
+            27.111387572302554,
+            24.964264156082407,
+            25.08500759445441
+          ],
+          "sepsis": [
+            22.472839168514376,
+            24.36533578868706,
+            26.705733383046308
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            22.824352096343446,
+            27.111387572302554,
+            22.472839168514376
+          ],
+          "miiv": [
+            20.69231339814186,
+            25.08500759445441,
+            26.705733383046308
+          ],
+          "hirid": [
+            22.621332873589793,
+            24.964264156082407,
+            24.36533578868706
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 24.093618447906913,
+          "overall_aki": 22.045999456025033,
+          "overall_eicu": 24.136192945720126,
+          "overall_mortality": 25.720219774279787,
+          "overall_hirid": 23.98364427278642,
+          "overall_sepsis": 24.514636113415914,
+          "overall_miiv": 24.161018125214195
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "mortality",
+      "dataset": "hirid",
+      "run_id": "20250621_194738",
+      "prompting_id": "zhu_2024b_one_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.507,
+          "auprc": 0.272,
+          "normalized_auprc": 2.472,
+          "specificity": 0.0,
+          "f1_score": 0.198,
+          "accuracy": 0.11,
+          "balanced_accuracy": 0.5,
+          "precision": 0.11,
+          "recall": 1.0,
+          "mcc": 0.5,
+          "kappa": 0.0,
+          "minpse": 0.113,
+          "task_dataset_score": 24.964
+        },
+        "task_pulse_scores": {
+          "aki": [
+            22.824352096343446,
+            22.621332873589793,
+            20.69231339814186
+          ],
+          "mortality": [
+            27.111387572302554,
+            24.964264156082407,
+            25.08500759445441
+          ],
+          "sepsis": [
+            22.472839168514376,
+            24.36533578868706,
+            26.705733383046308
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            22.824352096343446,
+            27.111387572302554,
+            22.472839168514376
+          ],
+          "miiv": [
+            20.69231339814186,
+            25.08500759445441,
+            26.705733383046308
+          ],
+          "hirid": [
+            22.621332873589793,
+            24.964264156082407,
+            24.36533578868706
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 24.093618447906913,
+          "overall_aki": 22.045999456025033,
+          "overall_eicu": 24.136192945720126,
+          "overall_mortality": 25.720219774279787,
+          "overall_hirid": 23.98364427278642,
+          "overall_sepsis": 24.514636113415914,
+          "overall_miiv": 24.161018125214195
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "mortality",
+      "dataset": "miiv",
+      "run_id": "20250621_194738",
+      "prompting_id": "zhu_2024b_one_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.357,
+          "auprc": 0.169,
+          "normalized_auprc": 1.408,
+          "specificity": 0.0,
+          "f1_score": 0.214,
+          "accuracy": 0.12,
+          "balanced_accuracy": 0.5,
+          "precision": 0.12,
+          "recall": 1.0,
+          "mcc": 0.5,
+          "kappa": 0.0,
+          "minpse": 0.121,
+          "task_dataset_score": 25.085
+        },
+        "task_pulse_scores": {
+          "aki": [
+            22.824352096343446,
+            22.621332873589793,
+            20.69231339814186
+          ],
+          "mortality": [
+            27.111387572302554,
+            24.964264156082407,
+            25.08500759445441
+          ],
+          "sepsis": [
+            22.472839168514376,
+            24.36533578868706,
+            26.705733383046308
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            22.824352096343446,
+            27.111387572302554,
+            22.472839168514376
+          ],
+          "miiv": [
+            20.69231339814186,
+            25.08500759445441,
+            26.705733383046308
+          ],
+          "hirid": [
+            22.621332873589793,
+            24.964264156082407,
+            24.36533578868706
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 24.093618447906913,
+          "overall_aki": 22.045999456025033,
+          "overall_eicu": 24.136192945720126,
+          "overall_mortality": 25.720219774279787,
+          "overall_hirid": 23.98364427278642,
+          "overall_sepsis": 24.514636113415914,
+          "overall_miiv": 24.161018125214195
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "sepsis",
+      "dataset": "eicu",
+      "run_id": "20250621_194738",
+      "prompting_id": "zhu_2024b_one_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.412,
+          "auprc": 0.031,
+          "normalized_auprc": 0.657,
+          "specificity": 0.326,
+          "f1_score": 0.074,
+          "accuracy": 0.337,
+          "balanced_accuracy": 0.44,
+          "precision": 0.04,
+          "recall": 0.553,
+          "mcc": 0.473,
+          "kappa": -0.017,
+          "minpse": 0.048,
+          "task_dataset_score": 22.473
+        },
+        "task_pulse_scores": {
+          "aki": [
+            22.824352096343446,
+            22.621332873589793,
+            20.69231339814186
+          ],
+          "mortality": [
+            27.111387572302554,
+            24.964264156082407,
+            25.08500759445441
+          ],
+          "sepsis": [
+            22.472839168514376,
+            24.36533578868706,
+            26.705733383046308
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            22.824352096343446,
+            27.111387572302554,
+            22.472839168514376
+          ],
+          "miiv": [
+            20.69231339814186,
+            25.08500759445441,
+            26.705733383046308
+          ],
+          "hirid": [
+            22.621332873589793,
+            24.964264156082407,
+            24.36533578868706
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 24.093618447906913,
+          "overall_aki": 22.045999456025033,
+          "overall_eicu": 24.136192945720126,
+          "overall_mortality": 25.720219774279787,
+          "overall_hirid": 23.98364427278642,
+          "overall_sepsis": 24.514636113415914,
+          "overall_miiv": 24.161018125214195
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "sepsis",
+      "dataset": "hirid",
+      "run_id": "20250621_194738",
+      "prompting_id": "zhu_2024b_one_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.415,
+          "auprc": 0.114,
+          "normalized_auprc": 1.516,
+          "specificity": 0.272,
+          "f1_score": 0.117,
+          "accuracy": 0.298,
+          "balanced_accuracy": 0.444,
+          "precision": 0.065,
+          "recall": 0.616,
+          "mcc": 0.467,
+          "kappa": -0.023,
+          "minpse": 0.082,
+          "task_dataset_score": 24.365
+        },
+        "task_pulse_scores": {
+          "aki": [
+            22.824352096343446,
+            22.621332873589793,
+            20.69231339814186
+          ],
+          "mortality": [
+            27.111387572302554,
+            24.964264156082407,
+            25.08500759445441
+          ],
+          "sepsis": [
+            22.472839168514376,
+            24.36533578868706,
+            26.705733383046308
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            22.824352096343446,
+            27.111387572302554,
+            22.472839168514376
+          ],
+          "miiv": [
+            20.69231339814186,
+            25.08500759445441,
+            26.705733383046308
+          ],
+          "hirid": [
+            22.621332873589793,
+            24.964264156082407,
+            24.36533578868706
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 24.093618447906913,
+          "overall_aki": 22.045999456025033,
+          "overall_eicu": 24.136192945720126,
+          "overall_mortality": 25.720219774279787,
+          "overall_hirid": 23.98364427278642,
+          "overall_sepsis": 24.514636113415914,
+          "overall_miiv": 24.161018125214195
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "sepsis",
+      "dataset": "miiv",
+      "run_id": "20250621_194738",
+      "prompting_id": "zhu_2024b_one_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.505,
+          "auprc": 0.045,
+          "normalized_auprc": 1.793,
+          "specificity": 0.4,
+          "f1_score": 0.048,
+          "accuracy": 0.405,
+          "balanced_accuracy": 0.5,
+          "precision": 0.025,
+          "recall": 0.6,
+          "mcc": 0.5,
+          "kappa": 0.0,
+          "minpse": 0.028,
+          "task_dataset_score": 26.706
+        },
+        "task_pulse_scores": {
+          "aki": [
+            22.824352096343446,
+            22.621332873589793,
+            20.69231339814186
+          ],
+          "mortality": [
+            27.111387572302554,
+            24.964264156082407,
+            25.08500759445441
+          ],
+          "sepsis": [
+            22.472839168514376,
+            24.36533578868706,
+            26.705733383046308
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            22.824352096343446,
+            27.111387572302554,
+            22.472839168514376
+          ],
+          "miiv": [
+            20.69231339814186,
+            25.08500759445441,
+            26.705733383046308
+          ],
+          "hirid": [
+            22.621332873589793,
+            24.964264156082407,
+            24.36533578868706
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 24.093618447906913,
+          "overall_aki": 22.045999456025033,
+          "overall_eicu": 24.136192945720126,
+          "overall_mortality": 25.720219774279787,
+          "overall_hirid": 23.98364427278642,
+          "overall_sepsis": 24.514636113415914,
+          "overall_miiv": 24.161018125214195
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "aki",
+      "dataset": "eicu",
+      "run_id": "20250620_114127",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.496,
+          "auprc": 0.558,
+          "normalized_auprc": 1.8,
+          "specificity": 0.0,
+          "f1_score": 0.473,
+          "accuracy": 0.31,
+          "balanced_accuracy": 0.5,
+          "precision": 0.31,
+          "recall": 1.0,
+          "mcc": 0.5,
+          "kappa": 0.0,
+          "minpse": 0.31,
+          "task_dataset_score": 27.865
+        },
+        "task_pulse_scores": {
+          "aki": [
+            27.86518158312198,
+            29.399102115696902,
+            25.99398631765288
+          ],
+          "mortality": [
+            23.57459618421052,
+            28.58715599184375,
+            25.93636040552957
+          ],
+          "sepsis": [
+            36.60259958671505,
+            42.19116525237005,
+            32.905462220077254
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            27.86518158312198,
+            23.57459618421052,
+            36.60259958671505
+          ],
+          "miiv": [
+            25.99398631765288,
+            25.93636040552957,
+            32.905462220077254
+          ],
+          "hirid": [
+            29.399102115696902,
+            28.58715599184375,
+            42.19116525237005
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 30.33951218413533,
+          "overall_aki": 27.752756672157258,
+          "overall_eicu": 29.34745911801585,
+          "overall_mortality": 26.03270419386128,
+          "overall_hirid": 33.39247445330357,
+          "overall_sepsis": 37.23307568638745,
+          "overall_miiv": 28.278602981086568
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "aki",
+      "dataset": "hirid",
+      "run_id": "20250620_114127",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.452,
+          "auprc": 0.251,
+          "normalized_auprc": 1.548,
+          "specificity": 0.0,
+          "f1_score": 0.279,
+          "accuracy": 0.162,
+          "balanced_accuracy": 0.5,
+          "precision": 0.162,
+          "recall": 1.0,
+          "mcc": 0.5,
+          "kappa": 0.0,
+          "minpse": 0.162,
+          "task_dataset_score": 29.399
+        },
+        "task_pulse_scores": {
+          "aki": [
+            27.86518158312198,
+            29.399102115696902,
+            25.99398631765288
+          ],
+          "mortality": [
+            23.57459618421052,
+            28.58715599184375,
+            25.93636040552957
+          ],
+          "sepsis": [
+            36.60259958671505,
+            42.19116525237005,
+            32.905462220077254
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            27.86518158312198,
+            23.57459618421052,
+            36.60259958671505
+          ],
+          "miiv": [
+            25.99398631765288,
+            25.93636040552957,
+            32.905462220077254
+          ],
+          "hirid": [
+            29.399102115696902,
+            28.58715599184375,
+            42.19116525237005
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 30.33951218413533,
+          "overall_aki": 27.752756672157258,
+          "overall_eicu": 29.34745911801585,
+          "overall_mortality": 26.03270419386128,
+          "overall_hirid": 33.39247445330357,
+          "overall_sepsis": 37.23307568638745,
+          "overall_miiv": 28.278602981086568
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "aki",
+      "dataset": "miiv",
+      "run_id": "20250620_114127",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.452,
+          "auprc": 0.48,
+          "normalized_auprc": 2.062,
+          "specificity": 0.0,
+          "f1_score": 0.378,
+          "accuracy": 0.233,
+          "balanced_accuracy": 0.5,
+          "precision": 0.233,
+          "recall": 1.0,
+          "mcc": 0.5,
+          "kappa": 0.0,
+          "minpse": 0.233,
+          "task_dataset_score": 25.994
+        },
+        "task_pulse_scores": {
+          "aki": [
+            27.86518158312198,
+            29.399102115696902,
+            25.99398631765288
+          ],
+          "mortality": [
+            23.57459618421052,
+            28.58715599184375,
+            25.93636040552957
+          ],
+          "sepsis": [
+            36.60259958671505,
+            42.19116525237005,
+            32.905462220077254
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            27.86518158312198,
+            23.57459618421052,
+            36.60259958671505
+          ],
+          "miiv": [
+            25.99398631765288,
+            25.93636040552957,
+            32.905462220077254
+          ],
+          "hirid": [
+            29.399102115696902,
+            28.58715599184375,
+            42.19116525237005
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 30.33951218413533,
+          "overall_aki": 27.752756672157258,
+          "overall_eicu": 29.34745911801585,
+          "overall_mortality": 26.03270419386128,
+          "overall_hirid": 33.39247445330357,
+          "overall_sepsis": 37.23307568638745,
+          "overall_miiv": 28.278602981086568
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "mortality",
+      "dataset": "eicu",
+      "run_id": "20250620_114127",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.405,
+          "auprc": 0.26,
+          "normalized_auprc": 3.713,
+          "specificity": 0.0,
+          "f1_score": 0.131,
+          "accuracy": 0.07,
+          "balanced_accuracy": 0.5,
+          "precision": 0.07,
+          "recall": 1.0,
+          "mcc": 0.5,
+          "kappa": 0.0,
+          "minpse": 0.07,
+          "task_dataset_score": 23.575
+        },
+        "task_pulse_scores": {
+          "aki": [
+            27.86518158312198,
+            29.399102115696902,
+            25.99398631765288
+          ],
+          "mortality": [
+            23.57459618421052,
+            28.58715599184375,
+            25.93636040552957
+          ],
+          "sepsis": [
+            36.60259958671505,
+            42.19116525237005,
+            32.905462220077254
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            27.86518158312198,
+            23.57459618421052,
+            36.60259958671505
+          ],
+          "miiv": [
+            25.99398631765288,
+            25.93636040552957,
+            32.905462220077254
+          ],
+          "hirid": [
+            29.399102115696902,
+            28.58715599184375,
+            42.19116525237005
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 30.33951218413533,
+          "overall_aki": 27.752756672157258,
+          "overall_eicu": 29.34745911801585,
+          "overall_mortality": 26.03270419386128,
+          "overall_hirid": 33.39247445330357,
+          "overall_sepsis": 37.23307568638745,
+          "overall_miiv": 28.278602981086568
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "mortality",
+      "dataset": "hirid",
+      "run_id": "20250620_114127",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.501,
+          "auprc": 0.352,
+          "normalized_auprc": 3.203,
+          "specificity": 0.0,
+          "f1_score": 0.198,
+          "accuracy": 0.11,
+          "balanced_accuracy": 0.5,
+          "precision": 0.11,
+          "recall": 1.0,
+          "mcc": 0.5,
+          "kappa": 0.0,
+          "minpse": 0.117,
+          "task_dataset_score": 28.587
+        },
+        "task_pulse_scores": {
+          "aki": [
+            27.86518158312198,
+            29.399102115696902,
+            25.99398631765288
+          ],
+          "mortality": [
+            23.57459618421052,
+            28.58715599184375,
+            25.93636040552957
+          ],
+          "sepsis": [
+            36.60259958671505,
+            42.19116525237005,
+            32.905462220077254
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            27.86518158312198,
+            23.57459618421052,
+            36.60259958671505
+          ],
+          "miiv": [
+            25.99398631765288,
+            25.93636040552957,
+            32.905462220077254
+          ],
+          "hirid": [
+            29.399102115696902,
+            28.58715599184375,
+            42.19116525237005
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 30.33951218413533,
+          "overall_aki": 27.752756672157258,
+          "overall_eicu": 29.34745911801585,
+          "overall_mortality": 26.03270419386128,
+          "overall_hirid": 33.39247445330357,
+          "overall_sepsis": 37.23307568638745,
+          "overall_miiv": 28.278602981086568
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "mortality",
+      "dataset": "miiv",
+      "run_id": "20250620_114127",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.454,
+          "auprc": 0.297,
+          "normalized_auprc": 2.474,
+          "specificity": 0.0,
+          "f1_score": 0.214,
+          "accuracy": 0.12,
+          "balanced_accuracy": 0.5,
+          "precision": 0.12,
+          "recall": 1.0,
+          "mcc": 0.5,
+          "kappa": 0.0,
+          "minpse": 0.122,
+          "task_dataset_score": 25.936
+        },
+        "task_pulse_scores": {
+          "aki": [
+            27.86518158312198,
+            29.399102115696902,
+            25.99398631765288
+          ],
+          "mortality": [
+            23.57459618421052,
+            28.58715599184375,
+            25.93636040552957
+          ],
+          "sepsis": [
+            36.60259958671505,
+            42.19116525237005,
+            32.905462220077254
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            27.86518158312198,
+            23.57459618421052,
+            36.60259958671505
+          ],
+          "miiv": [
+            25.99398631765288,
+            25.93636040552957,
+            32.905462220077254
+          ],
+          "hirid": [
+            29.399102115696902,
+            28.58715599184375,
+            42.19116525237005
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 30.33951218413533,
+          "overall_aki": 27.752756672157258,
+          "overall_eicu": 29.34745911801585,
+          "overall_mortality": 26.03270419386128,
+          "overall_hirid": 33.39247445330357,
+          "overall_sepsis": 37.23307568638745,
+          "overall_miiv": 28.278602981086568
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "sepsis",
+      "dataset": "eicu",
+      "run_id": "20250620_114127",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.507,
+          "auprc": 0.084,
+          "normalized_auprc": 1.759,
+          "specificity": 0.971,
+          "f1_score": 0.053,
+          "accuracy": 0.927,
+          "balanced_accuracy": 0.507,
+          "precision": 0.069,
+          "recall": 0.043,
+          "mcc": 0.509,
+          "kappa": 0.017,
+          "minpse": 0.048,
+          "task_dataset_score": 36.603
+        },
+        "task_pulse_scores": {
+          "aki": [
+            27.86518158312198,
+            29.399102115696902,
+            25.99398631765288
+          ],
+          "mortality": [
+            23.57459618421052,
+            28.58715599184375,
+            25.93636040552957
+          ],
+          "sepsis": [
+            36.60259958671505,
+            42.19116525237005,
+            32.905462220077254
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            27.86518158312198,
+            23.57459618421052,
+            36.60259958671505
+          ],
+          "miiv": [
+            25.99398631765288,
+            25.93636040552957,
+            32.905462220077254
+          ],
+          "hirid": [
+            29.399102115696902,
+            28.58715599184375,
+            42.19116525237005
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 30.33951218413533,
+          "overall_aki": 27.752756672157258,
+          "overall_eicu": 29.34745911801585,
+          "overall_mortality": 26.03270419386128,
+          "overall_hirid": 33.39247445330357,
+          "overall_sepsis": 37.23307568638745,
+          "overall_miiv": 28.278602981086568
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "sepsis",
+      "dataset": "hirid",
+      "run_id": "20250620_114127",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.522,
+          "auprc": 0.189,
+          "normalized_auprc": 2.515,
+          "specificity": 0.99,
+          "f1_score": 0.093,
+          "accuracy": 0.92,
+          "balanced_accuracy": 0.522,
+          "precision": 0.308,
+          "recall": 0.055,
+          "mcc": 0.551,
+          "kappa": 0.072,
+          "minpse": 0.075,
+          "task_dataset_score": 42.191
+        },
+        "task_pulse_scores": {
+          "aki": [
+            27.86518158312198,
+            29.399102115696902,
+            25.99398631765288
+          ],
+          "mortality": [
+            23.57459618421052,
+            28.58715599184375,
+            25.93636040552957
+          ],
+          "sepsis": [
+            36.60259958671505,
+            42.19116525237005,
+            32.905462220077254
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            27.86518158312198,
+            23.57459618421052,
+            36.60259958671505
+          ],
+          "miiv": [
+            25.99398631765288,
+            25.93636040552957,
+            32.905462220077254
+          ],
+          "hirid": [
+            29.399102115696902,
+            28.58715599184375,
+            42.19116525237005
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 30.33951218413533,
+          "overall_aki": 27.752756672157258,
+          "overall_eicu": 29.34745911801585,
+          "overall_mortality": 26.03270419386128,
+          "overall_hirid": 33.39247445330357,
+          "overall_sepsis": 37.23307568638745,
+          "overall_miiv": 28.278602981086568
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "sepsis",
+      "dataset": "miiv",
+      "run_id": "20250620_114127",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.49,
+          "auprc": 0.013,
+          "normalized_auprc": 0.5,
+          "specificity": 0.98,
+          "f1_score": 0.0,
+          "accuracy": 0.956,
+          "balanced_accuracy": 0.49,
+          "precision": 0.0,
+          "recall": 0.0,
+          "mcc": 0.489,
+          "kappa": -0.022,
+          "minpse": 0.025,
+          "task_dataset_score": 32.905
+        },
+        "task_pulse_scores": {
+          "aki": [
+            27.86518158312198,
+            29.399102115696902,
+            25.99398631765288
+          ],
+          "mortality": [
+            23.57459618421052,
+            28.58715599184375,
+            25.93636040552957
+          ],
+          "sepsis": [
+            36.60259958671505,
+            42.19116525237005,
+            32.905462220077254
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            27.86518158312198,
+            23.57459618421052,
+            36.60259958671505
+          ],
+          "miiv": [
+            25.99398631765288,
+            25.93636040552957,
+            32.905462220077254
+          ],
+          "hirid": [
+            29.399102115696902,
+            28.58715599184375,
+            42.19116525237005
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 30.33951218413533,
+          "overall_aki": 27.752756672157258,
+          "overall_eicu": 29.34745911801585,
+          "overall_mortality": 26.03270419386128,
+          "overall_hirid": 33.39247445330357,
+          "overall_sepsis": 37.23307568638745,
+          "overall_miiv": 28.278602981086568
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "aki",
+      "dataset": "eicu",
+      "run_id": "20250625_122103",
+      "prompting_id": "zhu_2024c_categorization_summary_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.594,
+          "auprc": 0.366,
+          "normalized_auprc": 1.181,
+          "specificity": 0.482,
+          "f1_score": 0.469,
+          "accuracy": 0.537,
+          "balanced_accuracy": 0.57,
+          "precision": 0.363,
+          "recall": 0.659,
+          "mcc": 0.566,
+          "kappa": 0.115,
+          "minpse": 0.368,
+          "task_dataset_score": 39.991
+        },
+        "task_pulse_scores": {
+          "aki": [
+            39.99139128804958,
+            33.66418126571298,
+            39.412402805372295
+          ],
+          "mortality": [
+            59.231820667031165,
+            50.66687265917603,
+            53.970083870967734
+          ],
+          "sepsis": [
+            19.181303269477997,
+            26.76798107882743,
+            25.64950191098429
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            39.99139128804958,
+            59.231820667031165,
+            19.181303269477997
+          ],
+          "miiv": [
+            39.412402805372295,
+            53.970083870967734,
+            25.64950191098429
+          ],
+          "hirid": [
+            33.66418126571298,
+            50.66687265917603,
+            26.76798107882743
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 38.72617097951106,
+          "overall_aki": 37.68932511971162,
+          "overall_eicu": 39.468171741519576,
+          "overall_mortality": 54.62292573239164,
+          "overall_hirid": 37.03301166790548,
+          "overall_sepsis": 23.866262086429902,
+          "overall_miiv": 39.67732952910811
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "aki",
+      "dataset": "hirid",
+      "run_id": "20250625_122103",
+      "prompting_id": "zhu_2024c_categorization_summary_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.534,
+          "auprc": 0.193,
+          "normalized_auprc": 1.195,
+          "specificity": 0.502,
+          "f1_score": 0.255,
+          "accuracy": 0.505,
+          "balanced_accuracy": 0.512,
+          "precision": 0.168,
+          "recall": 0.522,
+          "mcc": 0.509,
+          "kappa": 0.013,
+          "minpse": 0.182,
+          "task_dataset_score": 33.664
+        },
+        "task_pulse_scores": {
+          "aki": [
+            39.99139128804958,
+            33.66418126571298,
+            39.412402805372295
+          ],
+          "mortality": [
+            59.231820667031165,
+            50.66687265917603,
+            53.970083870967734
+          ],
+          "sepsis": [
+            19.181303269477997,
+            26.76798107882743,
+            25.64950191098429
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            39.99139128804958,
+            59.231820667031165,
+            19.181303269477997
+          ],
+          "miiv": [
+            39.412402805372295,
+            53.970083870967734,
+            25.64950191098429
+          ],
+          "hirid": [
+            33.66418126571298,
+            50.66687265917603,
+            26.76798107882743
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 38.72617097951106,
+          "overall_aki": 37.68932511971162,
+          "overall_eicu": 39.468171741519576,
+          "overall_mortality": 54.62292573239164,
+          "overall_hirid": 37.03301166790548,
+          "overall_sepsis": 23.866262086429902,
+          "overall_miiv": 39.67732952910811
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "aki",
+      "dataset": "miiv",
+      "run_id": "20250625_122103",
+      "prompting_id": "zhu_2024c_categorization_summary_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.568,
+          "auprc": 0.321,
+          "normalized_auprc": 1.381,
+          "specificity": 0.518,
+          "f1_score": 0.366,
+          "accuracy": 0.533,
+          "balanced_accuracy": 0.549,
+          "precision": 0.268,
+          "recall": 0.581,
+          "mcc": 0.542,
+          "kappa": 0.07,
+          "minpse": 0.297,
+          "task_dataset_score": 39.412
+        },
+        "task_pulse_scores": {
+          "aki": [
+            39.99139128804958,
+            33.66418126571298,
+            39.412402805372295
+          ],
+          "mortality": [
+            59.231820667031165,
+            50.66687265917603,
+            53.970083870967734
+          ],
+          "sepsis": [
+            19.181303269477997,
+            26.76798107882743,
+            25.64950191098429
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            39.99139128804958,
+            59.231820667031165,
+            19.181303269477997
+          ],
+          "miiv": [
+            39.412402805372295,
+            53.970083870967734,
+            25.64950191098429
+          ],
+          "hirid": [
+            33.66418126571298,
+            50.66687265917603,
+            26.76798107882743
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 38.72617097951106,
+          "overall_aki": 37.68932511971162,
+          "overall_eicu": 39.468171741519576,
+          "overall_mortality": 54.62292573239164,
+          "overall_hirid": 37.03301166790548,
+          "overall_sepsis": 23.866262086429902,
+          "overall_miiv": 39.67732952910811
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "mortality",
+      "dataset": "eicu",
+      "run_id": "20250625_122103",
+      "prompting_id": "zhu_2024c_categorization_summary_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.72,
+          "auprc": 0.559,
+          "normalized_auprc": 7.99,
+          "specificity": 0.0,
+          "f1_score": 0.131,
+          "accuracy": 0.07,
+          "balanced_accuracy": 0.5,
+          "precision": 0.07,
+          "recall": 1.0,
+          "mcc": 0.5,
+          "kappa": 0.0,
+          "minpse": 0.119,
+          "task_dataset_score": 59.232
+        },
+        "task_pulse_scores": {
+          "aki": [
+            39.99139128804958,
+            33.66418126571298,
+            39.412402805372295
+          ],
+          "mortality": [
+            59.231820667031165,
+            50.66687265917603,
+            53.970083870967734
+          ],
+          "sepsis": [
+            19.181303269477997,
+            26.76798107882743,
+            25.64950191098429
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            39.99139128804958,
+            59.231820667031165,
+            19.181303269477997
+          ],
+          "miiv": [
+            39.412402805372295,
+            53.970083870967734,
+            25.64950191098429
+          ],
+          "hirid": [
+            33.66418126571298,
+            50.66687265917603,
+            26.76798107882743
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 38.72617097951106,
+          "overall_aki": 37.68932511971162,
+          "overall_eicu": 39.468171741519576,
+          "overall_mortality": 54.62292573239164,
+          "overall_hirid": 37.03301166790548,
+          "overall_sepsis": 23.866262086429902,
+          "overall_miiv": 39.67732952910811
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "mortality",
+      "dataset": "hirid",
+      "run_id": "20250625_122103",
+      "prompting_id": "zhu_2024c_categorization_summary_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.505,
+          "auprc": 0.515,
+          "normalized_auprc": 4.683,
+          "specificity": 0.0,
+          "f1_score": 0.198,
+          "accuracy": 0.11,
+          "balanced_accuracy": 0.5,
+          "precision": 0.11,
+          "recall": 1.0,
+          "mcc": 0.5,
+          "kappa": 0.0,
+          "minpse": 0.111,
+          "task_dataset_score": 50.667
+        },
+        "task_pulse_scores": {
+          "aki": [
+            39.99139128804958,
+            33.66418126571298,
+            39.412402805372295
+          ],
+          "mortality": [
+            59.231820667031165,
+            50.66687265917603,
+            53.970083870967734
+          ],
+          "sepsis": [
+            19.181303269477997,
+            26.76798107882743,
+            25.64950191098429
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            39.99139128804958,
+            59.231820667031165,
+            19.181303269477997
+          ],
+          "miiv": [
+            39.412402805372295,
+            53.970083870967734,
+            25.64950191098429
+          ],
+          "hirid": [
+            33.66418126571298,
+            50.66687265917603,
+            26.76798107882743
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 38.72617097951106,
+          "overall_aki": 37.68932511971162,
+          "overall_eicu": 39.468171741519576,
+          "overall_mortality": 54.62292573239164,
+          "overall_hirid": 37.03301166790548,
+          "overall_sepsis": 23.866262086429902,
+          "overall_miiv": 39.67732952910811
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "mortality",
+      "dataset": "miiv",
+      "run_id": "20250625_122103",
+      "prompting_id": "zhu_2024c_categorization_summary_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.621,
+          "auprc": 0.507,
+          "normalized_auprc": 4.228,
+          "specificity": 0.0,
+          "f1_score": 0.214,
+          "accuracy": 0.12,
+          "balanced_accuracy": 0.5,
+          "precision": 0.12,
+          "recall": 1.0,
+          "mcc": 0.5,
+          "kappa": 0.0,
+          "minpse": 0.161,
+          "task_dataset_score": 53.97
+        },
+        "task_pulse_scores": {
+          "aki": [
+            39.99139128804958,
+            33.66418126571298,
+            39.412402805372295
+          ],
+          "mortality": [
+            59.231820667031165,
+            50.66687265917603,
+            53.970083870967734
+          ],
+          "sepsis": [
+            19.181303269477997,
+            26.76798107882743,
+            25.64950191098429
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            39.99139128804958,
+            59.231820667031165,
+            19.181303269477997
+          ],
+          "miiv": [
+            39.412402805372295,
+            53.970083870967734,
+            25.64950191098429
+          ],
+          "hirid": [
+            33.66418126571298,
+            50.66687265917603,
+            26.76798107882743
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 38.72617097951106,
+          "overall_aki": 37.68932511971162,
+          "overall_eicu": 39.468171741519576,
+          "overall_mortality": 54.62292573239164,
+          "overall_hirid": 37.03301166790548,
+          "overall_sepsis": 23.866262086429902,
+          "overall_miiv": 39.67732952910811
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "sepsis",
+      "dataset": "eicu",
+      "run_id": "20250625_122103",
+      "prompting_id": "zhu_2024c_categorization_summary_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.376,
+          "auprc": 0.032,
+          "normalized_auprc": 0.661,
+          "specificity": 0.267,
+          "f1_score": 0.071,
+          "accuracy": 0.282,
+          "balanced_accuracy": 0.421,
+          "precision": 0.038,
+          "recall": 0.574,
+          "mcc": 0.462,
+          "kappa": -0.021,
+          "minpse": 0.048,
+          "task_dataset_score": 19.181
+        },
+        "task_pulse_scores": {
+          "aki": [
+            39.99139128804958,
+            33.66418126571298,
+            39.412402805372295
+          ],
+          "mortality": [
+            59.231820667031165,
+            50.66687265917603,
+            53.970083870967734
+          ],
+          "sepsis": [
+            19.181303269477997,
+            26.76798107882743,
+            25.64950191098429
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            39.99139128804958,
+            59.231820667031165,
+            19.181303269477997
+          ],
+          "miiv": [
+            39.412402805372295,
+            53.970083870967734,
+            25.64950191098429
+          ],
+          "hirid": [
+            33.66418126571298,
+            50.66687265917603,
+            26.76798107882743
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 38.72617097951106,
+          "overall_aki": 37.68932511971162,
+          "overall_eicu": 39.468171741519576,
+          "overall_mortality": 54.62292573239164,
+          "overall_hirid": 37.03301166790548,
+          "overall_sepsis": 23.866262086429902,
+          "overall_miiv": 39.67732952910811
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "sepsis",
+      "dataset": "hirid",
+      "run_id": "20250625_122103",
+      "prompting_id": "zhu_2024c_categorization_summary_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.596,
+          "auprc": 0.172,
+          "normalized_auprc": 2.282,
+          "specificity": 0.198,
+          "f1_score": 0.139,
+          "accuracy": 0.244,
+          "balanced_accuracy": 0.503,
+          "precision": 0.076,
+          "recall": 0.808,
+          "mcc": 0.502,
+          "kappa": 0.001,
+          "minpse": 0.164,
+          "task_dataset_score": 26.768
+        },
+        "task_pulse_scores": {
+          "aki": [
+            39.99139128804958,
+            33.66418126571298,
+            39.412402805372295
+          ],
+          "mortality": [
+            59.231820667031165,
+            50.66687265917603,
+            53.970083870967734
+          ],
+          "sepsis": [
+            19.181303269477997,
+            26.76798107882743,
+            25.64950191098429
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            39.99139128804958,
+            59.231820667031165,
+            19.181303269477997
+          ],
+          "miiv": [
+            39.412402805372295,
+            53.970083870967734,
+            25.64950191098429
+          ],
+          "hirid": [
+            33.66418126571298,
+            50.66687265917603,
+            26.76798107882743
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 38.72617097951106,
+          "overall_aki": 37.68932511971162,
+          "overall_eicu": 39.468171741519576,
+          "overall_mortality": 54.62292573239164,
+          "overall_hirid": 37.03301166790548,
+          "overall_sepsis": 23.866262086429902,
+          "overall_miiv": 39.67732952910811
+        }
+      }
+    },
+    {
+      "model_id": "Mistral-7B-Instruct-v0.3",
+      "task_id": "sepsis",
+      "dataset": "miiv",
+      "run_id": "20250625_122103",
+      "prompting_id": "zhu_2024c_categorization_summary_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.606,
+          "auprc": 0.026,
+          "normalized_auprc": 1.045,
+          "specificity": 0.29,
+          "f1_score": 0.06,
+          "accuracy": 0.305,
+          "balanced_accuracy": 0.585,
+          "precision": 0.031,
+          "recall": 0.88,
+          "mcc": 0.53,
+          "kappa": 0.012,
+          "minpse": 0.037,
+          "task_dataset_score": 25.65
+        },
+        "task_pulse_scores": {
+          "aki": [
+            39.99139128804958,
+            33.66418126571298,
+            39.412402805372295
+          ],
+          "mortality": [
+            59.231820667031165,
+            50.66687265917603,
+            53.970083870967734
+          ],
+          "sepsis": [
+            19.181303269477997,
+            26.76798107882743,
+            25.64950191098429
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            39.99139128804958,
+            59.231820667031165,
+            19.181303269477997
+          ],
+          "miiv": [
+            39.412402805372295,
+            53.970083870967734,
+            25.64950191098429
+          ],
+          "hirid": [
+            33.66418126571298,
+            50.66687265917603,
+            26.76798107882743
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 38.72617097951106,
+          "overall_aki": 37.68932511971162,
+          "overall_eicu": 39.468171741519576,
+          "overall_mortality": 54.62292573239164,
+          "overall_hirid": 37.03301166790548,
+          "overall_sepsis": 23.866262086429902,
+          "overall_miiv": 39.67732952910811
+        }
+      }
+    }
+  ]
+}

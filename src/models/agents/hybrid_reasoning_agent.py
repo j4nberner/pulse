@@ -1,30 +1,22 @@
+import glob
 import logging
 import os
-import glob
-import joblib
 from typing import Any, Dict, Optional, Tuple
 
+import joblib
 import pandas as pd
 
 from src.models.agents.pulse_agent import PulseAgent
-from src.preprocessing.preprocessing_advanced.preprocessing_advanced import (
-    PreprocessorAdvanced,
-)
-from src.util.agent_util import (
-    create_error_response,
-    filter_na_columns,
-    format_clinical_data,
-    format_clinical_text,
-    get_task_specific_content,
-    get_monitoring_period_hours,
-    format_demographics_str,
-    parse_numeric_value,
-)
-from src.util.data_util import (
-    get_feature_name,
-    get_priority_features_for_task,
-    features_dict,
-)
+from src.preprocessing.preprocessing_advanced.preprocessing_advanced import \
+    PreprocessorAdvanced
+from src.util.agent_util import (create_error_response, filter_na_columns,
+                                 format_clinical_data, format_clinical_text,
+                                 format_demographics_str,
+                                 get_monitoring_period_hours,
+                                 get_task_specific_content,
+                                 parse_numeric_value)
+from src.util.data_util import (features_dict, get_feature_name,
+                                get_priority_features_for_task)
 
 logger = logging.getLogger("PULSE_logger")
 

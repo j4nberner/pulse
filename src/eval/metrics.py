@@ -6,19 +6,10 @@ from typing import Any, Dict, List, Union
 import numpy as np
 import pandas as pd
 import torch
-from sklearn.metrics import (
-    accuracy_score,
-    auc,
-    balanced_accuracy_score,
-    cohen_kappa_score,
-    confusion_matrix,
-    f1_score,
-    matthews_corrcoef,
-    precision_recall_curve,
-    precision_score,
-    recall_score,
-    roc_auc_score,
-)
+from sklearn.metrics import (accuracy_score, auc, balanced_accuracy_score,
+                             cohen_kappa_score, confusion_matrix, f1_score,
+                             matthews_corrcoef, precision_recall_curve,
+                             precision_score, recall_score, roc_auc_score)
 
 logger = logging.getLogger("PULSE_logger")
 
@@ -476,6 +467,7 @@ def calculate_mcc(
     y_true: Union[np.ndarray, torch.Tensor],
     y_pred: Union[np.ndarray, torch.Tensor],
     threshold: float = 0.5,
+    normalize: bool = False,
 ) -> float:
     """
     Calculate Matthews Correlation Coefficient (MCC) (-1: total disagreement,
@@ -498,7 +490,11 @@ def calculate_mcc(
     # Convert probabilities to binary predictions
     y_pred_binary = (y_pred >= threshold).astype(int)
 
-    return matthews_corrcoef(y_true, y_pred_binary)
+    mcc = matthews_corrcoef(y_true, y_pred_binary)
+    if normalize:
+        mcc = (mcc + 1) / 2
+
+    return mcc
 
 
 def calculate_kappa(

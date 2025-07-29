@@ -4,12 +4,7 @@ from typing import Any, Dict
 
 import torch
 from peft import PromptTuningConfig, PromptTuningInit, TaskType, get_peft_model
-from transformers import (
-    AutoTokenizer,
-    BitsAndBytesConfig,
-    Gemma3ForConditionalGeneration,
-    AutoProcessor,
-)
+from transformers import (AutoProcessor, BitsAndBytesConfig, Gemma3ForConditionalGeneration)
 
 from src.models.pulse_model import PulseLLMModel
 
@@ -85,7 +80,7 @@ class Gemma3Model(PulseLLMModel):
                     self.model_id,
                     device_map="auto",
                     torch_dtype=torch.bfloat16,
-                    attn_implementation="sdpa",
+                    attn_implementation="eager",
                 )
 
             if self.params.get("tuning", False):

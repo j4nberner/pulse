@@ -1,26 +1,20 @@
 import logging
 import os
+import random
 import time
 import warnings
 from typing import Any, Dict
 
+# import openai
+import anthropic
 import numpy as np
-
-# import vertexai
-from google import genai
-from google.genai.types import GenerateContentConfig, ThinkingConfig
+from anthropic.types.message_create_params import MessageCreateParamsNonStreaming
+from anthropic.types.messages.batch_create_params import Request
 
 from src.eval.metrics import MetricsTracker
-from src.models.pulse_model import PulseModel
+from src.models.pulse_model import PulseLLMModel
 from src.util.config_util import set_seeds
-from src.util.model_util import (
-    parse_llm_output,
-    prompt_template_hf,
-    system_message_samples,
-)
-
-# from vertexai.generative_models import (GenerationConfig, GenerativeModel, ThinkingConfig)
-
+from src.util.model_util import parse_llm_output, prompt_template_hf
 
 warnings.filterwarnings(
     "ignore",
@@ -30,8 +24,8 @@ warnings.filterwarnings(
 logger = logging.getLogger("PULSE_logger")
 
 
-class ClaudeSonnet4Model(PulseModel):
-    """ClaudeSonnet4 model wrapper."""
+class ClaudeSonnet4Model(PulseLLMModel):
+    """Claude Sonnet 4 model wrapper."""
 
     def __init__(self, params: Dict[str, Any], **kwargs) -> None:
         """Initializes the ClaudeSonnet4Model with parameters and paths.
@@ -48,44 +42,30 @@ class ClaudeSonnet4Model(PulseModel):
             "model_id",
             "thinking_budget",
             "temperature",
+            "api_key_name",
+            "batch_processing",
         ]
         self.check_required_params(params, required_params)
 
-        project_id = os.getenv("GOOGLE_CLOUD_PROJECT")
-        location = os.getenv("GOOGLE_CLOUD_LOCATION")
-        if not project_id or not location:
-            raise ValueError(
-                "GOOGLE_CLOUD_PROJECT and GOOGLE_CLOUD_LOCATION must be set in your .env file."
-            )
-        if not os.getenv("GOOGLE_APPLICATION_CREDENTIALS"):
-            raise ValueError(
-                "GOOGLE_APPLICATION_CREDENTIALS must be set in your .env file to the path of your service account key."
-            )
-
-        logger.info(
-            f"Initializing Vertex AI for project: {project_id}, location: {location}"
-        )
-        # Initialize Vertex AI. The SDK will automatically use the credentials from GOOGLE_APPLICATION_CREDENTIALS.
-        # vertexai.init(project=project_id, location=location)
-
-        self.client = genai.Client(
-            vertexai=True, project=params.get("project_id", None), location="global"
-        )
+        self.client = anthropic.Anthropic(api_key=os.getenv(params["api_key_name"]))
         self.model_id = params["model_id"]
         self.prompting_id = params.get("prompting_id", None)
         self.max_new_tokens = params["max_new_tokens"]
         self.thinking_budget = params["thinking_budget"]
+        self.temperature = params["temperature"]
+        self.batch_processing = params["batch_processing"]
 
         # self.model = GenerativeModel(self.model_id)
         self.is_agent = False
         self.agent_instance = None
+        self.is_loaded = True  # Gemini models are loaded by default
 
-    # Rename to generate_standard
-    def generate(
+    def _generate_standard(
         self,
         input_text: str,
         custom_system_message: str = None,
         parse_json: bool = True,
+        generate_raw_text: bool = False,
     ) -> Dict[str, Any]:
         """Standard generation logic for non-agent models."""
         # Set seed for deterministic generation
@@ -97,54 +77,66 @@ class ClaudeSonnet4Model(PulseModel):
             input_text = str(input_text)
 
         # Format input using prompt template
-        input_text = prompt_template_hf(
-            input_text, custom_system_message, self.model_name
+        input_text, sys_msg = prompt_template_hf(
+            input_text, custom_system_message, self.model_name, task=self.task_name
         )
-
-        max_output_tokens = (
-            self.max_new_tokens + self.thinking_budget
-            if self.thinking_budget != -1
-            else 10000
-        )
-
-        incl_thought = True if self.thinking_budget > 0 else False
 
         infer_start = time.perf_counter()
-        response = self.client.models.generate_content(
-            model=self.model_id,
-            contents=input_text,
-            config=GenerateContentConfig(
-                max_output_tokens=max_output_tokens,
-                temperature=self.params.get("temperature", 0.4),
-                top_p=1.0,
-                top_k=32,
-                thinking_config=ThinkingConfig(
-                    thinking_budget=self.thinking_budget, include_thoughts=incl_thought
-                ),
-            ),
-        )
+        # Retry logic for rate limiting
+        num_retries = 10
+        delay = 1
+        exponential_base = 2.0
+
+        for attempt in range(num_retries + 1):
+            try:
+                infer_start = time.perf_counter()
+                response = self.client.messages.create(
+                    model=self.model_id,
+                    system=sys_msg,
+                    max_tokens=self.max_new_tokens,
+                    messages=input_text,
+                    temperature=self.temperature,
+                    thinking={"type": "enabled", "budget_tokens": self.thinking_budget},
+                )
+                infer_time = time.perf_counter() - infer_start
+                break  # Success, exit retry loop
+
+            except Exception as e:
+                error_message = str(e)
+                logger.info("Error during inference: %s", error_message)
+
+                # Increment retries
+                num_retries += 1
+
+                # Check if max retries has been reached
+                if num_retries > num_retries:
+                    raise Exception(
+                        f"Maximum number of retries ({num_retries}) exceeded."
+                    )
+
+                # Increment the delay
+                delay *= exponential_base * (1 + random.random())
+
+                # Sleep for the delay
+                time.sleep(delay)
+
         infer_time = time.perf_counter() - infer_start
 
-        usage_metadata = response.usage_metadata
-        num_input_tokens = usage_metadata.prompt_token_count
-        num_output_tokens = usage_metadata.candidates_token_count
-
-        if incl_thought:
-            num_thinking_tokens = usage_metadata.thoughts_token_count
-        else:
-            num_thinking_tokens = 0
+        num_input_tokens = response.usage.input_tokens
+        num_output_tokens = response.usage.output_tokens
+        num_thinking_tokens = (
+            0  # Model provides a summary and not the actual reasoning tokens
+        )
 
         thinking_output = ""
         answer_output = ""
+        for block in response.content:
+            if block.type == "thinking":
+                thinking_output = block.thinking
+            elif block.type == "text":
+                answer_output = block.text
 
-        for part in response.candidates[0].content.parts:
-            if not part.text:
-                continue
-            if part.thought:
-                thinking_output = part.text
-            else:
-                answer_output = part.text
-                logger.debug("Decoded output:\n %s", answer_output)
+        logger.debug("Decoded output:\n %s", answer_output)
 
         # Parse the output if parse_json is True
         if parse_json:
@@ -171,8 +163,8 @@ class ClaudeSonnet4Model(PulseModel):
             "num_thinking_tokens": num_thinking_tokens,
         }
 
-    def evaluate(self, test_loader: Any, save_report: bool = False) -> float:
-        """Evaluates the model on a given test set.
+    def evaluate_batched(self, test_loader: Any, save_report: bool = False) -> float:
+        """Evaluates the model on a given test set using batch processing when available.
 
         Args:
             test_loader: Tuple of (X, y) test data in DataFrame form.
@@ -181,30 +173,9 @@ class ClaudeSonnet4Model(PulseModel):
         Returns:
             The average validation loss across the test dataset.
         """
-        logger.info("Starting test evaluation...")
-
-        metrics_tracker = MetricsTracker(
-            self.model_name,
-            self.task_name,
-            self.dataset_name,
-            self.save_dir,
-        )
-
-        # For agents: Initialize agent and set the metrics_tracker in the agent's memory manager
-        if self.is_agent:
-            if not self.agent_instance:
-                self._initialize_agent()
-            if self.agent_instance:
-                self.agent_instance.memory.metrics_tracker = metrics_tracker
-                logger.debug(
-                    "Set MetricsTracker in agent memory manager for %s", self.model_name
-                )
-
-        verbose: int = self.params.get("verbose", 1)
-
-        sys_msg = system_message_samples(task=self.task_name)[1]
-        logger.info("System Message:\n\n %s", sys_msg)
-
+        logger.info("Starting Claude Batch Processing...")
+        # Creating an array of json tasks
+        tasks = []
         for X, y in zip(test_loader[0].iterrows(), test_loader[1].iterrows()):
             idx = X[0]
             if self.is_agent:
@@ -213,43 +184,123 @@ class ClaudeSonnet4Model(PulseModel):
                 X_input = X[1].iloc[0]  # Single text prompt for standard models
             y_true = y[1].iloc[0]
 
-            try:
-                # Set target for agent models
-                if self.is_agent and self.agent_instance:
-                    self.agent_instance.memory.set_current_sample_target(y_true)
+            # system_message
+            input_text, sys_msg = prompt_template_hf(
+                X_input, None, self.model_name, task=self.task_name
+            )
 
-                # Get raw result from generation
-                result_dict = self.generate(X_input, custom_system_message=sys_msg)
+            task = Request(
+                custom_id=f"task-{idx}",
+                params=MessageCreateParamsNonStreaming(
+                    model=self.model_id,
+                    system=sys_msg,
+                    max_tokens=self.max_new_tokens,
+                    messages=input_text,
+                    temperature=1.0,
+                    thinking={"type": "enabled", "budget_tokens": self.thinking_budget},
+                ),
+            )
+            tasks.append(task)
 
-            except Exception as e:
-                logger.error(
-                    "Error during inference for sample %s: %s", idx, e, exc_info=True
+        batch = self.client.messages.batches.create(requests=tasks)
+
+        # Wait for the batch job to complete
+        message_batch = None
+        while True:
+            message_batch = self.client.messages.batches.retrieve(batch.id)
+            if message_batch.processing_status == "ended":
+                break
+
+            logger.info(f"Batch {batch.id} is still processing...")
+            time.sleep(60)
+
+        results = []
+        for r in self.client.messages.batches.results(batch.id):
+            results.append(r)
+
+        # Sort by custom_id to maintain order
+        results.sort(key=lambda x: x.custom_id.split("-")[1])
+
+        metrics_tracker = MetricsTracker(
+            self.model_name,
+            self.task_name,
+            self.dataset_name,
+            self.save_dir,
+        )
+        for r in results:
+            idx = int(r.custom_id.split("-")[1])
+            if idx not in test_loader[1].index or idx not in test_loader[0].index:
+                logger.warning(
+                    f"Result index {idx} not found in test_loader, skipping."
                 )
-                # Create fallback result
-                result_dict = {
-                    "generated_text": {
-                        "diagnosis": "error",
-                        "probability": np.nan,
-                        "explanation": f"Error: {str(e)}",
-                    },
-                    "token_time": 0.0,
-                    "infer_time": 0.0,
-                    "num_input_tokens": 0,
-                    "num_output_tokens": 0,
-                    "num_thinking_tokens": 0,
-                    "thinking_output": "",
-                }
+                continue
+            y_true = test_loader[1].loc[idx].iloc[0]
+            X_input = test_loader[0].loc[idx].iloc[0]
 
-            # Extract results
-            generated_text = result_dict["generated_text"]
-            token_time = result_dict["token_time"]
-            infer_time = result_dict["infer_time"]
-            num_input_tokens = result_dict["num_input_tokens"]
-            num_output_tokens = result_dict["num_output_tokens"]
-            num_thinking_tokens = result_dict["num_thinking_tokens"]
-            thinking_output = result_dict["thinking_output"]
+            model_output = r.result
+            if model_output.type == "errored":
+                logger.warning(
+                    "Error in model output for task %s: %s",
+                    r.custom_id,
+                    model_output.error,
+                )
+                metrics_tracker.add_results(np.nan, y_true)
+                metrics_tracker.add_metadata_item(
+                    {
+                        "Input Prompt": X_input,
+                        "Target Label": y_true,
+                        "Predicted Probability": np.nan,
+                        "Predicted Diagnosis": "error",
+                        "Predicted Explanation": "error",
+                        "Tokenization Time": 0,
+                        "Inference Time": 0,
+                        "Input Tokens": np.nan,
+                        "Output Tokens": np.nan,
+                        "Thinking Tokens": np.nan,
+                        "Thinking Output": "error",
+                    }
+                )
+                continue
 
-            predicted_probability = float(generated_text.get("probability", np.nan))
+            num_input_tokens = r.result.message.usage.input_tokens
+            num_output_tokens = r.result.message.usage.output_tokens
+            num_thinking_tokens = (
+                0  # Model provides a summary and not the actual reasoning tokens
+            )
+
+            thinking_output = ""
+            answer_output = ""
+            for block in r.result.message.content:
+                if block.type == "thinking":
+                    thinking_output = block.thinking.encode(
+                        "ascii", errors="replace"
+                    ).decode("ascii")
+
+                elif block.type == "text":
+                    answer_output = block.text
+
+            answer_output = answer_output.encode("ascii", errors="replace").decode(
+                "ascii"
+            )
+            logger.debug("Decoded output:\n %s", answer_output)
+            result_dict = parse_llm_output(answer_output)
+
+            logger.info(
+                "Input Tokens: %d | Output Tokens: %d | Thinking Budget: %d",
+                num_input_tokens,
+                num_output_tokens,
+                num_thinking_tokens,
+            )
+
+            # Handle case where generated_text is a string instead of dict (when parsing fails)
+            if isinstance(result_dict, dict):
+                predicted_probability = float(result_dict.get("probability", np.nan))
+                predicted_diagnosis = result_dict.get("diagnosis", "error")
+                generated_explanation = result_dict.get("explanation", "error")
+            else:
+                predicted_probability = np.nan
+                predicted_diagnosis = "error"
+                generated_explanation = "error"
 
             logger.info(
                 "Predicted probability: %s | True label: %s",
@@ -257,32 +308,22 @@ class ClaudeSonnet4Model(PulseModel):
                 y_true,
             )
 
-            if verbose > 1:
-                logger.info("Diagnosis for: %s", generated_text["diagnosis"])
-                logger.info(
-                    "Generated explanation: %s \n", generated_text["explanation"]
-                )
-            if verbose > 2:
-                logger.info("Input prompt: %s \n", X_input)
-
             metrics_tracker.add_results(predicted_probability, y_true)
-
-            if not self.is_agent:  # Agent models handle metadata logging in add_step()
-                metrics_tracker.add_metadata_item(
-                    {
-                        "Input Prompt": X_input,
-                        "Target Label": y_true,
-                        "Predicted Probability": predicted_probability,
-                        "Predicted Diagnosis": generated_text.get("diagnosis", ""),
-                        "Predicted Explanation": generated_text.get("explanation", ""),
-                        "Tokenization Time": token_time,
-                        "Inference Time": infer_time,
-                        "Input Tokens": num_input_tokens,
-                        "Output Tokens": num_output_tokens,
-                        "Thinking Tokens": num_thinking_tokens,
-                        "Thinking Output": thinking_output,
-                    }
-                )
+            metrics_tracker.add_metadata_item(
+                {
+                    "Input Prompt": X_input,
+                    "Target Label": y_true,
+                    "Predicted Probability": predicted_probability,
+                    "Predicted Diagnosis": predicted_diagnosis,
+                    "Predicted Explanation": generated_explanation,
+                    "Tokenization Time": 0,
+                    "Inference Time": 0,
+                    "Input Tokens": num_input_tokens,
+                    "Output Tokens": num_output_tokens,
+                    "Thinking Tokens": num_thinking_tokens,
+                    "Thinking Output": thinking_output,
+                }
+            )
             if len(metrics_tracker.items) > 100:
                 # Log metadata periodically to avoid memory issues
                 metrics_tracker.log_metadata()
@@ -295,4 +336,197 @@ class ClaudeSonnet4Model(PulseModel):
         logger.info("Test evaluation completed for %s", self.model_name)
         logger.info("Test metrics: %s", metrics_tracker.summary)
 
-        return 0.0  # Return a dummy loss value for compatibility
+    def evaluate_batched_offline(
+        self, test_loader: Any, save_report: bool = False, batch_id=None
+    ) -> float:
+        """Evaluates the model on a given test set using batch processing when available.
+
+        Args:
+            test_loader: Tuple of (X, y) test data in DataFrame form.
+            save_report: Whether to save the evaluation report.
+
+        Returns:
+            The average validation loss across the test dataset.
+        """
+        logger.info("Starting Claude Batch Processing...")
+        # Creating an array of json tasks
+        tasks = []
+        for X, y in zip(test_loader[0].iterrows(), test_loader[1].iterrows()):
+            idx = X[0]
+            if self.is_agent:
+                X_input = X[1]  # Full pandas Series with all patient features
+            else:
+                X_input = X[1].iloc[0]  # Single text prompt for standard models
+            y_true = y[1].iloc[0]
+
+            # system_message
+            input_text, sys_msg = prompt_template_hf(
+                X_input, None, self.model_name, task=self.task_name
+            )
+
+            task = Request(
+                custom_id=f"task-{idx}",
+                params=MessageCreateParamsNonStreaming(
+                    model=self.model_id,
+                    system=sys_msg,
+                    max_tokens=self.max_new_tokens,
+                    messages=input_text,
+                    temperature=1.0,
+                    thinking={"type": "enabled", "budget_tokens": self.thinking_budget},
+                ),
+            )
+            tasks.append(task)
+
+        # Wait for the batch job to complete
+        message_batch = None
+        while True:
+            message_batch = self.client.messages.batches.retrieve(batch_id)
+            if message_batch.processing_status == "ended":
+                break
+
+            logger.info(f"Batch {batch_id} is still processing...")
+            time.sleep(60)
+
+        results = []
+        for r in self.client.messages.batches.results(batch_id):
+            results.append(r)
+
+        # Sort by custom_id to maintain order
+        results.sort(key=lambda x: x.custom_id.split("-")[1])
+        logger.debug(f"Shape of results: {len(results)}")
+        logger.debug(f"Shape of y_true: {test_loader[1].shape}")
+        logger.debug(f"Shape of X_input: {test_loader[0].shape}")
+
+        metrics_tracker = MetricsTracker(
+            self.model_name,
+            self.task_name,
+            self.dataset_name,
+            self.save_dir,
+        )
+
+        X_df = test_loader[0]
+        y_df = test_loader[1].reset_index(
+            drop=True
+        )  # was not sorted in prompt preprocessing
+
+        for r in results:
+            idx_str = r.custom_id.split("-", 1)[1]
+            # Ensure index type matches test_loader indices
+            idx = None
+            # Try integer first
+            try:
+                idx_int = int(idx_str)
+                if idx_int in y_df.index and idx_int in X_df.index:
+                    idx = idx_int
+            except Exception:
+                pass
+            # Fallback to string
+            if idx is None and idx_str in y_df.index and idx_str in X_df.index:
+                idx = idx_str
+            if idx is None:
+                logger.warning(
+                    f"Result index {idx_str} not found in test_loader, skipping."
+                )
+                continue
+            y_true = y_df.loc[idx].iloc[0]
+            X_input = X_df.loc[idx].iloc[0]
+            X_input = test_loader[0].loc[idx].iloc[0]
+
+            model_output = r.result
+            if model_output.type == "errored":
+                logger.warning(
+                    "Error in model output for task %s: %s",
+                    r.custom_id,
+                    model_output.error,
+                )
+                metrics_tracker.add_results(np.nan, y_true)
+                metrics_tracker.add_metadata_item(
+                    {
+                        "Input Prompt": X_input,
+                        "Target Label": y_true,
+                        "Predicted Probability": np.nan,
+                        "Predicted Diagnosis": "error",
+                        "Predicted Explanation": "error",
+                        "Tokenization Time": 0,
+                        "Inference Time": 0,
+                        "Input Tokens": np.nan,
+                        "Output Tokens": np.nan,
+                        "Thinking Tokens": np.nan,
+                        "Thinking Output": "error",
+                    }
+                )
+                continue
+
+            num_input_tokens = r.result.message.usage.input_tokens
+            num_output_tokens = r.result.message.usage.output_tokens
+            num_thinking_tokens = (
+                0  # Model provides a summary and not the actual reasoning tokens
+            )
+
+            thinking_output = ""
+            answer_output = ""
+            for block in r.result.message.content:
+                if block.type == "thinking":
+                    thinking_output = block.thinking.encode(
+                        "ascii", errors="replace"
+                    ).decode("ascii")
+
+                elif block.type == "text":
+                    answer_output = block.text
+
+            answer_output = answer_output.encode("ascii", errors="replace").decode(
+                "ascii"
+            )
+            logger.debug("Decoded output:\n %s", answer_output)
+            result_dict = parse_llm_output(answer_output)
+
+            logger.info(
+                "Input Tokens: %d | Output Tokens: %d | Thinking Budget: %d",
+                num_input_tokens,
+                num_output_tokens,
+                num_thinking_tokens,
+            )
+
+            # Handle case where generated_text is a string instead of dict (when parsing fails)
+            if isinstance(result_dict, dict):
+                predicted_probability = float(result_dict.get("probability", np.nan))
+                predicted_diagnosis = result_dict.get("diagnosis", "error")
+                generated_explanation = result_dict.get("explanation", "error")
+            else:
+                predicted_probability = np.nan
+                predicted_diagnosis = "error"
+                generated_explanation = "error"
+
+            logger.info(
+                "Predicted probability: %s | True label: %s",
+                predicted_probability,
+                y_true,
+            )
+
+            metrics_tracker.add_results(predicted_probability, y_true)
+            metrics_tracker.add_metadata_item(
+                {
+                    "Input Prompt": X_input,
+                    "Target Label": y_true,
+                    "Predicted Probability": predicted_probability,
+                    "Predicted Diagnosis": predicted_diagnosis,
+                    "Predicted Explanation": generated_explanation,
+                    "Tokenization Time": 0,
+                    "Inference Time": 0,
+                    "Input Tokens": num_input_tokens,
+                    "Output Tokens": num_output_tokens,
+                    "Thinking Tokens": num_thinking_tokens,
+                    "Thinking Output": thinking_output,
+                }
+            )
+            if len(metrics_tracker.items) > 100:
+                # Log metadata periodically to avoid memory issues
+                metrics_tracker.log_metadata()
+
+        metrics_tracker.log_metadata(save_to_file=self.save_metadata)
+        metrics_tracker.summary = metrics_tracker.compute_overall_metrics()
+        if save_report:
+            metrics_tracker.save_report(prompting_id=self.prompting_id)
+
+        logger.info("Test evaluation completed for %s", self.model_name)
+        logger.info("Test metrics: %s", metrics_tracker.summary)

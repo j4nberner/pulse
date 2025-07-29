@@ -11,7 +11,8 @@ from openai import AzureOpenAI
 import wandb
 from src.eval.metrics import MetricsTracker
 from src.models.pulse_model import PulseModel
-from src.util.model_util import extract_dict, parse_llm_output, prompt_template_hf, system_message_samples
+from src.util.model_util import (parse_llm_output, prompt_template_hf,
+                                 system_message_samples)
 
 warnings.filterwarnings(
     "ignore",

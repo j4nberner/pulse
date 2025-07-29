@@ -1,0 +1,13 @@
+name: "OpenAIo3Model"
+pretrained_model_paths: null # Path to pretrained model (if any)
+params:
+  trainer_name: "DummyTrainer"
+  mode: "inference" # Mode of operation (inference, training)
+  model_id: "o3-2025-04-16" # Model ID for Llama3, path to pretrained model (if any)
+  api_key_name: "OPENAI_O3_KEY"
+  type: "LLM" # Type of model (convML for conventional machine learning, convDL for conventional deep learning and LLM for large language models)
+  verbose: 2
+  reasoning_effort: "medium" # Reasoning effort level (low, medium, high)
+  max_new_tokens: 30000
+  max_length: 30000 # Maximum length of input sequences
+  temperature: 0.4 # Temperature for sampling (0.0 = greedy sampling)

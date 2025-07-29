@@ -1,0 +1,607 @@
+{
+  "results": [
+    {
+      "model_id": "claude-sonnet-4-20250514",
+      "task_id": "aki",
+      "dataset": "eicu",
+      "run_id": "20250723_171551",
+      "prompting_id": "sarvari_2024_aggregation_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.624,
+          "auprc": 0.465,
+          "normalized_auprc": 1.501,
+          "specificity": 0.745,
+          "f1_score": 0.463,
+          "accuracy": 0.661,
+          "balanced_accuracy": 0.609,
+          "precision": 0.454,
+          "recall": 0.472,
+          "mcc": 0.608,
+          "kappa": 0.215,
+          "minpse": 0.459,
+          "task_dataset_score": 56.586
+        },
+        "task_pulse_scores": {
+          "aki": [
+            56.58573280679,
+            47.53319796385842,
+            51.78438941780917
+          ],
+          "mortality": [
+            59.38114178561615,
+            47.439953699922825,
+            56.4776282244289
+          ],
+          "sepsis": [
+            40.77679769485262,
+            47.25688769314919,
+            29.09853543537037
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            56.58573280679,
+            59.38114178561615,
+            40.77679769485262
+          ],
+          "miiv": [
+            51.78438941780917,
+            56.4776282244289,
+            29.09853543537037
+          ],
+          "hirid": [
+            47.53319796385842,
+            47.439953699922825,
+            47.25688769314919
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 48.48158496908863,
+          "overall_aki": 51.96777339615253,
+          "overall_eicu": 52.247890762419594,
+          "overall_mortality": 54.43290790332262,
+          "overall_hirid": 47.41001311897681,
+          "overall_sepsis": 39.04407360779072,
+          "overall_miiv": 45.78685102586948
+        }
+      }
+    },
+    {
+      "model_id": "claude-sonnet-4-20250514",
+      "task_id": "aki",
+      "dataset": "hirid",
+      "run_id": "20250723_171551",
+      "prompting_id": "sarvari_2024_aggregation_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.599,
+          "auprc": 0.243,
+          "normalized_auprc": 1.499,
+          "specificity": 0.897,
+          "f1_score": 0.282,
+          "accuracy": 0.792,
+          "balanced_accuracy": 0.574,
+          "precision": 0.32,
+          "recall": 0.252,
+          "mcc": 0.582,
+          "kappa": 0.162,
+          "minpse": 0.296,
+          "task_dataset_score": 47.533
+        },
+        "task_pulse_scores": {
+          "aki": [
+            56.58573280679,
+            47.53319796385842,
+            51.78438941780917
+          ],
+          "mortality": [
+            59.38114178561615,
+            47.439953699922825,
+            56.4776282244289
+          ],
+          "sepsis": [
+            40.77679769485262,
+            47.25688769314919,
+            29.09853543537037
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            56.58573280679,
+            59.38114178561615,
+            40.77679769485262
+          ],
+          "miiv": [
+            51.78438941780917,
+            56.4776282244289,
+            29.09853543537037
+          ],
+          "hirid": [
+            47.53319796385842,
+            47.439953699922825,
+            47.25688769314919
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 48.48158496908863,
+          "overall_aki": 51.96777339615253,
+          "overall_eicu": 52.247890762419594,
+          "overall_mortality": 54.43290790332262,
+          "overall_hirid": 47.41001311897681,
+          "overall_sepsis": 39.04407360779072,
+          "overall_miiv": 45.78685102586948
+        }
+      }
+    },
+    {
+      "model_id": "claude-sonnet-4-20250514",
+      "task_id": "aki",
+      "dataset": "miiv",
+      "run_id": "20250723_171551",
+      "prompting_id": "sarvari_2024_aggregation_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.591,
+          "auprc": 0.388,
+          "normalized_auprc": 1.665,
+          "specificity": 0.795,
+          "f1_score": 0.355,
+          "accuracy": 0.694,
+          "balanced_accuracy": 0.579,
+          "precision": 0.349,
+          "recall": 0.362,
+          "mcc": 0.578,
+          "kappa": 0.155,
+          "minpse": 0.356,
+          "task_dataset_score": 51.784
+        },
+        "task_pulse_scores": {
+          "aki": [
+            56.58573280679,
+            47.53319796385842,
+            51.78438941780917
+          ],
+          "mortality": [
+            59.38114178561615,
+            47.439953699922825,
+            56.4776282244289
+          ],
+          "sepsis": [
+            40.77679769485262,
+            47.25688769314919,
+            29.09853543537037
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            56.58573280679,
+            59.38114178561615,
+            40.77679769485262
+          ],
+          "miiv": [
+            51.78438941780917,
+            56.4776282244289,
+            29.09853543537037
+          ],
+          "hirid": [
+            47.53319796385842,
+            47.439953699922825,
+            47.25688769314919
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 48.48158496908863,
+          "overall_aki": 51.96777339615253,
+          "overall_eicu": 52.247890762419594,
+          "overall_mortality": 54.43290790332262,
+          "overall_hirid": 47.41001311897681,
+          "overall_sepsis": 39.04407360779072,
+          "overall_miiv": 45.78685102586948
+        }
+      }
+    },
+    {
+      "model_id": "claude-sonnet-4-20250514",
+      "task_id": "mortality",
+      "dataset": "eicu",
+      "run_id": "20250723_171551",
+      "prompting_id": "sarvari_2024_aggregation_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.758,
+          "auprc": 0.458,
+          "normalized_auprc": 6.539,
+          "specificity": 0.204,
+          "f1_score": 0.159,
+          "accuracy": 0.26,
+          "balanced_accuracy": 0.602,
+          "precision": 0.086,
+          "recall": 1.0,
+          "mcc": 0.566,
+          "kappa": 0.035,
+          "minpse": 0.211,
+          "task_dataset_score": 59.381
+        },
+        "task_pulse_scores": {
+          "aki": [
+            56.58573280679,
+            47.53319796385842,
+            51.78438941780917
+          ],
+          "mortality": [
+            59.38114178561615,
+            47.439953699922825,
+            56.4776282244289
+          ],
+          "sepsis": [
+            40.77679769485262,
+            47.25688769314919,
+            29.09853543537037
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            56.58573280679,
+            59.38114178561615,
+            40.77679769485262
+          ],
+          "miiv": [
+            51.78438941780917,
+            56.4776282244289,
+            29.09853543537037
+          ],
+          "hirid": [
+            47.53319796385842,
+            47.439953699922825,
+            47.25688769314919
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 48.48158496908863,
+          "overall_aki": 51.96777339615253,
+          "overall_eicu": 52.247890762419594,
+          "overall_mortality": 54.43290790332262,
+          "overall_hirid": 47.41001311897681,
+          "overall_sepsis": 39.04407360779072,
+          "overall_miiv": 45.78685102586948
+        }
+      }
+    },
+    {
+      "model_id": "claude-sonnet-4-20250514",
+      "task_id": "mortality",
+      "dataset": "hirid",
+      "run_id": "20250723_171551",
+      "prompting_id": "sarvari_2024_aggregation_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.625,
+          "auprc": 0.272,
+          "normalized_auprc": 2.472,
+          "specificity": 0.022,
+          "f1_score": 0.202,
+          "accuracy": 0.13,
+          "balanced_accuracy": 0.511,
+          "precision": 0.112,
+          "recall": 1.0,
+          "mcc": 0.525,
+          "kappa": 0.005,
+          "minpse": 0.273,
+          "task_dataset_score": 47.44
+        },
+        "task_pulse_scores": {
+          "aki": [
+            56.58573280679,
+            47.53319796385842,
+            51.78438941780917
+          ],
+          "mortality": [
+            59.38114178561615,
+            47.439953699922825,
+            56.4776282244289
+          ],
+          "sepsis": [
+            40.77679769485262,
+            47.25688769314919,
+            29.09853543537037
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            56.58573280679,
+            59.38114178561615,
+            40.77679769485262
+          ],
+          "miiv": [
+            51.78438941780917,
+            56.4776282244289,
+            29.09853543537037
+          ],
+          "hirid": [
+            47.53319796385842,
+            47.439953699922825,
+            47.25688769314919
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 48.48158496908863,
+          "overall_aki": 51.96777339615253,
+          "overall_eicu": 52.247890762419594,
+          "overall_mortality": 54.43290790332262,
+          "overall_hirid": 47.41001311897681,
+          "overall_sepsis": 39.04407360779072,
+          "overall_miiv": 45.78685102586948
+        }
+      }
+    },
+    {
+      "model_id": "claude-sonnet-4-20250514",
+      "task_id": "mortality",
+      "dataset": "miiv",
+      "run_id": "20250723_171551",
+      "prompting_id": "sarvari_2024_aggregation_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.759,
+          "auprc": 0.364,
+          "normalized_auprc": 3.03,
+          "specificity": 0.273,
+          "f1_score": 0.253,
+          "accuracy": 0.35,
+          "balanced_accuracy": 0.595,
+          "precision": 0.147,
+          "recall": 0.917,
+          "mcc": 0.571,
+          "kappa": 0.058,
+          "minpse": 0.32,
+          "task_dataset_score": 56.478
+        },
+        "task_pulse_scores": {
+          "aki": [
+            56.58573280679,
+            47.53319796385842,
+            51.78438941780917
+          ],
+          "mortality": [
+            59.38114178561615,
+            47.439953699922825,
+            56.4776282244289
+          ],
+          "sepsis": [
+            40.77679769485262,
+            47.25688769314919,
+            29.09853543537037
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            56.58573280679,
+            59.38114178561615,
+            40.77679769485262
+          ],
+          "miiv": [
+            51.78438941780917,
+            56.4776282244289,
+            29.09853543537037
+          ],
+          "hirid": [
+            47.53319796385842,
+            47.439953699922825,
+            47.25688769314919
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 48.48158496908863,
+          "overall_aki": 51.96777339615253,
+          "overall_eicu": 52.247890762419594,
+          "overall_mortality": 54.43290790332262,
+          "overall_hirid": 47.41001311897681,
+          "overall_sepsis": 39.04407360779072,
+          "overall_miiv": 45.78685102586948
+        }
+      }
+    },
+    {
+      "model_id": "claude-sonnet-4-20250514",
+      "task_id": "sepsis",
+      "dataset": "eicu",
+      "run_id": "20250723_171551",
+      "prompting_id": "sarvari_2024_aggregation_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.607,
+          "auprc": 0.054,
+          "normalized_auprc": 1.136,
+          "specificity": 0.363,
+          "f1_score": 0.123,
+          "accuracy": 0.389,
+          "balanced_accuracy": 0.628,
+          "precision": 0.066,
+          "recall": 0.894,
+          "mcc": 0.558,
+          "kappa": 0.037,
+          "minpse": 0.069,
+          "task_dataset_score": 40.777
+        },
+        "task_pulse_scores": {
+          "aki": [
+            56.58573280679,
+            47.53319796385842,
+            51.78438941780917
+          ],
+          "mortality": [
+            59.38114178561615,
+            47.439953699922825,
+            56.4776282244289
+          ],
+          "sepsis": [
+            40.77679769485262,
+            47.25688769314919,
+            29.09853543537037
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            56.58573280679,
+            59.38114178561615,
+            40.77679769485262
+          ],
+          "miiv": [
+            51.78438941780917,
+            56.4776282244289,
+            29.09853543537037
+          ],
+          "hirid": [
+            47.53319796385842,
+            47.439953699922825,
+            47.25688769314919
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 48.48158496908863,
+          "overall_aki": 51.96777339615253,
+          "overall_eicu": 52.247890762419594,
+          "overall_mortality": 54.43290790332262,
+          "overall_hirid": 47.41001311897681,
+          "overall_sepsis": 39.04407360779072,
+          "overall_miiv": 45.78685102586948
+        }
+      }
+    },
+    {
+      "model_id": "claude-sonnet-4-20250514",
+      "task_id": "sepsis",
+      "dataset": "hirid",
+      "run_id": "20250723_171551",
+      "prompting_id": "sarvari_2024_aggregation_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.697,
+          "auprc": 0.177,
+          "normalized_auprc": 2.353,
+          "specificity": 0.223,
+          "f1_score": 0.158,
+          "accuracy": 0.275,
+          "balanced_accuracy": 0.564,
+          "precision": 0.087,
+          "recall": 0.904,
+          "mcc": 0.541,
+          "kappa": 0.024,
+          "minpse": 0.224,
+          "task_dataset_score": 47.257
+        },
+        "task_pulse_scores": {
+          "aki": [
+            56.58573280679,
+            47.53319796385842,
+            51.78438941780917
+          ],
+          "mortality": [
+            59.38114178561615,
+            47.439953699922825,
+            56.4776282244289
+          ],
+          "sepsis": [
+            40.77679769485262,
+            47.25688769314919,
+            29.09853543537037
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            56.58573280679,
+            59.38114178561615,
+            40.77679769485262
+          ],
+          "miiv": [
+            51.78438941780917,
+            56.4776282244289,
+            29.09853543537037
+          ],
+          "hirid": [
+            47.53319796385842,
+            47.439953699922825,
+            47.25688769314919
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 48.48158496908863,
+          "overall_aki": 51.96777339615253,
+          "overall_eicu": 52.247890762419594,
+          "overall_mortality": 54.43290790332262,
+          "overall_hirid": 47.41001311897681,
+          "overall_sepsis": 39.04407360779072,
+          "overall_miiv": 45.78685102586948
+        }
+      }
+    },
+    {
+      "model_id": "claude-sonnet-4-20250514",
+      "task_id": "sepsis",
+      "dataset": "miiv",
+      "run_id": "20250723_171551",
+      "prompting_id": "sarvari_2024_aggregation_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.381,
+          "auprc": 0.018,
+          "normalized_auprc": 0.713,
+          "specificity": 0.333,
+          "f1_score": 0.035,
+          "accuracy": 0.336,
+          "balanced_accuracy": 0.406,
+          "precision": 0.018,
+          "recall": 0.48,
+          "mcc": 0.469,
+          "kappa": -0.014,
+          "minpse": 0.025,
+          "task_dataset_score": 29.099
+        },
+        "task_pulse_scores": {
+          "aki": [
+            56.58573280679,
+            47.53319796385842,
+            51.78438941780917
+          ],
+          "mortality": [
+            59.38114178561615,
+            47.439953699922825,
+            56.4776282244289
+          ],
+          "sepsis": [
+            40.77679769485262,
+            47.25688769314919,
+            29.09853543537037
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            56.58573280679,
+            59.38114178561615,
+            40.77679769485262
+          ],
+          "miiv": [
+            51.78438941780917,
+            56.4776282244289,
+            29.09853543537037
+          ],
+          "hirid": [
+            47.53319796385842,
+            47.439953699922825,
+            47.25688769314919
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 48.48158496908863,
+          "overall_aki": 51.96777339615253,
+          "overall_eicu": 52.247890762419594,
+          "overall_mortality": 54.43290790332262,
+          "overall_hirid": 47.41001311897681,
+          "overall_sepsis": 39.04407360779072,
+          "overall_miiv": 45.78685102586948
+        }
+      }
+    }
+  ]
+}

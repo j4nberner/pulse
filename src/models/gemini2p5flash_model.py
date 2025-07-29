@@ -6,23 +6,17 @@ import time
 import warnings
 from typing import Any, Dict
 
-import numpy as np
-
 # import vertexai
 from google import genai
-from google.genai.types import GenerateContentConfig, ThinkingConfig
-
-from src.eval.metrics import MetricsTracker
-from src.models.pulse_model import PulseModel, PulseLLMModel
-from src.util.config_util import set_seeds
-from src.util.model_util import (
-    parse_llm_output,
-    prompt_template_hf,
-    system_message_samples,
+from google.genai.types import (
+    CreateBatchJobConfig,
+    GenerateContentConfig,
+    ThinkingConfig,
 )
 
-# from vertexai.generative_models import (GenerationConfig, GenerativeModel, ThinkingConfig)
-
+from src.models.pulse_model import PulseLLMModel
+from src.util.config_util import set_seeds
+from src.util.model_util import parse_llm_output, prompt_template_hf
 
 warnings.filterwarnings(
     "ignore",
@@ -81,7 +75,7 @@ class Gemini2p5Model(PulseLLMModel):
         # self.model = GenerativeModel(self.model_id)
         self.is_agent = False
         self.agent_instance = None
-        self.is_loaded = True # Gemini models are loaded by default
+        self.is_loaded = True  # Gemini models are loaded by default
 
     def _generate_standard(
         self,
@@ -110,13 +104,15 @@ class Gemini2p5Model(PulseLLMModel):
             else 10000
         )
 
-        incl_thought = True if self.thinking_budget > 0 else False
+        incl_thought = (
+            True if self.thinking_budget > 0 or self.thinking_budget == -1 else False
+        )
 
         infer_start = time.perf_counter()
         # Retry logic for rate limiting
         max_retries = 3
         base_delay = 30
-        
+
         for attempt in range(max_retries + 1):
             try:
                 infer_start = time.perf_counter()
@@ -129,25 +125,30 @@ class Gemini2p5Model(PulseLLMModel):
                         top_p=1.0,
                         top_k=32,
                         thinking_config=ThinkingConfig(
-                            thinking_budget=self.thinking_budget, include_thoughts=incl_thought
+                            thinking_budget=self.thinking_budget,
+                            include_thoughts=incl_thought,
                         ),
                     ),
                 )
                 infer_time = time.perf_counter() - infer_start
                 break  # Success, exit retry loop
-                
+
             except Exception as e:
                 error_message = str(e)
-                
+
                 if "429" in error_message and "RESOURCE_EXHAUSTED" in error_message:
                     if attempt < max_retries:
-                        delay = base_delay * (2 ** attempt) + random.uniform(0, 5)
-                        logger.warning(f"Rate limit hit (429). Retrying in {delay:.1f} seconds... (attempt {attempt + 1}/{max_retries})")
+                        delay = base_delay * (2**attempt) + random.uniform(0, 5)
+                        logger.warning(
+                            f"Rate limit hit (429). Retrying in {delay:.1f} seconds... (attempt {attempt + 1}/{max_retries})"
+                        )
                         time.sleep(delay)
                         continue
                     else:
-                        logger.error(f"Max retries ({max_retries}) exceeded for rate limiting")
-                
+                        logger.error(
+                            f"Max retries ({max_retries}) exceeded for rate limiting"
+                        )
+
                 # Re-raise the exception if it's not a rate limit error or max retries exceeded
                 raise e
         infer_time = time.perf_counter() - infer_start
@@ -197,27 +198,3 @@ class Gemini2p5Model(PulseLLMModel):
             "num_output_tokens": num_output_tokens,
             "num_thinking_tokens": num_thinking_tokens,
         }
-
-    def execute_with_retry(func, *args, **kwargs):
-        """
-        Execute a function with retry logic for 429 errors.
-        """
-        max_retries = 3
-        base_delay = 30
-        
-        for attempt in range(max_retries + 1):
-            try:
-                return func(*args, **kwargs)
-            except Exception as e:
-                error_message = str(e)
-                
-                if "429" in error_message and "RESOURCE_EXHAUSTED" in error_message:
-                    if attempt < max_retries:
-                        delay = base_delay * (2 ** attempt) + random.uniform(0, 5)
-                        print(f"Rate limit hit (429). Retrying in {delay:.1f} seconds... (attempt {attempt + 1}/{max_retries})")
-                        time.sleep(delay)
-                        continue
-                
-                raise e
-        
-        return None
