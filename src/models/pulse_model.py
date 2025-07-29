@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, Any, Dict, Optional
 import joblib
 import numpy as np
 import torch
-import torch.nn as nn
 from peft import PromptTuningConfig, PromptTuningInit, TaskType, get_peft_model
 from torch.utils.data import DataLoader
 from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -306,8 +305,8 @@ class PulseLLMModel(PulseModel):
 
         # Tokenize with chat template
         tokenized_inputs = self.tokenizer.apply_chat_template(
-            input_text, 
-            tokenize=True, 
+            input_text,
+            tokenize=True,
             add_generation_prompt=True,
             return_tensors="pt",
             return_dict=True,
@@ -315,8 +314,9 @@ class PulseLLMModel(PulseModel):
 
         num_input_tokens = tokenized_inputs["input_ids"].size(1)
 
-        logger.debug("GPU memory allocated: %s",
-                     torch.cuda.memory_allocated() / (1024 ** 3))
+        logger.debug(
+            "GPU memory allocated: %s", torch.cuda.memory_allocated() / (1024**3)
+        )
 
         # Generate output with scores
         infer_start = time.perf_counter()
@@ -364,7 +364,9 @@ class PulseLLMModel(PulseModel):
                     self.tokenizer(
                         thinking_output,
                         return_tensors="pt",
-                    )["input_ids"][0]
+                    )[
+                        "input_ids"
+                    ][0]
                 )
             logger.debug("Answer output:\n %s", decoded_output)
 
@@ -389,7 +391,7 @@ class PulseLLMModel(PulseModel):
         result = {
             "generated_text": generated_text,
             "thinking_output": thinking_output,
-            "token_time": 0.0,  
+            "token_time": 0.0,
             "infer_time": infer_time,
             "num_input_tokens": num_input_tokens,
             "num_output_tokens": num_output_tokens,
@@ -408,9 +410,6 @@ class PulseLLMModel(PulseModel):
         Returns:
             The average validation loss across the test dataset.
         """
-        # Criterion not needed for LLM inference
-        # criterion = nn.BCELoss()  # Binary Cross Entropy Loss
-
         # Check if model is already loaded before attempting to load
         if not self.is_loaded:
             self.load_model()
@@ -438,7 +437,7 @@ class PulseLLMModel(PulseModel):
 
         verbose: int = self.params.get("verbose", 1)
         val_loss: list[float] = []
-        
+
         try:
             self.model.eval()
         except Exception as e:
@@ -451,7 +450,13 @@ class PulseLLMModel(PulseModel):
                 test_loader[1].reset_index(drop=True),
             )
 
+        skip_samples = 0
+
         for X, y in zip(test_loader[0].iterrows(), test_loader[1].iterrows()):
+            # Skip first n samples if specified in params
+            if X[0] < skip_samples:
+                continue
+
             idx = X[0]
             if self.is_agent:
                 X_input = X[1]  # Full pandas Series with all patient features
@@ -476,7 +481,7 @@ class PulseLLMModel(PulseModel):
                     "generated_text": {
                         "diagnosis": "error",
                         "probability": np.nan,
-                        "explanation": f"Error: {str(e)}",
+                        "explanation": f"error: {str(e)}",
                     },
                     "token_time": 0.0,
                     "infer_time": 0.0,
@@ -498,8 +503,12 @@ class PulseLLMModel(PulseModel):
             # Handle case where generated_text is a string instead of dict (when parsing fails)
             if isinstance(generated_text, dict):
                 predicted_probability = float(generated_text.get("probability", np.nan))
+                predicted_diagnosis = generated_text.get("diagnosis", "error")
+                generated_explanation = generated_text.get("explanation", "error")
             else:
                 predicted_probability = np.nan
+                predicted_diagnosis = "error"
+                generated_explanation = "error"
 
             logger.info(
                 "Predicted probability: %s | True label: %s",
@@ -508,17 +517,14 @@ class PulseLLMModel(PulseModel):
             )
 
             if verbose > 1:
-                logger.info("Diagnosis for: %s", generated_text["diagnosis"])
-                logger.info(
-                    "Generated explanation: %s \n", generated_text["explanation"]
-                )
+                logger.info("Diagnosis for: %s", predicted_diagnosis)
+                logger.info("Generated explanation: %s \n", generated_explanation)
             if verbose > 2:
                 logger.info("Input prompt: %s \n", X_input)
 
             if self.wandb:
                 wandb.log(
                     {
-                        # "val_loss": loss.item(),
                         "token_time": token_time,
                         "infer_time": infer_time,
                         "num_input_tokens": num_input_tokens,
@@ -529,21 +535,13 @@ class PulseLLMModel(PulseModel):
             metrics_tracker.add_results(predicted_probability, y_true)
 
             if not self.is_agent:  # Agent models handle metadata logging in add_step()
-                # Handle case where generated_text is a string instead of dict
-                if isinstance(generated_text, dict):
-                    diagnosis = generated_text.get("diagnosis", "")
-                    explanation = generated_text.get("explanation", "")
-                else:
-                    diagnosis = ""
-                    explanation = str(generated_text) if generated_text else ""
-
                 metrics_tracker.add_metadata_item(
                     {
                         "Input Prompt": X_input,
                         "Target Label": y_true,
                         "Predicted Probability": predicted_probability,
-                        "Predicted Diagnosis": diagnosis,
-                        "Predicted Explanation": explanation,
+                        "Predicted Diagnosis": predicted_diagnosis,
+                        "Predicted Explanation": generated_explanation,
                         "Tokenization Time": token_time,
                         "Inference Time": infer_time,
                         "Input Tokens": num_input_tokens,
@@ -566,7 +564,7 @@ class PulseLLMModel(PulseModel):
 
         # self.delete_model()
 
-        return 0.0  # float(np.mean(val_loss))
+        return 0.0
 
     def evaluate_sys_msgs(self, test_loader: Any, save_report: bool = True) -> float:
         """Evaluates the model on a given test set.
@@ -635,7 +633,9 @@ class PulseLLMModel(PulseModel):
 
                 # Handle case where generated_text is a string instead of dict (when parsing fails)
                 if isinstance(generated_text, dict):
-                    predicted_probability = float(generated_text.get("probability", np.nan))
+                    predicted_probability = float(
+                        generated_text.get("probability", np.nan)
+                    )
                 else:
                     predicted_probability = np.nan
 
@@ -646,9 +646,12 @@ class PulseLLMModel(PulseModel):
                 )
                 if verbose > 1:
                     if isinstance(generated_text, dict):
-                        logger.info("Diagnosis for: %s", generated_text.get("diagnosis", ""))
                         logger.info(
-                            "Generated explanation: %s \n", generated_text.get("explanation", "")
+                            "Diagnosis for: %s", generated_text.get("diagnosis", "")
+                        )
+                        logger.info(
+                            "Generated explanation: %s \n",
+                            generated_text.get("explanation", ""),
                         )
                     else:
                         logger.info("Raw output: %s", generated_text)
@@ -660,8 +663,6 @@ class PulseLLMModel(PulseModel):
                 ).unsqueeze(0)
                 target = torch.tensor(float(y_true), dtype=torch.float32).unsqueeze(0)
 
-                # Criterion not needed for LLM inference
-                # loss = criterion(predicted_label, target)
                 val_loss.append(np.nan)
 
                 metrics_tracker.add_results(predicted_probability, y_true)
@@ -699,8 +700,6 @@ class PulseLLMModel(PulseModel):
 
         logger.info("System Message evaluation completed for %s", self.model_name)
         logger.info("Test metrics: %s", metrics_tracker.summary)
-
-        # self.delete_model()
 
         return float(np.mean(val_loss))
 
@@ -801,11 +800,10 @@ class PulseLLMModel(PulseModel):
             # Process through agent - returns raw unparsed output
             result = self.agent_instance.process_single(input_data)
 
-            #TODO: @sophiafe Need to add to all agents if we want to have this included.
             # Adding default Thinking Output for compatibility
             result["thinking_output"] = ""
             result["num_thinking_tokens"] = 0
-            
+
             return result
 
         except Exception as e:

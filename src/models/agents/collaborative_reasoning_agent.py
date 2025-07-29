@@ -5,21 +5,16 @@ import numpy as np
 import pandas as pd
 
 from src.models.agents.pulse_agent import PulseAgent
-from src.preprocessing.preprocessing_advanced.preprocessing_advanced import (
-    PreprocessorAdvanced,
-)
-from src.util.agent_util import (
-    create_error_response,
-    filter_na_columns,
-    format_clinical_data,
-    format_clinical_text,
-    get_monitoring_period_hours,
-    get_specialist_features,
-    get_specialist_system_message,
-    get_task_specific_content,
-    format_demographics_str,
-    parse_numeric_value,
-)
+from src.preprocessing.preprocessing_advanced.preprocessing_advanced import \
+    PreprocessorAdvanced
+from src.util.agent_util import (create_error_response, filter_na_columns,
+                                 format_clinical_data, format_clinical_text,
+                                 format_demographics_str,
+                                 get_monitoring_period_hours,
+                                 get_specialist_features,
+                                 get_specialist_system_message,
+                                 get_task_specific_content,
+                                 parse_numeric_value)
 
 logger = logging.getLogger("PULSE_logger")
 

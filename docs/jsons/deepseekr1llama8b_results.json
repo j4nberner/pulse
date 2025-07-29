@@ -1,0 +1,2398 @@
+{
+  "results": [
+    {
+      "model_id": "DeepSeek-R1-Distill-Llama-8B",
+      "task_id": "aki",
+      "dataset": "eicu",
+      "run_id": "20250626_123125",
+      "prompting_id": "liu_2023_few_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.501,
+          "auprc": 0.335,
+          "normalized_auprc": 1.081,
+          "specificity": 0.863,
+          "f1_score": 0.223,
+          "accuracy": 0.646,
+          "balanced_accuracy": 0.513,
+          "precision": 0.35,
+          "recall": 0.164,
+          "mcc": 0.518,
+          "kappa": 0.032,
+          "minpse": 0.31,
+          "task_dataset_score": 45.1
+        },
+        "task_pulse_scores": {
+          "aki": [45.09966225469213, 41.386290791272636, 47.56999071156182],
+          "mortality": [
+            31.289952904650374, 59.668561152336736, 49.292300775020614
+          ],
+          "sepsis": [33.978112105450016, 37.869343769251735, 30.08793316677272]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [45.09966225469213, 31.289952904650374, 33.978112105450016],
+          "miiv": [47.56999071156182, 49.292300775020614, 30.08793316677272],
+          "hirid": [41.386290791272636, 59.668561152336736, 37.869343769251735]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 41.80468307011208,
+          "overall_aki": 44.6853145858422,
+          "overall_eicu": 36.7892424215975,
+          "overall_mortality": 46.750271610669245,
+          "overall_hirid": 46.308065237620376,
+          "overall_sepsis": 33.97846301382483,
+          "overall_miiv": 42.31674155111838
+        }
+      }
+    },
+    {
+      "model_id": "DeepSeek-R1-Distill-Llama-8B",
+      "task_id": "aki",
+      "dataset": "hirid",
+      "run_id": "20250626_123125",
+      "prompting_id": "liu_2023_few_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.528,
+          "auprc": 0.187,
+          "normalized_auprc": 1.156,
+          "specificity": 0.889,
+          "f1_score": 0.182,
+          "accuracy": 0.771,
+          "balanced_accuracy": 0.523,
+          "precision": 0.216,
+          "recall": 0.157,
+          "mcc": 0.527,
+          "kappa": 0.052,
+          "minpse": 0.189,
+          "task_dataset_score": 41.386
+        },
+        "task_pulse_scores": {
+          "aki": [45.09966225469213, 41.386290791272636, 47.56999071156182],
+          "mortality": [
+            31.289952904650374, 59.668561152336736, 49.292300775020614
+          ],
+          "sepsis": [33.978112105450016, 37.869343769251735, 30.08793316677272]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [45.09966225469213, 31.289952904650374, 33.978112105450016],
+          "miiv": [47.56999071156182, 49.292300775020614, 30.08793316677272],
+          "hirid": [41.386290791272636, 59.668561152336736, 37.869343769251735]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 41.80468307011208,
+          "overall_aki": 44.6853145858422,
+          "overall_eicu": 36.7892424215975,
+          "overall_mortality": 46.750271610669245,
+          "overall_hirid": 46.308065237620376,
+          "overall_sepsis": 33.97846301382483,
+          "overall_miiv": 42.31674155111838
+        }
+      }
+    },
+    {
+      "model_id": "DeepSeek-R1-Distill-Llama-8B",
+      "task_id": "aki",
+      "dataset": "miiv",
+      "run_id": "20250626_123125",
+      "prompting_id": "liu_2023_few_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.565,
+          "auprc": 0.314,
+          "normalized_auprc": 1.35,
+          "specificity": 0.902,
+          "f1_score": 0.233,
+          "accuracy": 0.733,
+          "balanced_accuracy": 0.538,
+          "precision": 0.351,
+          "recall": 0.175,
+          "mcc": 0.551,
+          "kappa": 0.093,
+          "minpse": 0.249,
+          "task_dataset_score": 47.57
+        },
+        "task_pulse_scores": {
+          "aki": [45.09966225469213, 41.386290791272636, 47.56999071156182],
+          "mortality": [
+            31.289952904650374, 59.668561152336736, 49.292300775020614
+          ],
+          "sepsis": [33.978112105450016, 37.869343769251735, 30.08793316677272]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [45.09966225469213, 31.289952904650374, 33.978112105450016],
+          "miiv": [47.56999071156182, 49.292300775020614, 30.08793316677272],
+          "hirid": [41.386290791272636, 59.668561152336736, 37.869343769251735]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 41.80468307011208,
+          "overall_aki": 44.6853145858422,
+          "overall_eicu": 36.7892424215975,
+          "overall_mortality": 46.750271610669245,
+          "overall_hirid": 46.308065237620376,
+          "overall_sepsis": 33.97846301382483,
+          "overall_miiv": 42.31674155111838
+        }
+      }
+    },
+    {
+      "model_id": "DeepSeek-R1-Distill-Llama-8B",
+      "task_id": "mortality",
+      "dataset": "eicu",
+      "run_id": "20250626_123125",
+      "prompting_id": "liu_2023_few_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.454,
+          "auprc": 0.058,
+          "normalized_auprc": 0.833,
+          "specificity": 0.634,
+          "f1_score": 0.093,
+          "accuracy": 0.61,
+          "balanced_accuracy": 0.46,
+          "precision": 0.056,
+          "recall": 0.286,
+          "mcc": 0.479,
+          "kappa": -0.027,
+          "minpse": 0.078,
+          "task_dataset_score": 31.29
+        },
+        "task_pulse_scores": {
+          "aki": [45.09966225469213, 41.386290791272636, 47.56999071156182],
+          "mortality": [
+            31.289952904650374, 59.668561152336736, 49.292300775020614
+          ],
+          "sepsis": [33.978112105450016, 37.869343769251735, 30.08793316677272]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [45.09966225469213, 31.289952904650374, 33.978112105450016],
+          "miiv": [47.56999071156182, 49.292300775020614, 30.08793316677272],
+          "hirid": [41.386290791272636, 59.668561152336736, 37.869343769251735]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 41.80468307011208,
+          "overall_aki": 44.6853145858422,
+          "overall_eicu": 36.7892424215975,
+          "overall_mortality": 46.750271610669245,
+          "overall_hirid": 46.308065237620376,
+          "overall_sepsis": 33.97846301382483,
+          "overall_miiv": 42.31674155111838
+        }
+      }
+    },
+    {
+      "model_id": "DeepSeek-R1-Distill-Llama-8B",
+      "task_id": "mortality",
+      "dataset": "hirid",
+      "run_id": "20250626_123125",
+      "prompting_id": "liu_2023_few_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.756,
+          "auprc": 0.416,
+          "normalized_auprc": 3.78,
+          "specificity": 0.685,
+          "f1_score": 0.375,
+          "accuracy": 0.7,
+          "balanced_accuracy": 0.752,
+          "precision": 0.243,
+          "recall": 0.818,
+          "mcc": 0.663,
+          "kappa": 0.247,
+          "minpse": 0.333,
+          "task_dataset_score": 59.669
+        },
+        "task_pulse_scores": {
+          "aki": [45.09966225469213, 41.386290791272636, 47.56999071156182],
+          "mortality": [
+            31.289952904650374, 59.668561152336736, 49.292300775020614
+          ],
+          "sepsis": [33.978112105450016, 37.869343769251735, 30.08793316677272]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [45.09966225469213, 31.289952904650374, 33.978112105450016],
+          "miiv": [47.56999071156182, 49.292300775020614, 30.08793316677272],
+          "hirid": [41.386290791272636, 59.668561152336736, 37.869343769251735]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 41.80468307011208,
+          "overall_aki": 44.6853145858422,
+          "overall_eicu": 36.7892424215975,
+          "overall_mortality": 46.750271610669245,
+          "overall_hirid": 46.308065237620376,
+          "overall_sepsis": 33.97846301382483,
+          "overall_miiv": 42.31674155111838
+        }
+      }
+    },
+    {
+      "model_id": "DeepSeek-R1-Distill-Llama-8B",
+      "task_id": "mortality",
+      "dataset": "miiv",
+      "run_id": "20250626_123125",
+      "prompting_id": "liu_2023_few_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.589,
+          "auprc": 0.319,
+          "normalized_auprc": 2.657,
+          "specificity": 0.807,
+          "f1_score": 0.294,
+          "accuracy": 0.76,
+          "balanced_accuracy": 0.612,
+          "precision": 0.227,
+          "recall": 0.417,
+          "mcc": 0.588,
+          "kappa": 0.164,
+          "minpse": 0.263,
+          "task_dataset_score": 49.292
+        },
+        "task_pulse_scores": {
+          "aki": [45.09966225469213, 41.386290791272636, 47.56999071156182],
+          "mortality": [
+            31.289952904650374, 59.668561152336736, 49.292300775020614
+          ],
+          "sepsis": [33.978112105450016, 37.869343769251735, 30.08793316677272]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [45.09966225469213, 31.289952904650374, 33.978112105450016],
+          "miiv": [47.56999071156182, 49.292300775020614, 30.08793316677272],
+          "hirid": [41.386290791272636, 59.668561152336736, 37.869343769251735]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 41.80468307011208,
+          "overall_aki": 44.6853145858422,
+          "overall_eicu": 36.7892424215975,
+          "overall_mortality": 46.750271610669245,
+          "overall_hirid": 46.308065237620376,
+          "overall_sepsis": 33.97846301382483,
+          "overall_miiv": 42.31674155111838
+        }
+      }
+    },
+    {
+      "model_id": "DeepSeek-R1-Distill-Llama-8B",
+      "task_id": "sepsis",
+      "dataset": "eicu",
+      "run_id": "20250626_123125",
+      "prompting_id": "liu_2023_few_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.486,
+          "auprc": 0.045,
+          "normalized_auprc": 0.931,
+          "specificity": 0.852,
+          "f1_score": 0.053,
+          "accuracy": 0.816,
+          "balanced_accuracy": 0.479,
+          "precision": 0.035,
+          "recall": 0.106,
+          "mcc": 0.487,
+          "kappa": -0.021,
+          "minpse": 0.085,
+          "task_dataset_score": 33.978
+        },
+        "task_pulse_scores": {
+          "aki": [45.09966225469213, 41.386290791272636, 47.56999071156182],
+          "mortality": [
+            31.289952904650374, 59.668561152336736, 49.292300775020614
+          ],
+          "sepsis": [33.978112105450016, 37.869343769251735, 30.08793316677272]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [45.09966225469213, 31.289952904650374, 33.978112105450016],
+          "miiv": [47.56999071156182, 49.292300775020614, 30.08793316677272],
+          "hirid": [41.386290791272636, 59.668561152336736, 37.869343769251735]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 41.80468307011208,
+          "overall_aki": 44.6853145858422,
+          "overall_eicu": 36.7892424215975,
+          "overall_mortality": 46.750271610669245,
+          "overall_hirid": 46.308065237620376,
+          "overall_sepsis": 33.97846301382483,
+          "overall_miiv": 42.31674155111838
+        }
+      }
+    },
+    {
+      "model_id": "DeepSeek-R1-Distill-Llama-8B",
+      "task_id": "sepsis",
+      "dataset": "hirid",
+      "run_id": "20250626_123125",
+      "prompting_id": "liu_2023_few_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.543,
+          "auprc": 0.084,
+          "normalized_auprc": 1.116,
+          "specificity": 0.807,
+          "f1_score": 0.122,
+          "accuracy": 0.763,
+          "balanced_accuracy": 0.513,
+          "precision": 0.085,
+          "recall": 0.219,
+          "mcc": 0.509,
+          "kappa": 0.015,
+          "minpse": 0.137,
+          "task_dataset_score": 37.869
+        },
+        "task_pulse_scores": {
+          "aki": [45.09966225469213, 41.386290791272636, 47.56999071156182],
+          "mortality": [
+            31.289952904650374, 59.668561152336736, 49.292300775020614
+          ],
+          "sepsis": [33.978112105450016, 37.869343769251735, 30.08793316677272]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [45.09966225469213, 31.289952904650374, 33.978112105450016],
+          "miiv": [47.56999071156182, 49.292300775020614, 30.08793316677272],
+          "hirid": [41.386290791272636, 59.668561152336736, 37.869343769251735]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 41.80468307011208,
+          "overall_aki": 44.6853145858422,
+          "overall_eicu": 36.7892424215975,
+          "overall_mortality": 46.750271610669245,
+          "overall_hirid": 46.308065237620376,
+          "overall_sepsis": 33.97846301382483,
+          "overall_miiv": 42.31674155111838
+        }
+      }
+    },
+    {
+      "model_id": "DeepSeek-R1-Distill-Llama-8B",
+      "task_id": "sepsis",
+      "dataset": "miiv",
+      "run_id": "20250626_123125",
+      "prompting_id": "liu_2023_few_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.392,
+          "auprc": 0.019,
+          "normalized_auprc": 0.766,
+          "specificity": 0.866,
+          "f1_score": 0.026,
+          "accuracy": 0.846,
+          "balanced_accuracy": 0.473,
+          "precision": 0.015,
+          "recall": 0.08,
+          "mcc": 0.488,
+          "kappa": -0.018,
+          "minpse": 0.029,
+          "task_dataset_score": 30.088
+        },
+        "task_pulse_scores": {
+          "aki": [45.09966225469213, 41.386290791272636, 47.56999071156182],
+          "mortality": [
+            31.289952904650374, 59.668561152336736, 49.292300775020614
+          ],
+          "sepsis": [33.978112105450016, 37.869343769251735, 30.08793316677272]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [45.09966225469213, 31.289952904650374, 33.978112105450016],
+          "miiv": [47.56999071156182, 49.292300775020614, 30.08793316677272],
+          "hirid": [41.386290791272636, 59.668561152336736, 37.869343769251735]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 41.80468307011208,
+          "overall_aki": 44.6853145858422,
+          "overall_eicu": 36.7892424215975,
+          "overall_mortality": 46.750271610669245,
+          "overall_hirid": 46.308065237620376,
+          "overall_sepsis": 33.97846301382483,
+          "overall_miiv": 42.31674155111838
+        }
+      }
+    },
+    {
+      "model_id": "DeepSeek-R1-Distill-Llama-8B",
+      "task_id": "aki",
+      "dataset": "eicu",
+      "run_id": "20250623_234009",
+      "prompting_id": "sarvari_2024_aggregation_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.546,
+          "auprc": 0.379,
+          "normalized_auprc": 1.224,
+          "specificity": 0.916,
+          "f1_score": 0.234,
+          "accuracy": 0.681,
+          "balanced_accuracy": 0.537,
+          "precision": 0.457,
+          "recall": 0.157,
+          "mcc": 0.555,
+          "kappa": 0.09,
+          "minpse": 0.31,
+          "task_dataset_score": 49.145
+        },
+        "task_pulse_scores": {
+          "aki": [49.14514782186325, 39.79130372036221, 42.806324438320495],
+          "mortality": [
+            38.62082073782055, 43.85961943179457, 44.762904938387315
+          ],
+          "sepsis": [32.38278150320692, 37.35218300563892, 37.09946522870681]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [49.14514782186325, 38.62082073782055, 32.38278150320692],
+          "miiv": [42.806324438320495, 44.762904938387315, 37.09946522870681],
+          "hirid": [39.79130372036221, 43.85961943179457, 37.35218300563892]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 40.64672786956678,
+          "overall_aki": 43.914258660181986,
+          "overall_eicu": 40.04958335429691,
+          "overall_mortality": 42.414448369334146,
+          "overall_hirid": 40.334368719265235,
+          "overall_sepsis": 35.61147657918422,
+          "overall_miiv": 41.55623153513821
+        }
+      }
+    },
+    {
+      "model_id": "DeepSeek-R1-Distill-Llama-8B",
+      "task_id": "aki",
+      "dataset": "hirid",
+      "run_id": "20250623_234009",
+      "prompting_id": "sarvari_2024_aggregation_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.516,
+          "auprc": 0.178,
+          "normalized_auprc": 1.097,
+          "specificity": 0.926,
+          "f1_score": 0.112,
+          "accuracy": 0.789,
+          "balanced_accuracy": 0.504,
+          "precision": 0.176,
+          "recall": 0.082,
+          "mcc": 0.505,
+          "kappa": 0.01,
+          "minpse": 0.17,
+          "task_dataset_score": 39.791
+        },
+        "task_pulse_scores": {
+          "aki": [49.14514782186325, 39.79130372036221, 42.806324438320495],
+          "mortality": [
+            38.62082073782055, 43.85961943179457, 44.762904938387315
+          ],
+          "sepsis": [32.38278150320692, 37.35218300563892, 37.09946522870681]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [49.14514782186325, 38.62082073782055, 32.38278150320692],
+          "miiv": [42.806324438320495, 44.762904938387315, 37.09946522870681],
+          "hirid": [39.79130372036221, 43.85961943179457, 37.35218300563892]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 40.64672786956678,
+          "overall_aki": 43.914258660181986,
+          "overall_eicu": 40.04958335429691,
+          "overall_mortality": 42.414448369334146,
+          "overall_hirid": 40.334368719265235,
+          "overall_sepsis": 35.61147657918422,
+          "overall_miiv": 41.55623153513821
+        }
+      }
+    },
+    {
+      "model_id": "DeepSeek-R1-Distill-Llama-8B",
+      "task_id": "aki",
+      "dataset": "miiv",
+      "run_id": "20250623_234009",
+      "prompting_id": "sarvari_2024_aggregation_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.524,
+          "auprc": 0.26,
+          "normalized_auprc": 1.118,
+          "specificity": 0.911,
+          "f1_score": 0.144,
+          "accuracy": 0.723,
+          "balanced_accuracy": 0.506,
+          "precision": 0.256,
+          "recall": 0.1,
+          "mcc": 0.509,
+          "kappa": 0.015,
+          "minpse": 0.233,
+          "task_dataset_score": 42.806
+        },
+        "task_pulse_scores": {
+          "aki": [49.14514782186325, 39.79130372036221, 42.806324438320495],
+          "mortality": [
+            38.62082073782055, 43.85961943179457, 44.762904938387315
+          ],
+          "sepsis": [32.38278150320692, 37.35218300563892, 37.09946522870681]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [49.14514782186325, 38.62082073782055, 32.38278150320692],
+          "miiv": [42.806324438320495, 44.762904938387315, 37.09946522870681],
+          "hirid": [39.79130372036221, 43.85961943179457, 37.35218300563892]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 40.64672786956678,
+          "overall_aki": 43.914258660181986,
+          "overall_eicu": 40.04958335429691,
+          "overall_mortality": 42.414448369334146,
+          "overall_hirid": 40.334368719265235,
+          "overall_sepsis": 35.61147657918422,
+          "overall_miiv": 41.55623153513821
+        }
+      }
+    },
+    {
+      "model_id": "DeepSeek-R1-Distill-Llama-8B",
+      "task_id": "mortality",
+      "dataset": "eicu",
+      "run_id": "20250623_234009",
+      "prompting_id": "sarvari_2024_aggregation_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.535,
+          "auprc": 0.079,
+          "normalized_auprc": 1.135,
+          "specificity": 0.839,
+          "f1_score": 0.167,
+          "accuracy": 0.8,
+          "balanced_accuracy": 0.562,
+          "precision": 0.118,
+          "recall": 0.286,
+          "mcc": 0.542,
+          "kappa": 0.075,
+          "minpse": 0.143,
+          "task_dataset_score": 38.621
+        },
+        "task_pulse_scores": {
+          "aki": [49.14514782186325, 39.79130372036221, 42.806324438320495],
+          "mortality": [
+            38.62082073782055, 43.85961943179457, 44.762904938387315
+          ],
+          "sepsis": [32.38278150320692, 37.35218300563892, 37.09946522870681]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [49.14514782186325, 38.62082073782055, 32.38278150320692],
+          "miiv": [42.806324438320495, 44.762904938387315, 37.09946522870681],
+          "hirid": [39.79130372036221, 43.85961943179457, 37.35218300563892]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 40.64672786956678,
+          "overall_aki": 43.914258660181986,
+          "overall_eicu": 40.04958335429691,
+          "overall_mortality": 42.414448369334146,
+          "overall_hirid": 40.334368719265235,
+          "overall_sepsis": 35.61147657918422,
+          "overall_miiv": 41.55623153513821
+        }
+      }
+    },
+    {
+      "model_id": "DeepSeek-R1-Distill-Llama-8B",
+      "task_id": "mortality",
+      "dataset": "hirid",
+      "run_id": "20250623_234009",
+      "prompting_id": "sarvari_2024_aggregation_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.608,
+          "auprc": 0.127,
+          "normalized_auprc": 1.153,
+          "specificity": 0.629,
+          "f1_score": 0.275,
+          "accuracy": 0.63,
+          "balanced_accuracy": 0.633,
+          "precision": 0.175,
+          "recall": 0.636,
+          "mcc": 0.585,
+          "kappa": 0.123,
+          "minpse": 0.179,
+          "task_dataset_score": 43.86
+        },
+        "task_pulse_scores": {
+          "aki": [49.14514782186325, 39.79130372036221, 42.806324438320495],
+          "mortality": [
+            38.62082073782055, 43.85961943179457, 44.762904938387315
+          ],
+          "sepsis": [32.38278150320692, 37.35218300563892, 37.09946522870681]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [49.14514782186325, 38.62082073782055, 32.38278150320692],
+          "miiv": [42.806324438320495, 44.762904938387315, 37.09946522870681],
+          "hirid": [39.79130372036221, 43.85961943179457, 37.35218300563892]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 40.64672786956678,
+          "overall_aki": 43.914258660181986,
+          "overall_eicu": 40.04958335429691,
+          "overall_mortality": 42.414448369334146,
+          "overall_hirid": 40.334368719265235,
+          "overall_sepsis": 35.61147657918422,
+          "overall_miiv": 41.55623153513821
+        }
+      }
+    },
+    {
+      "model_id": "DeepSeek-R1-Distill-Llama-8B",
+      "task_id": "mortality",
+      "dataset": "miiv",
+      "run_id": "20250623_234009",
+      "prompting_id": "sarvari_2024_aggregation_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.56,
+          "auprc": 0.261,
+          "normalized_auprc": 2.173,
+          "specificity": 0.818,
+          "f1_score": 0.194,
+          "accuracy": 0.75,
+          "balanced_accuracy": 0.534,
+          "precision": 0.158,
+          "recall": 0.25,
+          "mcc": 0.528,
+          "kappa": 0.054,
+          "minpse": 0.2,
+          "task_dataset_score": 44.763
+        },
+        "task_pulse_scores": {
+          "aki": [49.14514782186325, 39.79130372036221, 42.806324438320495],
+          "mortality": [
+            38.62082073782055, 43.85961943179457, 44.762904938387315
+          ],
+          "sepsis": [32.38278150320692, 37.35218300563892, 37.09946522870681]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [49.14514782186325, 38.62082073782055, 32.38278150320692],
+          "miiv": [42.806324438320495, 44.762904938387315, 37.09946522870681],
+          "hirid": [39.79130372036221, 43.85961943179457, 37.35218300563892]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 40.64672786956678,
+          "overall_aki": 43.914258660181986,
+          "overall_eicu": 40.04958335429691,
+          "overall_mortality": 42.414448369334146,
+          "overall_hirid": 40.334368719265235,
+          "overall_sepsis": 35.61147657918422,
+          "overall_miiv": 41.55623153513821
+        }
+      }
+    },
+    {
+      "model_id": "DeepSeek-R1-Distill-Llama-8B",
+      "task_id": "sepsis",
+      "dataset": "eicu",
+      "run_id": "20250623_234009",
+      "prompting_id": "sarvari_2024_aggregation_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.467,
+          "auprc": 0.041,
+          "normalized_auprc": 0.856,
+          "specificity": 0.563,
+          "f1_score": 0.072,
+          "accuracy": 0.553,
+          "balanced_accuracy": 0.462,
+          "precision": 0.04,
+          "recall": 0.362,
+          "mcc": 0.484,
+          "kappa": -0.016,
+          "minpse": 0.049,
+          "task_dataset_score": 32.383
+        },
+        "task_pulse_scores": {
+          "aki": [49.14514782186325, 39.79130372036221, 42.806324438320495],
+          "mortality": [
+            38.62082073782055, 43.85961943179457, 44.762904938387315
+          ],
+          "sepsis": [32.38278150320692, 37.35218300563892, 37.09946522870681]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [49.14514782186325, 38.62082073782055, 32.38278150320692],
+          "miiv": [42.806324438320495, 44.762904938387315, 37.09946522870681],
+          "hirid": [39.79130372036221, 43.85961943179457, 37.35218300563892]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 40.64672786956678,
+          "overall_aki": 43.914258660181986,
+          "overall_eicu": 40.04958335429691,
+          "overall_mortality": 42.414448369334146,
+          "overall_hirid": 40.334368719265235,
+          "overall_sepsis": 35.61147657918422,
+          "overall_miiv": 41.55623153513821
+        }
+      }
+    },
+    {
+      "model_id": "DeepSeek-R1-Distill-Llama-8B",
+      "task_id": "sepsis",
+      "dataset": "hirid",
+      "run_id": "20250623_234009",
+      "prompting_id": "sarvari_2024_aggregation_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.543,
+          "auprc": 0.083,
+          "normalized_auprc": 1.102,
+          "specificity": 0.714,
+          "f1_score": 0.141,
+          "accuracy": 0.686,
+          "balanced_accuracy": 0.528,
+          "precision": 0.089,
+          "recall": 0.342,
+          "mcc": 0.517,
+          "kappa": 0.025,
+          "minpse": 0.094,
+          "task_dataset_score": 37.352
+        },
+        "task_pulse_scores": {
+          "aki": [49.14514782186325, 39.79130372036221, 42.806324438320495],
+          "mortality": [
+            38.62082073782055, 43.85961943179457, 44.762904938387315
+          ],
+          "sepsis": [32.38278150320692, 37.35218300563892, 37.09946522870681]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [49.14514782186325, 38.62082073782055, 32.38278150320692],
+          "miiv": [42.806324438320495, 44.762904938387315, 37.09946522870681],
+          "hirid": [39.79130372036221, 43.85961943179457, 37.35218300563892]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 40.64672786956678,
+          "overall_aki": 43.914258660181986,
+          "overall_eicu": 40.04958335429691,
+          "overall_mortality": 42.414448369334146,
+          "overall_hirid": 40.334368719265235,
+          "overall_sepsis": 35.61147657918422,
+          "overall_miiv": 41.55623153513821
+        }
+      }
+    },
+    {
+      "model_id": "DeepSeek-R1-Distill-Llama-8B",
+      "task_id": "sepsis",
+      "dataset": "miiv",
+      "run_id": "20250623_234009",
+      "prompting_id": "sarvari_2024_aggregation_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.581,
+          "auprc": 0.029,
+          "normalized_auprc": 1.133,
+          "specificity": 0.504,
+          "f1_score": 0.069,
+          "accuracy": 0.509,
+          "balanced_accuracy": 0.612,
+          "precision": 0.036,
+          "recall": 0.72,
+          "mcc": 0.535,
+          "kappa": 0.022,
+          "minpse": 0.038,
+          "task_dataset_score": 37.099
+        },
+        "task_pulse_scores": {
+          "aki": [49.14514782186325, 39.79130372036221, 42.806324438320495],
+          "mortality": [
+            38.62082073782055, 43.85961943179457, 44.762904938387315
+          ],
+          "sepsis": [32.38278150320692, 37.35218300563892, 37.09946522870681]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [49.14514782186325, 38.62082073782055, 32.38278150320692],
+          "miiv": [42.806324438320495, 44.762904938387315, 37.09946522870681],
+          "hirid": [39.79130372036221, 43.85961943179457, 37.35218300563892]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 40.64672786956678,
+          "overall_aki": 43.914258660181986,
+          "overall_eicu": 40.04958335429691,
+          "overall_mortality": 42.414448369334146,
+          "overall_hirid": 40.334368719265235,
+          "overall_sepsis": 35.61147657918422,
+          "overall_miiv": 41.55623153513821
+        }
+      }
+    },
+    {
+      "model_id": "DeepSeek-R1-Distill-Llama-8B",
+      "task_id": "aki",
+      "dataset": "eicu",
+      "run_id": "20250625_173823",
+      "prompting_id": "zhu_2024a_cot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.571,
+          "auprc": 0.371,
+          "normalized_auprc": 1.197,
+          "specificity": 0.685,
+          "f1_score": 0.418,
+          "accuracy": 0.612,
+          "balanced_accuracy": 0.567,
+          "precision": 0.39,
+          "recall": 0.449,
+          "mcc": 0.565,
+          "kappa": 0.129,
+          "minpse": 0.403,
+          "task_dataset_score": 49.894
+        },
+        "task_pulse_scores": {
+          "aki": [49.89442484774994, 42.98601788246328, 47.497186582290986],
+          "mortality": [42.87784711603634, 45.7697006847413, 58.6328387398111],
+          "sepsis": [33.46777892646236, 39.105936235022504, 30.046884760286854]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [49.89442484774994, 42.87784711603634, 33.46777892646236],
+          "miiv": [47.497186582290986, 58.6328387398111, 30.046884760286854],
+          "hirid": [42.98601788246328, 45.7697006847413, 39.105936235022504]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 43.36429064165163,
+          "overall_aki": 46.79254310416807,
+          "overall_eicu": 42.08001696341621,
+          "overall_mortality": 49.09346218019625,
+          "overall_hirid": 42.62055160074237,
+          "overall_sepsis": 34.206866640590576,
+          "overall_miiv": 45.39230336079631
+        }
+      }
+    },
+    {
+      "model_id": "DeepSeek-R1-Distill-Llama-8B",
+      "task_id": "aki",
+      "dataset": "hirid",
+      "run_id": "20250625_173823",
+      "prompting_id": "zhu_2024a_cot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.543,
+          "auprc": 0.211,
+          "normalized_auprc": 1.304,
+          "specificity": 0.785,
+          "f1_score": 0.255,
+          "accuracy": 0.708,
+          "balanced_accuracy": 0.547,
+          "precision": 0.217,
+          "recall": 0.308,
+          "mcc": 0.541,
+          "kappa": 0.08,
+          "minpse": 0.233,
+          "task_dataset_score": 42.986
+        },
+        "task_pulse_scores": {
+          "aki": [49.89442484774994, 42.98601788246328, 47.497186582290986],
+          "mortality": [42.87784711603634, 45.7697006847413, 58.6328387398111],
+          "sepsis": [33.46777892646236, 39.105936235022504, 30.046884760286854]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [49.89442484774994, 42.87784711603634, 33.46777892646236],
+          "miiv": [47.497186582290986, 58.6328387398111, 30.046884760286854],
+          "hirid": [42.98601788246328, 45.7697006847413, 39.105936235022504]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 43.36429064165163,
+          "overall_aki": 46.79254310416807,
+          "overall_eicu": 42.08001696341621,
+          "overall_mortality": 49.09346218019625,
+          "overall_hirid": 42.62055160074237,
+          "overall_sepsis": 34.206866640590576,
+          "overall_miiv": 45.39230336079631
+        }
+      }
+    },
+    {
+      "model_id": "DeepSeek-R1-Distill-Llama-8B",
+      "task_id": "aki",
+      "dataset": "miiv",
+      "run_id": "20250625_173823",
+      "prompting_id": "zhu_2024a_cot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.566,
+          "auprc": 0.316,
+          "normalized_auprc": 1.356,
+          "specificity": 0.713,
+          "f1_score": 0.348,
+          "accuracy": 0.642,
+          "balanced_accuracy": 0.562,
+          "precision": 0.302,
+          "recall": 0.41,
+          "mcc": 0.556,
+          "kappa": 0.109,
+          "minpse": 0.328,
+          "task_dataset_score": 47.497
+        },
+        "task_pulse_scores": {
+          "aki": [49.89442484774994, 42.98601788246328, 47.497186582290986],
+          "mortality": [42.87784711603634, 45.7697006847413, 58.6328387398111],
+          "sepsis": [33.46777892646236, 39.105936235022504, 30.046884760286854]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [49.89442484774994, 42.87784711603634, 33.46777892646236],
+          "miiv": [47.497186582290986, 58.6328387398111, 30.046884760286854],
+          "hirid": [42.98601788246328, 45.7697006847413, 39.105936235022504]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 43.36429064165163,
+          "overall_aki": 46.79254310416807,
+          "overall_eicu": 42.08001696341621,
+          "overall_mortality": 49.09346218019625,
+          "overall_hirid": 42.62055160074237,
+          "overall_sepsis": 34.206866640590576,
+          "overall_miiv": 45.39230336079631
+        }
+      }
+    },
+    {
+      "model_id": "DeepSeek-R1-Distill-Llama-8B",
+      "task_id": "mortality",
+      "dataset": "eicu",
+      "run_id": "20250625_173823",
+      "prompting_id": "zhu_2024a_cot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.684,
+          "auprc": 0.075,
+          "normalized_auprc": 1.074,
+          "specificity": 0.28,
+          "f1_score": 0.15,
+          "accuracy": 0.32,
+          "balanced_accuracy": 0.568,
+          "precision": 0.082,
+          "recall": 0.857,
+          "mcc": 0.539,
+          "kappa": 0.026,
+          "minpse": 0.136,
+          "task_dataset_score": 42.878
+        },
+        "task_pulse_scores": {
+          "aki": [49.89442484774994, 42.98601788246328, 47.497186582290986],
+          "mortality": [42.87784711603634, 45.7697006847413, 58.6328387398111],
+          "sepsis": [33.46777892646236, 39.105936235022504, 30.046884760286854]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [49.89442484774994, 42.87784711603634, 33.46777892646236],
+          "miiv": [47.497186582290986, 58.6328387398111, 30.046884760286854],
+          "hirid": [42.98601788246328, 45.7697006847413, 39.105936235022504]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 43.36429064165163,
+          "overall_aki": 46.79254310416807,
+          "overall_eicu": 42.08001696341621,
+          "overall_mortality": 49.09346218019625,
+          "overall_hirid": 42.62055160074237,
+          "overall_sepsis": 34.206866640590576,
+          "overall_miiv": 45.39230336079631
+        }
+      }
+    },
+    {
+      "model_id": "DeepSeek-R1-Distill-Llama-8B",
+      "task_id": "mortality",
+      "dataset": "hirid",
+      "run_id": "20250625_173823",
+      "prompting_id": "zhu_2024a_cot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.644,
+          "auprc": 0.195,
+          "normalized_auprc": 1.769,
+          "specificity": 0.056,
+          "f1_score": 0.208,
+          "accuracy": 0.16,
+          "balanced_accuracy": 0.528,
+          "precision": 0.116,
+          "recall": 1.0,
+          "mcc": 0.54,
+          "kappa": 0.013,
+          "minpse": 0.149,
+          "task_dataset_score": 45.77
+        },
+        "task_pulse_scores": {
+          "aki": [49.89442484774994, 42.98601788246328, 47.497186582290986],
+          "mortality": [42.87784711603634, 45.7697006847413, 58.6328387398111],
+          "sepsis": [33.46777892646236, 39.105936235022504, 30.046884760286854]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [49.89442484774994, 42.87784711603634, 33.46777892646236],
+          "miiv": [47.497186582290986, 58.6328387398111, 30.046884760286854],
+          "hirid": [42.98601788246328, 45.7697006847413, 39.105936235022504]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 43.36429064165163,
+          "overall_aki": 46.79254310416807,
+          "overall_eicu": 42.08001696341621,
+          "overall_mortality": 49.09346218019625,
+          "overall_hirid": 42.62055160074237,
+          "overall_sepsis": 34.206866640590576,
+          "overall_miiv": 45.39230336079631
+        }
+      }
+    },
+    {
+      "model_id": "DeepSeek-R1-Distill-Llama-8B",
+      "task_id": "mortality",
+      "dataset": "miiv",
+      "run_id": "20250625_173823",
+      "prompting_id": "zhu_2024a_cot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.703,
+          "auprc": 0.503,
+          "normalized_auprc": 4.19,
+          "specificity": 0.239,
+          "f1_score": 0.244,
+          "accuracy": 0.32,
+          "balanced_accuracy": 0.578,
+          "precision": 0.141,
+          "recall": 0.917,
+          "mcc": 0.561,
+          "kappa": 0.046,
+          "minpse": 0.243,
+          "task_dataset_score": 58.633
+        },
+        "task_pulse_scores": {
+          "aki": [49.89442484774994, 42.98601788246328, 47.497186582290986],
+          "mortality": [42.87784711603634, 45.7697006847413, 58.6328387398111],
+          "sepsis": [33.46777892646236, 39.105936235022504, 30.046884760286854]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [49.89442484774994, 42.87784711603634, 33.46777892646236],
+          "miiv": [47.497186582290986, 58.6328387398111, 30.046884760286854],
+          "hirid": [42.98601788246328, 45.7697006847413, 39.105936235022504]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 43.36429064165163,
+          "overall_aki": 46.79254310416807,
+          "overall_eicu": 42.08001696341621,
+          "overall_mortality": 49.09346218019625,
+          "overall_hirid": 42.62055160074237,
+          "overall_sepsis": 34.206866640590576,
+          "overall_miiv": 45.39230336079631
+        }
+      }
+    },
+    {
+      "model_id": "DeepSeek-R1-Distill-Llama-8B",
+      "task_id": "sepsis",
+      "dataset": "eicu",
+      "run_id": "20250625_173823",
+      "prompting_id": "zhu_2024a_cot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.487,
+          "auprc": 0.043,
+          "normalized_auprc": 0.9,
+          "specificity": 0.386,
+          "f1_score": 0.08,
+          "accuracy": 0.394,
+          "balanced_accuracy": 0.47,
+          "precision": 0.043,
+          "recall": 0.553,
+          "mcc": 0.487,
+          "kappa": -0.009,
+          "minpse": 0.05,
+          "task_dataset_score": 33.468
+        },
+        "task_pulse_scores": {
+          "aki": [49.89442484774994, 42.98601788246328, 47.497186582290986],
+          "mortality": [42.87784711603634, 45.7697006847413, 58.6328387398111],
+          "sepsis": [33.46777892646236, 39.105936235022504, 30.046884760286854]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [49.89442484774994, 42.87784711603634, 33.46777892646236],
+          "miiv": [47.497186582290986, 58.6328387398111, 30.046884760286854],
+          "hirid": [42.98601788246328, 45.7697006847413, 39.105936235022504]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 43.36429064165163,
+          "overall_aki": 46.79254310416807,
+          "overall_eicu": 42.08001696341621,
+          "overall_mortality": 49.09346218019625,
+          "overall_hirid": 42.62055160074237,
+          "overall_sepsis": 34.206866640590576,
+          "overall_miiv": 45.39230336079631
+        }
+      }
+    },
+    {
+      "model_id": "DeepSeek-R1-Distill-Llama-8B",
+      "task_id": "sepsis",
+      "dataset": "hirid",
+      "run_id": "20250625_173823",
+      "prompting_id": "zhu_2024a_cot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.58,
+          "auprc": 0.097,
+          "normalized_auprc": 1.281,
+          "specificity": 0.431,
+          "f1_score": 0.146,
+          "accuracy": 0.446,
+          "balanced_accuracy": 0.53,
+          "precision": 0.083,
+          "recall": 0.63,
+          "mcc": 0.516,
+          "kappa": 0.015,
+          "minpse": 0.186,
+          "task_dataset_score": 39.106
+        },
+        "task_pulse_scores": {
+          "aki": [49.89442484774994, 42.98601788246328, 47.497186582290986],
+          "mortality": [42.87784711603634, 45.7697006847413, 58.6328387398111],
+          "sepsis": [33.46777892646236, 39.105936235022504, 30.046884760286854]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [49.89442484774994, 42.87784711603634, 33.46777892646236],
+          "miiv": [47.497186582290986, 58.6328387398111, 30.046884760286854],
+          "hirid": [42.98601788246328, 45.7697006847413, 39.105936235022504]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 43.36429064165163,
+          "overall_aki": 46.79254310416807,
+          "overall_eicu": 42.08001696341621,
+          "overall_mortality": 49.09346218019625,
+          "overall_hirid": 42.62055160074237,
+          "overall_sepsis": 34.206866640590576,
+          "overall_miiv": 45.39230336079631
+        }
+      }
+    },
+    {
+      "model_id": "DeepSeek-R1-Distill-Llama-8B",
+      "task_id": "sepsis",
+      "dataset": "miiv",
+      "run_id": "20250625_173823",
+      "prompting_id": "zhu_2024a_cot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.419,
+          "auprc": 0.019,
+          "normalized_auprc": 0.771,
+          "specificity": 0.442,
+          "f1_score": 0.035,
+          "accuracy": 0.441,
+          "balanced_accuracy": 0.421,
+          "precision": 0.018,
+          "recall": 0.4,
+          "mcc": 0.475,
+          "kappa": -0.014,
+          "minpse": 0.025,
+          "task_dataset_score": 30.047
+        },
+        "task_pulse_scores": {
+          "aki": [49.89442484774994, 42.98601788246328, 47.497186582290986],
+          "mortality": [42.87784711603634, 45.7697006847413, 58.6328387398111],
+          "sepsis": [33.46777892646236, 39.105936235022504, 30.046884760286854]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [49.89442484774994, 42.87784711603634, 33.46777892646236],
+          "miiv": [47.497186582290986, 58.6328387398111, 30.046884760286854],
+          "hirid": [42.98601788246328, 45.7697006847413, 39.105936235022504]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 43.36429064165163,
+          "overall_aki": 46.79254310416807,
+          "overall_eicu": 42.08001696341621,
+          "overall_mortality": 49.09346218019625,
+          "overall_hirid": 42.62055160074237,
+          "overall_sepsis": 34.206866640590576,
+          "overall_miiv": 45.39230336079631
+        }
+      }
+    },
+    {
+      "model_id": "DeepSeek-R1-Distill-Llama-8B",
+      "task_id": "aki",
+      "dataset": "eicu",
+      "run_id": "20250623_053338",
+      "prompting_id": "zhu_2024b_one_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.583,
+          "auprc": 0.407,
+          "normalized_auprc": 1.314,
+          "specificity": 0.788,
+          "f1_score": 0.367,
+          "accuracy": 0.646,
+          "balanced_accuracy": 0.56,
+          "precision": 0.412,
+          "recall": 0.331,
+          "mcc": 0.564,
+          "kappa": 0.126,
+          "minpse": 0.383,
+          "task_dataset_score": 51.785
+        },
+        "task_pulse_scores": {
+          "aki": [51.785293803140384, 42.96913533714309, 50.57971795588958],
+          "mortality": [49.84345530228669, 45.32805557179854, 43.2062947292818],
+          "sepsis": [34.40697592441447, 39.05158229463108, 34.83852595380303]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [51.785293803140384, 49.84345530228669, 34.40697592441447],
+          "miiv": [50.57971795588958, 43.2062947292818, 34.83852595380303],
+          "hirid": [42.96913533714309, 45.32805557179854, 39.05158229463108]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 43.55655965248762,
+          "overall_aki": 48.44471569872436,
+          "overall_eicu": 45.34524167661385,
+          "overall_mortality": 46.12593520112234,
+          "overall_hirid": 42.44959106785757,
+          "overall_sepsis": 36.099028057616195,
+          "overall_miiv": 42.874846212991464
+        }
+      }
+    },
+    {
+      "model_id": "DeepSeek-R1-Distill-Llama-8B",
+      "task_id": "aki",
+      "dataset": "hirid",
+      "run_id": "20250623_053338",
+      "prompting_id": "zhu_2024b_one_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.547,
+          "auprc": 0.216,
+          "normalized_auprc": 1.335,
+          "specificity": 0.82,
+          "f1_score": 0.22,
+          "accuracy": 0.726,
+          "balanced_accuracy": 0.53,
+          "precision": 0.204,
+          "recall": 0.239,
+          "mcc": 0.528,
+          "kappa": 0.055,
+          "minpse": 0.216,
+          "task_dataset_score": 42.969
+        },
+        "task_pulse_scores": {
+          "aki": [51.785293803140384, 42.96913533714309, 50.57971795588958],
+          "mortality": [49.84345530228669, 45.32805557179854, 43.2062947292818],
+          "sepsis": [34.40697592441447, 39.05158229463108, 34.83852595380303]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [51.785293803140384, 49.84345530228669, 34.40697592441447],
+          "miiv": [50.57971795588958, 43.2062947292818, 34.83852595380303],
+          "hirid": [42.96913533714309, 45.32805557179854, 39.05158229463108]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 43.55655965248762,
+          "overall_aki": 48.44471569872436,
+          "overall_eicu": 45.34524167661385,
+          "overall_mortality": 46.12593520112234,
+          "overall_hirid": 42.44959106785757,
+          "overall_sepsis": 36.099028057616195,
+          "overall_miiv": 42.874846212991464
+        }
+      }
+    },
+    {
+      "model_id": "DeepSeek-R1-Distill-Llama-8B",
+      "task_id": "aki",
+      "dataset": "miiv",
+      "run_id": "20250623_053338",
+      "prompting_id": "zhu_2024b_one_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.574,
+          "auprc": 0.359,
+          "normalized_auprc": 1.541,
+          "specificity": 0.873,
+          "f1_score": 0.325,
+          "accuracy": 0.734,
+          "balanced_accuracy": 0.574,
+          "precision": 0.396,
+          "recall": 0.275,
+          "mcc": 0.585,
+          "kappa": 0.166,
+          "minpse": 0.328,
+          "task_dataset_score": 50.58
+        },
+        "task_pulse_scores": {
+          "aki": [51.785293803140384, 42.96913533714309, 50.57971795588958],
+          "mortality": [49.84345530228669, 45.32805557179854, 43.2062947292818],
+          "sepsis": [34.40697592441447, 39.05158229463108, 34.83852595380303]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [51.785293803140384, 49.84345530228669, 34.40697592441447],
+          "miiv": [50.57971795588958, 43.2062947292818, 34.83852595380303],
+          "hirid": [42.96913533714309, 45.32805557179854, 39.05158229463108]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 43.55655965248762,
+          "overall_aki": 48.44471569872436,
+          "overall_eicu": 45.34524167661385,
+          "overall_mortality": 46.12593520112234,
+          "overall_hirid": 42.44959106785757,
+          "overall_sepsis": 36.099028057616195,
+          "overall_miiv": 42.874846212991464
+        }
+      }
+    },
+    {
+      "model_id": "DeepSeek-R1-Distill-Llama-8B",
+      "task_id": "mortality",
+      "dataset": "eicu",
+      "run_id": "20250623_053338",
+      "prompting_id": "zhu_2024b_one_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.657,
+          "auprc": 0.276,
+          "normalized_auprc": 3.94,
+          "specificity": 0.753,
+          "f1_score": 0.235,
+          "accuracy": 0.74,
+          "balanced_accuracy": 0.662,
+          "precision": 0.148,
+          "recall": 0.571,
+          "mcc": 0.593,
+          "kappa": 0.14,
+          "minpse": 0.25,
+          "task_dataset_score": 49.843
+        },
+        "task_pulse_scores": {
+          "aki": [51.785293803140384, 42.96913533714309, 50.57971795588958],
+          "mortality": [49.84345530228669, 45.32805557179854, 43.2062947292818],
+          "sepsis": [34.40697592441447, 39.05158229463108, 34.83852595380303]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [51.785293803140384, 49.84345530228669, 34.40697592441447],
+          "miiv": [50.57971795588958, 43.2062947292818, 34.83852595380303],
+          "hirid": [42.96913533714309, 45.32805557179854, 39.05158229463108]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 43.55655965248762,
+          "overall_aki": 48.44471569872436,
+          "overall_eicu": 45.34524167661385,
+          "overall_mortality": 46.12593520112234,
+          "overall_hirid": 42.44959106785757,
+          "overall_sepsis": 36.099028057616195,
+          "overall_miiv": 42.874846212991464
+        }
+      }
+    },
+    {
+      "model_id": "DeepSeek-R1-Distill-Llama-8B",
+      "task_id": "mortality",
+      "dataset": "hirid",
+      "run_id": "20250623_053338",
+      "prompting_id": "zhu_2024b_one_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.624,
+          "auprc": 0.14,
+          "normalized_auprc": 1.271,
+          "specificity": 0.742,
+          "f1_score": 0.3,
+          "accuracy": 0.72,
+          "balanced_accuracy": 0.644,
+          "precision": 0.207,
+          "recall": 0.545,
+          "mcc": 0.599,
+          "kappa": 0.167,
+          "minpse": 0.207,
+          "task_dataset_score": 45.328
+        },
+        "task_pulse_scores": {
+          "aki": [51.785293803140384, 42.96913533714309, 50.57971795588958],
+          "mortality": [49.84345530228669, 45.32805557179854, 43.2062947292818],
+          "sepsis": [34.40697592441447, 39.05158229463108, 34.83852595380303]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [51.785293803140384, 49.84345530228669, 34.40697592441447],
+          "miiv": [50.57971795588958, 43.2062947292818, 34.83852595380303],
+          "hirid": [42.96913533714309, 45.32805557179854, 39.05158229463108]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 43.55655965248762,
+          "overall_aki": 48.44471569872436,
+          "overall_eicu": 45.34524167661385,
+          "overall_mortality": 46.12593520112234,
+          "overall_hirid": 42.44959106785757,
+          "overall_sepsis": 36.099028057616195,
+          "overall_miiv": 42.874846212991464
+        }
+      }
+    },
+    {
+      "model_id": "DeepSeek-R1-Distill-Llama-8B",
+      "task_id": "mortality",
+      "dataset": "miiv",
+      "run_id": "20250623_053338",
+      "prompting_id": "zhu_2024b_one_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.544,
+          "auprc": 0.213,
+          "normalized_auprc": 1.773,
+          "specificity": 0.557,
+          "f1_score": 0.241,
+          "accuracy": 0.56,
+          "balanced_accuracy": 0.57,
+          "precision": 0.152,
+          "recall": 0.583,
+          "mcc": 0.546,
+          "kappa": 0.063,
+          "minpse": 0.154,
+          "task_dataset_score": 43.206
+        },
+        "task_pulse_scores": {
+          "aki": [51.785293803140384, 42.96913533714309, 50.57971795588958],
+          "mortality": [49.84345530228669, 45.32805557179854, 43.2062947292818],
+          "sepsis": [34.40697592441447, 39.05158229463108, 34.83852595380303]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [51.785293803140384, 49.84345530228669, 34.40697592441447],
+          "miiv": [50.57971795588958, 43.2062947292818, 34.83852595380303],
+          "hirid": [42.96913533714309, 45.32805557179854, 39.05158229463108]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 43.55655965248762,
+          "overall_aki": 48.44471569872436,
+          "overall_eicu": 45.34524167661385,
+          "overall_mortality": 46.12593520112234,
+          "overall_hirid": 42.44959106785757,
+          "overall_sepsis": 36.099028057616195,
+          "overall_miiv": 42.874846212991464
+        }
+      }
+    },
+    {
+      "model_id": "DeepSeek-R1-Distill-Llama-8B",
+      "task_id": "sepsis",
+      "dataset": "eicu",
+      "run_id": "20250623_053338",
+      "prompting_id": "zhu_2024b_one_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.495,
+          "auprc": 0.045,
+          "normalized_auprc": 0.941,
+          "specificity": 0.804,
+          "f1_score": 0.067,
+          "accuracy": 0.773,
+          "balanced_accuracy": 0.487,
+          "precision": 0.042,
+          "recall": 0.17,
+          "mcc": 0.493,
+          "kappa": -0.011,
+          "minpse": 0.052,
+          "task_dataset_score": 34.407
+        },
+        "task_pulse_scores": {
+          "aki": [51.785293803140384, 42.96913533714309, 50.57971795588958],
+          "mortality": [49.84345530228669, 45.32805557179854, 43.2062947292818],
+          "sepsis": [34.40697592441447, 39.05158229463108, 34.83852595380303]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [51.785293803140384, 49.84345530228669, 34.40697592441447],
+          "miiv": [50.57971795588958, 43.2062947292818, 34.83852595380303],
+          "hirid": [42.96913533714309, 45.32805557179854, 39.05158229463108]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 43.55655965248762,
+          "overall_aki": 48.44471569872436,
+          "overall_eicu": 45.34524167661385,
+          "overall_mortality": 46.12593520112234,
+          "overall_hirid": 42.44959106785757,
+          "overall_sepsis": 36.099028057616195,
+          "overall_miiv": 42.874846212991464
+        }
+      }
+    },
+    {
+      "model_id": "DeepSeek-R1-Distill-Llama-8B",
+      "task_id": "sepsis",
+      "dataset": "hirid",
+      "run_id": "20250623_053338",
+      "prompting_id": "zhu_2024b_one_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.569,
+          "auprc": 0.085,
+          "normalized_auprc": 1.128,
+          "specificity": 0.698,
+          "f1_score": 0.155,
+          "accuracy": 0.675,
+          "balanced_accuracy": 0.547,
+          "precision": 0.097,
+          "recall": 0.397,
+          "mcc": 0.527,
+          "kappa": 0.039,
+          "minpse": 0.127,
+          "task_dataset_score": 39.052
+        },
+        "task_pulse_scores": {
+          "aki": [51.785293803140384, 42.96913533714309, 50.57971795588958],
+          "mortality": [49.84345530228669, 45.32805557179854, 43.2062947292818],
+          "sepsis": [34.40697592441447, 39.05158229463108, 34.83852595380303]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [51.785293803140384, 49.84345530228669, 34.40697592441447],
+          "miiv": [50.57971795588958, 43.2062947292818, 34.83852595380303],
+          "hirid": [42.96913533714309, 45.32805557179854, 39.05158229463108]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 43.55655965248762,
+          "overall_aki": 48.44471569872436,
+          "overall_eicu": 45.34524167661385,
+          "overall_mortality": 46.12593520112234,
+          "overall_hirid": 42.44959106785757,
+          "overall_sepsis": 36.099028057616195,
+          "overall_miiv": 42.874846212991464
+        }
+      }
+    },
+    {
+      "model_id": "DeepSeek-R1-Distill-Llama-8B",
+      "task_id": "sepsis",
+      "dataset": "miiv",
+      "run_id": "20250623_053338",
+      "prompting_id": "zhu_2024b_one_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.503,
+          "auprc": 0.026,
+          "normalized_auprc": 1.038,
+          "specificity": 0.741,
+          "f1_score": 0.063,
+          "accuracy": 0.731,
+          "balanced_accuracy": 0.55,
+          "precision": 0.035,
+          "recall": 0.36,
+          "mcc": 0.518,
+          "kappa": 0.018,
+          "minpse": 0.049,
+          "task_dataset_score": 34.839
+        },
+        "task_pulse_scores": {
+          "aki": [51.785293803140384, 42.96913533714309, 50.57971795588958],
+          "mortality": [49.84345530228669, 45.32805557179854, 43.2062947292818],
+          "sepsis": [34.40697592441447, 39.05158229463108, 34.83852595380303]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [51.785293803140384, 49.84345530228669, 34.40697592441447],
+          "miiv": [50.57971795588958, 43.2062947292818, 34.83852595380303],
+          "hirid": [42.96913533714309, 45.32805557179854, 39.05158229463108]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 43.55655965248762,
+          "overall_aki": 48.44471569872436,
+          "overall_eicu": 45.34524167661385,
+          "overall_mortality": 46.12593520112234,
+          "overall_hirid": 42.44959106785757,
+          "overall_sepsis": 36.099028057616195,
+          "overall_miiv": 42.874846212991464
+        }
+      }
+    },
+    {
+      "model_id": "DeepSeek-R1-Distill-Llama-8B",
+      "task_id": "aki",
+      "dataset": "eicu",
+      "run_id": "20250620_211315",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.584,
+          "auprc": 0.401,
+          "normalized_auprc": 1.295,
+          "specificity": 0.8,
+          "f1_score": 0.348,
+          "accuracy": 0.646,
+          "balanced_accuracy": 0.552,
+          "precision": 0.406,
+          "recall": 0.305,
+          "mcc": 0.557,
+          "kappa": 0.112,
+          "minpse": 0.402,
+          "task_dataset_score": 51.116
+        },
+        "task_pulse_scores": {
+          "aki": [51.11632845158168, 40.83141578499358, 48.714726390771176],
+          "mortality": [
+            48.725050257865846, 39.75475018250834, 59.03636223097286
+          ],
+          "sepsis": [35.02659201084466, 40.213631981495354, 33.4398048668324]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [51.11632845158168, 48.725050257865846, 35.02659201084466],
+          "miiv": [48.714726390771176, 59.03636223097286, 33.4398048668324],
+          "hirid": [40.83141578499358, 39.75475018250834, 40.213631981495354]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 44.09540690642954,
+          "overall_aki": 46.88749020911548,
+          "overall_eicu": 44.9559902400974,
+          "overall_mortality": 49.17205422378235,
+          "overall_hirid": 40.266599316332425,
+          "overall_sepsis": 36.226676286390806,
+          "overall_miiv": 47.063631162858805
+        }
+      }
+    },
+    {
+      "model_id": "DeepSeek-R1-Distill-Llama-8B",
+      "task_id": "aki",
+      "dataset": "hirid",
+      "run_id": "20250620_211315",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.504,
+          "auprc": 0.198,
+          "normalized_auprc": 1.224,
+          "specificity": 0.859,
+          "f1_score": 0.208,
+          "accuracy": 0.753,
+          "balanced_accuracy": 0.53,
+          "precision": 0.216,
+          "recall": 0.201,
+          "mcc": 0.531,
+          "kappa": 0.062,
+          "minpse": 0.208,
+          "task_dataset_score": 40.831
+        },
+        "task_pulse_scores": {
+          "aki": [51.11632845158168, 40.83141578499358, 48.714726390771176],
+          "mortality": [
+            48.725050257865846, 39.75475018250834, 59.03636223097286
+          ],
+          "sepsis": [35.02659201084466, 40.213631981495354, 33.4398048668324]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [51.11632845158168, 48.725050257865846, 35.02659201084466],
+          "miiv": [48.714726390771176, 59.03636223097286, 33.4398048668324],
+          "hirid": [40.83141578499358, 39.75475018250834, 40.213631981495354]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 44.09540690642954,
+          "overall_aki": 46.88749020911548,
+          "overall_eicu": 44.9559902400974,
+          "overall_mortality": 49.17205422378235,
+          "overall_hirid": 40.266599316332425,
+          "overall_sepsis": 36.226676286390806,
+          "overall_miiv": 47.063631162858805
+        }
+      }
+    },
+    {
+      "model_id": "DeepSeek-R1-Distill-Llama-8B",
+      "task_id": "aki",
+      "dataset": "miiv",
+      "run_id": "20250620_211315",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.577,
+          "auprc": 0.322,
+          "normalized_auprc": 1.384,
+          "specificity": 0.838,
+          "f1_score": 0.329,
+          "accuracy": 0.713,
+          "balanced_accuracy": 0.57,
+          "precision": 0.361,
+          "recall": 0.301,
+          "mcc": 0.575,
+          "kappa": 0.148,
+          "minpse": 0.336,
+          "task_dataset_score": 48.715
+        },
+        "task_pulse_scores": {
+          "aki": [51.11632845158168, 40.83141578499358, 48.714726390771176],
+          "mortality": [
+            48.725050257865846, 39.75475018250834, 59.03636223097286
+          ],
+          "sepsis": [35.02659201084466, 40.213631981495354, 33.4398048668324]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [51.11632845158168, 48.725050257865846, 35.02659201084466],
+          "miiv": [48.714726390771176, 59.03636223097286, 33.4398048668324],
+          "hirid": [40.83141578499358, 39.75475018250834, 40.213631981495354]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 44.09540690642954,
+          "overall_aki": 46.88749020911548,
+          "overall_eicu": 44.9559902400974,
+          "overall_mortality": 49.17205422378235,
+          "overall_hirid": 40.266599316332425,
+          "overall_sepsis": 36.226676286390806,
+          "overall_miiv": 47.063631162858805
+        }
+      }
+    },
+    {
+      "model_id": "DeepSeek-R1-Distill-Llama-8B",
+      "task_id": "mortality",
+      "dataset": "eicu",
+      "run_id": "20250620_211315",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.747,
+          "auprc": 0.126,
+          "normalized_auprc": 1.802,
+          "specificity": 0.559,
+          "f1_score": 0.222,
+          "accuracy": 0.58,
+          "balanced_accuracy": 0.708,
+          "precision": 0.128,
+          "recall": 0.857,
+          "mcc": 0.606,
+          "kappa": 0.114,
+          "minpse": 0.2,
+          "task_dataset_score": 48.725
+        },
+        "task_pulse_scores": {
+          "aki": [51.11632845158168, 40.83141578499358, 48.714726390771176],
+          "mortality": [
+            48.725050257865846, 39.75475018250834, 59.03636223097286
+          ],
+          "sepsis": [35.02659201084466, 40.213631981495354, 33.4398048668324]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [51.11632845158168, 48.725050257865846, 35.02659201084466],
+          "miiv": [48.714726390771176, 59.03636223097286, 33.4398048668324],
+          "hirid": [40.83141578499358, 39.75475018250834, 40.213631981495354]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 44.09540690642954,
+          "overall_aki": 46.88749020911548,
+          "overall_eicu": 44.9559902400974,
+          "overall_mortality": 49.17205422378235,
+          "overall_hirid": 40.266599316332425,
+          "overall_sepsis": 36.226676286390806,
+          "overall_miiv": 47.063631162858805
+        }
+      }
+    },
+    {
+      "model_id": "DeepSeek-R1-Distill-Llama-8B",
+      "task_id": "mortality",
+      "dataset": "hirid",
+      "run_id": "20250620_211315",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.552,
+          "auprc": 0.089,
+          "normalized_auprc": 0.81,
+          "specificity": 0.326,
+          "f1_score": 0.225,
+          "accuracy": 0.38,
+          "balanced_accuracy": 0.572,
+          "precision": 0.13,
+          "recall": 0.818,
+          "mcc": 0.549,
+          "kappa": 0.044,
+          "minpse": 0.14,
+          "task_dataset_score": 39.755
+        },
+        "task_pulse_scores": {
+          "aki": [51.11632845158168, 40.83141578499358, 48.714726390771176],
+          "mortality": [
+            48.725050257865846, 39.75475018250834, 59.03636223097286
+          ],
+          "sepsis": [35.02659201084466, 40.213631981495354, 33.4398048668324]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [51.11632845158168, 48.725050257865846, 35.02659201084466],
+          "miiv": [48.714726390771176, 59.03636223097286, 33.4398048668324],
+          "hirid": [40.83141578499358, 39.75475018250834, 40.213631981495354]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 44.09540690642954,
+          "overall_aki": 46.88749020911548,
+          "overall_eicu": 44.9559902400974,
+          "overall_mortality": 49.17205422378235,
+          "overall_hirid": 40.266599316332425,
+          "overall_sepsis": 36.226676286390806,
+          "overall_miiv": 47.063631162858805
+        }
+      }
+    },
+    {
+      "model_id": "DeepSeek-R1-Distill-Llama-8B",
+      "task_id": "mortality",
+      "dataset": "miiv",
+      "run_id": "20250620_211315",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.741,
+          "auprc": 0.457,
+          "normalized_auprc": 3.806,
+          "specificity": 0.477,
+          "f1_score": 0.294,
+          "accuracy": 0.52,
+          "balanced_accuracy": 0.655,
+          "precision": 0.179,
+          "recall": 0.833,
+          "mcc": 0.602,
+          "kappa": 0.12,
+          "minpse": 0.286,
+          "task_dataset_score": 59.036
+        },
+        "task_pulse_scores": {
+          "aki": [51.11632845158168, 40.83141578499358, 48.714726390771176],
+          "mortality": [
+            48.725050257865846, 39.75475018250834, 59.03636223097286
+          ],
+          "sepsis": [35.02659201084466, 40.213631981495354, 33.4398048668324]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [51.11632845158168, 48.725050257865846, 35.02659201084466],
+          "miiv": [48.714726390771176, 59.03636223097286, 33.4398048668324],
+          "hirid": [40.83141578499358, 39.75475018250834, 40.213631981495354]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 44.09540690642954,
+          "overall_aki": 46.88749020911548,
+          "overall_eicu": 44.9559902400974,
+          "overall_mortality": 49.17205422378235,
+          "overall_hirid": 40.266599316332425,
+          "overall_sepsis": 36.226676286390806,
+          "overall_miiv": 47.063631162858805
+        }
+      }
+    },
+    {
+      "model_id": "DeepSeek-R1-Distill-Llama-8B",
+      "task_id": "sepsis",
+      "dataset": "eicu",
+      "run_id": "20250620_211315",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.514,
+          "auprc": 0.045,
+          "normalized_auprc": 0.945,
+          "specificity": 0.553,
+          "f1_score": 0.087,
+          "accuracy": 0.548,
+          "balanced_accuracy": 0.5,
+          "precision": 0.048,
+          "recall": 0.447,
+          "mcc": 0.5,
+          "kappa": -0.0,
+          "minpse": 0.061,
+          "task_dataset_score": 35.027
+        },
+        "task_pulse_scores": {
+          "aki": [51.11632845158168, 40.83141578499358, 48.714726390771176],
+          "mortality": [
+            48.725050257865846, 39.75475018250834, 59.03636223097286
+          ],
+          "sepsis": [35.02659201084466, 40.213631981495354, 33.4398048668324]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [51.11632845158168, 48.725050257865846, 35.02659201084466],
+          "miiv": [48.714726390771176, 59.03636223097286, 33.4398048668324],
+          "hirid": [40.83141578499358, 39.75475018250834, 40.213631981495354]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 44.09540690642954,
+          "overall_aki": 46.88749020911548,
+          "overall_eicu": 44.9559902400974,
+          "overall_mortality": 49.17205422378235,
+          "overall_hirid": 40.266599316332425,
+          "overall_sepsis": 36.226676286390806,
+          "overall_miiv": 47.063631162858805
+        }
+      }
+    },
+    {
+      "model_id": "DeepSeek-R1-Distill-Llama-8B",
+      "task_id": "sepsis",
+      "dataset": "hirid",
+      "run_id": "20250620_211315",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.571,
+          "auprc": 0.112,
+          "normalized_auprc": 1.488,
+          "specificity": 0.58,
+          "f1_score": 0.164,
+          "accuracy": 0.578,
+          "balanced_accuracy": 0.564,
+          "precision": 0.096,
+          "recall": 0.548,
+          "mcc": 0.534,
+          "kappa": 0.041,
+          "minpse": 0.117,
+          "task_dataset_score": 40.214
+        },
+        "task_pulse_scores": {
+          "aki": [51.11632845158168, 40.83141578499358, 48.714726390771176],
+          "mortality": [
+            48.725050257865846, 39.75475018250834, 59.03636223097286
+          ],
+          "sepsis": [35.02659201084466, 40.213631981495354, 33.4398048668324]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [51.11632845158168, 48.725050257865846, 35.02659201084466],
+          "miiv": [48.714726390771176, 59.03636223097286, 33.4398048668324],
+          "hirid": [40.83141578499358, 39.75475018250834, 40.213631981495354]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 44.09540690642954,
+          "overall_aki": 46.88749020911548,
+          "overall_eicu": 44.9559902400974,
+          "overall_mortality": 49.17205422378235,
+          "overall_hirid": 40.266599316332425,
+          "overall_sepsis": 36.226676286390806,
+          "overall_miiv": 47.063631162858805
+        }
+      }
+    },
+    {
+      "model_id": "DeepSeek-R1-Distill-Llama-8B",
+      "task_id": "sepsis",
+      "dataset": "miiv",
+      "run_id": "20250620_211315",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.5,
+          "auprc": 0.023,
+          "normalized_auprc": 0.912,
+          "specificity": 0.572,
+          "f1_score": 0.04,
+          "accuracy": 0.567,
+          "balanced_accuracy": 0.466,
+          "precision": 0.021,
+          "recall": 0.36,
+          "mcc": 0.489,
+          "kappa": -0.008,
+          "minpse": 0.028,
+          "task_dataset_score": 33.44
+        },
+        "task_pulse_scores": {
+          "aki": [51.11632845158168, 40.83141578499358, 48.714726390771176],
+          "mortality": [
+            48.725050257865846, 39.75475018250834, 59.03636223097286
+          ],
+          "sepsis": [35.02659201084466, 40.213631981495354, 33.4398048668324]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [51.11632845158168, 48.725050257865846, 35.02659201084466],
+          "miiv": [48.714726390771176, 59.03636223097286, 33.4398048668324],
+          "hirid": [40.83141578499358, 39.75475018250834, 40.213631981495354]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 44.09540690642954,
+          "overall_aki": 46.88749020911548,
+          "overall_eicu": 44.9559902400974,
+          "overall_mortality": 49.17205422378235,
+          "overall_hirid": 40.266599316332425,
+          "overall_sepsis": 36.226676286390806,
+          "overall_miiv": 47.063631162858805
+        }
+      }
+    },
+    {
+      "model_id": "DeepSeek-R1-Distill-Llama-8B",
+      "task_id": "aki",
+      "dataset": "eicu",
+      "run_id": "20250627_201905",
+      "prompting_id": "zhu_2024c_categorization_summary_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.549,
+          "auprc": 0.361,
+          "normalized_auprc": 1.166,
+          "specificity": 0.134,
+          "f1_score": 0.474,
+          "accuracy": 0.374,
+          "balanced_accuracy": 0.521,
+          "precision": 0.32,
+          "recall": 0.908,
+          "mcc": 0.53,
+          "kappa": 0.028,
+          "minpse": 0.327,
+          "task_dataset_score": 46.96
+        },
+        "task_pulse_scores": {
+          "aki": [46.96041158929678, 35.63852180962397, 41.212761540072115],
+          "mortality": [
+            35.75503153565048, 30.672851898569544, 34.306248082905206
+          ],
+          "sepsis": [35.97639398300966, 37.053249380986124, 30.746232850791696]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [46.96041158929678, 35.75503153565048, 35.97639398300966],
+          "miiv": [41.212761540072115, 34.306248082905206, 30.746232850791696],
+          "hirid": [35.63852180962397, 30.672851898569544, 37.053249380986124]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 36.48018918565617,
+          "overall_aki": 41.27056497966429,
+          "overall_eicu": 39.563945702652305,
+          "overall_mortality": 33.57804383904175,
+          "overall_hirid": 34.45487436305988,
+          "overall_sepsis": 34.59195873826249,
+          "overall_miiv": 35.42174749125634
+        }
+      }
+    },
+    {
+      "model_id": "DeepSeek-R1-Distill-Llama-8B",
+      "task_id": "aki",
+      "dataset": "hirid",
+      "run_id": "20250627_201905",
+      "prompting_id": "zhu_2024c_categorization_summary_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.468,
+          "auprc": 0.168,
+          "normalized_auprc": 1.037,
+          "specificity": 0.061,
+          "f1_score": 0.269,
+          "accuracy": 0.199,
+          "balanced_accuracy": 0.486,
+          "precision": 0.158,
+          "recall": 0.912,
+          "mcc": 0.48,
+          "kappa": -0.009,
+          "minpse": 0.189,
+          "task_dataset_score": 35.639
+        },
+        "task_pulse_scores": {
+          "aki": [46.96041158929678, 35.63852180962397, 41.212761540072115],
+          "mortality": [
+            35.75503153565048, 30.672851898569544, 34.306248082905206
+          ],
+          "sepsis": [35.97639398300966, 37.053249380986124, 30.746232850791696]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [46.96041158929678, 35.75503153565048, 35.97639398300966],
+          "miiv": [41.212761540072115, 34.306248082905206, 30.746232850791696],
+          "hirid": [35.63852180962397, 30.672851898569544, 37.053249380986124]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 36.48018918565617,
+          "overall_aki": 41.27056497966429,
+          "overall_eicu": 39.563945702652305,
+          "overall_mortality": 33.57804383904175,
+          "overall_hirid": 34.45487436305988,
+          "overall_sepsis": 34.59195873826249,
+          "overall_miiv": 35.42174749125634
+        }
+      }
+    },
+    {
+      "model_id": "DeepSeek-R1-Distill-Llama-8B",
+      "task_id": "aki",
+      "dataset": "miiv",
+      "run_id": "20250627_201905",
+      "prompting_id": "zhu_2024c_categorization_summary_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.506,
+          "auprc": 0.232,
+          "normalized_auprc": 0.998,
+          "specificity": 0.127,
+          "f1_score": 0.383,
+          "accuracy": 0.311,
+          "balanced_accuracy": 0.522,
+          "precision": 0.242,
+          "recall": 0.917,
+          "mcc": 0.529,
+          "kappa": 0.022,
+          "minpse": 0.242,
+          "task_dataset_score": 41.213
+        },
+        "task_pulse_scores": {
+          "aki": [46.96041158929678, 35.63852180962397, 41.212761540072115],
+          "mortality": [
+            35.75503153565048, 30.672851898569544, 34.306248082905206
+          ],
+          "sepsis": [35.97639398300966, 37.053249380986124, 30.746232850791696]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [46.96041158929678, 35.75503153565048, 35.97639398300966],
+          "miiv": [41.212761540072115, 34.306248082905206, 30.746232850791696],
+          "hirid": [35.63852180962397, 30.672851898569544, 37.053249380986124]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 36.48018918565617,
+          "overall_aki": 41.27056497966429,
+          "overall_eicu": 39.563945702652305,
+          "overall_mortality": 33.57804383904175,
+          "overall_hirid": 34.45487436305988,
+          "overall_sepsis": 34.59195873826249,
+          "overall_miiv": 35.42174749125634
+        }
+      }
+    },
+    {
+      "model_id": "DeepSeek-R1-Distill-Llama-8B",
+      "task_id": "mortality",
+      "dataset": "eicu",
+      "run_id": "20250627_201905",
+      "prompting_id": "zhu_2024c_categorization_summary_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.528,
+          "auprc": 0.068,
+          "normalized_auprc": 0.973,
+          "specificity": 0.011,
+          "f1_score": 0.132,
+          "accuracy": 0.08,
+          "balanced_accuracy": 0.505,
+          "precision": 0.071,
+          "recall": 1.0,
+          "mcc": 0.514,
+          "kappa": 0.002,
+          "minpse": 0.091,
+          "task_dataset_score": 35.755
+        },
+        "task_pulse_scores": {
+          "aki": [46.96041158929678, 35.63852180962397, 41.212761540072115],
+          "mortality": [
+            35.75503153565048, 30.672851898569544, 34.306248082905206
+          ],
+          "sepsis": [35.97639398300966, 37.053249380986124, 30.746232850791696]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [46.96041158929678, 35.75503153565048, 35.97639398300966],
+          "miiv": [41.212761540072115, 34.306248082905206, 30.746232850791696],
+          "hirid": [35.63852180962397, 30.672851898569544, 37.053249380986124]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 36.48018918565617,
+          "overall_aki": 41.27056497966429,
+          "overall_eicu": 39.563945702652305,
+          "overall_mortality": 33.57804383904175,
+          "overall_hirid": 34.45487436305988,
+          "overall_sepsis": 34.59195873826249,
+          "overall_miiv": 35.42174749125634
+        }
+      }
+    },
+    {
+      "model_id": "DeepSeek-R1-Distill-Llama-8B",
+      "task_id": "mortality",
+      "dataset": "hirid",
+      "run_id": "20250627_201905",
+      "prompting_id": "zhu_2024c_categorization_summary_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.496,
+          "auprc": 0.099,
+          "normalized_auprc": 0.904,
+          "specificity": 0.0,
+          "f1_score": 0.182,
+          "accuracy": 0.1,
+          "balanced_accuracy": 0.455,
+          "precision": 0.101,
+          "recall": 0.909,
+          "mcc": 0.357,
+          "kappa": -0.02,
+          "minpse": 0.16,
+          "task_dataset_score": 30.673
+        },
+        "task_pulse_scores": {
+          "aki": [46.96041158929678, 35.63852180962397, 41.212761540072115],
+          "mortality": [
+            35.75503153565048, 30.672851898569544, 34.306248082905206
+          ],
+          "sepsis": [35.97639398300966, 37.053249380986124, 30.746232850791696]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [46.96041158929678, 35.75503153565048, 35.97639398300966],
+          "miiv": [41.212761540072115, 34.306248082905206, 30.746232850791696],
+          "hirid": [35.63852180962397, 30.672851898569544, 37.053249380986124]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 36.48018918565617,
+          "overall_aki": 41.27056497966429,
+          "overall_eicu": 39.563945702652305,
+          "overall_mortality": 33.57804383904175,
+          "overall_hirid": 34.45487436305988,
+          "overall_sepsis": 34.59195873826249,
+          "overall_miiv": 35.42174749125634
+        }
+      }
+    },
+    {
+      "model_id": "DeepSeek-R1-Distill-Llama-8B",
+      "task_id": "mortality",
+      "dataset": "miiv",
+      "run_id": "20250627_201905",
+      "prompting_id": "zhu_2024c_categorization_summary_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.429,
+          "auprc": 0.109,
+          "normalized_auprc": 0.908,
+          "specificity": 0.011,
+          "f1_score": 0.216,
+          "accuracy": 0.13,
+          "balanced_accuracy": 0.506,
+          "precision": 0.121,
+          "recall": 1.0,
+          "mcc": 0.519,
+          "kappa": 0.003,
+          "minpse": 0.138,
+          "task_dataset_score": 34.306
+        },
+        "task_pulse_scores": {
+          "aki": [46.96041158929678, 35.63852180962397, 41.212761540072115],
+          "mortality": [
+            35.75503153565048, 30.672851898569544, 34.306248082905206
+          ],
+          "sepsis": [35.97639398300966, 37.053249380986124, 30.746232850791696]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [46.96041158929678, 35.75503153565048, 35.97639398300966],
+          "miiv": [41.212761540072115, 34.306248082905206, 30.746232850791696],
+          "hirid": [35.63852180962397, 30.672851898569544, 37.053249380986124]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 36.48018918565617,
+          "overall_aki": 41.27056497966429,
+          "overall_eicu": 39.563945702652305,
+          "overall_mortality": 33.57804383904175,
+          "overall_hirid": 34.45487436305988,
+          "overall_sepsis": 34.59195873826249,
+          "overall_miiv": 35.42174749125634
+        }
+      }
+    },
+    {
+      "model_id": "DeepSeek-R1-Distill-Llama-8B",
+      "task_id": "sepsis",
+      "dataset": "eicu",
+      "run_id": "20250627_201905",
+      "prompting_id": "zhu_2024c_categorization_summary_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.525,
+          "auprc": 0.042,
+          "normalized_auprc": 0.876,
+          "specificity": 0.073,
+          "f1_score": 0.098,
+          "accuracy": 0.117,
+          "balanced_accuracy": 0.536,
+          "precision": 0.052,
+          "recall": 1.0,
+          "mcc": 0.531,
+          "kappa": 0.007,
+          "minpse": 0.053,
+          "task_dataset_score": 35.976
+        },
+        "task_pulse_scores": {
+          "aki": [46.96041158929678, 35.63852180962397, 41.212761540072115],
+          "mortality": [
+            35.75503153565048, 30.672851898569544, 34.306248082905206
+          ],
+          "sepsis": [35.97639398300966, 37.053249380986124, 30.746232850791696]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [46.96041158929678, 35.75503153565048, 35.97639398300966],
+          "miiv": [41.212761540072115, 34.306248082905206, 30.746232850791696],
+          "hirid": [35.63852180962397, 30.672851898569544, 37.053249380986124]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 36.48018918565617,
+          "overall_aki": 41.27056497966429,
+          "overall_eicu": 39.563945702652305,
+          "overall_mortality": 33.57804383904175,
+          "overall_hirid": 34.45487436305988,
+          "overall_sepsis": 34.59195873826249,
+          "overall_miiv": 35.42174749125634
+        }
+      }
+    },
+    {
+      "model_id": "DeepSeek-R1-Distill-Llama-8B",
+      "task_id": "sepsis",
+      "dataset": "hirid",
+      "run_id": "20250627_201905",
+      "prompting_id": "zhu_2024c_categorization_summary_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.552,
+          "auprc": 0.078,
+          "normalized_auprc": 1.037,
+          "specificity": 0.029,
+          "f1_score": 0.142,
+          "accuracy": 0.101,
+          "balanced_accuracy": 0.508,
+          "precision": 0.076,
+          "recall": 0.986,
+          "mcc": 0.512,
+          "kappa": 0.002,
+          "minpse": 0.086,
+          "task_dataset_score": 37.053
+        },
+        "task_pulse_scores": {
+          "aki": [46.96041158929678, 35.63852180962397, 41.212761540072115],
+          "mortality": [
+            35.75503153565048, 30.672851898569544, 34.306248082905206
+          ],
+          "sepsis": [35.97639398300966, 37.053249380986124, 30.746232850791696]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [46.96041158929678, 35.75503153565048, 35.97639398300966],
+          "miiv": [41.212761540072115, 34.306248082905206, 30.746232850791696],
+          "hirid": [35.63852180962397, 30.672851898569544, 37.053249380986124]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 36.48018918565617,
+          "overall_aki": 41.27056497966429,
+          "overall_eicu": 39.563945702652305,
+          "overall_mortality": 33.57804383904175,
+          "overall_hirid": 34.45487436305988,
+          "overall_sepsis": 34.59195873826249,
+          "overall_miiv": 35.42174749125634
+        }
+      }
+    },
+    {
+      "model_id": "DeepSeek-R1-Distill-Llama-8B",
+      "task_id": "sepsis",
+      "dataset": "miiv",
+      "run_id": "20250627_201905",
+      "prompting_id": "zhu_2024c_categorization_summary_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.472,
+          "auprc": 0.023,
+          "normalized_auprc": 0.912,
+          "specificity": 0.05,
+          "f1_score": 0.042,
+          "accuracy": 0.069,
+          "balanced_accuracy": 0.425,
+          "precision": 0.021,
+          "recall": 0.8,
+          "mcc": 0.448,
+          "kappa": -0.008,
+          "minpse": 0.026,
+          "task_dataset_score": 30.746
+        },
+        "task_pulse_scores": {
+          "aki": [46.96041158929678, 35.63852180962397, 41.212761540072115],
+          "mortality": [
+            35.75503153565048, 30.672851898569544, 34.306248082905206
+          ],
+          "sepsis": [35.97639398300966, 37.053249380986124, 30.746232850791696]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [46.96041158929678, 35.75503153565048, 35.97639398300966],
+          "miiv": [41.212761540072115, 34.306248082905206, 30.746232850791696],
+          "hirid": [35.63852180962397, 30.672851898569544, 37.053249380986124]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 36.48018918565617,
+          "overall_aki": 41.27056497966429,
+          "overall_eicu": 39.563945702652305,
+          "overall_mortality": 33.57804383904175,
+          "overall_hirid": 34.45487436305988,
+          "overall_sepsis": 34.59195873826249,
+          "overall_miiv": 35.42174749125634
+        }
+      }
+    }
+  ]
+}

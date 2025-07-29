@@ -32,7 +32,7 @@ class DatasetManager:
     - Providing access to preprocessed data
 
     Attributes:
-        config (Dict): Configuration for datasets
+        config (OmegaConf): Configuration for datasets
         datasets (Dict): Dictionary of loaded datasets
         preprocessor (PreprocessorBaseline): Preprocessor instance
     """
@@ -42,7 +42,7 @@ class DatasetManager:
         Initialize the DatasetManager.
 
         Args:
-            config (dict): The full configuration
+            config (OmegaConf): The full configuration
         """
         self.config = config
         self.datasets = {}
@@ -408,7 +408,7 @@ class DatasetManager:
             df = data[split]
             if isinstance(df, pd.DataFrame):
                 mem_mb = df.memory_usage(deep=True).sum() / (1024 * 1024)
-                logger.debug(f"Size of {split} for {dataset_id}: {mem_mb:.2f} MB")
+                logger.debug("Size of %s for %s: %.2f MB", split, dataset_id, mem_mb)
         del df
 
         # Limit the loaded data to only load the necessary parts before processing
@@ -841,7 +841,7 @@ class DatasetManager:
                 logger.debug("Released cached data for %s", dataset_id)
                 gc.collect()
         else:
-            for ds_id, dataset in self.datasets.items():
+            for _, dataset in self.datasets.items():
                 if dataset["loaded"]:
                     dataset["data"] = None
                     dataset["loaded"] = False
@@ -881,21 +881,7 @@ class TorchDatasetWrapper(Dataset):
         Returns:
             tuple: (features, label) as torch.Tensor
         """
-        # # If we pre-computed arrays, use them
-        # if hasattr(self, "X_array") and hasattr(self, "y_array"):
-        #     X_sample = self.X_array[idx]
-        #     y_sample = self.y_array[idx]
-        # # For single integer index
-        # elif isinstance(idx, int):
-        #     X_sample = self.X.iloc[idx].values.astype(np.float32)
-        #     y_sample = self.y.iloc[idx].values.astype(np.float32)
-        # # For slices or lists of indices (batch access)
-        # else:
-        #     X_sample = self.X.iloc[idx].values.astype(np.float32)
-        #     y_sample = self.y.iloc[idx].values.astype(np.float32)
-
-        # # Convert to PyTorch tensors
-        # return torch.tensor(X_sample), torch.tensor(y_sample)
+        # Convert to PyTorch tensors
         X_sample = self.X[idx]
         y_sample = self.y[idx]
         return torch.tensor(X_sample, dtype=torch.float32), torch.tensor(

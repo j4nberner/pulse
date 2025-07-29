@@ -1,0 +1,5431 @@
+{
+  "results": [
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "aki",
+      "dataset": "eicu",
+      "run_id": "20250703_194029",
+      "prompting_id": "clinical_workflow_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.627,
+          "auprc": 0.406,
+          "normalized_auprc": 1.31,
+          "specificity": 0.811,
+          "f1_score": 0.414,
+          "accuracy": 0.675,
+          "balanced_accuracy": 0.591,
+          "precision": 0.469,
+          "recall": 0.37,
+          "mcc": 0.598,
+          "kappa": 0.193,
+          "minpse": 0.439,
+          "task_dataset_score": 53.926
+        },
+        "task_pulse_scores": {
+          "aki": [
+            53.925535682317054,
+            44.211325445600636,
+            51.59680769648306
+          ],
+          "mortality": [
+            51.4484292717504,
+            44.49727219607059,
+            61.63097695444629
+          ],
+          "sepsis": [
+            42.066861543807974,
+            48.745029757122595,
+            29.125242873869666
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            53.925535682317054,
+            51.4484292717504,
+            42.066861543807974
+          ],
+          "miiv": [
+            51.59680769648306,
+            61.63097695444629,
+            29.125242873869666
+          ],
+          "hirid": [
+            44.211325445600636,
+            44.49727219607059,
+            48.745029757122595
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 47.47194238016314,
+          "overall_aki": 49.91122294146692,
+          "overall_eicu": 49.14694216595848,
+          "overall_mortality": 52.525559474089086,
+          "overall_hirid": 45.817875799597935,
+          "overall_sepsis": 39.97904472493341,
+          "overall_miiv": 47.451009174933006
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "aki",
+      "dataset": "hirid",
+      "run_id": "20250703_194029",
+      "prompting_id": "clinical_workflow_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.58,
+          "auprc": 0.206,
+          "normalized_auprc": 1.273,
+          "specificity": 0.926,
+          "f1_score": 0.197,
+          "accuracy": 0.8,
+          "balanced_accuracy": 0.538,
+          "precision": 0.282,
+          "recall": 0.151,
+          "mcc": 0.55,
+          "kappa": 0.095,
+          "minpse": 0.227,
+          "task_dataset_score": 44.211
+        },
+        "task_pulse_scores": {
+          "aki": [
+            53.925535682317054,
+            44.211325445600636,
+            51.59680769648306
+          ],
+          "mortality": [
+            51.4484292717504,
+            44.49727219607059,
+            61.63097695444629
+          ],
+          "sepsis": [
+            42.066861543807974,
+            48.745029757122595,
+            29.125242873869666
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            53.925535682317054,
+            51.4484292717504,
+            42.066861543807974
+          ],
+          "miiv": [
+            51.59680769648306,
+            61.63097695444629,
+            29.125242873869666
+          ],
+          "hirid": [
+            44.211325445600636,
+            44.49727219607059,
+            48.745029757122595
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 47.47194238016314,
+          "overall_aki": 49.91122294146692,
+          "overall_eicu": 49.14694216595848,
+          "overall_mortality": 52.525559474089086,
+          "overall_hirid": 45.817875799597935,
+          "overall_sepsis": 39.97904472493341,
+          "overall_miiv": 47.451009174933006
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "aki",
+      "dataset": "miiv",
+      "run_id": "20250703_194029",
+      "prompting_id": "clinical_workflow_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.606,
+          "auprc": 0.359,
+          "normalized_auprc": 1.542,
+          "specificity": 0.837,
+          "f1_score": 0.359,
+          "accuracy": 0.721,
+          "balanced_accuracy": 0.587,
+          "precision": 0.385,
+          "recall": 0.336,
+          "mcc": 0.591,
+          "kappa": 0.181,
+          "minpse": 0.363,
+          "task_dataset_score": 51.597
+        },
+        "task_pulse_scores": {
+          "aki": [
+            53.925535682317054,
+            44.211325445600636,
+            51.59680769648306
+          ],
+          "mortality": [
+            51.4484292717504,
+            44.49727219607059,
+            61.63097695444629
+          ],
+          "sepsis": [
+            42.066861543807974,
+            48.745029757122595,
+            29.125242873869666
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            53.925535682317054,
+            51.4484292717504,
+            42.066861543807974
+          ],
+          "miiv": [
+            51.59680769648306,
+            61.63097695444629,
+            29.125242873869666
+          ],
+          "hirid": [
+            44.211325445600636,
+            44.49727219607059,
+            48.745029757122595
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 47.47194238016314,
+          "overall_aki": 49.91122294146692,
+          "overall_eicu": 49.14694216595848,
+          "overall_mortality": 52.525559474089086,
+          "overall_hirid": 45.817875799597935,
+          "overall_sepsis": 39.97904472493341,
+          "overall_miiv": 47.451009174933006
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "mortality",
+      "dataset": "eicu",
+      "run_id": "20250703_194029",
+      "prompting_id": "clinical_workflow_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.774,
+          "auprc": 0.227,
+          "normalized_auprc": 3.242,
+          "specificity": 0.462,
+          "f1_score": 0.161,
+          "accuracy": 0.48,
+          "balanced_accuracy": 0.588,
+          "precision": 0.091,
+          "recall": 0.714,
+          "mcc": 0.545,
+          "kappa": 0.042,
+          "minpse": 0.333,
+          "task_dataset_score": 51.448
+        },
+        "task_pulse_scores": {
+          "aki": [
+            53.925535682317054,
+            44.211325445600636,
+            51.59680769648306
+          ],
+          "mortality": [
+            51.4484292717504,
+            44.49727219607059,
+            61.63097695444629
+          ],
+          "sepsis": [
+            42.066861543807974,
+            48.745029757122595,
+            29.125242873869666
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            53.925535682317054,
+            51.4484292717504,
+            42.066861543807974
+          ],
+          "miiv": [
+            51.59680769648306,
+            61.63097695444629,
+            29.125242873869666
+          ],
+          "hirid": [
+            44.211325445600636,
+            44.49727219607059,
+            48.745029757122595
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 47.47194238016314,
+          "overall_aki": 49.91122294146692,
+          "overall_eicu": 49.14694216595848,
+          "overall_mortality": 52.525559474089086,
+          "overall_hirid": 45.817875799597935,
+          "overall_sepsis": 39.97904472493341,
+          "overall_miiv": 47.451009174933006
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "mortality",
+      "dataset": "hirid",
+      "run_id": "20250703_194029",
+      "prompting_id": "clinical_workflow_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.623,
+          "auprc": 0.25,
+          "normalized_auprc": 2.273,
+          "specificity": 0.112,
+          "f1_score": 0.182,
+          "accuracy": 0.19,
+          "balanced_accuracy": 0.465,
+          "precision": 0.102,
+          "recall": 0.818,
+          "mcc": 0.467,
+          "kappa": -0.017,
+          "minpse": 0.182,
+          "task_dataset_score": 44.497
+        },
+        "task_pulse_scores": {
+          "aki": [
+            53.925535682317054,
+            44.211325445600636,
+            51.59680769648306
+          ],
+          "mortality": [
+            51.4484292717504,
+            44.49727219607059,
+            61.63097695444629
+          ],
+          "sepsis": [
+            42.066861543807974,
+            48.745029757122595,
+            29.125242873869666
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            53.925535682317054,
+            51.4484292717504,
+            42.066861543807974
+          ],
+          "miiv": [
+            51.59680769648306,
+            61.63097695444629,
+            29.125242873869666
+          ],
+          "hirid": [
+            44.211325445600636,
+            44.49727219607059,
+            48.745029757122595
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 47.47194238016314,
+          "overall_aki": 49.91122294146692,
+          "overall_eicu": 49.14694216595848,
+          "overall_mortality": 52.525559474089086,
+          "overall_hirid": 45.817875799597935,
+          "overall_sepsis": 39.97904472493341,
+          "overall_miiv": 47.451009174933006
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "mortality",
+      "dataset": "miiv",
+      "run_id": "20250703_194029",
+      "prompting_id": "clinical_workflow_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.793,
+          "auprc": 0.449,
+          "normalized_auprc": 3.74,
+          "specificity": 0.409,
+          "f1_score": 0.293,
+          "accuracy": 0.47,
+          "balanced_accuracy": 0.663,
+          "precision": 0.175,
+          "recall": 0.917,
+          "mcc": 0.61,
+          "kappa": 0.115,
+          "minpse": 0.333,
+          "task_dataset_score": 61.631
+        },
+        "task_pulse_scores": {
+          "aki": [
+            53.925535682317054,
+            44.211325445600636,
+            51.59680769648306
+          ],
+          "mortality": [
+            51.4484292717504,
+            44.49727219607059,
+            61.63097695444629
+          ],
+          "sepsis": [
+            42.066861543807974,
+            48.745029757122595,
+            29.125242873869666
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            53.925535682317054,
+            51.4484292717504,
+            42.066861543807974
+          ],
+          "miiv": [
+            51.59680769648306,
+            61.63097695444629,
+            29.125242873869666
+          ],
+          "hirid": [
+            44.211325445600636,
+            44.49727219607059,
+            48.745029757122595
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 47.47194238016314,
+          "overall_aki": 49.91122294146692,
+          "overall_eicu": 49.14694216595848,
+          "overall_mortality": 52.525559474089086,
+          "overall_hirid": 45.817875799597935,
+          "overall_sepsis": 39.97904472493341,
+          "overall_miiv": 47.451009174933006
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "sepsis",
+      "dataset": "eicu",
+      "run_id": "20250703_194029",
+      "prompting_id": "clinical_workflow_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.646,
+          "auprc": 0.061,
+          "normalized_auprc": 1.276,
+          "specificity": 0.329,
+          "f1_score": 0.117,
+          "accuracy": 0.356,
+          "balanced_accuracy": 0.611,
+          "precision": 0.063,
+          "recall": 0.894,
+          "mcc": 0.551,
+          "kappa": 0.031,
+          "minpse": 0.078,
+          "task_dataset_score": 42.067
+        },
+        "task_pulse_scores": {
+          "aki": [
+            53.925535682317054,
+            44.211325445600636,
+            51.59680769648306
+          ],
+          "mortality": [
+            51.4484292717504,
+            44.49727219607059,
+            61.63097695444629
+          ],
+          "sepsis": [
+            42.066861543807974,
+            48.745029757122595,
+            29.125242873869666
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            53.925535682317054,
+            51.4484292717504,
+            42.066861543807974
+          ],
+          "miiv": [
+            51.59680769648306,
+            61.63097695444629,
+            29.125242873869666
+          ],
+          "hirid": [
+            44.211325445600636,
+            44.49727219607059,
+            48.745029757122595
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 47.47194238016314,
+          "overall_aki": 49.91122294146692,
+          "overall_eicu": 49.14694216595848,
+          "overall_mortality": 52.525559474089086,
+          "overall_hirid": 45.817875799597935,
+          "overall_sepsis": 39.97904472493341,
+          "overall_miiv": 47.451009174933006
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "sepsis",
+      "dataset": "hirid",
+      "run_id": "20250703_194029",
+      "prompting_id": "clinical_workflow_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.705,
+          "auprc": 0.235,
+          "normalized_auprc": 3.116,
+          "specificity": 0.067,
+          "f1_score": 0.145,
+          "accuracy": 0.135,
+          "balanced_accuracy": 0.52,
+          "precision": 0.078,
+          "recall": 0.973,
+          "mcc": 0.521,
+          "kappa": 0.006,
+          "minpse": 0.21,
+          "task_dataset_score": 48.745
+        },
+        "task_pulse_scores": {
+          "aki": [
+            53.925535682317054,
+            44.211325445600636,
+            51.59680769648306
+          ],
+          "mortality": [
+            51.4484292717504,
+            44.49727219607059,
+            61.63097695444629
+          ],
+          "sepsis": [
+            42.066861543807974,
+            48.745029757122595,
+            29.125242873869666
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            53.925535682317054,
+            51.4484292717504,
+            42.066861543807974
+          ],
+          "miiv": [
+            51.59680769648306,
+            61.63097695444629,
+            29.125242873869666
+          ],
+          "hirid": [
+            44.211325445600636,
+            44.49727219607059,
+            48.745029757122595
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 47.47194238016314,
+          "overall_aki": 49.91122294146692,
+          "overall_eicu": 49.14694216595848,
+          "overall_mortality": 52.525559474089086,
+          "overall_hirid": 45.817875799597935,
+          "overall_sepsis": 39.97904472493341,
+          "overall_miiv": 47.451009174933006
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "sepsis",
+      "dataset": "miiv",
+      "run_id": "20250703_194029",
+      "prompting_id": "clinical_workflow_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.368,
+          "auprc": 0.017,
+          "normalized_auprc": 0.688,
+          "specificity": 0.195,
+          "f1_score": 0.044,
+          "accuracy": 0.208,
+          "balanced_accuracy": 0.457,
+          "precision": 0.023,
+          "recall": 0.72,
+          "mcc": 0.483,
+          "kappa": -0.005,
+          "minpse": 0.027,
+          "task_dataset_score": 29.125
+        },
+        "task_pulse_scores": {
+          "aki": [
+            53.925535682317054,
+            44.211325445600636,
+            51.59680769648306
+          ],
+          "mortality": [
+            51.4484292717504,
+            44.49727219607059,
+            61.63097695444629
+          ],
+          "sepsis": [
+            42.066861543807974,
+            48.745029757122595,
+            29.125242873869666
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            53.925535682317054,
+            51.4484292717504,
+            42.066861543807974
+          ],
+          "miiv": [
+            51.59680769648306,
+            61.63097695444629,
+            29.125242873869666
+          ],
+          "hirid": [
+            44.211325445600636,
+            44.49727219607059,
+            48.745029757122595
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 47.47194238016314,
+          "overall_aki": 49.91122294146692,
+          "overall_eicu": 49.14694216595848,
+          "overall_mortality": 52.525559474089086,
+          "overall_hirid": 45.817875799597935,
+          "overall_sepsis": 39.97904472493341,
+          "overall_miiv": 47.451009174933006
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "aki",
+      "dataset": "eicu",
+      "run_id": "20250702_080324",
+      "prompting_id": "collaborative_reasoning_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.616,
+          "auprc": 0.425,
+          "normalized_auprc": 1.371,
+          "specificity": 0.726,
+          "f1_score": 0.449,
+          "accuracy": 0.645,
+          "balanced_accuracy": 0.596,
+          "precision": 0.433,
+          "recall": 0.466,
+          "mcc": 0.594,
+          "kappa": 0.188,
+          "minpse": 0.437,
+          "task_dataset_score": 54.549
+        },
+        "task_pulse_scores": {
+          "aki": [
+            54.54879027946383,
+            46.68627332120796,
+            51.39790523687532
+          ],
+          "mortality": [
+            45.34155338746913,
+            46.60961233530484,
+            67.05378421172273
+          ],
+          "sepsis": [
+            37.547856175137014,
+            48.78332830071615,
+            34.1050081345099
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            54.54879027946383,
+            45.34155338746913,
+            37.547856175137014
+          ],
+          "miiv": [
+            51.39790523687532,
+            67.05378421172273,
+            34.1050081345099
+          ],
+          "hirid": [
+            46.68627332120796,
+            46.60961233530484,
+            48.78332830071615
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 48.008234598045206,
+          "overall_aki": 50.87765627918237,
+          "overall_eicu": 45.81273328069,
+          "overall_mortality": 53.00164997816557,
+          "overall_hirid": 47.35973798574298,
+          "overall_sepsis": 40.14539753678769,
+          "overall_miiv": 50.852232527702654
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "aki",
+      "dataset": "hirid",
+      "run_id": "20250702_080324",
+      "prompting_id": "collaborative_reasoning_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.601,
+          "auprc": 0.251,
+          "normalized_auprc": 1.549,
+          "specificity": 0.583,
+          "f1_score": 0.293,
+          "accuracy": 0.576,
+          "balanced_accuracy": 0.562,
+          "precision": 0.2,
+          "recall": 0.541,
+          "mcc": 0.546,
+          "kappa": 0.074,
+          "minpse": 0.233,
+          "task_dataset_score": 46.686
+        },
+        "task_pulse_scores": {
+          "aki": [
+            54.54879027946383,
+            46.68627332120796,
+            51.39790523687532
+          ],
+          "mortality": [
+            45.34155338746913,
+            46.60961233530484,
+            67.05378421172273
+          ],
+          "sepsis": [
+            37.547856175137014,
+            48.78332830071615,
+            34.1050081345099
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            54.54879027946383,
+            45.34155338746913,
+            37.547856175137014
+          ],
+          "miiv": [
+            51.39790523687532,
+            67.05378421172273,
+            34.1050081345099
+          ],
+          "hirid": [
+            46.68627332120796,
+            46.60961233530484,
+            48.78332830071615
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 48.008234598045206,
+          "overall_aki": 50.87765627918237,
+          "overall_eicu": 45.81273328069,
+          "overall_mortality": 53.00164997816557,
+          "overall_hirid": 47.35973798574298,
+          "overall_sepsis": 40.14539753678769,
+          "overall_miiv": 50.852232527702654
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "aki",
+      "dataset": "miiv",
+      "run_id": "20250702_080324",
+      "prompting_id": "collaborative_reasoning_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.617,
+          "auprc": 0.378,
+          "normalized_auprc": 1.625,
+          "specificity": 0.629,
+          "f1_score": 0.353,
+          "accuracy": 0.593,
+          "balanced_accuracy": 0.553,
+          "precision": 0.28,
+          "recall": 0.476,
+          "mcc": 0.545,
+          "kappa": 0.085,
+          "minpse": 0.336,
+          "task_dataset_score": 51.398
+        },
+        "task_pulse_scores": {
+          "aki": [
+            54.54879027946383,
+            46.68627332120796,
+            51.39790523687532
+          ],
+          "mortality": [
+            45.34155338746913,
+            46.60961233530484,
+            67.05378421172273
+          ],
+          "sepsis": [
+            37.547856175137014,
+            48.78332830071615,
+            34.1050081345099
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            54.54879027946383,
+            45.34155338746913,
+            37.547856175137014
+          ],
+          "miiv": [
+            51.39790523687532,
+            67.05378421172273,
+            34.1050081345099
+          ],
+          "hirid": [
+            46.68627332120796,
+            46.60961233530484,
+            48.78332830071615
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 48.008234598045206,
+          "overall_aki": 50.87765627918237,
+          "overall_eicu": 45.81273328069,
+          "overall_mortality": 53.00164997816557,
+          "overall_hirid": 47.35973798574298,
+          "overall_sepsis": 40.14539753678769,
+          "overall_miiv": 50.852232527702654
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "mortality",
+      "dataset": "eicu",
+      "run_id": "20250702_080324",
+      "prompting_id": "collaborative_reasoning_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.703,
+          "auprc": 0.136,
+          "normalized_auprc": 1.941,
+          "specificity": 0.022,
+          "f1_score": 0.133,
+          "accuracy": 0.09,
+          "balanced_accuracy": 0.511,
+          "precision": 0.071,
+          "recall": 1.0,
+          "mcc": 0.52,
+          "kappa": 0.003,
+          "minpse": 0.217,
+          "task_dataset_score": 45.342
+        },
+        "task_pulse_scores": {
+          "aki": [
+            54.54879027946383,
+            46.68627332120796,
+            51.39790523687532
+          ],
+          "mortality": [
+            45.34155338746913,
+            46.60961233530484,
+            67.05378421172273
+          ],
+          "sepsis": [
+            37.547856175137014,
+            48.78332830071615,
+            34.1050081345099
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            54.54879027946383,
+            45.34155338746913,
+            37.547856175137014
+          ],
+          "miiv": [
+            51.39790523687532,
+            67.05378421172273,
+            34.1050081345099
+          ],
+          "hirid": [
+            46.68627332120796,
+            46.60961233530484,
+            48.78332830071615
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 48.008234598045206,
+          "overall_aki": 50.87765627918237,
+          "overall_eicu": 45.81273328069,
+          "overall_mortality": 53.00164997816557,
+          "overall_hirid": 47.35973798574298,
+          "overall_sepsis": 40.14539753678769,
+          "overall_miiv": 50.852232527702654
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "mortality",
+      "dataset": "hirid",
+      "run_id": "20250702_080324",
+      "prompting_id": "collaborative_reasoning_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.651,
+          "auprc": 0.246,
+          "normalized_auprc": 2.237,
+          "specificity": 0.0,
+          "f1_score": 0.198,
+          "accuracy": 0.11,
+          "balanced_accuracy": 0.5,
+          "precision": 0.11,
+          "recall": 1.0,
+          "mcc": 0.5,
+          "kappa": 0.0,
+          "minpse": 0.188,
+          "task_dataset_score": 46.61
+        },
+        "task_pulse_scores": {
+          "aki": [
+            54.54879027946383,
+            46.68627332120796,
+            51.39790523687532
+          ],
+          "mortality": [
+            45.34155338746913,
+            46.60961233530484,
+            67.05378421172273
+          ],
+          "sepsis": [
+            37.547856175137014,
+            48.78332830071615,
+            34.1050081345099
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            54.54879027946383,
+            45.34155338746913,
+            37.547856175137014
+          ],
+          "miiv": [
+            51.39790523687532,
+            67.05378421172273,
+            34.1050081345099
+          ],
+          "hirid": [
+            46.68627332120796,
+            46.60961233530484,
+            48.78332830071615
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 48.008234598045206,
+          "overall_aki": 50.87765627918237,
+          "overall_eicu": 45.81273328069,
+          "overall_mortality": 53.00164997816557,
+          "overall_hirid": 47.35973798574298,
+          "overall_sepsis": 40.14539753678769,
+          "overall_miiv": 50.852232527702654
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "mortality",
+      "dataset": "miiv",
+      "run_id": "20250702_080324",
+      "prompting_id": "collaborative_reasoning_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.826,
+          "auprc": 0.647,
+          "normalized_auprc": 5.395,
+          "specificity": 0.057,
+          "f1_score": 0.224,
+          "accuracy": 0.17,
+          "balanced_accuracy": 0.528,
+          "precision": 0.126,
+          "recall": 1.0,
+          "mcc": 0.542,
+          "kappa": 0.014,
+          "minpse": 0.583,
+          "task_dataset_score": 67.054
+        },
+        "task_pulse_scores": {
+          "aki": [
+            54.54879027946383,
+            46.68627332120796,
+            51.39790523687532
+          ],
+          "mortality": [
+            45.34155338746913,
+            46.60961233530484,
+            67.05378421172273
+          ],
+          "sepsis": [
+            37.547856175137014,
+            48.78332830071615,
+            34.1050081345099
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            54.54879027946383,
+            45.34155338746913,
+            37.547856175137014
+          ],
+          "miiv": [
+            51.39790523687532,
+            67.05378421172273,
+            34.1050081345099
+          ],
+          "hirid": [
+            46.68627332120796,
+            46.60961233530484,
+            48.78332830071615
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 48.008234598045206,
+          "overall_aki": 50.87765627918237,
+          "overall_eicu": 45.81273328069,
+          "overall_mortality": 53.00164997816557,
+          "overall_hirid": 47.35973798574298,
+          "overall_sepsis": 40.14539753678769,
+          "overall_miiv": 50.852232527702654
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "sepsis",
+      "dataset": "eicu",
+      "run_id": "20250702_080324",
+      "prompting_id": "collaborative_reasoning_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.563,
+          "auprc": 0.051,
+          "normalized_auprc": 1.056,
+          "specificity": 0.036,
+          "f1_score": 0.093,
+          "accuracy": 0.082,
+          "balanced_accuracy": 0.508,
+          "precision": 0.049,
+          "recall": 0.979,
+          "mcc": 0.509,
+          "kappa": 0.002,
+          "minpse": 0.068,
+          "task_dataset_score": 37.548
+        },
+        "task_pulse_scores": {
+          "aki": [
+            54.54879027946383,
+            46.68627332120796,
+            51.39790523687532
+          ],
+          "mortality": [
+            45.34155338746913,
+            46.60961233530484,
+            67.05378421172273
+          ],
+          "sepsis": [
+            37.547856175137014,
+            48.78332830071615,
+            34.1050081345099
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            54.54879027946383,
+            45.34155338746913,
+            37.547856175137014
+          ],
+          "miiv": [
+            51.39790523687532,
+            67.05378421172273,
+            34.1050081345099
+          ],
+          "hirid": [
+            46.68627332120796,
+            46.60961233530484,
+            48.78332830071615
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 48.008234598045206,
+          "overall_aki": 50.87765627918237,
+          "overall_eicu": 45.81273328069,
+          "overall_mortality": 53.00164997816557,
+          "overall_hirid": 47.35973798574298,
+          "overall_sepsis": 40.14539753678769,
+          "overall_miiv": 50.852232527702654
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "sepsis",
+      "dataset": "hirid",
+      "run_id": "20250702_080324",
+      "prompting_id": "collaborative_reasoning_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.719,
+          "auprc": 0.237,
+          "normalized_auprc": 3.151,
+          "specificity": 0.002,
+          "f1_score": 0.14,
+          "accuracy": 0.077,
+          "balanced_accuracy": 0.501,
+          "precision": 0.075,
+          "recall": 1.0,
+          "mcc": 0.506,
+          "kappa": 0.0,
+          "minpse": 0.172,
+          "task_dataset_score": 48.783
+        },
+        "task_pulse_scores": {
+          "aki": [
+            54.54879027946383,
+            46.68627332120796,
+            51.39790523687532
+          ],
+          "mortality": [
+            45.34155338746913,
+            46.60961233530484,
+            67.05378421172273
+          ],
+          "sepsis": [
+            37.547856175137014,
+            48.78332830071615,
+            34.1050081345099
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            54.54879027946383,
+            45.34155338746913,
+            37.547856175137014
+          ],
+          "miiv": [
+            51.39790523687532,
+            67.05378421172273,
+            34.1050081345099
+          ],
+          "hirid": [
+            46.68627332120796,
+            46.60961233530484,
+            48.78332830071615
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 48.008234598045206,
+          "overall_aki": 50.87765627918237,
+          "overall_eicu": 45.81273328069,
+          "overall_mortality": 53.00164997816557,
+          "overall_hirid": 47.35973798574298,
+          "overall_sepsis": 40.14539753678769,
+          "overall_miiv": 50.852232527702654
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "sepsis",
+      "dataset": "miiv",
+      "run_id": "20250702_080324",
+      "prompting_id": "collaborative_reasoning_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.481,
+          "auprc": 0.023,
+          "normalized_auprc": 0.892,
+          "specificity": 0.033,
+          "f1_score": 0.051,
+          "accuracy": 0.058,
+          "balanced_accuracy": 0.517,
+          "precision": 0.026,
+          "recall": 1.0,
+          "mcc": 0.515,
+          "kappa": 0.002,
+          "minpse": 0.026,
+          "task_dataset_score": 34.105
+        },
+        "task_pulse_scores": {
+          "aki": [
+            54.54879027946383,
+            46.68627332120796,
+            51.39790523687532
+          ],
+          "mortality": [
+            45.34155338746913,
+            46.60961233530484,
+            67.05378421172273
+          ],
+          "sepsis": [
+            37.547856175137014,
+            48.78332830071615,
+            34.1050081345099
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            54.54879027946383,
+            45.34155338746913,
+            37.547856175137014
+          ],
+          "miiv": [
+            51.39790523687532,
+            67.05378421172273,
+            34.1050081345099
+          ],
+          "hirid": [
+            46.68627332120796,
+            46.60961233530484,
+            48.78332830071615
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 48.008234598045206,
+          "overall_aki": 50.87765627918237,
+          "overall_eicu": 45.81273328069,
+          "overall_mortality": 53.00164997816557,
+          "overall_hirid": 47.35973798574298,
+          "overall_sepsis": 40.14539753678769,
+          "overall_miiv": 50.852232527702654
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "aki",
+      "dataset": "eicu",
+      "run_id": "20250704_142727",
+      "prompting_id": "hybrid_reasoning_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.712,
+          "auprc": 0.499,
+          "normalized_auprc": 1.611,
+          "specificity": 0.779,
+          "f1_score": 0.493,
+          "accuracy": 0.689,
+          "balanced_accuracy": 0.634,
+          "precision": 0.498,
+          "recall": 0.489,
+          "mcc": 0.635,
+          "kappa": 0.269,
+          "minpse": 0.492,
+          "task_dataset_score": 61.461
+        },
+        "task_pulse_scores": {
+          "aki": [
+            61.46090336237751,
+            54.372068671856255,
+            63.71344468130859
+          ],
+          "mortality": [
+            43.98564260543113,
+            50.03747347350524,
+            60.61263278679639
+          ],
+          "sepsis": [
+            40.76523807234086,
+            54.66403747637072,
+            35.82531325324843
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            61.46090336237751,
+            43.98564260543113,
+            40.76523807234086
+          ],
+          "miiv": [
+            63.71344468130859,
+            60.61263278679639,
+            35.82531325324843
+          ],
+          "hirid": [
+            54.372068671856255,
+            50.03747347350524,
+            54.66403747637072
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 51.71519493147057,
+          "overall_aki": 59.84880557184746,
+          "overall_eicu": 48.7372613467165,
+          "overall_mortality": 51.54524962191092,
+          "overall_hirid": 53.024526540577405,
+          "overall_sepsis": 43.751529600653335,
+          "overall_miiv": 53.383796907117805
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "aki",
+      "dataset": "hirid",
+      "run_id": "20250704_142727",
+      "prompting_id": "hybrid_reasoning_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.747,
+          "auprc": 0.299,
+          "normalized_auprc": 1.846,
+          "specificity": 0.905,
+          "f1_score": 0.325,
+          "accuracy": 0.805,
+          "balanced_accuracy": 0.597,
+          "precision": 0.371,
+          "recall": 0.289,
+          "mcc": 0.608,
+          "kappa": 0.213,
+          "minpse": 0.342,
+          "task_dataset_score": 54.372
+        },
+        "task_pulse_scores": {
+          "aki": [
+            61.46090336237751,
+            54.372068671856255,
+            63.71344468130859
+          ],
+          "mortality": [
+            43.98564260543113,
+            50.03747347350524,
+            60.61263278679639
+          ],
+          "sepsis": [
+            40.76523807234086,
+            54.66403747637072,
+            35.82531325324843
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            61.46090336237751,
+            43.98564260543113,
+            40.76523807234086
+          ],
+          "miiv": [
+            63.71344468130859,
+            60.61263278679639,
+            35.82531325324843
+          ],
+          "hirid": [
+            54.372068671856255,
+            50.03747347350524,
+            54.66403747637072
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 51.71519493147057,
+          "overall_aki": 59.84880557184746,
+          "overall_eicu": 48.7372613467165,
+          "overall_mortality": 51.54524962191092,
+          "overall_hirid": 53.024526540577405,
+          "overall_sepsis": 43.751529600653335,
+          "overall_miiv": 53.383796907117805
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "aki",
+      "dataset": "miiv",
+      "run_id": "20250704_142727",
+      "prompting_id": "hybrid_reasoning_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.749,
+          "auprc": 0.518,
+          "normalized_auprc": 2.224,
+          "specificity": 0.893,
+          "f1_score": 0.426,
+          "accuracy": 0.77,
+          "balanced_accuracy": 0.63,
+          "precision": 0.509,
+          "recall": 0.367,
+          "mcc": 0.647,
+          "kappa": 0.288,
+          "minpse": 0.435,
+          "task_dataset_score": 63.713
+        },
+        "task_pulse_scores": {
+          "aki": [
+            61.46090336237751,
+            54.372068671856255,
+            63.71344468130859
+          ],
+          "mortality": [
+            43.98564260543113,
+            50.03747347350524,
+            60.61263278679639
+          ],
+          "sepsis": [
+            40.76523807234086,
+            54.66403747637072,
+            35.82531325324843
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            61.46090336237751,
+            43.98564260543113,
+            40.76523807234086
+          ],
+          "miiv": [
+            63.71344468130859,
+            60.61263278679639,
+            35.82531325324843
+          ],
+          "hirid": [
+            54.372068671856255,
+            50.03747347350524,
+            54.66403747637072
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 51.71519493147057,
+          "overall_aki": 59.84880557184746,
+          "overall_eicu": 48.7372613467165,
+          "overall_mortality": 51.54524962191092,
+          "overall_hirid": 53.024526540577405,
+          "overall_sepsis": 43.751529600653335,
+          "overall_miiv": 53.383796907117805
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "mortality",
+      "dataset": "eicu",
+      "run_id": "20250704_142727",
+      "prompting_id": "hybrid_reasoning_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.73,
+          "auprc": 0.118,
+          "normalized_auprc": 1.691,
+          "specificity": 0.871,
+          "f1_score": 0.19,
+          "accuracy": 0.83,
+          "balanced_accuracy": 0.578,
+          "precision": 0.143,
+          "recall": 0.286,
+          "mcc": 0.558,
+          "kappa": 0.107,
+          "minpse": 0.176,
+          "task_dataset_score": 43.986
+        },
+        "task_pulse_scores": {
+          "aki": [
+            61.46090336237751,
+            54.372068671856255,
+            63.71344468130859
+          ],
+          "mortality": [
+            43.98564260543113,
+            50.03747347350524,
+            60.61263278679639
+          ],
+          "sepsis": [
+            40.76523807234086,
+            54.66403747637072,
+            35.82531325324843
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            61.46090336237751,
+            43.98564260543113,
+            40.76523807234086
+          ],
+          "miiv": [
+            63.71344468130859,
+            60.61263278679639,
+            35.82531325324843
+          ],
+          "hirid": [
+            54.372068671856255,
+            50.03747347350524,
+            54.66403747637072
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 51.71519493147057,
+          "overall_aki": 59.84880557184746,
+          "overall_eicu": 48.7372613467165,
+          "overall_mortality": 51.54524962191092,
+          "overall_hirid": 53.024526540577405,
+          "overall_sepsis": 43.751529600653335,
+          "overall_miiv": 53.383796907117805
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "mortality",
+      "dataset": "hirid",
+      "run_id": "20250704_142727",
+      "prompting_id": "hybrid_reasoning_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.744,
+          "auprc": 0.202,
+          "normalized_auprc": 1.839,
+          "specificity": 0.888,
+          "f1_score": 0.32,
+          "accuracy": 0.83,
+          "balanced_accuracy": 0.626,
+          "precision": 0.286,
+          "recall": 0.364,
+          "mcc": 0.613,
+          "kappa": 0.224,
+          "minpse": 0.286,
+          "task_dataset_score": 50.037
+        },
+        "task_pulse_scores": {
+          "aki": [
+            61.46090336237751,
+            54.372068671856255,
+            63.71344468130859
+          ],
+          "mortality": [
+            43.98564260543113,
+            50.03747347350524,
+            60.61263278679639
+          ],
+          "sepsis": [
+            40.76523807234086,
+            54.66403747637072,
+            35.82531325324843
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            61.46090336237751,
+            43.98564260543113,
+            40.76523807234086
+          ],
+          "miiv": [
+            63.71344468130859,
+            60.61263278679639,
+            35.82531325324843
+          ],
+          "hirid": [
+            54.372068671856255,
+            50.03747347350524,
+            54.66403747637072
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 51.71519493147057,
+          "overall_aki": 59.84880557184746,
+          "overall_eicu": 48.7372613467165,
+          "overall_mortality": 51.54524962191092,
+          "overall_hirid": 53.024526540577405,
+          "overall_sepsis": 43.751529600653335,
+          "overall_miiv": 53.383796907117805
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "mortality",
+      "dataset": "miiv",
+      "run_id": "20250704_142727",
+      "prompting_id": "hybrid_reasoning_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.81,
+          "auprc": 0.358,
+          "normalized_auprc": 2.982,
+          "specificity": 0.966,
+          "f1_score": 0.421,
+          "accuracy": 0.89,
+          "balanced_accuracy": 0.65,
+          "precision": 0.571,
+          "recall": 0.333,
+          "mcc": 0.691,
+          "kappa": 0.365,
+          "minpse": 0.438,
+          "task_dataset_score": 60.613
+        },
+        "task_pulse_scores": {
+          "aki": [
+            61.46090336237751,
+            54.372068671856255,
+            63.71344468130859
+          ],
+          "mortality": [
+            43.98564260543113,
+            50.03747347350524,
+            60.61263278679639
+          ],
+          "sepsis": [
+            40.76523807234086,
+            54.66403747637072,
+            35.82531325324843
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            61.46090336237751,
+            43.98564260543113,
+            40.76523807234086
+          ],
+          "miiv": [
+            63.71344468130859,
+            60.61263278679639,
+            35.82531325324843
+          ],
+          "hirid": [
+            54.372068671856255,
+            50.03747347350524,
+            54.66403747637072
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 51.71519493147057,
+          "overall_aki": 59.84880557184746,
+          "overall_eicu": 48.7372613467165,
+          "overall_mortality": 51.54524962191092,
+          "overall_hirid": 53.024526540577405,
+          "overall_sepsis": 43.751529600653335,
+          "overall_miiv": 53.383796907117805
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "sepsis",
+      "dataset": "eicu",
+      "run_id": "20250704_142727",
+      "prompting_id": "hybrid_reasoning_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.587,
+          "auprc": 0.145,
+          "normalized_auprc": 1.792,
+          "specificity": 0.996,
+          "f1_score": 0.0,
+          "accuracy": 0.915,
+          "balanced_accuracy": 0.498,
+          "precision": 0.0,
+          "recall": 0.0,
+          "mcc": 0.491,
+          "kappa": -0.007,
+          "minpse": 0.216,
+          "task_dataset_score": 40.765
+        },
+        "task_pulse_scores": {
+          "aki": [
+            61.46090336237751,
+            54.372068671856255,
+            63.71344468130859
+          ],
+          "mortality": [
+            43.98564260543113,
+            50.03747347350524,
+            60.61263278679639
+          ],
+          "sepsis": [
+            40.76523807234086,
+            54.66403747637072,
+            35.82531325324843
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            61.46090336237751,
+            43.98564260543113,
+            40.76523807234086
+          ],
+          "miiv": [
+            63.71344468130859,
+            60.61263278679639,
+            35.82531325324843
+          ],
+          "hirid": [
+            54.372068671856255,
+            50.03747347350524,
+            54.66403747637072
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 51.71519493147057,
+          "overall_aki": 59.84880557184746,
+          "overall_eicu": 48.7372613467165,
+          "overall_mortality": 51.54524962191092,
+          "overall_hirid": 53.024526540577405,
+          "overall_sepsis": 43.751529600653335,
+          "overall_miiv": 53.383796907117805
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "sepsis",
+      "dataset": "hirid",
+      "run_id": "20250704_142727",
+      "prompting_id": "hybrid_reasoning_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.788,
+          "auprc": 0.217,
+          "normalized_auprc": 2.881,
+          "specificity": 0.847,
+          "f1_score": 0.32,
+          "accuracy": 0.825,
+          "balanced_accuracy": 0.698,
+          "precision": 0.226,
+          "recall": 0.548,
+          "mcc": 0.635,
+          "kappa": 0.239,
+          "minpse": 0.24,
+          "task_dataset_score": 54.664
+        },
+        "task_pulse_scores": {
+          "aki": [
+            61.46090336237751,
+            54.372068671856255,
+            63.71344468130859
+          ],
+          "mortality": [
+            43.98564260543113,
+            50.03747347350524,
+            60.61263278679639
+          ],
+          "sepsis": [
+            40.76523807234086,
+            54.66403747637072,
+            35.82531325324843
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            61.46090336237751,
+            43.98564260543113,
+            40.76523807234086
+          ],
+          "miiv": [
+            63.71344468130859,
+            60.61263278679639,
+            35.82531325324843
+          ],
+          "hirid": [
+            54.372068671856255,
+            50.03747347350524,
+            54.66403747637072
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 51.71519493147057,
+          "overall_aki": 59.84880557184746,
+          "overall_eicu": 48.7372613467165,
+          "overall_mortality": 51.54524962191092,
+          "overall_hirid": 53.024526540577405,
+          "overall_sepsis": 43.751529600653335,
+          "overall_miiv": 53.383796907117805
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "sepsis",
+      "dataset": "miiv",
+      "run_id": "20250704_142727",
+      "prompting_id": "hybrid_reasoning_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.551,
+          "auprc": 0.032,
+          "normalized_auprc": 1.265,
+          "specificity": 0.98,
+          "f1_score": 0.0,
+          "accuracy": 0.956,
+          "balanced_accuracy": 0.49,
+          "precision": 0.0,
+          "recall": 0.0,
+          "mcc": 0.489,
+          "kappa": -0.022,
+          "minpse": 0.047,
+          "task_dataset_score": 35.825
+        },
+        "task_pulse_scores": {
+          "aki": [
+            61.46090336237751,
+            54.372068671856255,
+            63.71344468130859
+          ],
+          "mortality": [
+            43.98564260543113,
+            50.03747347350524,
+            60.61263278679639
+          ],
+          "sepsis": [
+            40.76523807234086,
+            54.66403747637072,
+            35.82531325324843
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            61.46090336237751,
+            43.98564260543113,
+            40.76523807234086
+          ],
+          "miiv": [
+            63.71344468130859,
+            60.61263278679639,
+            35.82531325324843
+          ],
+          "hirid": [
+            54.372068671856255,
+            50.03747347350524,
+            54.66403747637072
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 51.71519493147057,
+          "overall_aki": 59.84880557184746,
+          "overall_eicu": 48.7372613467165,
+          "overall_mortality": 51.54524962191092,
+          "overall_hirid": 53.024526540577405,
+          "overall_sepsis": 43.751529600653335,
+          "overall_miiv": 53.383796907117805
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "aki",
+      "dataset": "eicu",
+      "run_id": "20250623_140022",
+      "prompting_id": "liu_2023_few_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.627,
+          "auprc": 0.541,
+          "normalized_auprc": 1.746,
+          "specificity": 0.661,
+          "f1_score": 0.482,
+          "accuracy": 0.629,
+          "balanced_accuracy": 0.609,
+          "precision": 0.425,
+          "recall": 0.557,
+          "mcc": 0.603,
+          "kappa": 0.201,
+          "minpse": 0.469,
+          "task_dataset_score": 59.057
+        },
+        "task_pulse_scores": {
+          "aki": [
+            59.05730559853399,
+            50.01166993470802,
+            54.06460600334431
+          ],
+          "mortality": [
+            55.20766192378355,
+            55.75825460637451,
+            72.62864971032604
+          ],
+          "sepsis": [
+            44.85842812131701,
+            55.002027721754885,
+            35.86807491578848
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            59.05730559853399,
+            55.20766192378355,
+            44.85842812131701
+          ],
+          "miiv": [
+            54.06460600334431,
+            72.62864971032604,
+            35.86807491578848
+          ],
+          "hirid": [
+            50.01166993470802,
+            55.75825460637451,
+            55.002027721754885
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 53.60629761510342,
+          "overall_aki": 54.37786051219544,
+          "overall_eicu": 53.04113188121152,
+          "overall_mortality": 61.19818874682803,
+          "overall_hirid": 53.590650754279146,
+          "overall_sepsis": 45.24284358628679,
+          "overall_miiv": 54.187110209819615
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "aki",
+      "dataset": "hirid",
+      "run_id": "20250623_140022",
+      "prompting_id": "liu_2023_few_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.629,
+          "auprc": 0.302,
+          "normalized_auprc": 1.864,
+          "specificity": 0.951,
+          "f1_score": 0.199,
+          "accuracy": 0.82,
+          "balanced_accuracy": 0.545,
+          "precision": 0.355,
+          "recall": 0.138,
+          "mcc": 0.568,
+          "kappa": 0.119,
+          "minpse": 0.266,
+          "task_dataset_score": 50.012
+        },
+        "task_pulse_scores": {
+          "aki": [
+            59.05730559853399,
+            50.01166993470802,
+            54.06460600334431
+          ],
+          "mortality": [
+            55.20766192378355,
+            55.75825460637451,
+            72.62864971032604
+          ],
+          "sepsis": [
+            44.85842812131701,
+            55.002027721754885,
+            35.86807491578848
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            59.05730559853399,
+            55.20766192378355,
+            44.85842812131701
+          ],
+          "miiv": [
+            54.06460600334431,
+            72.62864971032604,
+            35.86807491578848
+          ],
+          "hirid": [
+            50.01166993470802,
+            55.75825460637451,
+            55.002027721754885
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 53.60629761510342,
+          "overall_aki": 54.37786051219544,
+          "overall_eicu": 53.04113188121152,
+          "overall_mortality": 61.19818874682803,
+          "overall_hirid": 53.590650754279146,
+          "overall_sepsis": 45.24284358628679,
+          "overall_miiv": 54.187110209819615
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "aki",
+      "dataset": "miiv",
+      "run_id": "20250623_140022",
+      "prompting_id": "liu_2023_few_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.6,
+          "auprc": 0.418,
+          "normalized_auprc": 1.794,
+          "specificity": 0.881,
+          "f1_score": 0.351,
+          "accuracy": 0.745,
+          "balanced_accuracy": 0.589,
+          "precision": 0.43,
+          "recall": 0.297,
+          "mcc": 0.602,
+          "kappa": 0.199,
+          "minpse": 0.349,
+          "task_dataset_score": 54.065
+        },
+        "task_pulse_scores": {
+          "aki": [
+            59.05730559853399,
+            50.01166993470802,
+            54.06460600334431
+          ],
+          "mortality": [
+            55.20766192378355,
+            55.75825460637451,
+            72.62864971032604
+          ],
+          "sepsis": [
+            44.85842812131701,
+            55.002027721754885,
+            35.86807491578848
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            59.05730559853399,
+            55.20766192378355,
+            44.85842812131701
+          ],
+          "miiv": [
+            54.06460600334431,
+            72.62864971032604,
+            35.86807491578848
+          ],
+          "hirid": [
+            50.01166993470802,
+            55.75825460637451,
+            55.002027721754885
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 53.60629761510342,
+          "overall_aki": 54.37786051219544,
+          "overall_eicu": 53.04113188121152,
+          "overall_mortality": 61.19818874682803,
+          "overall_hirid": 53.590650754279146,
+          "overall_sepsis": 45.24284358628679,
+          "overall_miiv": 54.187110209819615
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "mortality",
+      "dataset": "eicu",
+      "run_id": "20250623_140022",
+      "prompting_id": "liu_2023_few_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.725,
+          "auprc": 0.389,
+          "normalized_auprc": 5.555,
+          "specificity": 0.452,
+          "f1_score": 0.159,
+          "accuracy": 0.47,
+          "balanced_accuracy": 0.583,
+          "precision": 0.089,
+          "recall": 0.714,
+          "mcc": 0.543,
+          "kappa": 0.039,
+          "minpse": 0.214,
+          "task_dataset_score": 55.208
+        },
+        "task_pulse_scores": {
+          "aki": [
+            59.05730559853399,
+            50.01166993470802,
+            54.06460600334431
+          ],
+          "mortality": [
+            55.20766192378355,
+            55.75825460637451,
+            72.62864971032604
+          ],
+          "sepsis": [
+            44.85842812131701,
+            55.002027721754885,
+            35.86807491578848
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            59.05730559853399,
+            55.20766192378355,
+            44.85842812131701
+          ],
+          "miiv": [
+            54.06460600334431,
+            72.62864971032604,
+            35.86807491578848
+          ],
+          "hirid": [
+            50.01166993470802,
+            55.75825460637451,
+            55.002027721754885
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 53.60629761510342,
+          "overall_aki": 54.37786051219544,
+          "overall_eicu": 53.04113188121152,
+          "overall_mortality": 61.19818874682803,
+          "overall_hirid": 53.590650754279146,
+          "overall_sepsis": 45.24284358628679,
+          "overall_miiv": 54.187110209819615
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "mortality",
+      "dataset": "hirid",
+      "run_id": "20250623_140022",
+      "prompting_id": "liu_2023_few_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.695,
+          "auprc": 0.415,
+          "normalized_auprc": 3.77,
+          "specificity": 0.393,
+          "f1_score": 0.243,
+          "accuracy": 0.44,
+          "balanced_accuracy": 0.606,
+          "precision": 0.143,
+          "recall": 0.818,
+          "mcc": 0.569,
+          "kappa": 0.069,
+          "minpse": 0.25,
+          "task_dataset_score": 55.758
+        },
+        "task_pulse_scores": {
+          "aki": [
+            59.05730559853399,
+            50.01166993470802,
+            54.06460600334431
+          ],
+          "mortality": [
+            55.20766192378355,
+            55.75825460637451,
+            72.62864971032604
+          ],
+          "sepsis": [
+            44.85842812131701,
+            55.002027721754885,
+            35.86807491578848
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            59.05730559853399,
+            55.20766192378355,
+            44.85842812131701
+          ],
+          "miiv": [
+            54.06460600334431,
+            72.62864971032604,
+            35.86807491578848
+          ],
+          "hirid": [
+            50.01166993470802,
+            55.75825460637451,
+            55.002027721754885
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 53.60629761510342,
+          "overall_aki": 54.37786051219544,
+          "overall_eicu": 53.04113188121152,
+          "overall_mortality": 61.19818874682803,
+          "overall_hirid": 53.590650754279146,
+          "overall_sepsis": 45.24284358628679,
+          "overall_miiv": 54.187110209819615
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "mortality",
+      "dataset": "miiv",
+      "run_id": "20250623_140022",
+      "prompting_id": "liu_2023_few_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.877,
+          "auprc": 0.628,
+          "normalized_auprc": 5.232,
+          "specificity": 0.75,
+          "f1_score": 0.419,
+          "accuracy": 0.75,
+          "balanced_accuracy": 0.75,
+          "precision": 0.29,
+          "recall": 0.75,
+          "mcc": 0.676,
+          "kappa": 0.297,
+          "minpse": 0.5,
+          "task_dataset_score": 72.629
+        },
+        "task_pulse_scores": {
+          "aki": [
+            59.05730559853399,
+            50.01166993470802,
+            54.06460600334431
+          ],
+          "mortality": [
+            55.20766192378355,
+            55.75825460637451,
+            72.62864971032604
+          ],
+          "sepsis": [
+            44.85842812131701,
+            55.002027721754885,
+            35.86807491578848
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            59.05730559853399,
+            55.20766192378355,
+            44.85842812131701
+          ],
+          "miiv": [
+            54.06460600334431,
+            72.62864971032604,
+            35.86807491578848
+          ],
+          "hirid": [
+            50.01166993470802,
+            55.75825460637451,
+            55.002027721754885
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 53.60629761510342,
+          "overall_aki": 54.37786051219544,
+          "overall_eicu": 53.04113188121152,
+          "overall_mortality": 61.19818874682803,
+          "overall_hirid": 53.590650754279146,
+          "overall_sepsis": 45.24284358628679,
+          "overall_miiv": 54.187110209819615
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "sepsis",
+      "dataset": "eicu",
+      "run_id": "20250623_140022",
+      "prompting_id": "liu_2023_few_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.688,
+          "auprc": 0.067,
+          "normalized_auprc": 1.404,
+          "specificity": 0.591,
+          "f1_score": 0.163,
+          "accuracy": 0.602,
+          "balanced_accuracy": 0.7,
+          "precision": 0.091,
+          "recall": 0.809,
+          "mcc": 0.586,
+          "kappa": 0.084,
+          "minpse": 0.091,
+          "task_dataset_score": 44.858
+        },
+        "task_pulse_scores": {
+          "aki": [
+            59.05730559853399,
+            50.01166993470802,
+            54.06460600334431
+          ],
+          "mortality": [
+            55.20766192378355,
+            55.75825460637451,
+            72.62864971032604
+          ],
+          "sepsis": [
+            44.85842812131701,
+            55.002027721754885,
+            35.86807491578848
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            59.05730559853399,
+            55.20766192378355,
+            44.85842812131701
+          ],
+          "miiv": [
+            54.06460600334431,
+            72.62864971032604,
+            35.86807491578848
+          ],
+          "hirid": [
+            50.01166993470802,
+            55.75825460637451,
+            55.002027721754885
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 53.60629761510342,
+          "overall_aki": 54.37786051219544,
+          "overall_eicu": 53.04113188121152,
+          "overall_mortality": 61.19818874682803,
+          "overall_hirid": 53.590650754279146,
+          "overall_sepsis": 45.24284358628679,
+          "overall_miiv": 54.187110209819615
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "sepsis",
+      "dataset": "hirid",
+      "run_id": "20250623_140022",
+      "prompting_id": "liu_2023_few_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.761,
+          "auprc": 0.282,
+          "normalized_auprc": 3.742,
+          "specificity": 0.614,
+          "f1_score": 0.239,
+          "accuracy": 0.626,
+          "balanced_accuracy": 0.697,
+          "precision": 0.141,
+          "recall": 0.781,
+          "mcc": 0.606,
+          "kappa": 0.128,
+          "minpse": 0.288,
+          "task_dataset_score": 55.002
+        },
+        "task_pulse_scores": {
+          "aki": [
+            59.05730559853399,
+            50.01166993470802,
+            54.06460600334431
+          ],
+          "mortality": [
+            55.20766192378355,
+            55.75825460637451,
+            72.62864971032604
+          ],
+          "sepsis": [
+            44.85842812131701,
+            55.002027721754885,
+            35.86807491578848
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            59.05730559853399,
+            55.20766192378355,
+            44.85842812131701
+          ],
+          "miiv": [
+            54.06460600334431,
+            72.62864971032604,
+            35.86807491578848
+          ],
+          "hirid": [
+            50.01166993470802,
+            55.75825460637451,
+            55.002027721754885
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 53.60629761510342,
+          "overall_aki": 54.37786051219544,
+          "overall_eicu": 53.04113188121152,
+          "overall_mortality": 61.19818874682803,
+          "overall_hirid": 53.590650754279146,
+          "overall_sepsis": 45.24284358628679,
+          "overall_miiv": 54.187110209819615
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "sepsis",
+      "dataset": "miiv",
+      "run_id": "20250623_140022",
+      "prompting_id": "liu_2023_few_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.546,
+          "auprc": 0.025,
+          "normalized_auprc": 0.988,
+          "specificity": 0.684,
+          "f1_score": 0.047,
+          "accuracy": 0.675,
+          "balanced_accuracy": 0.502,
+          "precision": 0.026,
+          "recall": 0.32,
+          "mcc": 0.501,
+          "kappa": 0.001,
+          "minpse": 0.032,
+          "task_dataset_score": 35.868
+        },
+        "task_pulse_scores": {
+          "aki": [
+            59.05730559853399,
+            50.01166993470802,
+            54.06460600334431
+          ],
+          "mortality": [
+            55.20766192378355,
+            55.75825460637451,
+            72.62864971032604
+          ],
+          "sepsis": [
+            44.85842812131701,
+            55.002027721754885,
+            35.86807491578848
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            59.05730559853399,
+            55.20766192378355,
+            44.85842812131701
+          ],
+          "miiv": [
+            54.06460600334431,
+            72.62864971032604,
+            35.86807491578848
+          ],
+          "hirid": [
+            50.01166993470802,
+            55.75825460637451,
+            55.002027721754885
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 53.60629761510342,
+          "overall_aki": 54.37786051219544,
+          "overall_eicu": 53.04113188121152,
+          "overall_mortality": 61.19818874682803,
+          "overall_hirid": 53.590650754279146,
+          "overall_sepsis": 45.24284358628679,
+          "overall_miiv": 54.187110209819615
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "aki",
+      "dataset": "eicu",
+      "run_id": "20250622_111935",
+      "prompting_id": "sarvari_2024_aggregation_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.558,
+          "auprc": 0.411,
+          "normalized_auprc": 1.327,
+          "specificity": 0.907,
+          "f1_score": 0.227,
+          "accuracy": 0.674,
+          "balanced_accuracy": 0.531,
+          "precision": 0.427,
+          "recall": 0.154,
+          "mcc": 0.545,
+          "kappa": 0.074,
+          "minpse": 0.319,
+          "task_dataset_score": 50.514
+        },
+        "task_pulse_scores": {
+          "aki": [
+            50.51405615700209,
+            48.811069126078316,
+            52.960060178239964
+          ],
+          "mortality": [
+            46.33485303664113,
+            55.349137114124304,
+            58.824751548709706
+          ],
+          "sepsis": [
+            36.304732059384385,
+            56.19709031153429,
+            33.56186292745945
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            50.51405615700209,
+            46.33485303664113,
+            36.304732059384385
+          ],
+          "miiv": [
+            52.960060178239964,
+            58.824751548709706,
+            33.56186292745945
+          ],
+          "hirid": [
+            48.811069126078316,
+            55.349137114124304,
+            56.19709031153429
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 48.76195693990818,
+          "overall_aki": 50.76172848710679,
+          "overall_eicu": 44.38454708434253,
+          "overall_mortality": 53.502913899825046,
+          "overall_hirid": 53.4524321839123,
+          "overall_sepsis": 42.021228432792704,
+          "overall_miiv": 48.44889155146971
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "aki",
+      "dataset": "hirid",
+      "run_id": "20250622_111935",
+      "prompting_id": "sarvari_2024_aggregation_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.575,
+          "auprc": 0.286,
+          "normalized_auprc": 1.769,
+          "specificity": 0.983,
+          "f1_score": 0.188,
+          "accuracy": 0.842,
+          "balanced_accuracy": 0.548,
+          "precision": 0.562,
+          "recall": 0.113,
+          "mcc": 0.6,
+          "kappa": 0.142,
+          "minpse": 0.214,
+          "task_dataset_score": 48.811
+        },
+        "task_pulse_scores": {
+          "aki": [
+            50.51405615700209,
+            48.811069126078316,
+            52.960060178239964
+          ],
+          "mortality": [
+            46.33485303664113,
+            55.349137114124304,
+            58.824751548709706
+          ],
+          "sepsis": [
+            36.304732059384385,
+            56.19709031153429,
+            33.56186292745945
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            50.51405615700209,
+            46.33485303664113,
+            36.304732059384385
+          ],
+          "miiv": [
+            52.960060178239964,
+            58.824751548709706,
+            33.56186292745945
+          ],
+          "hirid": [
+            48.811069126078316,
+            55.349137114124304,
+            56.19709031153429
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 48.76195693990818,
+          "overall_aki": 50.76172848710679,
+          "overall_eicu": 44.38454708434253,
+          "overall_mortality": 53.502913899825046,
+          "overall_hirid": 53.4524321839123,
+          "overall_sepsis": 42.021228432792704,
+          "overall_miiv": 48.44889155146971
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "aki",
+      "dataset": "miiv",
+      "run_id": "20250622_111935",
+      "prompting_id": "sarvari_2024_aggregation_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.577,
+          "auprc": 0.405,
+          "normalized_auprc": 1.74,
+          "specificity": 0.964,
+          "f1_score": 0.247,
+          "accuracy": 0.776,
+          "balanced_accuracy": 0.561,
+          "precision": 0.571,
+          "recall": 0.157,
+          "mcc": 0.605,
+          "kappa": 0.162,
+          "minpse": 0.275,
+          "task_dataset_score": 52.96
+        },
+        "task_pulse_scores": {
+          "aki": [
+            50.51405615700209,
+            48.811069126078316,
+            52.960060178239964
+          ],
+          "mortality": [
+            46.33485303664113,
+            55.349137114124304,
+            58.824751548709706
+          ],
+          "sepsis": [
+            36.304732059384385,
+            56.19709031153429,
+            33.56186292745945
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            50.51405615700209,
+            46.33485303664113,
+            36.304732059384385
+          ],
+          "miiv": [
+            52.960060178239964,
+            58.824751548709706,
+            33.56186292745945
+          ],
+          "hirid": [
+            48.811069126078316,
+            55.349137114124304,
+            56.19709031153429
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 48.76195693990818,
+          "overall_aki": 50.76172848710679,
+          "overall_eicu": 44.38454708434253,
+          "overall_mortality": 53.502913899825046,
+          "overall_hirid": 53.4524321839123,
+          "overall_sepsis": 42.021228432792704,
+          "overall_miiv": 48.44889155146971
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "mortality",
+      "dataset": "eicu",
+      "run_id": "20250622_111935",
+      "prompting_id": "sarvari_2024_aggregation_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.575,
+          "auprc": 0.283,
+          "normalized_auprc": 4.049,
+          "specificity": 0.398,
+          "f1_score": 0.147,
+          "accuracy": 0.42,
+          "balanced_accuracy": 0.556,
+          "precision": 0.082,
+          "recall": 0.714,
+          "mcc": 0.529,
+          "kappa": 0.025,
+          "minpse": 0.103,
+          "task_dataset_score": 46.335
+        },
+        "task_pulse_scores": {
+          "aki": [
+            50.51405615700209,
+            48.811069126078316,
+            52.960060178239964
+          ],
+          "mortality": [
+            46.33485303664113,
+            55.349137114124304,
+            58.824751548709706
+          ],
+          "sepsis": [
+            36.304732059384385,
+            56.19709031153429,
+            33.56186292745945
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            50.51405615700209,
+            46.33485303664113,
+            36.304732059384385
+          ],
+          "miiv": [
+            52.960060178239964,
+            58.824751548709706,
+            33.56186292745945
+          ],
+          "hirid": [
+            48.811069126078316,
+            55.349137114124304,
+            56.19709031153429
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 48.76195693990818,
+          "overall_aki": 50.76172848710679,
+          "overall_eicu": 44.38454708434253,
+          "overall_mortality": 53.502913899825046,
+          "overall_hirid": 53.4524321839123,
+          "overall_sepsis": 42.021228432792704,
+          "overall_miiv": 48.44889155146971
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "mortality",
+      "dataset": "hirid",
+      "run_id": "20250622_111935",
+      "prompting_id": "sarvari_2024_aggregation_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.639,
+          "auprc": 0.493,
+          "normalized_auprc": 4.484,
+          "specificity": 0.157,
+          "f1_score": 0.208,
+          "accuracy": 0.24,
+          "balanced_accuracy": 0.533,
+          "precision": 0.118,
+          "recall": 0.909,
+          "mcc": 0.529,
+          "kappa": 0.017,
+          "minpse": 0.154,
+          "task_dataset_score": 55.349
+        },
+        "task_pulse_scores": {
+          "aki": [
+            50.51405615700209,
+            48.811069126078316,
+            52.960060178239964
+          ],
+          "mortality": [
+            46.33485303664113,
+            55.349137114124304,
+            58.824751548709706
+          ],
+          "sepsis": [
+            36.304732059384385,
+            56.19709031153429,
+            33.56186292745945
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            50.51405615700209,
+            46.33485303664113,
+            36.304732059384385
+          ],
+          "miiv": [
+            52.960060178239964,
+            58.824751548709706,
+            33.56186292745945
+          ],
+          "hirid": [
+            48.811069126078316,
+            55.349137114124304,
+            56.19709031153429
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 48.76195693990818,
+          "overall_aki": 50.76172848710679,
+          "overall_eicu": 44.38454708434253,
+          "overall_mortality": 53.502913899825046,
+          "overall_hirid": 53.4524321839123,
+          "overall_sepsis": 42.021228432792704,
+          "overall_miiv": 48.44889155146971
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "mortality",
+      "dataset": "miiv",
+      "run_id": "20250622_111935",
+      "prompting_id": "sarvari_2024_aggregation_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.698,
+          "auprc": 0.492,
+          "normalized_auprc": 4.102,
+          "specificity": 0.159,
+          "f1_score": 0.245,
+          "accuracy": 0.26,
+          "balanced_accuracy": 0.58,
+          "precision": 0.14,
+          "recall": 1.0,
+          "mcc": 0.574,
+          "kappa": 0.043,
+          "minpse": 0.205,
+          "task_dataset_score": 58.825
+        },
+        "task_pulse_scores": {
+          "aki": [
+            50.51405615700209,
+            48.811069126078316,
+            52.960060178239964
+          ],
+          "mortality": [
+            46.33485303664113,
+            55.349137114124304,
+            58.824751548709706
+          ],
+          "sepsis": [
+            36.304732059384385,
+            56.19709031153429,
+            33.56186292745945
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            50.51405615700209,
+            46.33485303664113,
+            36.304732059384385
+          ],
+          "miiv": [
+            52.960060178239964,
+            58.824751548709706,
+            33.56186292745945
+          ],
+          "hirid": [
+            48.811069126078316,
+            55.349137114124304,
+            56.19709031153429
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 48.76195693990818,
+          "overall_aki": 50.76172848710679,
+          "overall_eicu": 44.38454708434253,
+          "overall_mortality": 53.502913899825046,
+          "overall_hirid": 53.4524321839123,
+          "overall_sepsis": 42.021228432792704,
+          "overall_miiv": 48.44889155146971
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "sepsis",
+      "dataset": "eicu",
+      "run_id": "20250622_111935",
+      "prompting_id": "sarvari_2024_aggregation_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.559,
+          "auprc": 0.049,
+          "normalized_auprc": 1.022,
+          "specificity": 0.714,
+          "f1_score": 0.056,
+          "accuracy": 0.689,
+          "balanced_accuracy": 0.453,
+          "precision": 0.033,
+          "recall": 0.191,
+          "mcc": 0.478,
+          "kappa": -0.029,
+          "minpse": 0.066,
+          "task_dataset_score": 36.305
+        },
+        "task_pulse_scores": {
+          "aki": [
+            50.51405615700209,
+            48.811069126078316,
+            52.960060178239964
+          ],
+          "mortality": [
+            46.33485303664113,
+            55.349137114124304,
+            58.824751548709706
+          ],
+          "sepsis": [
+            36.304732059384385,
+            56.19709031153429,
+            33.56186292745945
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            50.51405615700209,
+            46.33485303664113,
+            36.304732059384385
+          ],
+          "miiv": [
+            52.960060178239964,
+            58.824751548709706,
+            33.56186292745945
+          ],
+          "hirid": [
+            48.811069126078316,
+            55.349137114124304,
+            56.19709031153429
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 48.76195693990818,
+          "overall_aki": 50.76172848710679,
+          "overall_eicu": 44.38454708434253,
+          "overall_mortality": 53.502913899825046,
+          "overall_hirid": 53.4524321839123,
+          "overall_sepsis": 42.021228432792704,
+          "overall_miiv": 48.44889155146971
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "sepsis",
+      "dataset": "hirid",
+      "run_id": "20250622_111935",
+      "prompting_id": "sarvari_2024_aggregation_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.78,
+          "auprc": 0.267,
+          "normalized_auprc": 3.548,
+          "specificity": 0.753,
+          "f1_score": 0.301,
+          "accuracy": 0.75,
+          "balanced_accuracy": 0.733,
+          "precision": 0.19,
+          "recall": 0.712,
+          "mcc": 0.637,
+          "kappa": 0.206,
+          "minpse": 0.299,
+          "task_dataset_score": 56.197
+        },
+        "task_pulse_scores": {
+          "aki": [
+            50.51405615700209,
+            48.811069126078316,
+            52.960060178239964
+          ],
+          "mortality": [
+            46.33485303664113,
+            55.349137114124304,
+            58.824751548709706
+          ],
+          "sepsis": [
+            36.304732059384385,
+            56.19709031153429,
+            33.56186292745945
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            50.51405615700209,
+            46.33485303664113,
+            36.304732059384385
+          ],
+          "miiv": [
+            52.960060178239964,
+            58.824751548709706,
+            33.56186292745945
+          ],
+          "hirid": [
+            48.811069126078316,
+            55.349137114124304,
+            56.19709031153429
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 48.76195693990818,
+          "overall_aki": 50.76172848710679,
+          "overall_eicu": 44.38454708434253,
+          "overall_mortality": 53.502913899825046,
+          "overall_hirid": 53.4524321839123,
+          "overall_sepsis": 42.021228432792704,
+          "overall_miiv": 48.44889155146971
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "sepsis",
+      "dataset": "miiv",
+      "run_id": "20250622_111935",
+      "prompting_id": "sarvari_2024_aggregation_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.489,
+          "auprc": 0.022,
+          "normalized_auprc": 0.884,
+          "specificity": 0.749,
+          "f1_score": 0.037,
+          "accuracy": 0.735,
+          "balanced_accuracy": 0.475,
+          "precision": 0.02,
+          "recall": 0.2,
+          "mcc": 0.491,
+          "kappa": -0.01,
+          "minpse": 0.026,
+          "task_dataset_score": 33.562
+        },
+        "task_pulse_scores": {
+          "aki": [
+            50.51405615700209,
+            48.811069126078316,
+            52.960060178239964
+          ],
+          "mortality": [
+            46.33485303664113,
+            55.349137114124304,
+            58.824751548709706
+          ],
+          "sepsis": [
+            36.304732059384385,
+            56.19709031153429,
+            33.56186292745945
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            50.51405615700209,
+            46.33485303664113,
+            36.304732059384385
+          ],
+          "miiv": [
+            52.960060178239964,
+            58.824751548709706,
+            33.56186292745945
+          ],
+          "hirid": [
+            48.811069126078316,
+            55.349137114124304,
+            56.19709031153429
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 48.76195693990818,
+          "overall_aki": 50.76172848710679,
+          "overall_eicu": 44.38454708434253,
+          "overall_mortality": 53.502913899825046,
+          "overall_hirid": 53.4524321839123,
+          "overall_sepsis": 42.021228432792704,
+          "overall_miiv": 48.44889155146971
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "aki",
+      "dataset": "eicu",
+      "run_id": "20250624_172337",
+      "prompting_id": "zhu_2024a_cot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.599,
+          "auprc": 0.455,
+          "normalized_auprc": 1.467,
+          "specificity": 0.878,
+          "f1_score": 0.306,
+          "accuracy": 0.677,
+          "balanced_accuracy": 0.554,
+          "precision": 0.458,
+          "recall": 0.23,
+          "mcc": 0.568,
+          "kappa": 0.124,
+          "minpse": 0.342,
+          "task_dataset_score": 54.04
+        },
+        "task_pulse_scores": {
+          "aki": [
+            54.0395069555527,
+            49.2344023178185,
+            54.942785985165465
+          ],
+          "mortality": [
+            52.792144089156835,
+            55.18714257260295,
+            60.92746458692524
+          ],
+          "sepsis": [
+            37.4043002120893,
+            50.36694652350477,
+            31.970051007308825
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            54.0395069555527,
+            52.792144089156835,
+            37.4043002120893
+          ],
+          "miiv": [
+            54.942785985165465,
+            60.92746458692524,
+            31.970051007308825
+          ],
+          "hirid": [
+            49.2344023178185,
+            55.18714257260295,
+            50.36694652350477
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 49.651638250013846,
+          "overall_aki": 52.738898419512225,
+          "overall_eicu": 48.078650418932945,
+          "overall_mortality": 56.30225041622834,
+          "overall_hirid": 51.59616380464207,
+          "overall_sepsis": 39.91376591430097,
+          "overall_miiv": 49.280100526466505
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "aki",
+      "dataset": "hirid",
+      "run_id": "20250624_172337",
+      "prompting_id": "zhu_2024a_cot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.592,
+          "auprc": 0.315,
+          "normalized_auprc": 1.943,
+          "specificity": 0.953,
+          "f1_score": 0.2,
+          "accuracy": 0.821,
+          "balanced_accuracy": 0.545,
+          "precision": 0.361,
+          "recall": 0.138,
+          "mcc": 0.569,
+          "kappa": 0.121,
+          "minpse": 0.252,
+          "task_dataset_score": 49.234
+        },
+        "task_pulse_scores": {
+          "aki": [
+            54.0395069555527,
+            49.2344023178185,
+            54.942785985165465
+          ],
+          "mortality": [
+            52.792144089156835,
+            55.18714257260295,
+            60.92746458692524
+          ],
+          "sepsis": [
+            37.4043002120893,
+            50.36694652350477,
+            31.970051007308825
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            54.0395069555527,
+            52.792144089156835,
+            37.4043002120893
+          ],
+          "miiv": [
+            54.942785985165465,
+            60.92746458692524,
+            31.970051007308825
+          ],
+          "hirid": [
+            49.2344023178185,
+            55.18714257260295,
+            50.36694652350477
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 49.651638250013846,
+          "overall_aki": 52.738898419512225,
+          "overall_eicu": 48.078650418932945,
+          "overall_mortality": 56.30225041622834,
+          "overall_hirid": 51.59616380464207,
+          "overall_sepsis": 39.91376591430097,
+          "overall_miiv": 49.280100526466505
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "aki",
+      "dataset": "miiv",
+      "run_id": "20250624_172337",
+      "prompting_id": "zhu_2024a_cot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.608,
+          "auprc": 0.41,
+          "normalized_auprc": 1.76,
+          "specificity": 0.931,
+          "f1_score": 0.352,
+          "accuracy": 0.775,
+          "balanced_accuracy": 0.597,
+          "precision": 0.536,
+          "recall": 0.262,
+          "mcc": 0.628,
+          "kappa": 0.235,
+          "minpse": 0.354,
+          "task_dataset_score": 54.943
+        },
+        "task_pulse_scores": {
+          "aki": [
+            54.0395069555527,
+            49.2344023178185,
+            54.942785985165465
+          ],
+          "mortality": [
+            52.792144089156835,
+            55.18714257260295,
+            60.92746458692524
+          ],
+          "sepsis": [
+            37.4043002120893,
+            50.36694652350477,
+            31.970051007308825
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            54.0395069555527,
+            52.792144089156835,
+            37.4043002120893
+          ],
+          "miiv": [
+            54.942785985165465,
+            60.92746458692524,
+            31.970051007308825
+          ],
+          "hirid": [
+            49.2344023178185,
+            55.18714257260295,
+            50.36694652350477
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 49.651638250013846,
+          "overall_aki": 52.738898419512225,
+          "overall_eicu": 48.078650418932945,
+          "overall_mortality": 56.30225041622834,
+          "overall_hirid": 51.59616380464207,
+          "overall_sepsis": 39.91376591430097,
+          "overall_miiv": 49.280100526466505
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "mortality",
+      "dataset": "eicu",
+      "run_id": "20250624_172337",
+      "prompting_id": "zhu_2024a_cot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.762,
+          "auprc": 0.242,
+          "normalized_auprc": 3.456,
+          "specificity": 0.817,
+          "f1_score": 0.222,
+          "accuracy": 0.79,
+          "balanced_accuracy": 0.623,
+          "precision": 0.15,
+          "recall": 0.429,
+          "mcc": 0.578,
+          "kappa": 0.132,
+          "minpse": 0.158,
+          "task_dataset_score": 52.792
+        },
+        "task_pulse_scores": {
+          "aki": [
+            54.0395069555527,
+            49.2344023178185,
+            54.942785985165465
+          ],
+          "mortality": [
+            52.792144089156835,
+            55.18714257260295,
+            60.92746458692524
+          ],
+          "sepsis": [
+            37.4043002120893,
+            50.36694652350477,
+            31.970051007308825
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            54.0395069555527,
+            52.792144089156835,
+            37.4043002120893
+          ],
+          "miiv": [
+            54.942785985165465,
+            60.92746458692524,
+            31.970051007308825
+          ],
+          "hirid": [
+            49.2344023178185,
+            55.18714257260295,
+            50.36694652350477
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 49.651638250013846,
+          "overall_aki": 52.738898419512225,
+          "overall_eicu": 48.078650418932945,
+          "overall_mortality": 56.30225041622834,
+          "overall_hirid": 51.59616380464207,
+          "overall_sepsis": 39.91376591430097,
+          "overall_miiv": 49.280100526466505
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "mortality",
+      "dataset": "hirid",
+      "run_id": "20250624_172337",
+      "prompting_id": "zhu_2024a_cot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.707,
+          "auprc": 0.312,
+          "normalized_auprc": 2.834,
+          "specificity": 0.685,
+          "f1_score": 0.34,
+          "accuracy": 0.69,
+          "balanced_accuracy": 0.706,
+          "precision": 0.222,
+          "recall": 0.727,
+          "mcc": 0.634,
+          "kappa": 0.207,
+          "minpse": 0.229,
+          "task_dataset_score": 55.187
+        },
+        "task_pulse_scores": {
+          "aki": [
+            54.0395069555527,
+            49.2344023178185,
+            54.942785985165465
+          ],
+          "mortality": [
+            52.792144089156835,
+            55.18714257260295,
+            60.92746458692524
+          ],
+          "sepsis": [
+            37.4043002120893,
+            50.36694652350477,
+            31.970051007308825
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            54.0395069555527,
+            52.792144089156835,
+            37.4043002120893
+          ],
+          "miiv": [
+            54.942785985165465,
+            60.92746458692524,
+            31.970051007308825
+          ],
+          "hirid": [
+            49.2344023178185,
+            55.18714257260295,
+            50.36694652350477
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 49.651638250013846,
+          "overall_aki": 52.738898419512225,
+          "overall_eicu": 48.078650418932945,
+          "overall_mortality": 56.30225041622834,
+          "overall_hirid": 51.59616380464207,
+          "overall_sepsis": 39.91376591430097,
+          "overall_miiv": 49.280100526466505
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "mortality",
+      "dataset": "miiv",
+      "run_id": "20250624_172337",
+      "prompting_id": "zhu_2024a_cot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.767,
+          "auprc": 0.375,
+          "normalized_auprc": 3.121,
+          "specificity": 0.818,
+          "f1_score": 0.444,
+          "accuracy": 0.8,
+          "balanced_accuracy": 0.742,
+          "precision": 0.333,
+          "recall": 0.667,
+          "mcc": 0.684,
+          "kappa": 0.339,
+          "minpse": 0.348,
+          "task_dataset_score": 60.927
+        },
+        "task_pulse_scores": {
+          "aki": [
+            54.0395069555527,
+            49.2344023178185,
+            54.942785985165465
+          ],
+          "mortality": [
+            52.792144089156835,
+            55.18714257260295,
+            60.92746458692524
+          ],
+          "sepsis": [
+            37.4043002120893,
+            50.36694652350477,
+            31.970051007308825
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            54.0395069555527,
+            52.792144089156835,
+            37.4043002120893
+          ],
+          "miiv": [
+            54.942785985165465,
+            60.92746458692524,
+            31.970051007308825
+          ],
+          "hirid": [
+            49.2344023178185,
+            55.18714257260295,
+            50.36694652350477
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 49.651638250013846,
+          "overall_aki": 52.738898419512225,
+          "overall_eicu": 48.078650418932945,
+          "overall_mortality": 56.30225041622834,
+          "overall_hirid": 51.59616380464207,
+          "overall_sepsis": 39.91376591430097,
+          "overall_miiv": 49.280100526466505
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "sepsis",
+      "dataset": "eicu",
+      "run_id": "20250624_172337",
+      "prompting_id": "zhu_2024a_cot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.575,
+          "auprc": 0.048,
+          "normalized_auprc": 1.082,
+          "specificity": 0.789,
+          "f1_score": 0.067,
+          "accuracy": 0.763,
+          "balanced_accuracy": 0.49,
+          "precision": 0.04,
+          "recall": 0.19,
+          "mcc": 0.495,
+          "kappa": -0.007,
+          "minpse": 0.062,
+          "task_dataset_score": 37.404
+        },
+        "task_pulse_scores": {
+          "aki": [
+            54.0395069555527,
+            49.2344023178185,
+            54.942785985165465
+          ],
+          "mortality": [
+            52.792144089156835,
+            55.18714257260295,
+            60.92746458692524
+          ],
+          "sepsis": [
+            37.4043002120893,
+            50.36694652350477,
+            31.970051007308825
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            54.0395069555527,
+            52.792144089156835,
+            37.4043002120893
+          ],
+          "miiv": [
+            54.942785985165465,
+            60.92746458692524,
+            31.970051007308825
+          ],
+          "hirid": [
+            49.2344023178185,
+            55.18714257260295,
+            50.36694652350477
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 49.651638250013846,
+          "overall_aki": 52.738898419512225,
+          "overall_eicu": 48.078650418932945,
+          "overall_mortality": 56.30225041622834,
+          "overall_hirid": 51.59616380464207,
+          "overall_sepsis": 39.91376591430097,
+          "overall_miiv": 49.280100526466505
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "sepsis",
+      "dataset": "hirid",
+      "run_id": "20250624_172337",
+      "prompting_id": "zhu_2024a_cot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.731,
+          "auprc": 0.176,
+          "normalized_auprc": 2.342,
+          "specificity": 0.751,
+          "f1_score": 0.254,
+          "accuracy": 0.739,
+          "balanced_accuracy": 0.67,
+          "precision": 0.162,
+          "recall": 0.589,
+          "mcc": 0.601,
+          "kappa": 0.154,
+          "minpse": 0.201,
+          "task_dataset_score": 50.367
+        },
+        "task_pulse_scores": {
+          "aki": [
+            54.0395069555527,
+            49.2344023178185,
+            54.942785985165465
+          ],
+          "mortality": [
+            52.792144089156835,
+            55.18714257260295,
+            60.92746458692524
+          ],
+          "sepsis": [
+            37.4043002120893,
+            50.36694652350477,
+            31.970051007308825
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            54.0395069555527,
+            52.792144089156835,
+            37.4043002120893
+          ],
+          "miiv": [
+            54.942785985165465,
+            60.92746458692524,
+            31.970051007308825
+          ],
+          "hirid": [
+            49.2344023178185,
+            55.18714257260295,
+            50.36694652350477
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 49.651638250013846,
+          "overall_aki": 52.738898419512225,
+          "overall_eicu": 48.078650418932945,
+          "overall_mortality": 56.30225041622834,
+          "overall_hirid": 51.59616380464207,
+          "overall_sepsis": 39.91376591430097,
+          "overall_miiv": 49.280100526466505
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "sepsis",
+      "dataset": "miiv",
+      "run_id": "20250624_172337",
+      "prompting_id": "zhu_2024a_cot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.45,
+          "auprc": 0.021,
+          "normalized_auprc": 0.836,
+          "specificity": 0.841,
+          "f1_score": 0.022,
+          "accuracy": 0.822,
+          "balanced_accuracy": 0.461,
+          "precision": 0.013,
+          "recall": 0.08,
+          "mcc": 0.483,
+          "kappa": -0.022,
+          "minpse": 0.025,
+          "task_dataset_score": 31.97
+        },
+        "task_pulse_scores": {
+          "aki": [
+            54.0395069555527,
+            49.2344023178185,
+            54.942785985165465
+          ],
+          "mortality": [
+            52.792144089156835,
+            55.18714257260295,
+            60.92746458692524
+          ],
+          "sepsis": [
+            37.4043002120893,
+            50.36694652350477,
+            31.970051007308825
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            54.0395069555527,
+            52.792144089156835,
+            37.4043002120893
+          ],
+          "miiv": [
+            54.942785985165465,
+            60.92746458692524,
+            31.970051007308825
+          ],
+          "hirid": [
+            49.2344023178185,
+            55.18714257260295,
+            50.36694652350477
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 49.651638250013846,
+          "overall_aki": 52.738898419512225,
+          "overall_eicu": 48.078650418932945,
+          "overall_mortality": 56.30225041622834,
+          "overall_hirid": 51.59616380464207,
+          "overall_sepsis": 39.91376591430097,
+          "overall_miiv": 49.280100526466505
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "aki",
+      "dataset": "eicu",
+      "run_id": "20250625_104921",
+      "prompting_id": "zhu_2024b_one_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.664,
+          "auprc": 0.57,
+          "normalized_auprc": 1.838,
+          "specificity": 0.791,
+          "f1_score": 0.5,
+          "accuracy": 0.697,
+          "balanced_accuracy": 0.64,
+          "precision": 0.512,
+          "recall": 0.489,
+          "mcc": 0.642,
+          "kappa": 0.283,
+          "minpse": 0.492,
+          "task_dataset_score": 62.534
+        },
+        "task_pulse_scores": {
+          "aki": [
+            62.534126894995914,
+            51.82132423162623,
+            58.3403911155441
+          ],
+          "mortality": [
+            61.09733138218374,
+            57.643409871791086,
+            65.03338117312693
+          ],
+          "sepsis": [
+            44.51297871865837,
+            52.20143361230313,
+            30.78611168324731
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            62.534126894995914,
+            61.09733138218374,
+            44.51297871865837
+          ],
+          "miiv": [
+            58.3403911155441,
+            65.03338117312693,
+            30.78611168324731
+          ],
+          "hirid": [
+            51.82132423162623,
+            57.643409871791086,
+            52.20143361230313
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 53.77449874260853,
+          "overall_aki": 57.56528074738875,
+          "overall_eicu": 56.04814566527934,
+          "overall_mortality": 61.25804080903392,
+          "overall_hirid": 53.88872257190681,
+          "overall_sepsis": 42.50017467140294,
+          "overall_miiv": 51.38662799063945
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "aki",
+      "dataset": "hirid",
+      "run_id": "20250625_104921",
+      "prompting_id": "zhu_2024b_one_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.627,
+          "auprc": 0.334,
+          "normalized_auprc": 2.062,
+          "specificity": 0.954,
+          "f1_score": 0.241,
+          "accuracy": 0.827,
+          "balanced_accuracy": 0.562,
+          "precision": 0.415,
+          "recall": 0.17,
+          "mcc": 0.592,
+          "kappa": 0.162,
+          "minpse": 0.305,
+          "task_dataset_score": 51.821
+        },
+        "task_pulse_scores": {
+          "aki": [
+            62.534126894995914,
+            51.82132423162623,
+            58.3403911155441
+          ],
+          "mortality": [
+            61.09733138218374,
+            57.643409871791086,
+            65.03338117312693
+          ],
+          "sepsis": [
+            44.51297871865837,
+            52.20143361230313,
+            30.78611168324731
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            62.534126894995914,
+            61.09733138218374,
+            44.51297871865837
+          ],
+          "miiv": [
+            58.3403911155441,
+            65.03338117312693,
+            30.78611168324731
+          ],
+          "hirid": [
+            51.82132423162623,
+            57.643409871791086,
+            52.20143361230313
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 53.77449874260853,
+          "overall_aki": 57.56528074738875,
+          "overall_eicu": 56.04814566527934,
+          "overall_mortality": 61.25804080903392,
+          "overall_hirid": 53.88872257190681,
+          "overall_sepsis": 42.50017467140294,
+          "overall_miiv": 51.38662799063945
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "aki",
+      "dataset": "miiv",
+      "run_id": "20250625_104921",
+      "prompting_id": "zhu_2024b_one_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.64,
+          "auprc": 0.461,
+          "normalized_auprc": 1.979,
+          "specificity": 0.958,
+          "f1_score": 0.348,
+          "accuracy": 0.79,
+          "balanced_accuracy": 0.599,
+          "precision": 0.632,
+          "recall": 0.24,
+          "mcc": 0.647,
+          "kappa": 0.252,
+          "minpse": 0.31,
+          "task_dataset_score": 58.34
+        },
+        "task_pulse_scores": {
+          "aki": [
+            62.534126894995914,
+            51.82132423162623,
+            58.3403911155441
+          ],
+          "mortality": [
+            61.09733138218374,
+            57.643409871791086,
+            65.03338117312693
+          ],
+          "sepsis": [
+            44.51297871865837,
+            52.20143361230313,
+            30.78611168324731
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            62.534126894995914,
+            61.09733138218374,
+            44.51297871865837
+          ],
+          "miiv": [
+            58.3403911155441,
+            65.03338117312693,
+            30.78611168324731
+          ],
+          "hirid": [
+            51.82132423162623,
+            57.643409871791086,
+            52.20143361230313
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 53.77449874260853,
+          "overall_aki": 57.56528074738875,
+          "overall_eicu": 56.04814566527934,
+          "overall_mortality": 61.25804080903392,
+          "overall_hirid": 53.88872257190681,
+          "overall_sepsis": 42.50017467140294,
+          "overall_miiv": 51.38662799063945
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "mortality",
+      "dataset": "eicu",
+      "run_id": "20250625_104921",
+      "prompting_id": "zhu_2024b_one_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.808,
+          "auprc": 0.415,
+          "normalized_auprc": 5.933,
+          "specificity": 0.419,
+          "f1_score": 0.206,
+          "accuracy": 0.46,
+          "balanced_accuracy": 0.71,
+          "precision": 0.115,
+          "recall": 1.0,
+          "mcc": 0.61,
+          "kappa": 0.092,
+          "minpse": 0.214,
+          "task_dataset_score": 61.097
+        },
+        "task_pulse_scores": {
+          "aki": [
+            62.534126894995914,
+            51.82132423162623,
+            58.3403911155441
+          ],
+          "mortality": [
+            61.09733138218374,
+            57.643409871791086,
+            65.03338117312693
+          ],
+          "sepsis": [
+            44.51297871865837,
+            52.20143361230313,
+            30.78611168324731
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            62.534126894995914,
+            61.09733138218374,
+            44.51297871865837
+          ],
+          "miiv": [
+            58.3403911155441,
+            65.03338117312693,
+            30.78611168324731
+          ],
+          "hirid": [
+            51.82132423162623,
+            57.643409871791086,
+            52.20143361230313
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 53.77449874260853,
+          "overall_aki": 57.56528074738875,
+          "overall_eicu": 56.04814566527934,
+          "overall_mortality": 61.25804080903392,
+          "overall_hirid": 53.88872257190681,
+          "overall_sepsis": 42.50017467140294,
+          "overall_miiv": 51.38662799063945
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "mortality",
+      "dataset": "hirid",
+      "run_id": "20250625_104921",
+      "prompting_id": "zhu_2024b_one_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.761,
+          "auprc": 0.316,
+          "normalized_auprc": 2.873,
+          "specificity": 0.472,
+          "f1_score": 0.319,
+          "accuracy": 0.53,
+          "balanced_accuracy": 0.736,
+          "precision": 0.19,
+          "recall": 1.0,
+          "mcc": 0.65,
+          "kappa": 0.164,
+          "minpse": 0.25,
+          "task_dataset_score": 57.643
+        },
+        "task_pulse_scores": {
+          "aki": [
+            62.534126894995914,
+            51.82132423162623,
+            58.3403911155441
+          ],
+          "mortality": [
+            61.09733138218374,
+            57.643409871791086,
+            65.03338117312693
+          ],
+          "sepsis": [
+            44.51297871865837,
+            52.20143361230313,
+            30.78611168324731
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            62.534126894995914,
+            61.09733138218374,
+            44.51297871865837
+          ],
+          "miiv": [
+            58.3403911155441,
+            65.03338117312693,
+            30.78611168324731
+          ],
+          "hirid": [
+            51.82132423162623,
+            57.643409871791086,
+            52.20143361230313
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 53.77449874260853,
+          "overall_aki": 57.56528074738875,
+          "overall_eicu": 56.04814566527934,
+          "overall_mortality": 61.25804080903392,
+          "overall_hirid": 53.88872257190681,
+          "overall_sepsis": 42.50017467140294,
+          "overall_miiv": 51.38662799063945
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "mortality",
+      "dataset": "miiv",
+      "run_id": "20250625_104921",
+      "prompting_id": "zhu_2024b_one_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.77,
+          "auprc": 0.51,
+          "normalized_auprc": 4.249,
+          "specificity": 0.739,
+          "f1_score": 0.409,
+          "accuracy": 0.74,
+          "balanced_accuracy": 0.744,
+          "precision": 0.281,
+          "recall": 0.75,
+          "mcc": 0.67,
+          "kappa": 0.284,
+          "minpse": 0.417,
+          "task_dataset_score": 65.033
+        },
+        "task_pulse_scores": {
+          "aki": [
+            62.534126894995914,
+            51.82132423162623,
+            58.3403911155441
+          ],
+          "mortality": [
+            61.09733138218374,
+            57.643409871791086,
+            65.03338117312693
+          ],
+          "sepsis": [
+            44.51297871865837,
+            52.20143361230313,
+            30.78611168324731
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            62.534126894995914,
+            61.09733138218374,
+            44.51297871865837
+          ],
+          "miiv": [
+            58.3403911155441,
+            65.03338117312693,
+            30.78611168324731
+          ],
+          "hirid": [
+            51.82132423162623,
+            57.643409871791086,
+            52.20143361230313
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 53.77449874260853,
+          "overall_aki": 57.56528074738875,
+          "overall_eicu": 56.04814566527934,
+          "overall_mortality": 61.25804080903392,
+          "overall_hirid": 53.88872257190681,
+          "overall_sepsis": 42.50017467140294,
+          "overall_miiv": 51.38662799063945
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "sepsis",
+      "dataset": "eicu",
+      "run_id": "20250625_104921",
+      "prompting_id": "zhu_2024b_one_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.674,
+          "auprc": 0.072,
+          "normalized_auprc": 1.51,
+          "specificity": 0.48,
+          "f1_score": 0.15,
+          "accuracy": 0.501,
+          "balanced_accuracy": 0.698,
+          "precision": 0.081,
+          "recall": 0.915,
+          "mcc": 0.585,
+          "kappa": 0.067,
+          "minpse": 0.084,
+          "task_dataset_score": 44.513
+        },
+        "task_pulse_scores": {
+          "aki": [
+            62.534126894995914,
+            51.82132423162623,
+            58.3403911155441
+          ],
+          "mortality": [
+            61.09733138218374,
+            57.643409871791086,
+            65.03338117312693
+          ],
+          "sepsis": [
+            44.51297871865837,
+            52.20143361230313,
+            30.78611168324731
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            62.534126894995914,
+            61.09733138218374,
+            44.51297871865837
+          ],
+          "miiv": [
+            58.3403911155441,
+            65.03338117312693,
+            30.78611168324731
+          ],
+          "hirid": [
+            51.82132423162623,
+            57.643409871791086,
+            52.20143361230313
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 53.77449874260853,
+          "overall_aki": 57.56528074738875,
+          "overall_eicu": 56.04814566527934,
+          "overall_mortality": 61.25804080903392,
+          "overall_hirid": 53.88872257190681,
+          "overall_sepsis": 42.50017467140294,
+          "overall_miiv": 51.38662799063945
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "sepsis",
+      "dataset": "hirid",
+      "run_id": "20250625_104921",
+      "prompting_id": "zhu_2024b_one_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.742,
+          "auprc": 0.21,
+          "normalized_auprc": 2.783,
+          "specificity": 0.655,
+          "f1_score": 0.252,
+          "accuracy": 0.663,
+          "balanced_accuracy": 0.704,
+          "precision": 0.151,
+          "recall": 0.753,
+          "mcc": 0.611,
+          "kappa": 0.144,
+          "minpse": 0.273,
+          "task_dataset_score": 52.201
+        },
+        "task_pulse_scores": {
+          "aki": [
+            62.534126894995914,
+            51.82132423162623,
+            58.3403911155441
+          ],
+          "mortality": [
+            61.09733138218374,
+            57.643409871791086,
+            65.03338117312693
+          ],
+          "sepsis": [
+            44.51297871865837,
+            52.20143361230313,
+            30.78611168324731
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            62.534126894995914,
+            61.09733138218374,
+            44.51297871865837
+          ],
+          "miiv": [
+            58.3403911155441,
+            65.03338117312693,
+            30.78611168324731
+          ],
+          "hirid": [
+            51.82132423162623,
+            57.643409871791086,
+            52.20143361230313
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 53.77449874260853,
+          "overall_aki": 57.56528074738875,
+          "overall_eicu": 56.04814566527934,
+          "overall_mortality": 61.25804080903392,
+          "overall_hirid": 53.88872257190681,
+          "overall_sepsis": 42.50017467140294,
+          "overall_miiv": 51.38662799063945
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "sepsis",
+      "dataset": "miiv",
+      "run_id": "20250625_104921",
+      "prompting_id": "zhu_2024b_one_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.429,
+          "auprc": 0.02,
+          "normalized_auprc": 0.776,
+          "specificity": 0.755,
+          "f1_score": 0.015,
+          "accuracy": 0.738,
+          "balanced_accuracy": 0.417,
+          "precision": 0.008,
+          "recall": 0.08,
+          "mcc": 0.47,
+          "kappa": -0.032,
+          "minpse": 0.026,
+          "task_dataset_score": 30.786
+        },
+        "task_pulse_scores": {
+          "aki": [
+            62.534126894995914,
+            51.82132423162623,
+            58.3403911155441
+          ],
+          "mortality": [
+            61.09733138218374,
+            57.643409871791086,
+            65.03338117312693
+          ],
+          "sepsis": [
+            44.51297871865837,
+            52.20143361230313,
+            30.78611168324731
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            62.534126894995914,
+            61.09733138218374,
+            44.51297871865837
+          ],
+          "miiv": [
+            58.3403911155441,
+            65.03338117312693,
+            30.78611168324731
+          ],
+          "hirid": [
+            51.82132423162623,
+            57.643409871791086,
+            52.20143361230313
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 53.77449874260853,
+          "overall_aki": 57.56528074738875,
+          "overall_eicu": 56.04814566527934,
+          "overall_mortality": 61.25804080903392,
+          "overall_hirid": 53.88872257190681,
+          "overall_sepsis": 42.50017467140294,
+          "overall_miiv": 51.38662799063945
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "aki",
+      "dataset": "eicu",
+      "run_id": "20250619_150123",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.609,
+          "auprc": 0.499,
+          "normalized_auprc": 1.609,
+          "specificity": 0.853,
+          "f1_score": 0.406,
+          "accuracy": 0.693,
+          "balanced_accuracy": 0.595,
+          "precision": 0.507,
+          "recall": 0.338,
+          "mcc": 0.609,
+          "kappa": 0.21,
+          "minpse": 0.377,
+          "task_dataset_score": 57.253
+        },
+        "task_pulse_scores": {
+          "aki": [
+            57.25345647418515,
+            47.58988616044449,
+            57.52727417199581
+          ],
+          "mortality": [
+            61.45870395503869,
+            51.481540761412134,
+            66.39738176603738
+          ],
+          "sepsis": [
+            39.77500870817912,
+            52.10103322407217,
+            31.406457350487404
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            57.25345647418515,
+            61.45870395503869,
+            39.77500870817912
+          ],
+          "miiv": [
+            57.52727417199581,
+            66.39738176603738,
+            31.406457350487404
+          ],
+          "hirid": [
+            47.58988616044449,
+            51.481540761412134,
+            52.10103322407217
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 51.665638063539156,
+          "overall_aki": 54.12353893554181,
+          "overall_eicu": 52.82905637913432,
+          "overall_mortality": 59.77920882749606,
+          "overall_hirid": 50.39082004864293,
+          "overall_sepsis": 41.094166427579566,
+          "overall_miiv": 51.7770377628402
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "aki",
+      "dataset": "hirid",
+      "run_id": "20250619_150123",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.606,
+          "auprc": 0.236,
+          "normalized_auprc": 1.46,
+          "specificity": 0.943,
+          "f1_score": 0.239,
+          "accuracy": 0.819,
+          "balanced_accuracy": 0.559,
+          "precision": 0.373,
+          "recall": 0.176,
+          "mcc": 0.583,
+          "kappa": 0.151,
+          "minpse": 0.239,
+          "task_dataset_score": 47.59
+        },
+        "task_pulse_scores": {
+          "aki": [
+            57.25345647418515,
+            47.58988616044449,
+            57.52727417199581
+          ],
+          "mortality": [
+            61.45870395503869,
+            51.481540761412134,
+            66.39738176603738
+          ],
+          "sepsis": [
+            39.77500870817912,
+            52.10103322407217,
+            31.406457350487404
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            57.25345647418515,
+            61.45870395503869,
+            39.77500870817912
+          ],
+          "miiv": [
+            57.52727417199581,
+            66.39738176603738,
+            31.406457350487404
+          ],
+          "hirid": [
+            47.58988616044449,
+            51.481540761412134,
+            52.10103322407217
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 51.665638063539156,
+          "overall_aki": 54.12353893554181,
+          "overall_eicu": 52.82905637913432,
+          "overall_mortality": 59.77920882749606,
+          "overall_hirid": 50.39082004864293,
+          "overall_sepsis": 41.094166427579566,
+          "overall_miiv": 51.7770377628402
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "aki",
+      "dataset": "miiv",
+      "run_id": "20250619_150123",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.642,
+          "auprc": 0.453,
+          "normalized_auprc": 1.952,
+          "specificity": 0.914,
+          "f1_score": 0.372,
+          "accuracy": 0.77,
+          "balanced_accuracy": 0.604,
+          "precision": 0.508,
+          "recall": 0.294,
+          "mcc": 0.629,
+          "kappa": 0.243,
+          "minpse": 0.36,
+          "task_dataset_score": 57.527
+        },
+        "task_pulse_scores": {
+          "aki": [
+            57.25345647418515,
+            47.58988616044449,
+            57.52727417199581
+          ],
+          "mortality": [
+            61.45870395503869,
+            51.481540761412134,
+            66.39738176603738
+          ],
+          "sepsis": [
+            39.77500870817912,
+            52.10103322407217,
+            31.406457350487404
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            57.25345647418515,
+            61.45870395503869,
+            39.77500870817912
+          ],
+          "miiv": [
+            57.52727417199581,
+            66.39738176603738,
+            31.406457350487404
+          ],
+          "hirid": [
+            47.58988616044449,
+            51.481540761412134,
+            52.10103322407217
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 51.665638063539156,
+          "overall_aki": 54.12353893554181,
+          "overall_eicu": 52.82905637913432,
+          "overall_mortality": 59.77920882749606,
+          "overall_hirid": 50.39082004864293,
+          "overall_sepsis": 41.094166427579566,
+          "overall_miiv": 51.7770377628402
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "mortality",
+      "dataset": "eicu",
+      "run_id": "20250619_150123",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.83,
+          "auprc": 0.389,
+          "normalized_auprc": 5.56,
+          "specificity": 0.731,
+          "f1_score": 0.27,
+          "accuracy": 0.73,
+          "balanced_accuracy": 0.723,
+          "precision": 0.167,
+          "recall": 0.714,
+          "mcc": 0.624,
+          "kappa": 0.177,
+          "minpse": 0.3,
+          "task_dataset_score": 61.459
+        },
+        "task_pulse_scores": {
+          "aki": [
+            57.25345647418515,
+            47.58988616044449,
+            57.52727417199581
+          ],
+          "mortality": [
+            61.45870395503869,
+            51.481540761412134,
+            66.39738176603738
+          ],
+          "sepsis": [
+            39.77500870817912,
+            52.10103322407217,
+            31.406457350487404
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            57.25345647418515,
+            61.45870395503869,
+            39.77500870817912
+          ],
+          "miiv": [
+            57.52727417199581,
+            66.39738176603738,
+            31.406457350487404
+          ],
+          "hirid": [
+            47.58988616044449,
+            51.481540761412134,
+            52.10103322407217
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 51.665638063539156,
+          "overall_aki": 54.12353893554181,
+          "overall_eicu": 52.82905637913432,
+          "overall_mortality": 59.77920882749606,
+          "overall_hirid": 50.39082004864293,
+          "overall_sepsis": 41.094166427579566,
+          "overall_miiv": 51.7770377628402
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "mortality",
+      "dataset": "hirid",
+      "run_id": "20250619_150123",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.637,
+          "auprc": 0.336,
+          "normalized_auprc": 3.059,
+          "specificity": 0.494,
+          "f1_score": 0.25,
+          "accuracy": 0.52,
+          "balanced_accuracy": 0.611,
+          "precision": 0.151,
+          "recall": 0.727,
+          "mcc": 0.569,
+          "kappa": 0.083,
+          "minpse": 0.273,
+          "task_dataset_score": 51.482
+        },
+        "task_pulse_scores": {
+          "aki": [
+            57.25345647418515,
+            47.58988616044449,
+            57.52727417199581
+          ],
+          "mortality": [
+            61.45870395503869,
+            51.481540761412134,
+            66.39738176603738
+          ],
+          "sepsis": [
+            39.77500870817912,
+            52.10103322407217,
+            31.406457350487404
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            57.25345647418515,
+            61.45870395503869,
+            39.77500870817912
+          ],
+          "miiv": [
+            57.52727417199581,
+            66.39738176603738,
+            31.406457350487404
+          ],
+          "hirid": [
+            47.58988616044449,
+            51.481540761412134,
+            52.10103322407217
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 51.665638063539156,
+          "overall_aki": 54.12353893554181,
+          "overall_eicu": 52.82905637913432,
+          "overall_mortality": 59.77920882749606,
+          "overall_hirid": 50.39082004864293,
+          "overall_sepsis": 41.094166427579566,
+          "overall_miiv": 51.7770377628402
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "mortality",
+      "dataset": "miiv",
+      "run_id": "20250619_150123",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.806,
+          "auprc": 0.553,
+          "normalized_auprc": 4.604,
+          "specificity": 0.58,
+          "f1_score": 0.339,
+          "accuracy": 0.61,
+          "balanced_accuracy": 0.706,
+          "precision": 0.213,
+          "recall": 0.833,
+          "mcc": 0.634,
+          "kappa": 0.183,
+          "minpse": 0.5,
+          "task_dataset_score": 66.397
+        },
+        "task_pulse_scores": {
+          "aki": [
+            57.25345647418515,
+            47.58988616044449,
+            57.52727417199581
+          ],
+          "mortality": [
+            61.45870395503869,
+            51.481540761412134,
+            66.39738176603738
+          ],
+          "sepsis": [
+            39.77500870817912,
+            52.10103322407217,
+            31.406457350487404
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            57.25345647418515,
+            61.45870395503869,
+            39.77500870817912
+          ],
+          "miiv": [
+            57.52727417199581,
+            66.39738176603738,
+            31.406457350487404
+          ],
+          "hirid": [
+            47.58988616044449,
+            51.481540761412134,
+            52.10103322407217
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 51.665638063539156,
+          "overall_aki": 54.12353893554181,
+          "overall_eicu": 52.82905637913432,
+          "overall_mortality": 59.77920882749606,
+          "overall_hirid": 50.39082004864293,
+          "overall_sepsis": 41.094166427579566,
+          "overall_miiv": 51.7770377628402
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "sepsis",
+      "dataset": "eicu",
+      "run_id": "20250619_150123",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.613,
+          "auprc": 0.057,
+          "normalized_auprc": 1.19,
+          "specificity": 0.7,
+          "f1_score": 0.104,
+          "accuracy": 0.685,
+          "balanced_accuracy": 0.541,
+          "precision": 0.06,
+          "recall": 0.383,
+          "mcc": 0.519,
+          "kappa": 0.023,
+          "minpse": 0.07,
+          "task_dataset_score": 39.775
+        },
+        "task_pulse_scores": {
+          "aki": [
+            57.25345647418515,
+            47.58988616044449,
+            57.52727417199581
+          ],
+          "mortality": [
+            61.45870395503869,
+            51.481540761412134,
+            66.39738176603738
+          ],
+          "sepsis": [
+            39.77500870817912,
+            52.10103322407217,
+            31.406457350487404
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            57.25345647418515,
+            61.45870395503869,
+            39.77500870817912
+          ],
+          "miiv": [
+            57.52727417199581,
+            66.39738176603738,
+            31.406457350487404
+          ],
+          "hirid": [
+            47.58988616044449,
+            51.481540761412134,
+            52.10103322407217
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 51.665638063539156,
+          "overall_aki": 54.12353893554181,
+          "overall_eicu": 52.82905637913432,
+          "overall_mortality": 59.77920882749606,
+          "overall_hirid": 50.39082004864293,
+          "overall_sepsis": 41.094166427579566,
+          "overall_miiv": 51.7770377628402
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "sepsis",
+      "dataset": "hirid",
+      "run_id": "20250619_150123",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.746,
+          "auprc": 0.198,
+          "normalized_auprc": 2.623,
+          "specificity": 0.69,
+          "f1_score": 0.263,
+          "accuracy": 0.693,
+          "balanced_accuracy": 0.708,
+          "precision": 0.161,
+          "recall": 0.726,
+          "mcc": 0.616,
+          "kappa": 0.159,
+          "minpse": 0.233,
+          "task_dataset_score": 52.101
+        },
+        "task_pulse_scores": {
+          "aki": [
+            57.25345647418515,
+            47.58988616044449,
+            57.52727417199581
+          ],
+          "mortality": [
+            61.45870395503869,
+            51.481540761412134,
+            66.39738176603738
+          ],
+          "sepsis": [
+            39.77500870817912,
+            52.10103322407217,
+            31.406457350487404
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            57.25345647418515,
+            61.45870395503869,
+            39.77500870817912
+          ],
+          "miiv": [
+            57.52727417199581,
+            66.39738176603738,
+            31.406457350487404
+          ],
+          "hirid": [
+            47.58988616044449,
+            51.481540761412134,
+            52.10103322407217
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 51.665638063539156,
+          "overall_aki": 54.12353893554181,
+          "overall_eicu": 52.82905637913432,
+          "overall_mortality": 59.77920882749606,
+          "overall_hirid": 50.39082004864293,
+          "overall_sepsis": 41.094166427579566,
+          "overall_miiv": 51.7770377628402
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "sepsis",
+      "dataset": "miiv",
+      "run_id": "20250619_150123",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.442,
+          "auprc": 0.02,
+          "normalized_auprc": 0.788,
+          "specificity": 0.741,
+          "f1_score": 0.022,
+          "accuracy": 0.726,
+          "balanced_accuracy": 0.431,
+          "precision": 0.012,
+          "recall": 0.12,
+          "mcc": 0.475,
+          "kappa": -0.026,
+          "minpse": 0.026,
+          "task_dataset_score": 31.406
+        },
+        "task_pulse_scores": {
+          "aki": [
+            57.25345647418515,
+            47.58988616044449,
+            57.52727417199581
+          ],
+          "mortality": [
+            61.45870395503869,
+            51.481540761412134,
+            66.39738176603738
+          ],
+          "sepsis": [
+            39.77500870817912,
+            52.10103322407217,
+            31.406457350487404
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            57.25345647418515,
+            61.45870395503869,
+            39.77500870817912
+          ],
+          "miiv": [
+            57.52727417199581,
+            66.39738176603738,
+            31.406457350487404
+          ],
+          "hirid": [
+            47.58988616044449,
+            51.481540761412134,
+            52.10103322407217
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 51.665638063539156,
+          "overall_aki": 54.12353893554181,
+          "overall_eicu": 52.82905637913432,
+          "overall_mortality": 59.77920882749606,
+          "overall_hirid": 50.39082004864293,
+          "overall_sepsis": 41.094166427579566,
+          "overall_miiv": 51.7770377628402
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "aki",
+      "dataset": "eicu",
+      "run_id": "20250701_090405",
+      "prompting_id": "zhu_2024c_categorization_summary_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.6,
+          "auprc": 0.435,
+          "normalized_auprc": 1.402,
+          "specificity": 0.588,
+          "f1_score": 0.454,
+          "accuracy": 0.58,
+          "balanced_accuracy": 0.576,
+          "precision": 0.381,
+          "recall": 0.564,
+          "mcc": 0.57,
+          "kappa": 0.134,
+          "minpse": 0.384,
+          "task_dataset_score": 53.362
+        },
+        "task_pulse_scores": {
+          "aki": [
+            53.3617854954484,
+            45.627432989340946,
+            51.67685109268937
+          ],
+          "mortality": [
+            40.16855908492428,
+            55.20350143715703,
+            51.964079381752704
+          ],
+          "sepsis": [
+            35.96475210138704,
+            46.22247970517458,
+            34.92733192742582
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            53.3617854954484,
+            40.16855908492428,
+            35.96475210138704
+          ],
+          "miiv": [
+            51.67685109268937,
+            51.964079381752704,
+            34.92733192742582
+          ],
+          "hirid": [
+            45.627432989340946,
+            55.20350143715703,
+            46.22247970517458
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 46.124085912811125,
+          "overall_aki": 50.222023192492905,
+          "overall_eicu": 43.16503222725324,
+          "overall_mortality": 49.11204663461134,
+          "overall_hirid": 49.01780471055752,
+          "overall_sepsis": 39.038187911329146,
+          "overall_miiv": 46.18942080062263
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "aki",
+      "dataset": "hirid",
+      "run_id": "20250701_090405",
+      "prompting_id": "zhu_2024c_categorization_summary_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.574,
+          "auprc": 0.265,
+          "normalized_auprc": 1.636,
+          "specificity": 0.58,
+          "f1_score": 0.276,
+          "accuracy": 0.568,
+          "balanced_accuracy": 0.545,
+          "precision": 0.19,
+          "recall": 0.509,
+          "mcc": 0.533,
+          "kappa": 0.053,
+          "minpse": 0.195,
+          "task_dataset_score": 45.627
+        },
+        "task_pulse_scores": {
+          "aki": [
+            53.3617854954484,
+            45.627432989340946,
+            51.67685109268937
+          ],
+          "mortality": [
+            40.16855908492428,
+            55.20350143715703,
+            51.964079381752704
+          ],
+          "sepsis": [
+            35.96475210138704,
+            46.22247970517458,
+            34.92733192742582
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            53.3617854954484,
+            40.16855908492428,
+            35.96475210138704
+          ],
+          "miiv": [
+            51.67685109268937,
+            51.964079381752704,
+            34.92733192742582
+          ],
+          "hirid": [
+            45.627432989340946,
+            55.20350143715703,
+            46.22247970517458
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 46.124085912811125,
+          "overall_aki": 50.222023192492905,
+          "overall_eicu": 43.16503222725324,
+          "overall_mortality": 49.11204663461134,
+          "overall_hirid": 49.01780471055752,
+          "overall_sepsis": 39.038187911329146,
+          "overall_miiv": 46.18942080062263
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "aki",
+      "dataset": "miiv",
+      "run_id": "20250701_090405",
+      "prompting_id": "zhu_2024c_categorization_summary_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.607,
+          "auprc": 0.38,
+          "normalized_auprc": 1.634,
+          "specificity": 0.623,
+          "f1_score": 0.384,
+          "accuracy": 0.602,
+          "balanced_accuracy": 0.578,
+          "precision": 0.3,
+          "recall": 0.533,
+          "mcc": 0.567,
+          "kappa": 0.122,
+          "minpse": 0.305,
+          "task_dataset_score": 51.677
+        },
+        "task_pulse_scores": {
+          "aki": [
+            53.3617854954484,
+            45.627432989340946,
+            51.67685109268937
+          ],
+          "mortality": [
+            40.16855908492428,
+            55.20350143715703,
+            51.964079381752704
+          ],
+          "sepsis": [
+            35.96475210138704,
+            46.22247970517458,
+            34.92733192742582
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            53.3617854954484,
+            40.16855908492428,
+            35.96475210138704
+          ],
+          "miiv": [
+            51.67685109268937,
+            51.964079381752704,
+            34.92733192742582
+          ],
+          "hirid": [
+            45.627432989340946,
+            55.20350143715703,
+            46.22247970517458
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 46.124085912811125,
+          "overall_aki": 50.222023192492905,
+          "overall_eicu": 43.16503222725324,
+          "overall_mortality": 49.11204663461134,
+          "overall_hirid": 49.01780471055752,
+          "overall_sepsis": 39.038187911329146,
+          "overall_miiv": 46.18942080062263
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "mortality",
+      "dataset": "eicu",
+      "run_id": "20250701_090405",
+      "prompting_id": "zhu_2024c_categorization_summary_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.492,
+          "auprc": 0.21,
+          "normalized_auprc": 2.997,
+          "specificity": 0.0,
+          "f1_score": 0.131,
+          "accuracy": 0.07,
+          "balanced_accuracy": 0.5,
+          "precision": 0.07,
+          "recall": 1.0,
+          "mcc": 0.5,
+          "kappa": 0.0,
+          "minpse": 0.095,
+          "task_dataset_score": 40.169
+        },
+        "task_pulse_scores": {
+          "aki": [
+            53.3617854954484,
+            45.627432989340946,
+            51.67685109268937
+          ],
+          "mortality": [
+            40.16855908492428,
+            55.20350143715703,
+            51.964079381752704
+          ],
+          "sepsis": [
+            35.96475210138704,
+            46.22247970517458,
+            34.92733192742582
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            53.3617854954484,
+            40.16855908492428,
+            35.96475210138704
+          ],
+          "miiv": [
+            51.67685109268937,
+            51.964079381752704,
+            34.92733192742582
+          ],
+          "hirid": [
+            45.627432989340946,
+            55.20350143715703,
+            46.22247970517458
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 46.124085912811125,
+          "overall_aki": 50.222023192492905,
+          "overall_eicu": 43.16503222725324,
+          "overall_mortality": 49.11204663461134,
+          "overall_hirid": 49.01780471055752,
+          "overall_sepsis": 39.038187911329146,
+          "overall_miiv": 46.18942080062263
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "mortality",
+      "dataset": "hirid",
+      "run_id": "20250701_090405",
+      "prompting_id": "zhu_2024c_categorization_summary_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.681,
+          "auprc": 0.477,
+          "normalized_auprc": 4.335,
+          "specificity": 0.0,
+          "f1_score": 0.198,
+          "accuracy": 0.11,
+          "balanced_accuracy": 0.5,
+          "precision": 0.11,
+          "recall": 1.0,
+          "mcc": 0.5,
+          "kappa": 0.0,
+          "minpse": 0.2,
+          "task_dataset_score": 55.204
+        },
+        "task_pulse_scores": {
+          "aki": [
+            53.3617854954484,
+            45.627432989340946,
+            51.67685109268937
+          ],
+          "mortality": [
+            40.16855908492428,
+            55.20350143715703,
+            51.964079381752704
+          ],
+          "sepsis": [
+            35.96475210138704,
+            46.22247970517458,
+            34.92733192742582
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            53.3617854954484,
+            40.16855908492428,
+            35.96475210138704
+          ],
+          "miiv": [
+            51.67685109268937,
+            51.964079381752704,
+            34.92733192742582
+          ],
+          "hirid": [
+            45.627432989340946,
+            55.20350143715703,
+            46.22247970517458
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 46.124085912811125,
+          "overall_aki": 50.222023192492905,
+          "overall_eicu": 43.16503222725324,
+          "overall_mortality": 49.11204663461134,
+          "overall_hirid": 49.01780471055752,
+          "overall_sepsis": 39.038187911329146,
+          "overall_miiv": 46.18942080062263
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "mortality",
+      "dataset": "miiv",
+      "run_id": "20250701_090405",
+      "prompting_id": "zhu_2024c_categorization_summary_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.641,
+          "auprc": 0.419,
+          "normalized_auprc": 3.491,
+          "specificity": 0.0,
+          "f1_score": 0.214,
+          "accuracy": 0.12,
+          "balanced_accuracy": 0.5,
+          "precision": 0.12,
+          "recall": 1.0,
+          "mcc": 0.5,
+          "kappa": 0.0,
+          "minpse": 0.206,
+          "task_dataset_score": 51.964
+        },
+        "task_pulse_scores": {
+          "aki": [
+            53.3617854954484,
+            45.627432989340946,
+            51.67685109268937
+          ],
+          "mortality": [
+            40.16855908492428,
+            55.20350143715703,
+            51.964079381752704
+          ],
+          "sepsis": [
+            35.96475210138704,
+            46.22247970517458,
+            34.92733192742582
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            53.3617854954484,
+            40.16855908492428,
+            35.96475210138704
+          ],
+          "miiv": [
+            51.67685109268937,
+            51.964079381752704,
+            34.92733192742582
+          ],
+          "hirid": [
+            45.627432989340946,
+            55.20350143715703,
+            46.22247970517458
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 46.124085912811125,
+          "overall_aki": 50.222023192492905,
+          "overall_eicu": 43.16503222725324,
+          "overall_mortality": 49.11204663461134,
+          "overall_hirid": 49.01780471055752,
+          "overall_sepsis": 39.038187911329146,
+          "overall_miiv": 46.18942080062263
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "sepsis",
+      "dataset": "eicu",
+      "run_id": "20250701_090405",
+      "prompting_id": "zhu_2024c_categorization_summary_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.506,
+          "auprc": 0.043,
+          "normalized_auprc": 0.897,
+          "specificity": 0.115,
+          "f1_score": 0.102,
+          "accuracy": 0.157,
+          "balanced_accuracy": 0.557,
+          "precision": 0.054,
+          "recall": 1.0,
+          "mcc": 0.539,
+          "kappa": 0.012,
+          "minpse": 0.054,
+          "task_dataset_score": 35.965
+        },
+        "task_pulse_scores": {
+          "aki": [
+            53.3617854954484,
+            45.627432989340946,
+            51.67685109268937
+          ],
+          "mortality": [
+            40.16855908492428,
+            55.20350143715703,
+            51.964079381752704
+          ],
+          "sepsis": [
+            35.96475210138704,
+            46.22247970517458,
+            34.92733192742582
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            53.3617854954484,
+            40.16855908492428,
+            35.96475210138704
+          ],
+          "miiv": [
+            51.67685109268937,
+            51.964079381752704,
+            34.92733192742582
+          ],
+          "hirid": [
+            45.627432989340946,
+            55.20350143715703,
+            46.22247970517458
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 46.124085912811125,
+          "overall_aki": 50.222023192492905,
+          "overall_eicu": 43.16503222725324,
+          "overall_mortality": 49.11204663461134,
+          "overall_hirid": 49.01780471055752,
+          "overall_sepsis": 39.038187911329146,
+          "overall_miiv": 46.18942080062263
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "sepsis",
+      "dataset": "hirid",
+      "run_id": "20250701_090405",
+      "prompting_id": "zhu_2024c_categorization_summary_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.668,
+          "auprc": 0.204,
+          "normalized_auprc": 2.703,
+          "specificity": 0.03,
+          "f1_score": 0.144,
+          "accuracy": 0.103,
+          "balanced_accuracy": 0.515,
+          "precision": 0.077,
+          "recall": 1.0,
+          "mcc": 0.524,
+          "kappa": 0.005,
+          "minpse": 0.137,
+          "task_dataset_score": 46.222
+        },
+        "task_pulse_scores": {
+          "aki": [
+            53.3617854954484,
+            45.627432989340946,
+            51.67685109268937
+          ],
+          "mortality": [
+            40.16855908492428,
+            55.20350143715703,
+            51.964079381752704
+          ],
+          "sepsis": [
+            35.96475210138704,
+            46.22247970517458,
+            34.92733192742582
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            53.3617854954484,
+            40.16855908492428,
+            35.96475210138704
+          ],
+          "miiv": [
+            51.67685109268937,
+            51.964079381752704,
+            34.92733192742582
+          ],
+          "hirid": [
+            45.627432989340946,
+            55.20350143715703,
+            46.22247970517458
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 46.124085912811125,
+          "overall_aki": 50.222023192492905,
+          "overall_eicu": 43.16503222725324,
+          "overall_mortality": 49.11204663461134,
+          "overall_hirid": 49.01780471055752,
+          "overall_sepsis": 39.038187911329146,
+          "overall_miiv": 46.18942080062263
+        }
+      }
+    },
+    {
+      "model_id": "gemini-2.5-flash-preview-05-20",
+      "task_id": "sepsis",
+      "dataset": "miiv",
+      "run_id": "20250701_090405",
+      "prompting_id": "zhu_2024c_categorization_summary_agent_preprocessor",
+      "metrics_summary": {
+        "overall": {
+          "auroc": 0.52,
+          "auprc": 0.025,
+          "normalized_auprc": 0.971,
+          "specificity": 0.116,
+          "f1_score": 0.053,
+          "accuracy": 0.137,
+          "balanced_accuracy": 0.538,
+          "precision": 0.027,
+          "recall": 0.96,
+          "mcc": 0.519,
+          "kappa": 0.004,
+          "minpse": 0.028,
+          "task_dataset_score": 34.927
+        },
+        "task_pulse_scores": {
+          "aki": [
+            53.3617854954484,
+            45.627432989340946,
+            51.67685109268937
+          ],
+          "mortality": [
+            40.16855908492428,
+            55.20350143715703,
+            51.964079381752704
+          ],
+          "sepsis": [
+            35.96475210138704,
+            46.22247970517458,
+            34.92733192742582
+          ]
+        },
+        "dataset_pulse_scores": {
+          "eicu": [
+            53.3617854954484,
+            40.16855908492428,
+            35.96475210138704
+          ],
+          "miiv": [
+            51.67685109268937,
+            51.964079381752704,
+            34.92733192742582
+          ],
+          "hirid": [
+            45.627432989340946,
+            55.20350143715703,
+            46.22247970517458
+          ]
+        },
+        "overall_pulse_scores": {
+          "overall_score": 46.124085912811125,
+          "overall_aki": 50.222023192492905,
+          "overall_eicu": 43.16503222725324,
+          "overall_mortality": 49.11204663461134,
+          "overall_hirid": 49.01780471055752,
+          "overall_sepsis": 39.038187911329146,
+          "overall_miiv": 46.18942080062263
+        }
+      }
+    }
+  ]
+}

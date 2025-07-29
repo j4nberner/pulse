@@ -1,10 +1,14 @@
 <p align="center">
-  <img src="src/pulse_logo.png" alt="PULSE Logo" width="300"/>
+  <img src="docs/logos/pulse_logo.png" alt="PULSE Logo" width="150"/>
+  <img src="docs/logos/eth_logo.svg" alt="ETH Logo" width="150"/>
+  <img src="docs/logos/bmds_logo.png" alt="BMDS Logo" width="100"/>
 </p>
 
 # PULSE Benchmark
 
 PULSE (_<u>P</u>redictive <u>U</u>nderstanding of <u>L</u>ife-threatening <u>S</u>ituations using <u>E</u>mbeddings_) benchmarks the predictive capabilities of Large Language Models (LLMs) using ICU time-series data.
+
+Results are hosted at https://j4nberner.github.io/pulse/
 
 ## Overview
 
@@ -30,14 +34,18 @@ This repository contains the implementation for predicting mortality, acute kidn
    ```
 
 3. Adjust configs/config_benchmark.yaml
+
    Default config
+
    - app_mode: "benchmark"
    - tasks: choose tasks to perform benchmark on
    - dataset: choose datasets to perform benchmark on
-   - standardize: true/false depending on models selected
+   - standardize: true for convDL, fals for convML and LLMs
    - windowing: enabled and window size 6
    - prompting_ids: choose prompting approach to perform benchark on and set number of shots to perform few-shot prompting.
    - Load_models: choose models to perform benchmark on. Make sure that standardization method matches the model
+
+   Model specific configs can be adjusted if needed. For propriatary LLMs make sure that the api key name matches to the name set as an environment variable in secrets/.env folder. This will be loaded automatically. For convDL models, the architecture is set in the config.
 
 ## Data
 
@@ -71,11 +79,11 @@ Task Definitions are in accordance with YAIB (https://arxiv.org/abs/2306.05109).
 
 ## Implemented Models
 
-| Type                | Models                                                                                                       |
-| ------------------- | ------------------------------------------------------------------------------------------------------------ |
-| **conventional ML** | RandomForest, XGBoost, LightGBM                                                                              |
-| **conventional DL** | CNN, LSTM, GRU, InceptionTime                                                                                |
-| **LLM**             | Llama 3.1-8b-Instruct, DeepseekR1Llama8b, DeepseekR1Qwen7b, Mistral-7b, GPT4o, Gemini2p5flash, ClaudeSonnet4 |
+| Type                | Models                                                                                                      |
+| ------------------- | ----------------------------------------------------------------------------------------------------------- |
+| **conventional ML** | RandomForest, XGBoost, LightGBM                                                                             |
+| **conventional DL** | CNN, LSTM, GRU, InceptionTime                                                                               |
+| **LLM**             | Llama 3.1-8b-Instruct, DeepseekR1Llama8b, Mistral-7b, GPT4o, Gemini2p5 flash and pro, ClaudeSonnet4, Grok 4 |
 
 ## Results
 
@@ -129,14 +137,6 @@ This rule penalizes an LLM for being confidently wrong. A wrong guess with a pro
 The CCF is 1 minus the average of all penalties calculated across the entire dataset.
 
 $$\text{CCF} = 1 - \frac{\sum \text{penalties}}{\text{Total Number of Samples}}$$
-
-### Score Interpretation
-
-- **PULSE Score = 100**: Perfect performance with optimal confidence calibration
-- **PULSE Score = 75-99**: Excellent performance with good confidence calibration
-- **PULSE Score = 50-74**: Good performance but may have confidence issues (for LLMs)
-- **PULSE Score = 25-49**: Moderate performance with significant room for improvement
-- **PULSE Score = 0-24**: Poor performance requiring substantial model improvements
 
 ## Train a model
 

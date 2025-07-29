@@ -4,32 +4,20 @@ from typing import Any, Dict, Optional
 import pandas as pd
 
 from src.models.agents.pulse_agent import PulseAgent
-from src.preprocessing.preprocessing_advanced.preprocessing_advanced import (
-    PreprocessorAdvanced,
-)
-from src.util.agent_util import (
-    create_error_response,
-    extract_confidence,
-    extract_requested_labs,
-    filter_na_columns,
-    format_clinical_data,
-    format_clinical_text,
-    get_available_labs,
-    get_available_vitals,
-    get_lab_groups_available,
-    get_monitoring_period_hours,
-    get_task_specific_content,
-    validate_features,
-    validate_lab_request,
-    format_demographics_str,
-    parse_numeric_value,
-)
-from src.util.data_util import (
-    get_all_feature_groups,
-    get_feature_group_keys,
-    get_feature_group_title,
-    get_feature_name,
-)
+from src.preprocessing.preprocessing_advanced.preprocessing_advanced import \
+    PreprocessorAdvanced
+from src.util.agent_util import (create_error_response, extract_confidence,
+                                 extract_requested_labs, filter_na_columns,
+                                 format_clinical_data, format_clinical_text,
+                                 format_demographics_str, get_available_labs,
+                                 get_available_vitals,
+                                 get_lab_groups_available,
+                                 get_monitoring_period_hours,
+                                 get_task_specific_content,
+                                 parse_numeric_value, validate_features,
+                                 validate_lab_request)
+from src.util.data_util import (get_all_feature_groups, get_feature_group_keys,
+                                get_feature_group_title, get_feature_name)
 
 logger = logging.getLogger("PULSE_logger")
 

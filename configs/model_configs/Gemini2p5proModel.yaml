@@ -1,0 +1,12 @@
+name: "Gemini2p5proModel"
+pretrained_model_paths: null # Path to pretrained model (if any)
+params:
+  trainer_name: "DummyTrainer"
+  mode: "inference" # Mode of operation (inference, training)
+  model_id: "gemini-2.5-pro" #"gemini-2.0-flash-001" # Model ID
+  type: "LLM" # Type of model (convML for conventional machine learning, convDL for conventional deep learning and LLM for large language models)
+  verbose: 2
+  max_new_tokens: 300
+  max_length: 30000 # Maximum length of input sequences
+  temperature: 0.4 # Temperature for sampling (0.0 = greedy sampling)
+  thinking_budget: -1 # 0 = no thinking budget, -1 = dynamic thinking budget

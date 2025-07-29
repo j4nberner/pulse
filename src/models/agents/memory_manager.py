@@ -1,11 +1,10 @@
 import logging
-import pandas as pd
 from datetime import datetime
-from typing import Any, Dict, List, Optional
-from src.util.agent_util import (
-    get_monitoring_period_hours,
-    get_specialist_features,
-)
+from typing import Any, Dict, Optional
+
+
+from src.util.agent_util import (get_monitoring_period_hours,
+                                 get_specialist_features)
 
 logger = logging.getLogger("PULSE_logger")
 

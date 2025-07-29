@@ -28,7 +28,7 @@ class EarlyStopping:
             This value is chosen to prevent stopping due to minor fluctuations in validation loss.
     """
 
-    def __init__(self, patience=10, verbose=True, delta=0.0001):
+    def __init__(self, patience: int = 10, verbose: bool = True, delta: float = 0.0001):
         self.patience = patience
         self.verbose = verbose
         self.delta = delta
@@ -37,7 +37,7 @@ class EarlyStopping:
         self.counter = 0
         self.best_model_state = None
 
-    def __call__(self, val_loss, model):
+    def __call__(self, val_loss: float, model: nn.Module):
         score = -val_loss
 
         if self.best_score is None:
@@ -93,7 +93,7 @@ def save_torch_model(model_name: str, model: Any, save_dir: str) -> str:
             torch.save(model, model_path)
 
         logger.info("Model '%s' saved to %s", model_name, model_path)
-    except Exception as e:
+    except (OSError, torch.TorchError) as e:
         logger.error("Failed to save model '%s': %s", model_name, str(e))
 
     return model_path
@@ -116,7 +116,11 @@ def save_sklearn_model(model_name: str, model: Any, save_dir: str) -> None:
         joblib.dump(model, model_path)
 
         logger.info("Model '%s' saved to %s", model_name, model_path)
-    except Exception as e:
+    except (
+        OSError,
+        joblib.externals.loky.process_executor.TerminatedWorkerError,
+        joblib.externals.loky.process_executor.BrokenProcessPool,
+    ) as e:
         logger.error("Failed to save model '%s': %s", model_name, str(e))
 
 
@@ -163,7 +167,6 @@ def prepare_data_for_model_convml(
 def prepare_data_for_model_convdl(
     data_loader,
     config: Dict,
-    model_name: Optional[str] = None,
     task_name: Optional[str] = None,
     architecture_type: Optional[str] = None,
 ) -> Any:
@@ -173,7 +176,6 @@ def prepare_data_for_model_convdl(
     Args:
         data_loader: DataLoader containing the input data
         config: Configuration dictionary with preprocessing settings
-        model_name: Name of the model to determine format requirements
         task_name: Name of the current task (e.g., "mortality", "aki")
         architecture_type: Base architecture of the convDL model ("CNN" or "RNN") to determine array format
 
@@ -184,7 +186,7 @@ def prepare_data_for_model_convdl(
     # Import the converter
     from src.preprocessing.preprocessing_advanced.windowing import WindowedDataTo3D
 
-    # Create converter with model name and config
+    # Create converter with architecture type and config
     converter = WindowedDataTo3D(
         architecture_type=architecture_type, config=config, task_name=task_name
     )
@@ -312,13 +314,25 @@ def prompt_template_hf(
                 "content": f"{system_message} Text:\n{input_text} <think>\n",
             },
         ]
-    elif model == "Gemini2p5flashModel":
+    elif model == "Gemini2p5flashModel" or model == "Gemini2p5proModel":
         formatted_prompt = [
-            {"role": "user", "parts": [{"text": f"{system_message} \n\n{input_text}"}]},
+            {"role": "user", "parts": [{"text": f"{system_message} \n\n{input_text}"}]}
+        ]
+    elif model == "ClaudeSonnet4Model":
+        formatted_prompt = [
+            {"role": "user", "content": input_text},
+        ]
+        return formatted_prompt, system_message
+    elif model == "Grok4Model":
+        return input_text, system_message
+    elif model == "OpenAIo3Model":
+        formatted_prompt = [
+            {"role": "system", "content": system_message},
+            {"role": "user", "content": input_text},
         ]
     else:
         formatted_prompt = [
-            {"role": "system", "content": system_message},
+            {"role": "assistant", "content": system_message},
             {"role": "user", "content": input_text},
         ]
 
@@ -654,7 +668,7 @@ def fix_json_formatting(json_text: str) -> str:
 
 def parse_llm_output(
     output_text: str,
-    required_keys: List[str] = ["diagnosis", "probability", "explanation"],
+    required_keys: Optional[List[str]] = None,
     default_values: Dict[str, Any] = None,
 ) -> Dict[str, Any]:
     """Extract and parse JSON objects from LLM output with robust error handling.
@@ -667,6 +681,8 @@ def parse_llm_output(
     Returns:
         Dictionary with parsed content and normalized values
     """
+    if required_keys is None:
+        required_keys = ["diagnosis", "probability", "explanation"]
     if default_values is None:
         default_values = {
             "diagnosis": "unknown",
@@ -715,8 +731,6 @@ def parse_llm_output(
                     # Remove any surrounding quotes and whitespace
                     prob_raw = prob_raw.strip().strip("\"'")
                     # Try to extract numeric value from string
-                    import re
-
                     numeric_match = re.search(r"(\d+\.?\d*)", prob_raw)
                     if numeric_match:
                         prob_raw = numeric_match.group(1)
