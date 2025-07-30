@@ -616,16 +616,18 @@ class PULSEScoreCalculator:
                     f"  Probability range: [{prob_stats['min']:.3f}, {prob_stats['max']:.3f}]"
                 )
                 print(f"  Probability mean: {prob_stats['mean']:.3f}")
+                print(f"  Probability std: {prob_stats['std']:.3f}")
+                print(f"  Probability median: {prob_stats['50%']:.3f}")
         else:
             print("\n❌ Data format needs fixing before PULSE calculation")
 
         # Show data types and unique values
         if verification_results["has_required_columns"]:
             print("\nData types and unique values:")
-            key_cols = ["Target Label", "Predicted Diagnosis", "Predicted Probability"]
+            key_cols = ["Target Label", "Predicted Diagnosis"]
             for col in key_cols:
                 if col in df.columns:
-                    unique_vals = df[col].unique()[:5]  # Show first 5 unique values
+                    unique_vals = df[col].unique()  # Show all unique values
                     print(f"  {col}: {df[col].dtype}, values: {unique_vals}")
 
         # Show data derivation info
@@ -641,7 +643,6 @@ class PULSEScoreCalculator:
             else:
                 print("  • Predictions from explicit prediction column")
 
-        print(f"  • Total samples: {len(df)}")
         print(f"  • Tasks: {', '.join(df['task'].unique())}")
         print(f"  • Datasets: {', '.join(df['dataset'].unique())}")
         print("")

@@ -261,26 +261,17 @@ class LLMAnalyzer(ModelAnalyzer):
     """
 
     @staticmethod
-    def load_metadata(metadata_path_list, verbose=False, fix_csv=True):
+    def load_metadata(metadata_path_list, verbose=False):
         """
         Load metadata from a CSV file into a DataFrame.
 
         Args:
             metadata_path_list (list): Path list with the metadata CSV files
             verbose (bool): Whether to print verbose output
-            fix_csv (bool): Whether to fix broken CSV files before loading
 
         Returns:
             pd.DataFrame: DataFrame containing the metadata.
         """
-        # EXPECTED_COLS = 43
-        # EXTRA_HEADER = [
-        #     "metadata_investigation_triggered",
-        #     "metadata_ml_confidence_low",
-        #     "metadata_high_disagreement",
-        #     "metadata_agreement_threshold",
-        # ]
-
         df_mdata = pd.DataFrame()
         print("Extracting metadata from files:")
 
@@ -288,45 +279,35 @@ class LLMAnalyzer(ModelAnalyzer):
             try:
                 actual_path = m_path
 
-                # # Fix CSV if needed
-                # if fix_csv:
-                #     fixed_path = m_path.replace(".csv", ".csv")
-                #     extended_rows = 0
-                #     all_rows = []
-
-                #     with open(m_path, "r", encoding="utf-8") as fin:
-                #         reader = csv.reader(fin)
-                #         try:
-                #             header = next(reader)
-                #             # If header is missing the last 4 columns, add them
-                #             if len(header) < EXPECTED_COLS:
-                #                 header += EXTRA_HEADER[-(EXPECTED_COLS - len(header)) :]
-                #             elif len(header) > EXPECTED_COLS:
-                #                 header = header[:EXPECTED_COLS]
-                #             all_rows.append(header)
-
-                #             for _, row in enumerate(reader, start=2):
-                #                 if len(row) < EXPECTED_COLS:
-                #                     row += [""] * (EXPECTED_COLS - len(row))
-                #                     extended_rows += 1
-                #                 elif len(row) > EXPECTED_COLS:
-                #                     row = row[:EXPECTED_COLS]
-                #                 all_rows.append(row)
-                #         except StopIteration:
-                #             print(f"Empty CSV file: {m_path}")
-                #             continue
-
-                #     if extended_rows > 0:
-                #         # If the fixed file exists, just replace it
-                #         with open(
-                #             fixed_path, "w", encoding="utf-8", newline=""
-                #         ) as fout:
-                #             writer = csv.writer(fout)
-                #             writer.writerows(all_rows)
-                #         actual_path = fixed_path
-
                 # Load the CSV (either original or fixed)
-                df = pd.read_csv(actual_path, encoding="utf-8")
+                try:
+                    df = pd.read_csv(actual_path, encoding="utf-8")
+                except (pd.errors.ParserError, csv.Error):
+                    # Attempt to fix the CSV by matching row lengths to header
+                    fixed_path = actual_path.replace(".csv", ".csv")
+                    with open(actual_path, "r", encoding="utf-8") as fin:
+                        reader = csv.reader(fin)
+                        rows = list(reader)
+                        if not rows:
+                            print(f"Empty CSV file: {actual_path}")
+                            continue
+                        header = rows[0]
+                        expected_cols = len(header)
+                        fixed_rows = [header]
+                        for row in rows[1:]:
+                            if len(row) < expected_cols:
+                                row += [""] * (expected_cols - len(row))
+                            elif len(row) > expected_cols:
+                                row = row[:expected_cols]
+                            fixed_rows.append(row)
+                    with open(fixed_path, "w", encoding="utf-8", newline="") as fout:
+                        writer = csv.writer(fout)
+                        writer.writerows(fixed_rows)
+                    print(
+                        f"Fixed csv file with path {fixed_path} and replaced old one."
+                    )
+                    df = pd.read_csv(fixed_path, encoding="utf-8")
+                    actual_path = fixed_path
 
                 # Extract model name, task, dataset, and timestamp from the metadata path
                 match = re.search(
@@ -1273,6 +1254,23 @@ class LLMAnalyzer(ModelAnalyzer):
 
         print(f"Saved {len(results_list)} result entries to {output_file_path}")
         return final_json
+
+    @staticmethod
+    def get_from_mdata(df_mdata: pd.DataFrame, filter: dict) -> pd.DataFrame:
+        """
+        Get specific rows containing all specified conditions from the metadata DataFrame.
+        Args:
+            df_mdata (pd.DataFrame): Metadata DataFrame.
+            filter (dict): Dictionary of conditions to filter rows with keys as column names and values as the desired values.
+        """
+        df_filtered = df_mdata.copy()
+        for key, value in filter.items():
+            if key in df_filtered.columns:
+                if isinstance(value, list):
+                    df_filtered = df_filtered[df_filtered[key].isin(value)]
+                else:
+                    df_filtered = df_filtered[df_filtered[key] == value]
+        return df_filtered
 
     @staticmethod
     def create_results_dataframe_from_pulse_results(result_dict):
