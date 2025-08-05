@@ -4226,7 +4226,7 @@
       "task_id": "aki",
       "dataset": "eicu",
       "run_id": "20250620_211315",
-      "prompting_id": "zhu_2024b_zero_shot",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
       "metrics_summary": {
         "overall": {
           "auroc": 0.584,
@@ -4293,7 +4293,7 @@
       "task_id": "aki",
       "dataset": "hirid",
       "run_id": "20250620_211315",
-      "prompting_id": "zhu_2024b_zero_shot",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
       "metrics_summary": {
         "overall": {
           "auroc": 0.504,
@@ -4360,7 +4360,7 @@
       "task_id": "aki",
       "dataset": "miiv",
       "run_id": "20250620_211315",
-      "prompting_id": "zhu_2024b_zero_shot",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
       "metrics_summary": {
         "overall": {
           "auroc": 0.577,
@@ -4427,7 +4427,7 @@
       "task_id": "mortality",
       "dataset": "eicu",
       "run_id": "20250620_211315",
-      "prompting_id": "zhu_2024b_zero_shot",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
       "metrics_summary": {
         "overall": {
           "auroc": 0.747,
@@ -4494,7 +4494,7 @@
       "task_id": "mortality",
       "dataset": "hirid",
       "run_id": "20250620_211315",
-      "prompting_id": "zhu_2024b_zero_shot",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
       "metrics_summary": {
         "overall": {
           "auroc": 0.552,
@@ -4561,7 +4561,7 @@
       "task_id": "mortality",
       "dataset": "miiv",
       "run_id": "20250620_211315",
-      "prompting_id": "zhu_2024b_zero_shot",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
       "metrics_summary": {
         "overall": {
           "auroc": 0.741,
@@ -4628,7 +4628,7 @@
       "task_id": "sepsis",
       "dataset": "eicu",
       "run_id": "20250620_211315",
-      "prompting_id": "zhu_2024b_zero_shot",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
       "metrics_summary": {
         "overall": {
           "auroc": 0.514,
@@ -4695,7 +4695,7 @@
       "task_id": "sepsis",
       "dataset": "hirid",
       "run_id": "20250620_211315",
-      "prompting_id": "zhu_2024b_zero_shot",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
       "metrics_summary": {
         "overall": {
           "auroc": 0.571,
@@ -4762,7 +4762,7 @@
       "task_id": "sepsis",
       "dataset": "miiv",
       "run_id": "20250620_211315",
-      "prompting_id": "zhu_2024b_zero_shot",
+      "prompting_id": "zhu_2024b_zero_shot_preprocessor",
       "metrics_summary": {
         "overall": {
           "auroc": 0.5,

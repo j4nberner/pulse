@@ -529,6 +529,74 @@
         display: block;
       }
 
+      /* Info icon styles */
+      .info-icon {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        background: #667eea;
+        color: white;
+        border-radius: 50%;
+        text-align: center;
+        line-height: 16px;
+        font-size: 12px;
+        font-weight: bold;
+        margin-left: 8px;
+        cursor: help;
+        position: relative;
+        vertical-align: middle;
+      }
+
+      .info-icon:hover {
+        background: #764ba2;
+      }
+
+      .info-tooltip {
+        visibility: hidden;
+        width: 250px;
+        background-color: #2c2c2c;
+        color: white;
+        text-align: left;
+        border-radius: 8px;
+        padding: 12px;
+        position: absolute;
+        z-index: 1001;
+        bottom: 125%;
+        left: 50%;
+        margin-left: -125px;
+        opacity: 0;
+        transition: opacity 0.3s;
+        font-size: 13px;
+        line-height: 1.4;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      }
+
+      .info-tooltip::after {
+        content: "";
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        margin-left: -5px;
+        border-width: 5px;
+        border-style: solid;
+        border-color: #2c2c2c transparent transparent transparent;
+      }
+
+      .info-icon:hover .info-tooltip {
+        visibility: visible;
+        opacity: 1;
+      }
+
+      .control-group-with-info {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+      }
+
+      .control-group-with-info label {
+        margin: 0;
+      }
+
       @media (max-width: 768px) {
         .dashboard {
           grid-template-columns: 1fr;
@@ -593,28 +661,17 @@
 
       <!-- Tab Contents -->
       <div id="overall-tab" class="tab-content active">
-        <!-- Summary Stats -->
-        <div class="summary-stats" id="overallSummaryStats">
-          <div class="stat-card">
-            <div class="stat-value" id="overallTotalModels">-</div>
-            <div class="stat-label">Total Models</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value" id="overallTotalTasks">-</div>
-            <div class="stat-label">Tasks</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value" id="overallBestModel">-</div>
-            <div class="stat-label">Best Model</div>
-          </div>
-        </div>
-
         <!-- Filters -->
         <div class="header">
           <h2>Overall Performance Across All Tasks</h2>
           <div class="controls">
             <div class="control-group">
-              <label>Model Type</label>
+              <div class="control-group-with-info">
+                <label>Model Type</label>
+                <span class="info-icon">i
+                  <span class="info-tooltip">Filter models by type: LLMs (Large Language Models) or traditional baseline models (CNN, LSTM, XGBoost, etc.)</span>
+                </span>
+              </div>
               <select id="overallModelTypeFilter">
                 <option value="all">All Models</option>
                 <option value="llm">LLMs Only</option>
@@ -622,7 +679,12 @@
               </select>
             </div>
             <div class="control-group">
-              <label>Primary Metric</label>
+              <div class="control-group-with-info">
+                <label>Primary Metric</label>
+                <span class="info-icon">i
+                  <span class="info-tooltip">Select the primary metric for sorting and evaluation. AUROC and AUPRC are most commonly used for medical prediction tasks.</span>
+                </span>
+              </div>
               <select id="overallPrimaryMetric">
                 <option value="auroc" selected>AUROC</option>
                 <option value="auprc">AUPRC</option>
@@ -639,6 +701,35 @@
                 <option value="task_dataset_score">PULSE Score</option>
               </select>
             </div>
+            <div class="control-group">
+              <div class="control-group-with-info">
+                <label>Show Approaches</label>
+                <span class="info-icon">i
+                  <span class="info-tooltip">For LLMs, choose to show only the best performing prompting approach or all tested approaches for each model.</span>
+                </span>
+              </div>
+              <select id="overallShowApproaches">
+                <option value="best">Best Only</option>
+                <option value="all">All Approaches</option>
+              </select>
+            </div>
+            <div class="control-group">
+              <div class="control-group-with-info">
+                <label>Model Filter</label>
+                <span class="info-icon">i
+                  <span class="info-tooltip">Select specific models to display. You can choose individual models or view all models at once.</span>
+                </span>
+              </div>
+              <div class="model-filter-dropdown" id="overallModelFilterDropdown">
+                <div class="model-filter-button" onclick="toggleModelFilter('overall')">
+                  <span id="overallModelFilterText">All Models</span>
+                  <span class="model-filter-arrow">▼</span>
+                </div>
+                <div class="model-filter-options" id="overallModelFilterOptions">
+                  <!-- Options will be populated by JavaScript -->
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -653,27 +744,6 @@
         <!-- Results Table (Full Width) -->
         <div class="card">
           <h3>Overall Detailed Results Table</h3>
-          <div class="controls" style="margin-bottom: 20px;">
-            <div class="control-group">
-              <label>Show Approaches</label>
-              <select id="overallShowApproaches">
-                <option value="best">Best Only</option>
-                <option value="all">All Approaches</option>
-              </select>
-            </div>
-            <div class="control-group">
-              <label>Model Filter</label>
-              <div class="model-filter-dropdown" id="overallModelFilterDropdown">
-                <div class="model-filter-button" onclick="toggleModelFilter('overall')">
-                  <span id="overallModelFilterText">All Models</span>
-                  <span class="model-filter-arrow">▼</span>
-                </div>
-                <div class="model-filter-options" id="overallModelFilterOptions">
-                  <!-- Options will be populated by JavaScript -->
-                </div>
-              </div>
-            </div>
-          </div>
           <div class="table-container">
             <table id="overallResultsTable">
               <thead>
@@ -705,28 +775,17 @@
       </div>
 
       <div id="aki-tab" class="tab-content">
-        <!-- Summary Stats -->
-        <div class="summary-stats" id="akiSummaryStats">
-          <div class="stat-card">
-            <div class="stat-value" id="akiTotalModels">-</div>
-            <div class="stat-label">Total Models</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value" id="akiTotalDatasets">-</div>
-            <div class="stat-label">Datasets</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value" id="akiBestModel">-</div>
-            <div class="stat-label">Best Model</div>
-          </div>
-        </div>
-
         <!-- Filters -->
         <div class="header">
           <h2>Acute Kidney Injury (AKI) Prediction</h2>
           <div class="controls">
             <div class="control-group">
-              <label>Dataset</label>
+              <div class="control-group-with-info">
+                <label>Dataset</label>
+                <span class="info-icon">i
+                  <span class="info-tooltip">Filter results by specific ICU dataset: HiRID (Swiss), eICU (US multi-center), or MIMIC-IV (US single-center).</span>
+                </span>
+              </div>
               <select id="akiDatasetFilter">
                 <option value="all">All Datasets</option>
                 <option value="hirid">HiRID</option>
@@ -735,7 +794,12 @@
               </select>
             </div>
             <div class="control-group">
-              <label>Model Type</label>
+              <div class="control-group-with-info">
+                <label>Model Type</label>
+                <span class="info-icon">i
+                  <span class="info-tooltip">Filter models by type: LLMs (Large Language Models) or traditional baseline models (CNN, LSTM, XGBoost, etc.)</span>
+                </span>
+              </div>
               <select id="akiModelTypeFilter">
                 <option value="all">All Models</option>
                 <option value="llm">LLMs Only</option>
@@ -743,14 +807,24 @@
               </select>
             </div>
             <div class="control-group">
-              <label>Show Approaches</label>
+              <div class="control-group-with-info">
+                <label>Show Approaches</label>
+                <span class="info-icon">i
+                  <span class="info-tooltip">For LLMs, choose to show only the best performing prompting approach or all tested approaches for each model.</span>
+                </span>
+              </div>
               <select id="akiShowApproaches">
                 <option value="best">Best Only</option>
                 <option value="all">All Approaches</option>
               </select>
             </div>
             <div class="control-group">
-              <label>Primary Metric</label>
+              <div class="control-group-with-info">
+                <label>Primary Metric</label>
+                <span class="info-icon">i
+                  <span class="info-tooltip">Select the primary metric for sorting and evaluation. AUROC and AUPRC are most commonly used for medical prediction tasks.</span>
+                </span>
+              </div>
               <select id="akiPrimaryMetric">
                 <option value="auroc" selected>AUROC</option>
                 <option value="auprc">AUPRC</option>
@@ -767,6 +841,23 @@
                 <option value="task_dataset_score">PULSE Score</option>
               </select>
             </div>
+            <div class="control-group">
+              <div class="control-group-with-info">
+                <label>Model Filter</label>
+                <span class="info-icon">i
+                  <span class="info-tooltip">Select specific models to display. You can choose individual models or view all models at once.</span>
+                </span>
+              </div>
+              <div class="model-filter-dropdown" id="akiModelFilterDropdown">
+                <div class="model-filter-button" onclick="toggleModelFilter('aki')">
+                  <span id="akiModelFilterText">All Models</span>
+                  <span class="model-filter-arrow">▼</span>
+                </div>
+                <div class="model-filter-options" id="akiModelFilterOptions">
+                  <!-- Options will be populated by JavaScript -->
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -781,20 +872,6 @@
         <!-- Results Table (Full Width) -->
         <div class="card">
           <h3>AKI Detailed Results Table</h3>
-          <div class="controls" style="margin-bottom: 20px;">
-            <div class="control-group">
-              <label>Model Filter</label>
-              <div class="model-filter-dropdown" id="akiModelFilterDropdown">
-                <div class="model-filter-button" onclick="toggleModelFilter('aki')">
-                  <span id="akiModelFilterText">All Models</span>
-                  <span class="model-filter-arrow">▼</span>
-                </div>
-                <div class="model-filter-options" id="akiModelFilterOptions">
-                  <!-- Options will be populated by JavaScript -->
-                </div>
-              </div>
-            </div>
-          </div>
           <div class="table-container">
             <table id="akiResultsTable">
               <thead>
@@ -827,28 +904,17 @@
       </div>
 
       <div id="mortality-tab" class="tab-content">
-        <!-- Summary Stats -->
-        <div class="summary-stats" id="mortalitySummaryStats">
-          <div class="stat-card">
-            <div class="stat-value" id="mortalityTotalModels">-</div>
-            <div class="stat-label">Total Models</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value" id="mortalityTotalDatasets">-</div>
-            <div class="stat-label">Datasets</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value" id="mortalityBestModel">-</div>
-            <div class="stat-label">Best Model</div>
-          </div>
-        </div>
-
         <!-- Filters -->
         <div class="header">
           <h2>Mortality Prediction</h2>
           <div class="controls">
             <div class="control-group">
-              <label>Dataset</label>
+              <div class="control-group-with-info">
+                <label>Dataset</label>
+                <span class="info-icon">i
+                  <span class="info-tooltip">Filter results by specific ICU dataset: HiRID (Swiss), eICU (US multi-center), or MIMIC-IV (US single-center).</span>
+                </span>
+              </div>
               <select id="mortalityDatasetFilter">
                 <option value="all">All Datasets</option>
                 <option value="hirid">HiRID</option>
@@ -857,7 +923,12 @@
               </select>
             </div>
             <div class="control-group">
-              <label>Model Type</label>
+              <div class="control-group-with-info">
+                <label>Model Type</label>
+                <span class="info-icon">i
+                  <span class="info-tooltip">Filter models by type: LLMs (Large Language Models) or traditional baseline models (CNN, LSTM, XGBoost, etc.)</span>
+                </span>
+              </div>
               <select id="mortalityModelTypeFilter">
                 <option value="all">All Models</option>
                 <option value="llm">LLMs Only</option>
@@ -865,14 +936,24 @@
               </select>
             </div>
             <div class="control-group">
-              <label>Show Approaches</label>
+              <div class="control-group-with-info">
+                <label>Show Approaches</label>
+                <span class="info-icon">i
+                  <span class="info-tooltip">For LLMs, choose to show only the best performing prompting approach or all tested approaches for each model.</span>
+                </span>
+              </div>
               <select id="mortalityShowApproaches">
                 <option value="best">Best Only</option>
                 <option value="all">All Approaches</option>
               </select>
             </div>
             <div class="control-group">
-              <label>Primary Metric</label>
+              <div class="control-group-with-info">
+                <label>Primary Metric</label>
+                <span class="info-icon">i
+                  <span class="info-tooltip">Select the primary metric for sorting and evaluation. AUROC and AUPRC are most commonly used for medical prediction tasks.</span>
+                </span>
+              </div>
               <select id="mortalityPrimaryMetric">
                 <option value="auroc" selected>AUROC</option>
                 <option value="auprc">AUPRC</option>
@@ -889,6 +970,23 @@
                 <option value="task_dataset_score">PULSE Score</option>
               </select>
             </div>
+            <div class="control-group">
+              <div class="control-group-with-info">
+                <label>Model Filter</label>
+                <span class="info-icon">i
+                  <span class="info-tooltip">Select specific models to display. You can choose individual models or view all models at once.</span>
+                </span>
+              </div>
+              <div class="model-filter-dropdown" id="mortalityModelFilterDropdown">
+                <div class="model-filter-button" onclick="toggleModelFilter('mortality')">
+                  <span id="mortalityModelFilterText">All Models</span>
+                  <span class="model-filter-arrow">▼</span>
+                </div>
+                <div class="model-filter-options" id="mortalityModelFilterOptions">
+                  <!-- Options will be populated by JavaScript -->
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -903,20 +1001,6 @@
         <!-- Results Table (Full Width) -->
         <div class="card">
           <h3>Mortality Detailed Results Table</h3>
-          <div class="controls" style="margin-bottom: 20px;">
-            <div class="control-group">
-              <label>Model Filter</label>
-              <div class="model-filter-dropdown" id="mortalityModelFilterDropdown">
-                <div class="model-filter-button" onclick="toggleModelFilter('mortality')">
-                  <span id="mortalityModelFilterText">All Models</span>
-                  <span class="model-filter-arrow">▼</span>
-                </div>
-                <div class="model-filter-options" id="mortalityModelFilterOptions">
-                  <!-- Options will be populated by JavaScript -->
-                </div>
-              </div>
-            </div>
-          </div>
           <div class="table-container">
             <table id="mortalityResultsTable">
               <thead>
@@ -947,30 +1031,23 @@
           </div>
         </div>
       </div>
-
-      <div id="sepsis-tab" class="tab-content">
-        <!-- Summary Stats -->
-        <div class="summary-stats" id="sepsisSummaryStats">
-          <div class="stat-card">
-            <div class="stat-value" id="sepsisTotalModels">-</div>
-            <div class="stat-label">Total Models</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value" id="sepsisTotalDatasets">-</div>
-            <div class="stat-label">Datasets</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value" id="sepsisBestModel">-</div>
-            <div class="stat-label">Best Model</div>
+            </table>
           </div>
         </div>
+      </div>
 
+      <div id="sepsis-tab" class="tab-content">
         <!-- Filters -->
         <div class="header">
           <h2>Sepsis Prediction</h2>
           <div class="controls">
             <div class="control-group">
-              <label>Dataset</label>
+              <div class="control-group-with-info">
+                <label>Dataset</label>
+                <span class="info-icon">i
+                  <span class="info-tooltip">Filter results by specific ICU dataset: HiRID (Swiss), eICU (US multi-center), or MIMIC-IV (US single-center).</span>
+                </span>
+              </div>
               <select id="sepsisDatasetFilter">
                 <option value="all">All Datasets</option>
                 <option value="hirid">HiRID</option>
@@ -979,7 +1056,12 @@
               </select>
             </div>
             <div class="control-group">
-              <label>Model Type</label>
+              <div class="control-group-with-info">
+                <label>Model Type</label>
+                <span class="info-icon">i
+                  <span class="info-tooltip">Filter models by type: LLMs (Large Language Models) or traditional baseline models (CNN, LSTM, XGBoost, etc.)</span>
+                </span>
+              </div>
               <select id="sepsisModelTypeFilter">
                 <option value="all">All Models</option>
                 <option value="llm">LLMs Only</option>
@@ -987,14 +1069,24 @@
               </select>
             </div>
             <div class="control-group">
-              <label>Show Approaches</label>
+              <div class="control-group-with-info">
+                <label>Show Approaches</label>
+                <span class="info-icon">i
+                  <span class="info-tooltip">For LLMs, choose to show only the best performing prompting approach or all tested approaches for each model.</span>
+                </span>
+              </div>
               <select id="sepsisShowApproaches">
                 <option value="best">Best Only</option>
                 <option value="all">All Approaches</option>
               </select>
             </div>
             <div class="control-group">
-              <label>Primary Metric</label>
+              <div class="control-group-with-info">
+                <label>Primary Metric</label>
+                <span class="info-icon">i
+                  <span class="info-tooltip">Select the primary metric for sorting and evaluation. AUROC and AUPRC are most commonly used for medical prediction tasks.</span>
+                </span>
+              </div>
               <select id="sepsisPrimaryMetric">
                 <option value="auroc" selected>AUROC</option>
                 <option value="auprc">AUPRC</option>
@@ -1011,6 +1103,23 @@
                 <option value="task_dataset_score">PULSE Score</option>
               </select>
             </div>
+            <div class="control-group">
+              <div class="control-group-with-info">
+                <label>Model Filter</label>
+                <span class="info-icon">i
+                  <span class="info-tooltip">Select specific models to display. You can choose individual models or view all models at once.</span>
+                </span>
+              </div>
+              <div class="model-filter-dropdown" id="sepsisModelFilterDropdown">
+                <div class="model-filter-button" onclick="toggleModelFilter('sepsis')">
+                  <span id="sepsisModelFilterText">All Models</span>
+                  <span class="model-filter-arrow">▼</span>
+                </div>
+                <div class="model-filter-options" id="sepsisModelFilterOptions">
+                  <!-- Options will be populated by JavaScript -->
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -1025,20 +1134,6 @@
         <!-- Results Table (Full Width) -->
         <div class="card">
           <h3>Sepsis Detailed Results Table</h3>
-          <div class="controls" style="margin-bottom: 20px;">
-            <div class="control-group">
-              <label>Model Filter</label>
-              <div class="model-filter-dropdown" id="sepsisModelFilterDropdown">
-                <div class="model-filter-button" onclick="toggleModelFilter('sepsis')">
-                  <span id="sepsisModelFilterText">All Models</span>
-                  <span class="model-filter-arrow">▼</span>
-                </div>
-                <div class="model-filter-options" id="sepsisModelFilterOptions">
-                  <!-- Options will be populated by JavaScript -->
-                </div>
-              </div>
-            </div>
-          </div>
           <div class="table-container">
             <table id="sepsisResultsTable">
               <thead>
@@ -1068,7 +1163,7 @@
             </table>
           </div>
         </div>
-      }
+      </div>
     </div>
 
     <script>
@@ -1398,7 +1493,6 @@
       }
 
       function updateCurrentTab() {
-        updateSummaryStats(currentTask);
         createPerformanceChart(currentTask);
         updateTable(currentTask);
       }
@@ -1444,100 +1538,6 @@
           
           return modelTypeMatch && modelMatch;
         });
-      }
-
-      function updateSummaryStats(task) {
-        if (task === 'overall') {
-          updateOverallSummaryStats();
-          return;
-        }
-        
-        const filteredData = getFilteredData(task);
-        const primaryMetric = document.getElementById(`${task}PrimaryMetric`).value;
-        
-        // Use best approaches only for summary stats
-        const bestApproachData = getBestPromptingApproaches(filteredData, primaryMetric);
-        
-        const models = [...new Set(bestApproachData.map((d) => d.model_id))];
-        const datasets = [...new Set(bestApproachData.map((d) => d.dataset))];
-
-        // Find best model by average score using best approaches
-        const modelAverages = {};
-        bestApproachData.forEach((d) => {
-          const score = d.metrics[primaryMetric];
-          if (score !== undefined && score !== null) {
-            if (!modelAverages[d.model_id]) {
-              modelAverages[d.model_id] = { scores: [], entries: [] };
-            }
-            modelAverages[d.model_id].scores.push(score);
-            modelAverages[d.model_id].entries.push(d);
-          }
-        });
-
-        let bestModelByAverage = null;
-        let bestAverageScore = -Infinity;
-        Object.keys(modelAverages).forEach((modelId) => {
-          const scores = modelAverages[modelId].scores;
-          const avgScore = scores.reduce((sum, score) => sum + score, 0) / scores.length;
-          if (avgScore > bestAverageScore) {
-            bestAverageScore = avgScore;
-            bestModelByAverage = modelId;
-          }
-        });
-
-        document.getElementById(`${task}TotalModels`).textContent = models.length;
-        document.getElementById(`${task}TotalDatasets`).textContent = datasets.length;
-
-        const bestModelElement = document.getElementById(`${task}BestModel`);
-        if (bestModelByAverage) {
-          bestModelElement.innerHTML = `${bestModelByAverage} <span class="gold-cup">🏆</span>`;
-        } else {
-          bestModelElement.textContent = "-";
-        }
-      }
-
-      function updateOverallSummaryStats() {
-        const filteredData = getOverallFilteredData();
-        const primaryMetric = document.getElementById('overallPrimaryMetric').value;
-        
-        // Use best approaches only for summary stats
-        const bestApproachData = getBestPromptingApproaches(filteredData, primaryMetric);
-        
-        const models = [...new Set(bestApproachData.map((d) => d.model_id))];
-        const tasks = [...new Set(bestApproachData.map((d) => d.task_id))];
-        
-        // Calculate averages for each model across all tasks and datasets using best approaches
-        const modelAverages = {};
-        bestApproachData.forEach((d) => {
-          const score = d.metrics[primaryMetric];
-          if (score !== undefined && score !== null) {
-            if (!modelAverages[d.model_id]) {
-              modelAverages[d.model_id] = { scores: [] };
-            }
-            modelAverages[d.model_id].scores.push(score);
-          }
-        });
-
-        let bestModelByAverage = null;
-        let bestAverageScore = -Infinity;
-        Object.keys(modelAverages).forEach((modelId) => {
-          const scores = modelAverages[modelId].scores;
-          const avgScore = scores.reduce((sum, score) => sum + score, 0) / scores.length;
-          if (avgScore > bestAverageScore) {
-            bestAverageScore = avgScore;
-            bestModelByAverage = modelId;
-          }
-        });
-
-        document.getElementById('overallTotalModels').textContent = models.length;
-        document.getElementById('overallTotalTasks').textContent = tasks.length;
-
-        const bestModelElement = document.getElementById('overallBestModel');
-        if (bestModelByAverage) {
-          bestModelElement.innerHTML = `${bestModelByAverage} <span class="gold-cup">🏆</span>`;
-        } else {
-          bestModelElement.textContent = "-";
-        }
       }
 
       // Logo mapping for proprietary LLMs

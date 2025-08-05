@@ -352,14 +352,26 @@ class PULSEScoreCalculator:
         """
         # Default candidate column names
         if target_col_candidates is None:
-            target_col_candidates = ["true_label", "label", "target", "Target Label"]
+            target_col_candidates = [
+                "true_label",
+                "label",
+                "target",
+                "Target Label",
+                "label_value",
+            ]
         if prob_col_candidates is None:
             prob_col_candidates = [
                 "Predicted Probability",
+                "probability",
+                "prob",
+                "predicted_prob",
             ]
         if pred_col_candidates is None:
             pred_col_candidates = [
                 "Predicted Diagnosis",
+                "binary_prediction",
+                "prediction",
+                "predicted_binary",
             ]
         if task_col_candidates is None:
             task_col_candidates = ["task", "task_id", "outcome"]
@@ -430,19 +442,32 @@ class PULSEScoreCalculator:
                         df_prepared[prediction_col] > 0
                     ).astype(float)
                 else:
-                    # Convert various prediction formats to binary with task awareness
-                    # If task label is not found in prediction, it will return NaN
-                    # Use a lambda with default argument to avoid variable capture issues
-                    df_prepared["Predicted Diagnosis Binary"] = df_prepared.apply(
-                        lambda row, col=prediction_col: self.convert_prediction_to_binary(
-                            row[col], row["task"]
-                        ),
-                        axis=1,
-                    )
-                    # Convert Probability Prediction to Binary
-                    df_prepared["Predicted Binary"] = (
-                        df_prepared["Predicted Probability"] > 0.5
-                    ).astype(float)
+                    # For classical ML models with binary_prediction column
+                    if prediction_col == "binary_prediction":
+                        df_prepared["Predicted Binary"] = df_prepared[
+                            prediction_col
+                        ].astype(float)
+                        df_prepared["Predicted Diagnosis Binary"] = df_prepared[
+                            prediction_col
+                        ].astype(float)
+                        # Create a dummy diagnosis column for classical ML models
+                        df_prepared["Predicted Diagnosis"] = df_prepared[
+                            prediction_col
+                        ].apply(lambda x: "diagnosis" if x == 1 else "not-diagnosis")
+                    else:
+                        # Convert various prediction formats to binary with task awareness (for LLMs)
+                        # If task label is not found in prediction, it will return NaN
+                        # Use a lambda with default argument to avoid variable capture issues
+                        df_prepared["Predicted Diagnosis Binary"] = df_prepared.apply(
+                            lambda row, col=prediction_col: self.convert_prediction_to_binary(
+                                row[col], row["task"]
+                            ),
+                            axis=1,
+                        )
+                        # Convert Probability Prediction to Binary
+                        df_prepared["Predicted Binary"] = (
+                            df_prepared["Predicted Probability"] > 0.5
+                        ).astype(float)
 
                 pred_col = prediction_col
                 break
@@ -463,11 +488,23 @@ class PULSEScoreCalculator:
                 df_prepared["Predicted Binary"] = (df_prepared[prob_col] > 0).astype(
                     float
                 )
+                df_prepared["Predicted Diagnosis Binary"] = (
+                    df_prepared[prob_col] > 0
+                ).astype(float)
             else:
                 # For probabilities, use 0.5 as threshold
                 df_prepared["Predicted Binary"] = (
                     df_prepared["Predicted Probability"] > 0.5
                 ).astype(float)
+                df_prepared["Predicted Diagnosis Binary"] = (
+                    df_prepared["Predicted Probability"] > 0.5
+                ).astype(float)
+
+            # Create a dummy diagnosis column for models without explicit text predictions
+            if "Predicted Diagnosis" not in df_prepared.columns:
+                df_prepared["Predicted Diagnosis"] = df_prepared[
+                    "Predicted Binary"
+                ].apply(lambda x: "diagnosis" if x == 1 else "not-diagnosis")
 
         # Map dataset column
         dataset_col = None
@@ -502,6 +539,8 @@ class PULSEScoreCalculator:
         """
         Verify that DataFrame is properly formatted for PULSE calculation.
 
+        Supports both LLM and classical ML model formats with different requirements.
+
         Args:
             df: DataFrame to verify
 
@@ -516,30 +555,63 @@ class PULSEScoreCalculator:
             "ready_for_pulse": False,
         }
 
-        required_cols = [
+        # Core required columns for both LLM and classical ML models
+        core_required_cols = [
             "Target Label",
             "Predicted Probability",
-            "Predicted Diagnosis",
-            "Predicted Binary",
             "task",
             "dataset",
         ]
 
-        # Check required columns
-        if all(col in df.columns for col in required_cols):
-            results["has_required_columns"] = True
+        # Additional columns needed for LLM models
+        llm_required_cols = [
+            "Predicted Diagnosis",
+        ]
 
+        # Binary prediction columns (one of these should exist)
+        binary_pred_cols = ["Predicted Binary", "Predicted Diagnosis Binary"]
+
+        # Check core required columns
+        has_core_cols = all(col in df.columns for col in core_required_cols)
+
+        # Check if at least one binary prediction column exists
+        has_binary_pred = any(col in df.columns for col in binary_pred_cols)
+
+        # For LLM models, also require Predicted Diagnosis
+        if self.is_llm_model:
+            has_required = (
+                has_core_cols
+                and has_binary_pred
+                and all(col in df.columns for col in llm_required_cols)
+            )
+        else:
+            # For classical ML models, only need core columns and binary predictions
+            has_required = has_core_cols and has_binary_pred
+
+        results["has_required_columns"] = has_required
+
+        if has_required:
             # Check target label format
             target_unique = df["Target Label"].unique()
             results["target_is_binary"] = all(val in [0, 1] for val in target_unique)
 
-            # Check prediction format (allow NaN for invalid predictions)
-            pred_unique = df["Predicted Binary"].dropna().unique()
-            results["pred_is_binary"] = all(val in [0, 1] for val in pred_unique)
+            # Check prediction format (use whichever binary prediction column exists)
+            binary_pred_col = None
+            for col in binary_pred_cols:
+                if col in df.columns:
+                    binary_pred_col = col
+                    break
 
-            # Count NaN predictions for Diagnosis. e.g. is nan when diagnosis is not correctly labeled as asked in prompt
-            nan_count = df["Predicted Diagnosis Binary"].isna().sum()
-            results["nan_predictions"] = nan_count
+            if binary_pred_col:
+                pred_unique = df[binary_pred_col].dropna().unique()
+                results["pred_is_binary"] = all(val in [0, 1] for val in pred_unique)
+
+            # Count NaN predictions for Diagnosis (only relevant for LLM models)
+            if "Predicted Diagnosis Binary" in df.columns:
+                nan_count = df["Predicted Diagnosis Binary"].isna().sum()
+                results["nan_predictions"] = nan_count
+            else:
+                results["nan_predictions"] = 0
 
             # Check probability range
             prob_min = df["Predicted Probability"].min()
@@ -603,12 +675,24 @@ class PULSEScoreCalculator:
                 print(f"\n{task.upper()}:")
                 print(f"  Total samples: {len(task_data)}/{total_samples[task]}")
                 print(f"  Positive labels: {task_data['Target Label'].sum()}")
-                valid_preds = task_data["Predicted Binary"].dropna()
-                print(f"  Valid predictions: {len(valid_preds)}")
-                print(f"  Positive predictions: {valid_preds.sum()}")
-                nan_preds = task_data["Predicted Diagnosis"].isna().sum()
-                if nan_preds > 0:
-                    print(f"  Wrongly labled: {nan_preds}")
+
+                # Use whichever binary prediction column exists
+                binary_pred_col = None
+                if "Predicted Binary" in task_data.columns:
+                    binary_pred_col = "Predicted Binary"
+                elif "Predicted Diagnosis Binary" in task_data.columns:
+                    binary_pred_col = "Predicted Diagnosis Binary"
+
+                if binary_pred_col:
+                    valid_preds = task_data[binary_pred_col].dropna()
+                    print(f"  Valid predictions: {len(valid_preds)}")
+                    print(f"  Positive predictions: {valid_preds.sum()}")
+
+                # Only show NaN diagnosis info for LLM models
+                if self.is_llm_model and "Predicted Diagnosis" in task_data.columns:
+                    nan_preds = task_data["Predicted Diagnosis"].isna().sum()
+                    if nan_preds > 0:
+                        print(f"  Wrongly labeled: {nan_preds}")
 
                 # Show probability statistics
                 prob_stats = task_data["Predicted Probability"].describe()
@@ -624,7 +708,14 @@ class PULSEScoreCalculator:
         # Show data types and unique values
         if verification_results["has_required_columns"]:
             print("\nData types and unique values:")
-            key_cols = ["Target Label", "Predicted Diagnosis"]
+            key_cols = ["Target Label"]
+
+            # Add relevant prediction columns based on model type
+            if self.is_llm_model and "Predicted Diagnosis" in df.columns:
+                key_cols.append("Predicted Diagnosis")
+            elif not self.is_llm_model and "binary_prediction" in df.columns:
+                key_cols.append("binary_prediction")
+
             for col in key_cols:
                 if col in df.columns:
                     unique_vals = df[col].unique()  # Show all unique values
@@ -632,16 +723,25 @@ class PULSEScoreCalculator:
 
         # Show data derivation info
         print("\nData source information:")
-        if "Predicted Diagnosis" in df.columns:
+
+        # Check prediction derivation for different model types
+        if self.is_llm_model and "Predicted Diagnosis" in df.columns:
             # Check if predictions seem to be derived from probabilities
-            prob_derived = (
-                df["Predicted Diagnosis"]
-                == (df["Predicted Probability"] > 0.5).astype(int)
-            ).all()
-            if prob_derived:
-                print("  • Predictions derived from probabilities (threshold = 0.5)")
-            else:
-                print("  • Predictions from explicit prediction column")
+            try:
+                prob_derived = (
+                    df["Predicted Diagnosis"]
+                    == (df["Predicted Probability"] > 0.5).astype(int)
+                ).all()
+                if prob_derived:
+                    print(
+                        "  • Predictions derived from probabilities (threshold = 0.5)"
+                    )
+                else:
+                    print("  • Predictions from explicit prediction column")
+            except:
+                print("  • Predictions from explicit LLM text responses")
+        elif not self.is_llm_model:
+            print("  • Classical ML model predictions")
 
         print(f"  • Tasks: {', '.join(df['task'].unique())}")
         print(f"  • Datasets: {', '.join(df['dataset'].unique())}")
@@ -652,7 +752,7 @@ class PULSEScoreCalculator:
         df: pd.DataFrame,
         target_col: str = "Target Label",
         prob_col: str = "Predicted Probability",
-        pred_col: str = "Predicted Diagnosis Binary",
+        pred_col: str = None,
         task_col: str = "task",
         dataset_col: str = "dataset",
     ) -> Dict[str, Dict[str, float]]:
@@ -663,13 +763,24 @@ class PULSEScoreCalculator:
             df: DataFrame containing predictions and true labels
             target_col: Column name for true binary labels
             prob_col: Column name for predicted probabilities
-            pred_col: Column name for binary predictions
+            pred_col: Column name for binary predictions (auto-detected if None)
             task_col: Column name for task/outcome identifier
             dataset_col: Column name for dataset identifier
 
         Returns:
             Dictionary with PULSE scores for each task, each task-dataset combination, and overall score
         """
+        # Auto-detect the prediction column if not specified
+        if pred_col is None:
+            if "Predicted Diagnosis Binary" in df.columns:
+                pred_col = "Predicted Diagnosis Binary"
+            elif "Predicted Binary" in df.columns:
+                pred_col = "Predicted Binary"
+            else:
+                raise ValueError(
+                    "No binary prediction column found. Expected 'Predicted Diagnosis Binary' or 'Predicted Binary'"
+                )
+
         results_dict = {
             "pulse_scores": [],
             "task_scores": {"aki": [], "mortality": [], "sepsis": []},
@@ -888,7 +999,7 @@ class PULSEScoreCalculator:
                 df_prepared,
                 target_col="Target Label",
                 prob_col="Predicted Probability",
-                pred_col="Predicted Diagnosis Binary",
+                pred_col=None,  # Auto-detect the prediction column
                 task_col="task",
                 dataset_col="dataset",
             )

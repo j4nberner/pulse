@@ -608,7 +608,7 @@
       "task_id": "aki",
       "dataset": "eicu",
       "run_id": "20250710_104835",
-      "prompting_id": "clinical_worflow_agent_preprocessor",
+      "prompting_id": "clinical_workflow_agent_preprocessor",
       "metrics_summary": {
         "overall": {
           "auroc": 0.477,
@@ -675,7 +675,7 @@
       "task_id": "aki",
       "dataset": "hirid",
       "run_id": "20250710_104835",
-      "prompting_id": "clinical_worflow_agent_preprocessor",
+      "prompting_id": "clinical_workflow_agent_preprocessor",
       "metrics_summary": {
         "overall": {
           "auroc": 0.461,
@@ -742,7 +742,7 @@
       "task_id": "aki",
       "dataset": "miiv",
       "run_id": "20250710_104835",
-      "prompting_id": "clinical_worflow_agent_preprocessor",
+      "prompting_id": "clinical_workflow_agent_preprocessor",
       "metrics_summary": {
         "overall": {
           "auroc": 0.491,
@@ -809,7 +809,7 @@
       "task_id": "mortality",
       "dataset": "eicu",
       "run_id": "20250710_104835",
-      "prompting_id": "clinical_worflow_agent_preprocessor",
+      "prompting_id": "clinical_workflow_agent_preprocessor",
       "metrics_summary": {
         "overall": {
           "auroc": 0.541,
@@ -876,7 +876,7 @@
       "task_id": "mortality",
       "dataset": "hirid",
       "run_id": "20250710_104835",
-      "prompting_id": "clinical_worflow_agent_preprocessor",
+      "prompting_id": "clinical_workflow_agent_preprocessor",
       "metrics_summary": {
         "overall": {
           "auroc": 0.577,
@@ -943,7 +943,7 @@
       "task_id": "mortality",
       "dataset": "miiv",
       "run_id": "20250710_104835",
-      "prompting_id": "clinical_worflow_agent_preprocessor",
+      "prompting_id": "clinical_workflow_agent_preprocessor",
       "metrics_summary": {
         "overall": {
           "auroc": 0.665,
@@ -1010,7 +1010,7 @@
       "task_id": "sepsis",
       "dataset": "eicu",
       "run_id": "20250710_104835",
-      "prompting_id": "clinical_worflow_agent_preprocessor",
+      "prompting_id": "clinical_workflow_agent_preprocessor",
       "metrics_summary": {
         "overall": {
           "auroc": 0.513,
@@ -1077,7 +1077,7 @@
       "task_id": "sepsis",
       "dataset": "hirid",
       "run_id": "20250710_104835",
-      "prompting_id": "clinical_worflow_agent_preprocessor",
+      "prompting_id": "clinical_workflow_agent_preprocessor",
       "metrics_summary": {
         "overall": {
           "auroc": 0.567,
@@ -1144,7 +1144,7 @@
       "task_id": "sepsis",
       "dataset": "miiv",
       "run_id": "20250710_104835",
-      "prompting_id": "clinical_worflow_agent_preprocessor",
+      "prompting_id": "clinical_workflow_agent_preprocessor",
       "metrics_summary": {
         "overall": {
           "auroc": 0.538,
