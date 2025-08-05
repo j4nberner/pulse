@@ -652,10 +652,16 @@
 
         <!-- Tab Navigation -->
         <div class="tabs">
-          <button class="tab-button active" onclick="switchTab('overall')">Overall</button>
+          <button class="tab-button active" onclick="switchTab('overall')">
+            Overall
+          </button>
           <button class="tab-button" onclick="switchTab('aki')">AKI</button>
-          <button class="tab-button" onclick="switchTab('mortality')">Mortality</button>
-          <button class="tab-button" onclick="switchTab('sepsis')">Sepsis</button>
+          <button class="tab-button" onclick="switchTab('mortality')">
+            Mortality
+          </button>
+          <button class="tab-button" onclick="switchTab('sepsis')">
+            Sepsis
+          </button>
         </div>
       </div>
 
@@ -668,8 +674,12 @@
             <div class="control-group">
               <div class="control-group-with-info">
                 <label>Model Type</label>
-                <span class="info-icon">i
-                  <span class="info-tooltip">Filter models by type: LLMs (Large Language Models) or traditional baseline models (CNN, LSTM, XGBoost, etc.)</span>
+                <span class="info-icon"
+                  >i
+                  <span class="info-tooltip"
+                    >Filter models by type: LLMs (Large Language Models) or
+                    traditional baseline models (CNN, LSTM, XGBoost, etc.)</span
+                  >
                 </span>
               </div>
               <select id="overallModelTypeFilter">
@@ -681,8 +691,13 @@
             <div class="control-group">
               <div class="control-group-with-info">
                 <label>Primary Metric</label>
-                <span class="info-icon">i
-                  <span class="info-tooltip">Select the primary metric for sorting and evaluation. AUROC and AUPRC are most commonly used for medical prediction tasks.</span>
+                <span class="info-icon"
+                  >i
+                  <span class="info-tooltip"
+                    >Select the primary metric for sorting and evaluation. AUROC
+                    and AUPRC are most commonly used for medical prediction
+                    tasks. Note: MCC values are normalized to 0-1 range.</span
+                  >
                 </span>
               </div>
               <select id="overallPrimaryMetric">
@@ -704,8 +719,12 @@
             <div class="control-group">
               <div class="control-group-with-info">
                 <label>Show Approaches</label>
-                <span class="info-icon">i
-                  <span class="info-tooltip">For LLMs, choose to show only the best performing prompting approach or all tested approaches for each model.</span>
+                <span class="info-icon"
+                  >i
+                  <span class="info-tooltip"
+                    >For LLMs, choose to show only the best performing prompting
+                    approach or all tested approaches for each model.</span
+                  >
                 </span>
               </div>
               <select id="overallShowApproaches">
@@ -716,16 +735,29 @@
             <div class="control-group">
               <div class="control-group-with-info">
                 <label>Model Filter</label>
-                <span class="info-icon">i
-                  <span class="info-tooltip">Select specific models to display. You can choose individual models or view all models at once.</span>
+                <span class="info-icon"
+                  >i
+                  <span class="info-tooltip"
+                    >Select specific models to display. You can choose
+                    individual models or view all models at once.</span
+                  >
                 </span>
               </div>
-              <div class="model-filter-dropdown" id="overallModelFilterDropdown">
-                <div class="model-filter-button" onclick="toggleModelFilter('overall')">
+              <div
+                class="model-filter-dropdown"
+                id="overallModelFilterDropdown"
+              >
+                <div
+                  class="model-filter-button"
+                  onclick="toggleModelFilter('overall')"
+                >
                   <span id="overallModelFilterText">All Models</span>
                   <span class="model-filter-arrow">▼</span>
                 </div>
-                <div class="model-filter-options" id="overallModelFilterOptions">
+                <div
+                  class="model-filter-options"
+                  id="overallModelFilterOptions"
+                >
                   <!-- Options will be populated by JavaScript -->
                 </div>
               </div>
@@ -734,7 +766,7 @@
         </div>
 
         <!-- Performance Chart -->
-        <div class="card" style="margin-bottom: 25px;">
+        <div class="card" style="margin-bottom: 25px">
           <h3>Overall Model Performance Comparison</h3>
           <div class="chart-container">
             <canvas id="overallPerformanceChart"></canvas>
@@ -766,7 +798,9 @@
               </thead>
               <tbody id="overallResultsTableBody">
                 <tr>
-                  <td colspan="14" class="loading">Loading overall results...</td>
+                  <td colspan="14" class="loading">
+                    Loading overall results...
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -782,8 +816,12 @@
             <div class="control-group">
               <div class="control-group-with-info">
                 <label>Dataset</label>
-                <span class="info-icon">i
-                  <span class="info-tooltip">Filter results by specific ICU dataset: HiRID (Swiss), eICU (US multi-center), or MIMIC-IV (US single-center).</span>
+                <span class="info-icon"
+                  >i
+                  <span class="info-tooltip"
+                    >Filter results by specific ICU dataset: HiRID (Swiss), eICU
+                    (US multi-center), or MIMIC-IV (US single-center).</span
+                  >
                 </span>
               </div>
               <select id="akiDatasetFilter">
@@ -796,8 +834,12 @@
             <div class="control-group">
               <div class="control-group-with-info">
                 <label>Model Type</label>
-                <span class="info-icon">i
-                  <span class="info-tooltip">Filter models by type: LLMs (Large Language Models) or traditional baseline models (CNN, LSTM, XGBoost, etc.)</span>
+                <span class="info-icon"
+                  >i
+                  <span class="info-tooltip"
+                    >Filter models by type: LLMs (Large Language Models) or
+                    traditional baseline models (CNN, LSTM, XGBoost, etc.)</span
+                  >
                 </span>
               </div>
               <select id="akiModelTypeFilter">
@@ -809,8 +851,12 @@
             <div class="control-group">
               <div class="control-group-with-info">
                 <label>Show Approaches</label>
-                <span class="info-icon">i
-                  <span class="info-tooltip">For LLMs, choose to show only the best performing prompting approach or all tested approaches for each model.</span>
+                <span class="info-icon"
+                  >i
+                  <span class="info-tooltip"
+                    >For LLMs, choose to show only the best performing prompting
+                    approach or all tested approaches for each model.</span
+                  >
                 </span>
               </div>
               <select id="akiShowApproaches">
@@ -821,8 +867,13 @@
             <div class="control-group">
               <div class="control-group-with-info">
                 <label>Primary Metric</label>
-                <span class="info-icon">i
-                  <span class="info-tooltip">Select the primary metric for sorting and evaluation. AUROC and AUPRC are most commonly used for medical prediction tasks.</span>
+                <span class="info-icon"
+                  >i
+                  <span class="info-tooltip"
+                    >Select the primary metric for sorting and evaluation. AUROC
+                    and AUPRC are most commonly used for medical prediction
+                    tasks. Note: MCC values are normalized to 0-1 range.</span
+                  >
                 </span>
               </div>
               <select id="akiPrimaryMetric">
@@ -844,12 +895,19 @@
             <div class="control-group">
               <div class="control-group-with-info">
                 <label>Model Filter</label>
-                <span class="info-icon">i
-                  <span class="info-tooltip">Select specific models to display. You can choose individual models or view all models at once.</span>
+                <span class="info-icon"
+                  >i
+                  <span class="info-tooltip"
+                    >Select specific models to display. You can choose
+                    individual models or view all models at once.</span
+                  >
                 </span>
               </div>
               <div class="model-filter-dropdown" id="akiModelFilterDropdown">
-                <div class="model-filter-button" onclick="toggleModelFilter('aki')">
+                <div
+                  class="model-filter-button"
+                  onclick="toggleModelFilter('aki')"
+                >
                   <span id="akiModelFilterText">All Models</span>
                   <span class="model-filter-arrow">▼</span>
                 </div>
@@ -862,7 +920,7 @@
         </div>
 
         <!-- Performance Chart -->
-        <div class="card" style="margin-bottom: 25px;">
+        <div class="card" style="margin-bottom: 25px">
           <h3>AKI Model Performance Comparison</h3>
           <div class="chart-container">
             <canvas id="akiPerformanceChart"></canvas>
@@ -911,8 +969,12 @@
             <div class="control-group">
               <div class="control-group-with-info">
                 <label>Dataset</label>
-                <span class="info-icon">i
-                  <span class="info-tooltip">Filter results by specific ICU dataset: HiRID (Swiss), eICU (US multi-center), or MIMIC-IV (US single-center).</span>
+                <span class="info-icon"
+                  >i
+                  <span class="info-tooltip"
+                    >Filter results by specific ICU dataset: HiRID (Swiss), eICU
+                    (US multi-center), or MIMIC-IV (US single-center).</span
+                  >
                 </span>
               </div>
               <select id="mortalityDatasetFilter">
@@ -925,8 +987,12 @@
             <div class="control-group">
               <div class="control-group-with-info">
                 <label>Model Type</label>
-                <span class="info-icon">i
-                  <span class="info-tooltip">Filter models by type: LLMs (Large Language Models) or traditional baseline models (CNN, LSTM, XGBoost, etc.)</span>
+                <span class="info-icon"
+                  >i
+                  <span class="info-tooltip"
+                    >Filter models by type: LLMs (Large Language Models) or
+                    traditional baseline models (CNN, LSTM, XGBoost, etc.)</span
+                  >
                 </span>
               </div>
               <select id="mortalityModelTypeFilter">
@@ -938,8 +1004,12 @@
             <div class="control-group">
               <div class="control-group-with-info">
                 <label>Show Approaches</label>
-                <span class="info-icon">i
-                  <span class="info-tooltip">For LLMs, choose to show only the best performing prompting approach or all tested approaches for each model.</span>
+                <span class="info-icon"
+                  >i
+                  <span class="info-tooltip"
+                    >For LLMs, choose to show only the best performing prompting
+                    approach or all tested approaches for each model.</span
+                  >
                 </span>
               </div>
               <select id="mortalityShowApproaches">
@@ -950,8 +1020,13 @@
             <div class="control-group">
               <div class="control-group-with-info">
                 <label>Primary Metric</label>
-                <span class="info-icon">i
-                  <span class="info-tooltip">Select the primary metric for sorting and evaluation. AUROC and AUPRC are most commonly used for medical prediction tasks.</span>
+                <span class="info-icon"
+                  >i
+                  <span class="info-tooltip"
+                    >Select the primary metric for sorting and evaluation. AUROC
+                    and AUPRC are most commonly used for medical prediction
+                    tasks. Note: MCC values are normalized to 0-1 range.</span
+                  >
                 </span>
               </div>
               <select id="mortalityPrimaryMetric">
@@ -973,16 +1048,29 @@
             <div class="control-group">
               <div class="control-group-with-info">
                 <label>Model Filter</label>
-                <span class="info-icon">i
-                  <span class="info-tooltip">Select specific models to display. You can choose individual models or view all models at once.</span>
+                <span class="info-icon"
+                  >i
+                  <span class="info-tooltip"
+                    >Select specific models to display. You can choose
+                    individual models or view all models at once.</span
+                  >
                 </span>
               </div>
-              <div class="model-filter-dropdown" id="mortalityModelFilterDropdown">
-                <div class="model-filter-button" onclick="toggleModelFilter('mortality')">
+              <div
+                class="model-filter-dropdown"
+                id="mortalityModelFilterDropdown"
+              >
+                <div
+                  class="model-filter-button"
+                  onclick="toggleModelFilter('mortality')"
+                >
                   <span id="mortalityModelFilterText">All Models</span>
                   <span class="model-filter-arrow">▼</span>
                 </div>
-                <div class="model-filter-options" id="mortalityModelFilterOptions">
+                <div
+                  class="model-filter-options"
+                  id="mortalityModelFilterOptions"
+                >
                   <!-- Options will be populated by JavaScript -->
                 </div>
               </div>
@@ -991,7 +1079,7 @@
         </div>
 
         <!-- Performance Chart -->
-        <div class="card" style="margin-bottom: 25px;">
+        <div class="card" style="margin-bottom: 25px">
           <h3>Mortality Model Performance Comparison</h3>
           <div class="chart-container">
             <canvas id="mortalityPerformanceChart"></canvas>
@@ -1024,13 +1112,11 @@
               </thead>
               <tbody id="mortalityResultsTableBody">
                 <tr>
-                  <td colspan="15" class="loading">Loading mortality results...</td>
+                  <td colspan="15" class="loading">
+                    Loading mortality results...
+                  </td>
                 </tr>
               </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
             </table>
           </div>
         </div>
@@ -1044,8 +1130,12 @@
             <div class="control-group">
               <div class="control-group-with-info">
                 <label>Dataset</label>
-                <span class="info-icon">i
-                  <span class="info-tooltip">Filter results by specific ICU dataset: HiRID (Swiss), eICU (US multi-center), or MIMIC-IV (US single-center).</span>
+                <span class="info-icon"
+                  >i
+                  <span class="info-tooltip"
+                    >Filter results by specific ICU dataset: HiRID (Swiss), eICU
+                    (US multi-center), or MIMIC-IV (US single-center).</span
+                  >
                 </span>
               </div>
               <select id="sepsisDatasetFilter">
@@ -1058,8 +1148,12 @@
             <div class="control-group">
               <div class="control-group-with-info">
                 <label>Model Type</label>
-                <span class="info-icon">i
-                  <span class="info-tooltip">Filter models by type: LLMs (Large Language Models) or traditional baseline models (CNN, LSTM, XGBoost, etc.)</span>
+                <span class="info-icon"
+                  >i
+                  <span class="info-tooltip"
+                    >Filter models by type: LLMs (Large Language Models) or
+                    traditional baseline models (CNN, LSTM, XGBoost, etc.)</span
+                  >
                 </span>
               </div>
               <select id="sepsisModelTypeFilter">
@@ -1071,8 +1165,12 @@
             <div class="control-group">
               <div class="control-group-with-info">
                 <label>Show Approaches</label>
-                <span class="info-icon">i
-                  <span class="info-tooltip">For LLMs, choose to show only the best performing prompting approach or all tested approaches for each model.</span>
+                <span class="info-icon"
+                  >i
+                  <span class="info-tooltip"
+                    >For LLMs, choose to show only the best performing prompting
+                    approach or all tested approaches for each model.</span
+                  >
                 </span>
               </div>
               <select id="sepsisShowApproaches">
@@ -1083,8 +1181,13 @@
             <div class="control-group">
               <div class="control-group-with-info">
                 <label>Primary Metric</label>
-                <span class="info-icon">i
-                  <span class="info-tooltip">Select the primary metric for sorting and evaluation. AUROC and AUPRC are most commonly used for medical prediction tasks.</span>
+                <span class="info-icon"
+                  >i
+                  <span class="info-tooltip"
+                    >Select the primary metric for sorting and evaluation. AUROC
+                    and AUPRC are most commonly used for medical prediction
+                    tasks. Note: MCC values are normalized to 0-1 range.</span
+                  >
                 </span>
               </div>
               <select id="sepsisPrimaryMetric">
@@ -1106,12 +1209,19 @@
             <div class="control-group">
               <div class="control-group-with-info">
                 <label>Model Filter</label>
-                <span class="info-icon">i
-                  <span class="info-tooltip">Select specific models to display. You can choose individual models or view all models at once.</span>
+                <span class="info-icon"
+                  >i
+                  <span class="info-tooltip"
+                    >Select specific models to display. You can choose
+                    individual models or view all models at once.</span
+                  >
                 </span>
               </div>
               <div class="model-filter-dropdown" id="sepsisModelFilterDropdown">
-                <div class="model-filter-button" onclick="toggleModelFilter('sepsis')">
+                <div
+                  class="model-filter-button"
+                  onclick="toggleModelFilter('sepsis')"
+                >
                   <span id="sepsisModelFilterText">All Models</span>
                   <span class="model-filter-arrow">▼</span>
                 </div>
@@ -1124,7 +1234,7 @@
         </div>
 
         <!-- Performance Chart -->
-        <div class="card" style="margin-bottom: 25px;">
+        <div class="card" style="margin-bottom: 25px">
           <h3>Sepsis Model Performance Comparison</h3>
           <div class="chart-container">
             <canvas id="sepsisPerformanceChart"></canvas>
@@ -1157,7 +1267,9 @@
               </thead>
               <tbody id="sepsisResultsTableBody">
                 <tr>
-                  <td colspan="15" class="loading">Loading sepsis results...</td>
+                  <td colspan="15" class="loading">
+                    Loading sepsis results...
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -1170,12 +1282,12 @@
       console.log("Script loaded successfully");
       let allData = [];
       let charts = {};
-      let currentTask = 'overall';
+      let currentTask = "overall";
 
       // Baseline model identifiers
       const baselineModels = [
         "CNN",
-        "LSTM", 
+        "LSTM",
         "GRU",
         "XGBoost",
         "LightGBM",
@@ -1196,19 +1308,19 @@
       // Get best prompting approach for each model based on primary metric
       function getBestPromptingApproaches(data, primaryMetric) {
         const modelBestApproaches = {};
-        
+
         // Group by model_id + task_id + dataset
         const modelGroups = {};
-        data.forEach(d => {
+        data.forEach((d) => {
           const key = `${d.model_id}_${d.task_id}_${d.dataset}`;
           if (!modelGroups[key]) {
             modelGroups[key] = [];
           }
           modelGroups[key].push(d);
         });
-        
+
         // Find best approach for each group
-        Object.keys(modelGroups).forEach(key => {
+        Object.keys(modelGroups).forEach((key) => {
           const group = modelGroups[key];
           if (group.length <= 1) {
             // No multiple approaches, keep as is
@@ -1217,63 +1329,71 @@
             // Find best approach by primary metric
             let bestEntry = group[0];
             let bestScore = bestEntry.metrics[primaryMetric] || -Infinity;
-            
-            group.forEach(entry => {
+
+            group.forEach((entry) => {
               const score = entry.metrics[primaryMetric] || -Infinity;
               if (score > bestScore) {
                 bestScore = score;
                 bestEntry = entry;
               }
             });
-            
+
             modelBestApproaches[key] = bestEntry;
           }
         });
-        
+
         return Object.values(modelBestApproaches);
       }
 
       // Format prompting approach name for display
       function formatPromptingApproach(promptingId) {
         if (!promptingId || promptingId === "") return "";
-        
+
         // Map specific prompting IDs to clean names
         const approachMapping = {
-          "hybrid_reasoning_agent_preprocessor": "Hybrid Agent",
-          "sarvari_2024_aggregation_preprocessor": "Aggregation", 
-          "zhu_2024b_zero_shot_preprocessor": "Zero Shot",
-          "zhu_2024c_categorization_summary_agent_preprocessor": "Categorization Summary Agent",
-          "liu_2023_few_shot_preprocessor": "Few Shot",
-          "collaborative_reasoning_agent_preprocessor": "Collaborative Reasoning Agent",
-          "zhu_2024b_one_shot_preprocessor": "One Shot",
-          "zhu_2024a_cot_preprocessor": "CoT",
-          "clinical_workflow_agent_preprocessor": "Clinical Workflow Agent",
-          "categorization_agent_preprocessor": "Categorization Agent"
+          hybrid_reasoning_agent_preprocessor: "Hybrid Agent",
+          sarvari_2024_aggregation_preprocessor: "Aggregation",
+          zhu_2024b_zero_shot_preprocessor: "Zero Shot",
+          zhu_2024c_categorization_summary_agent_preprocessor:
+            "Categorization Summary Agent",
+          liu_2023_few_shot_preprocessor: "Few Shot",
+          collaborative_reasoning_agent_preprocessor:
+            "Collaborative Reasoning Agent",
+          zhu_2024b_one_shot_preprocessor: "One Shot",
+          zhu_2024a_cot_preprocessor: "CoT",
+          clinical_workflow_agent_preprocessor: "Clinical Workflow Agent",
+          categorization_agent_preprocessor: "Categorization Agent",
         };
-        
-        return approachMapping[promptingId] || promptingId.replace(/_/g, ' ').replace(/preprocessor/g, '').trim();
+
+        return (
+          approachMapping[promptingId] ||
+          promptingId
+            .replace(/_/g, " ")
+            .replace(/preprocessor/g, "")
+            .trim()
+        );
       }
 
       // Switch between tabs
       function switchTab(task) {
         // Hide all tab contents
-        document.querySelectorAll('.tab-content').forEach(content => {
-          content.classList.remove('active');
+        document.querySelectorAll(".tab-content").forEach((content) => {
+          content.classList.remove("active");
         });
-        
+
         // Remove active class from all tab buttons
-        document.querySelectorAll('.tab-button').forEach(button => {
-          button.classList.remove('active');
+        document.querySelectorAll(".tab-button").forEach((button) => {
+          button.classList.remove("active");
         });
-        
+
         // Show selected tab content
-        document.getElementById(`${task}-tab`).classList.add('active');
-        
+        document.getElementById(`${task}-tab`).classList.add("active");
+
         // Add active class to selected tab button
-        event.target.classList.add('active');
-        
+        event.target.classList.add("active");
+
         currentTask = task;
-        
+
         // Update the current tab's content
         updateCurrentTab();
       }
@@ -1281,11 +1401,11 @@
       // Load all JSON files from the jsons folder
       async function loadAllResults() {
         console.log("Loading all result files...");
-        
+
         // List of all model files based on the directory listing
         const modelFiles = [
           "claudesonnet4_results.json",
-          "CNN_results.json", 
+          "CNN_results.json",
           "deepseekr1llama8b_results.json",
           "gemini2p5flash_results.json",
           "gemini2p5pro_results.json",
@@ -1300,24 +1420,24 @@
           "mistral7b_results.json",
           "o3_results.json",
           "RandomForest_results.json",
-          "XGBoost_results.json"
+          "XGBoost_results.json",
         ];
 
         allData = [];
-        
+
         for (const fileName of modelFiles) {
           try {
             console.log(`Loading ${fileName}...`);
             const response = await fetch(`jsons/${fileName}`);
-            
+
             if (!response.ok) {
               console.warn(`Failed to load ${fileName}: ${response.status}`);
               continue;
             }
-            
+
             const data = await response.json();
             console.log(`Loaded ${fileName}:`, data);
-            
+
             // Extract results array
             let results = [];
             if (Array.isArray(data)) {
@@ -1328,29 +1448,28 @@
               console.warn(`Invalid format in ${fileName}`);
               continue;
             }
-            
+
             // Add each result to allData
-            results.forEach(result => {
+            results.forEach((result) => {
               if (result.metrics_summary && result.metrics_summary.overall) {
                 allData.push({
                   model_id: result.model_id,
-                  task_id: result.task_id, 
+                  task_id: result.task_id,
                   dataset: result.dataset,
                   prompting_id: result.prompting_id || "",
                   metrics: result.metrics_summary.overall,
-                  fileName: fileName
+                  fileName: fileName,
                 });
               }
             });
-            
           } catch (error) {
             console.error(`Error loading ${fileName}:`, error);
           }
         }
-        
+
         console.log("All data loaded:", allData);
         console.log("Total entries:", allData.length);
-        
+
         // Initialize the dashboard
         initializeDashboard();
       }
@@ -1370,41 +1489,45 @@
 
       // Global variable to store selected models for each task
       const selectedModels = {
-        overall: ['all'],
-        aki: ['all'],
-        mortality: ['all'],
-        sepsis: ['all']
+        overall: ["all"],
+        aki: ["all"],
+        mortality: ["all"],
+        sepsis: ["all"],
       };
 
       function populateModelFilters() {
-        const models = [...new Set(allData.map(d => d.model_id))].sort();
-        
+        const models = [...new Set(allData.map((d) => d.model_id))].sort();
+
         // Populate all model filter dropdowns
-        ['overall', 'aki', 'mortality', 'sepsis'].forEach(task => {
-          const optionsContainer = document.getElementById(`${task}ModelFilterOptions`);
+        ["overall", "aki", "mortality", "sepsis"].forEach((task) => {
+          const optionsContainer = document.getElementById(
+            `${task}ModelFilterOptions`
+          );
           if (optionsContainer) {
-            optionsContainer.innerHTML = '';
-            
+            optionsContainer.innerHTML = "";
+
             // Add "All Models" option
-            const allOption = document.createElement('div');
-            allOption.className = 'model-filter-option all-models selected';
-            allOption.setAttribute('data-value', 'all');
-            allOption.onclick = () => handleModelFilterChange(task, 'all');
+            const allOption = document.createElement("div");
+            allOption.className = "model-filter-option all-models selected";
+            allOption.setAttribute("data-value", "all");
+            allOption.onclick = () => handleModelFilterChange(task, "all");
             allOption.innerHTML = `
               <span>All Models</span>
             `;
             optionsContainer.appendChild(allOption);
-            
+
             // Add individual model options
-            models.forEach(model => {
-              const option = document.createElement('div');
-              option.className = 'model-filter-option';
-              option.setAttribute('data-value', model);
+            models.forEach((model) => {
+              const option = document.createElement("div");
+              option.className = "model-filter-option";
+              option.setAttribute("data-value", model);
               option.onclick = () => handleModelFilterChange(task, model);
-              
+
               const logoUrl = getModelLogo(model);
-              const logoHtml = logoUrl ? `<img src="${logoUrl}" alt="${model}" class="model-logo-small">` : '<div style="width: 20px;"></div>';
-              
+              const logoHtml = logoUrl
+                ? `<img src="${logoUrl}" alt="${model}" class="model-logo-small">`
+                : '<div style="width: 20px;"></div>';
+
               option.innerHTML = `
                 ${logoHtml}
                 <span>${model}</span>
@@ -1417,67 +1540,81 @@
 
       function toggleModelFilter(task) {
         const dropdown = document.getElementById(`${task}ModelFilterDropdown`);
-        dropdown.classList.toggle('open');
-        
+        dropdown.classList.toggle("open");
+
         // Close other dropdowns
-        ['overall', 'aki', 'mortality', 'sepsis'].forEach(otherTask => {
+        ["overall", "aki", "mortality", "sepsis"].forEach((otherTask) => {
           if (otherTask !== task) {
-            const otherDropdown = document.getElementById(`${otherTask}ModelFilterDropdown`);
+            const otherDropdown = document.getElementById(
+              `${otherTask}ModelFilterDropdown`
+            );
             if (otherDropdown) {
-              otherDropdown.classList.remove('open');
+              otherDropdown.classList.remove("open");
             }
           }
         });
       }
 
       function handleModelFilterChange(task, value) {
-        const allOption = document.querySelector(`#${task}ModelFilterOptions .model-filter-option[data-value="all"]`);
-        const valueOption = document.querySelector(`#${task}ModelFilterOptions .model-filter-option[data-value="${value}"]`);
-        
-        if (value === 'all') {
+        const allOption = document.querySelector(
+          `#${task}ModelFilterOptions .model-filter-option[data-value="all"]`
+        );
+        const valueOption = document.querySelector(
+          `#${task}ModelFilterOptions .model-filter-option[data-value="${value}"]`
+        );
+
+        if (value === "all") {
           // Select all models
-          selectedModels[task] = ['all'];
+          selectedModels[task] = ["all"];
           // Update visual state
-          const allOptions = document.querySelectorAll(`#${task}ModelFilterOptions .model-filter-option`);
-          allOptions.forEach(option => option.classList.remove('selected'));
-          allOption.classList.add('selected');
+          const allOptions = document.querySelectorAll(
+            `#${task}ModelFilterOptions .model-filter-option`
+          );
+          allOptions.forEach((option) => option.classList.remove("selected"));
+          allOption.classList.add("selected");
         } else {
-          if (selectedModels[task].includes('all')) {
+          if (selectedModels[task].includes("all")) {
             // Switching from "all" to specific models
             selectedModels[task] = [value];
-            allOption.classList.remove('selected');
-            valueOption.classList.add('selected');
+            allOption.classList.remove("selected");
+            valueOption.classList.add("selected");
           } else {
             // Toggle specific model
             if (selectedModels[task].includes(value)) {
               // Remove model from selection
-              selectedModels[task] = selectedModels[task].filter(m => m !== value);
-              valueOption.classList.remove('selected');
-              
+              selectedModels[task] = selectedModels[task].filter(
+                (m) => m !== value
+              );
+              valueOption.classList.remove("selected");
+
               // If no models selected, select all
               if (selectedModels[task].length === 0) {
-                selectedModels[task] = ['all'];
-                allOption.classList.add('selected');
+                selectedModels[task] = ["all"];
+                allOption.classList.add("selected");
                 // Remove selection from all other options
-                const allOtherOptions = document.querySelectorAll(`#${task}ModelFilterOptions .model-filter-option:not([data-value="all"])`);
-                allOtherOptions.forEach(option => option.classList.remove('selected'));
+                const allOtherOptions = document.querySelectorAll(
+                  `#${task}ModelFilterOptions .model-filter-option:not([data-value="all"])`
+                );
+                allOtherOptions.forEach((option) =>
+                  option.classList.remove("selected")
+                );
               }
             } else {
               // Add model to selection
               selectedModels[task].push(value);
-              valueOption.classList.add('selected');
+              valueOption.classList.add("selected");
             }
           }
         }
-        
+
         updateModelFilterText(task);
         updateCurrentTab();
       }
 
       function updateModelFilterText(task) {
         const textElement = document.getElementById(`${task}ModelFilterText`);
-        if (selectedModels[task].includes('all')) {
-          textElement.textContent = 'All Models';
+        if (selectedModels[task].includes("all")) {
+          textElement.textContent = "All Models";
         } else {
           const count = selectedModels[task].length;
           if (count === 1) {
@@ -1489,7 +1626,7 @@
       }
 
       function getSelectedModels(task) {
-        return selectedModels[task] || ['all'];
+        return selectedModels[task] || ["all"];
       }
 
       function updateCurrentTab() {
@@ -1498,44 +1635,57 @@
       }
 
       function getFilteredData(task) {
-        if (task === 'overall') {
+        if (task === "overall") {
           return getOverallFilteredData();
         }
-        
-        const datasetFilter = document.getElementById(`${task}DatasetFilter`).value;
-        const modelTypeFilter = document.getElementById(`${task}ModelTypeFilter`).value;
+
+        const datasetFilter = document.getElementById(
+          `${task}DatasetFilter`
+        ).value;
+        const modelTypeFilter = document.getElementById(
+          `${task}ModelTypeFilter`
+        ).value;
         const selectedModelList = getSelectedModels(task);
 
         return allData.filter((d) => {
           // Filter by task
           if (d.task_id !== task) return false;
-          
+
           // Filter by dataset
-          const datasetMatch = datasetFilter === "all" || d.dataset === datasetFilter;
-          
+          const datasetMatch =
+            datasetFilter === "all" || d.dataset === datasetFilter;
+
           // Filter by model type
           const modelType = getModelType(d.model_id);
-          const modelTypeMatch = modelTypeFilter === "all" || modelType === modelTypeFilter;
+          const modelTypeMatch =
+            modelTypeFilter === "all" || modelType === modelTypeFilter;
 
           // Filter by specific model (multiple selection)
-          const modelMatch = selectedModelList.includes("all") || selectedModelList.includes(d.model_id);
+          const modelMatch =
+            selectedModelList.includes("all") ||
+            selectedModelList.includes(d.model_id);
 
           return datasetMatch && modelTypeMatch && modelMatch;
         });
       }
 
       function getOverallFilteredData() {
-        const modelTypeFilter = document.getElementById('overallModelTypeFilter').value;
-        const selectedModelList = getSelectedModels('overall');
-        
+        const modelTypeFilter = document.getElementById(
+          "overallModelTypeFilter"
+        ).value;
+        const selectedModelList = getSelectedModels("overall");
+
         return allData.filter((d) => {
           // Filter by model type
           const modelType = getModelType(d.model_id);
-          const modelTypeMatch = modelTypeFilter === "all" || modelType === modelTypeFilter;
-          
+          const modelTypeMatch =
+            modelTypeFilter === "all" || modelType === modelTypeFilter;
+
           // Filter by specific model (multiple selection)
-          const modelMatch = selectedModelList.includes("all") || selectedModelList.includes(d.model_id);
-          
+          const modelMatch =
+            selectedModelList.includes("all") ||
+            selectedModelList.includes(d.model_id);
+
           return modelTypeMatch && modelMatch;
         });
       }
@@ -1554,12 +1704,12 @@
         claudesonnet4: "llm_logos/Claude_logo.svg",
         "claude-sonnet": "llm_logos/Claude_logo.svg",
         Gemini: "llm_logos/Google-gemini-icon.svg",
-        gemini: "llm_logos/Google-gemini-icon.svg", 
+        gemini: "llm_logos/Google-gemini-icon.svg",
         Gemini2p5: "llm_logos/Google-gemini-icon.svg",
         gemini2p5: "llm_logos/Google-gemini-icon.svg",
         Llama: "llm_logos/Meta_logo.svg",
         llama: "llm_logos/Meta_logo.svg",
-        Llama3: "llm_logos/Meta_logo.svg", 
+        Llama3: "llm_logos/Meta_logo.svg",
         llama3: "llm_logos/Meta_logo.svg",
         Meta: "llm_logos/Meta_logo.svg",
         meta: "llm_logos/Meta_logo.svg",
@@ -1577,11 +1727,13 @@
         const modelIdLower = modelId.toLowerCase();
         if (modelIdLower.includes("o3")) return modelLogos["o3"];
         if (modelIdLower.includes("deepseek")) return modelLogos["DeepSeek"];
-        if (modelIdLower.includes("gpt") || modelIdLower.includes("openai")) return modelLogos["OpenAI"];
+        if (modelIdLower.includes("gpt") || modelIdLower.includes("openai"))
+          return modelLogos["OpenAI"];
         if (modelIdLower.includes("claude")) return modelLogos["Claude"];
         if (modelIdLower.includes("gemini")) return modelLogos["Gemini"];
         if (modelIdLower.includes("gemma")) return modelLogos["Gemma"];
-        if (modelIdLower.includes("llama") || modelIdLower.includes("meta")) return modelLogos["Llama"];
+        if (modelIdLower.includes("llama") || modelIdLower.includes("meta"))
+          return modelLogos["Llama"];
         if (modelIdLower.includes("mistral")) return modelLogos["Mistral"];
 
         return null;
@@ -1606,17 +1758,24 @@
       }
 
       async function createPerformanceChart(task) {
-        if (task === 'overall') {
+        if (task === "overall") {
           await createOverallPerformanceChart();
           return;
         }
-        
-        const ctx = document.getElementById(`${task}PerformanceChart`).getContext("2d");
+
+        const ctx = document
+          .getElementById(`${task}PerformanceChart`)
+          .getContext("2d");
         const filteredData = getFilteredData(task);
-        const primaryMetric = document.getElementById(`${task}PrimaryMetric`).value;
+        const primaryMetric = document.getElementById(
+          `${task}PrimaryMetric`
+        ).value;
 
         // Get only the best prompting approaches for chart display
-        const bestApproachData = getBestPromptingApproaches(filteredData, primaryMetric);
+        const bestApproachData = getBestPromptingApproaches(
+          filteredData,
+          primaryMetric
+        );
 
         // Group by model and calculate average performance
         const modelPerformance = {};
@@ -1643,17 +1802,19 @@
         const modelData = models.map((model, index) => ({
           model: model,
           score: avgScores[index],
-          type: modelPerformance[model].type
+          type: modelPerformance[model].type,
         }));
 
         // Sort by score descending
         modelData.sort((a, b) => b.score - a.score);
 
         // Extract sorted arrays
-        const sortedModels = modelData.map(d => d.model);
-        const sortedScores = modelData.map(d => d.score);
-        const sortedColors = modelData.map(d => 
-          d.type === "llm" ? "rgba(102, 126, 234, 0.8)" : "rgba(252, 182, 159, 0.8)"
+        const sortedModels = modelData.map((d) => d.model);
+        const sortedScores = modelData.map((d) => d.score);
+        const sortedColors = modelData.map((d) =>
+          d.type === "llm"
+            ? "rgba(102, 126, 234, 0.8)"
+            : "rgba(252, 182, 159, 0.8)"
         );
 
         // Load logos for models that have them
@@ -1678,7 +1839,9 @@
                 label: primaryMetric.toUpperCase(),
                 data: sortedScores,
                 backgroundColor: sortedColors,
-                borderColor: sortedColors.map((color) => color.replace("0.8", "1")),
+                borderColor: sortedColors.map((color) =>
+                  color.replace("0.8", "1")
+                ),
                 borderWidth: 2,
                 borderRadius: 8,
               },
@@ -1694,8 +1857,8 @@
             },
             scales: {
               y: {
-                beginAtZero: primaryMetric === "mcc" ? false : true,
-                min: primaryMetric === "mcc" ? -1 : 0,
+                beginAtZero: true,
+                min: 0,
                 max: primaryMetric === "task_dataset_score" ? 100 : 1,
               },
               x: {
@@ -1723,7 +1886,13 @@
 
                     ctx.save();
                     ctx.globalAlpha = 0.8;
-                    ctx.drawImage(image, x - logoSize / 2, y, logoSize, logoSize);
+                    ctx.drawImage(
+                      image,
+                      x - logoSize / 2,
+                      y,
+                      logoSize,
+                      logoSize
+                    );
                     ctx.restore();
                   }
                 });
@@ -1734,12 +1903,19 @@
       }
 
       async function createOverallPerformanceChart() {
-        const ctx = document.getElementById('overallPerformanceChart').getContext("2d");
+        const ctx = document
+          .getElementById("overallPerformanceChart")
+          .getContext("2d");
         const filteredData = getOverallFilteredData();
-        const primaryMetric = document.getElementById('overallPrimaryMetric').value;
+        const primaryMetric = document.getElementById(
+          "overallPrimaryMetric"
+        ).value;
 
         // Get only the best prompting approaches for chart display
-        const bestApproachData = getBestPromptingApproaches(filteredData, primaryMetric);
+        const bestApproachData = getBestPromptingApproaches(
+          filteredData,
+          primaryMetric
+        );
 
         // Group by model and calculate average performance across all tasks and datasets
         const modelPerformance = {};
@@ -1766,17 +1942,19 @@
         const modelData = models.map((model, index) => ({
           model: model,
           score: avgScores[index],
-          type: modelPerformance[model].type
+          type: modelPerformance[model].type,
         }));
 
         // Sort by score descending
         modelData.sort((a, b) => b.score - a.score);
 
         // Extract sorted arrays
-        const sortedModels = modelData.map(d => d.model);
-        const sortedScores = modelData.map(d => d.score);
-        const sortedColors = modelData.map(d => 
-          d.type === "llm" ? "rgba(102, 126, 234, 0.8)" : "rgba(252, 182, 159, 0.8)"
+        const sortedModels = modelData.map((d) => d.model);
+        const sortedScores = modelData.map((d) => d.score);
+        const sortedColors = modelData.map((d) =>
+          d.type === "llm"
+            ? "rgba(102, 126, 234, 0.8)"
+            : "rgba(252, 182, 159, 0.8)"
         );
 
         // Load logos for models that have them
@@ -1788,11 +1966,11 @@
           }
         }
 
-        if (charts['overallPerformance']) {
-          charts['overallPerformance'].destroy();
+        if (charts["overallPerformance"]) {
+          charts["overallPerformance"].destroy();
         }
 
-        charts['overallPerformance'] = new Chart(ctx, {
+        charts["overallPerformance"] = new Chart(ctx, {
           type: "bar",
           data: {
             labels: sortedModels,
@@ -1801,7 +1979,9 @@
                 label: primaryMetric.toUpperCase(),
                 data: sortedScores,
                 backgroundColor: sortedColors,
-                borderColor: sortedColors.map((color) => color.replace("0.8", "1")),
+                borderColor: sortedColors.map((color) =>
+                  color.replace("0.8", "1")
+                ),
                 borderWidth: 2,
                 borderRadius: 8,
               },
@@ -1817,8 +1997,8 @@
             },
             scales: {
               y: {
-                beginAtZero: primaryMetric === "mcc" ? false : true,
-                min: primaryMetric === "mcc" ? -1 : 0,
+                beginAtZero: true,
+                min: 0,
                 max: primaryMetric === "task_dataset_score" ? 100 : 1,
               },
               x: {
@@ -1846,7 +2026,13 @@
 
                     ctx.save();
                     ctx.globalAlpha = 0.8;
-                    ctx.drawImage(image, x - logoSize / 2, y, logoSize, logoSize);
+                    ctx.drawImage(
+                      image,
+                      x - logoSize / 2,
+                      y,
+                      logoSize,
+                      logoSize
+                    );
                     ctx.restore();
                   }
                 });
@@ -1857,14 +2043,18 @@
       }
 
       function updateTable(task) {
-        if (task === 'overall') {
+        if (task === "overall") {
           updateOverallTable();
           return;
         }
-        
+
         const filteredData = getFilteredData(task);
-        const showApproaches = document.getElementById(`${task}ShowApproaches`).value;
-        const primaryMetric = document.getElementById(`${task}PrimaryMetric`).value;
+        const showApproaches = document.getElementById(
+          `${task}ShowApproaches`
+        ).value;
+        const primaryMetric = document.getElementById(
+          `${task}PrimaryMetric`
+        ).value;
         const tbody = document.getElementById(`${task}ResultsTableBody`);
 
         if (filteredData.length === 0) {
@@ -1875,13 +2065,18 @@
         let dataToShow = filteredData;
         let bestApproaches = new Set();
 
-        if (showApproaches === 'best') {
+        if (showApproaches === "best") {
           dataToShow = getBestPromptingApproaches(filteredData, primaryMetric);
         } else {
           // Mark best approaches when showing all
-          const bestData = getBestPromptingApproaches(filteredData, primaryMetric);
-          bestData.forEach(entry => {
-            bestApproaches.add(`${entry.model_id}_${entry.task_id}_${entry.dataset}_${entry.prompting_id}`);
+          const bestData = getBestPromptingApproaches(
+            filteredData,
+            primaryMetric
+          );
+          bestData.forEach((entry) => {
+            bestApproaches.add(
+              `${entry.model_id}_${entry.task_id}_${entry.dataset}_${entry.prompting_id}`
+            );
           });
         }
 
@@ -1897,18 +2092,24 @@
         dataToShow.forEach((d) => {
           const metrics = d.metrics;
           const modelType = getModelType(d.model_id);
-          const isBestApproach = bestApproaches.has(`${d.model_id}_${d.task_id}_${d.dataset}_${d.prompting_id}`);
+          const isBestApproach = bestApproaches.has(
+            `${d.model_id}_${d.task_id}_${d.dataset}_${d.prompting_id}`
+          );
           const formattedApproach = formatPromptingApproach(d.prompting_id);
-          
+
           // Create model display with approach and type indicator
           let modelDisplay = '<div class="model-display-container">';
-          
+
           if (formattedApproach) {
             modelDisplay += `<div class="model-with-approach">
               <div class="model-main-row">
                 ${getModelLogoHtml(d.model_id)}
                 <span class="model-name">${d.model_id}</span>
-                ${isBestApproach && showApproaches === 'all' ? '<span class="best-approach-indicator">⭐</span>' : ''}
+                ${
+                  isBestApproach && showApproaches === "all"
+                    ? '<span class="best-approach-indicator">⭐</span>'
+                    : ""
+                }
               </div>
               <span class="approach-in-model">${formattedApproach}</span>
             </div>`;
@@ -1916,28 +2117,59 @@
             modelDisplay += `<div class="model-main-row">
               ${getModelLogoHtml(d.model_id)}
               <span class="model-name">${d.model_id}</span>
-              ${isBestApproach && showApproaches === 'all' ? '<span class="best-approach-indicator">⭐</span>' : ''}
+              ${
+                isBestApproach && showApproaches === "all"
+                  ? '<span class="best-approach-indicator">⭐</span>'
+                  : ""
+              }
             </div>`;
           }
-          modelDisplay += '</div>';
+          modelDisplay += "</div>";
 
           const row = document.createElement("tr");
           row.innerHTML = `
             <td class="model-name-cell ${modelType}-type">${modelDisplay}</td>
             <td>${d.dataset.toUpperCase()}</td>
-            <td><span class="metric-value ${getMetricClass(metrics.auroc)}">${(metrics.auroc || 0).toFixed(3)}</span></td>
-            <td><span class="metric-value ${getMetricClass(metrics.auprc)}">${(metrics.auprc || 0).toFixed(3)}</span></td>
-            <td><span class="metric-value ${getMetricClass(metrics.normalized_auprc)}">${(metrics.normalized_auprc || 0).toFixed(3)}</span></td>
-            <td><span class="metric-value ${getMetricClass(metrics.mcc)}">${(metrics.mcc || 0).toFixed(3)}</span></td>
-            <td><span class="metric-value ${getMetricClass(metrics.specificity)}">${(metrics.specificity || 0).toFixed(3)}</span></td>
-            <td><span class="metric-value ${getMetricClass(metrics.f1_score)}">${(metrics.f1_score || 0).toFixed(3)}</span></td>
-            <td><span class="metric-value ${getMetricClass(metrics.accuracy)}">${(metrics.accuracy || 0).toFixed(3)}</span></td>
-            <td><span class="metric-value ${getMetricClass(metrics.balanced_accuracy)}">${(metrics.balanced_accuracy || 0).toFixed(3)}</span></td>
-            <td><span class="metric-value ${getMetricClass(metrics.precision)}">${(metrics.precision || 0).toFixed(3)}</span></td>
-            <td><span class="metric-value ${getMetricClass(metrics.recall)}">${(metrics.recall || 0).toFixed(3)}</span></td>
-            <td><span class="metric-value ${getMetricClass(metrics.kappa)}">${(metrics.kappa || 0).toFixed(3)}</span></td>
-            <td><span class="metric-value ${getMetricClass(metrics.minpse)}">${(metrics.minpse || 0).toFixed(3)}</span></td>
-            <td><span class="metric-value ${getMetricClass(metrics.task_dataset_score, true)}">${(metrics.task_dataset_score || 0).toFixed(1)}</span></td>
+            <td><span class="metric-value ${getMetricClass(metrics.auroc)}">${(
+            metrics.auroc || 0
+          ).toFixed(3)}</span></td>
+            <td><span class="metric-value ${getMetricClass(metrics.auprc)}">${(
+            metrics.auprc || 0
+          ).toFixed(3)}</span></td>
+            <td><span class="metric-value ${getMetricClass(
+              metrics.normalized_auprc
+            )}">${(metrics.normalized_auprc || 0).toFixed(3)}</span></td>
+            <td><span class="metric-value ${getMetricClass(metrics.mcc)}">${(
+            metrics.mcc || 0
+          ).toFixed(3)}</span></td>
+            <td><span class="metric-value ${getMetricClass(
+              metrics.specificity
+            )}">${(metrics.specificity || 0).toFixed(3)}</span></td>
+            <td><span class="metric-value ${getMetricClass(
+              metrics.f1_score
+            )}">${(metrics.f1_score || 0).toFixed(3)}</span></td>
+            <td><span class="metric-value ${getMetricClass(
+              metrics.accuracy
+            )}">${(metrics.accuracy || 0).toFixed(3)}</span></td>
+            <td><span class="metric-value ${getMetricClass(
+              metrics.balanced_accuracy
+            )}">${(metrics.balanced_accuracy || 0).toFixed(3)}</span></td>
+            <td><span class="metric-value ${getMetricClass(
+              metrics.precision
+            )}">${(metrics.precision || 0).toFixed(3)}</span></td>
+            <td><span class="metric-value ${getMetricClass(metrics.recall)}">${(
+            metrics.recall || 0
+          ).toFixed(3)}</span></td>
+            <td><span class="metric-value ${getMetricClass(metrics.kappa)}">${(
+            metrics.kappa || 0
+          ).toFixed(3)}</span></td>
+            <td><span class="metric-value ${getMetricClass(metrics.minpse)}">${(
+            metrics.minpse || 0
+          ).toFixed(3)}</span></td>
+            <td><span class="metric-value ${getMetricClass(
+              metrics.task_dataset_score,
+              true
+            )}">${(metrics.task_dataset_score || 0).toFixed(1)}</span></td>
           `;
           tbody.appendChild(row);
         });
@@ -1945,10 +2177,12 @@
 
       function getApproachClass(promptingId) {
         if (!promptingId || promptingId === "") return "approach-default";
-        
+
         const id = promptingId.toLowerCase();
-        if (id.includes("sarvari") || id.includes("aggregation")) return "approach-sarvari";
-        if (id.includes("zhu") || id.includes("zero_shot")) return "approach-zhu";
+        if (id.includes("sarvari") || id.includes("aggregation"))
+          return "approach-sarvari";
+        if (id.includes("zhu") || id.includes("zero_shot"))
+          return "approach-zhu";
         if (id.includes("hybrid")) return "approach-hybrid";
         if (id.includes("one_shot")) return "approach-sarvari";
         if (id.includes("cot")) return "approach-zhu";
@@ -1961,9 +2195,13 @@
 
       function updateOverallTable() {
         const filteredData = getOverallFilteredData();
-        const showApproaches = document.getElementById('overallShowApproaches') ? document.getElementById('overallShowApproaches').value : 'best';
-        const primaryMetric = document.getElementById('overallPrimaryMetric').value;
-        const tbody = document.getElementById('overallResultsTableBody');
+        const showApproaches = document.getElementById("overallShowApproaches")
+          ? document.getElementById("overallShowApproaches").value
+          : "best";
+        const primaryMetric = document.getElementById(
+          "overallPrimaryMetric"
+        ).value;
+        const tbody = document.getElementById("overallResultsTableBody");
 
         if (filteredData.length === 0) {
           tbody.innerHTML = `<tr><td colspan="14" class="no-data">No data matches the current filters</td></tr>`;
@@ -1973,21 +2211,32 @@
         let dataToProcess = filteredData;
         let bestApproaches = new Set();
 
-        if (showApproaches === 'best') {
-          dataToProcess = getBestPromptingApproaches(filteredData, primaryMetric);
+        if (showApproaches === "best") {
+          dataToProcess = getBestPromptingApproaches(
+            filteredData,
+            primaryMetric
+          );
         } else {
           // Mark best approaches when showing all
-          const bestData = getBestPromptingApproaches(filteredData, primaryMetric);
-          bestData.forEach(entry => {
-            bestApproaches.add(`${entry.model_id}_${entry.task_id}_${entry.dataset}_${entry.prompting_id}`);
+          const bestData = getBestPromptingApproaches(
+            filteredData,
+            primaryMetric
+          );
+          bestData.forEach((entry) => {
+            bestApproaches.add(
+              `${entry.model_id}_${entry.task_id}_${entry.dataset}_${entry.prompting_id}`
+            );
           });
         }
 
         // Calculate averages for each model across all tasks and datasets
         const modelAverages = {};
         dataToProcess.forEach((d) => {
-          const key = showApproaches === 'all' ? `${d.model_id}_${d.prompting_id}` : d.model_id;
-          
+          const key =
+            showApproaches === "all"
+              ? `${d.model_id}_${d.prompting_id}`
+              : d.model_id;
+
           if (!modelAverages[key]) {
             modelAverages[key] = {
               model_id: d.model_id,
@@ -2006,50 +2255,72 @@
               minpse: [],
               task_dataset_score: [],
               type: getModelType(d.model_id),
-              isBest: false
+              isBest: false,
             };
           }
-          
-          if (d.metrics.auroc !== undefined) modelAverages[key].auroc.push(d.metrics.auroc);
-          if (d.metrics.auprc !== undefined) modelAverages[key].auprc.push(d.metrics.auprc);
-          if (d.metrics.normalized_auprc !== undefined) modelAverages[key].normalized_auprc.push(d.metrics.normalized_auprc);
-          if (d.metrics.mcc !== undefined) modelAverages[key].mcc.push(d.metrics.mcc);
-          if (d.metrics.specificity !== undefined) modelAverages[key].specificity.push(d.metrics.specificity);
-          if (d.metrics.f1_score !== undefined) modelAverages[key].f1_score.push(d.metrics.f1_score);
-          if (d.metrics.accuracy !== undefined) modelAverages[key].accuracy.push(d.metrics.accuracy);
-          if (d.metrics.balanced_accuracy !== undefined) modelAverages[key].balanced_accuracy.push(d.metrics.balanced_accuracy);
-          if (d.metrics.precision !== undefined) modelAverages[key].precision.push(d.metrics.precision);
-          if (d.metrics.recall !== undefined) modelAverages[key].recall.push(d.metrics.recall);
-          if (d.metrics.kappa !== undefined) modelAverages[key].kappa.push(d.metrics.kappa);
-          if (d.metrics.minpse !== undefined) modelAverages[key].minpse.push(d.metrics.minpse);
-          if (d.metrics.task_dataset_score !== undefined) modelAverages[key].task_dataset_score.push(d.metrics.task_dataset_score);
+
+          if (d.metrics.auroc !== undefined)
+            modelAverages[key].auroc.push(d.metrics.auroc);
+          if (d.metrics.auprc !== undefined)
+            modelAverages[key].auprc.push(d.metrics.auprc);
+          if (d.metrics.normalized_auprc !== undefined)
+            modelAverages[key].normalized_auprc.push(
+              d.metrics.normalized_auprc
+            );
+          if (d.metrics.mcc !== undefined)
+            modelAverages[key].mcc.push(d.metrics.mcc);
+          if (d.metrics.specificity !== undefined)
+            modelAverages[key].specificity.push(d.metrics.specificity);
+          if (d.metrics.f1_score !== undefined)
+            modelAverages[key].f1_score.push(d.metrics.f1_score);
+          if (d.metrics.accuracy !== undefined)
+            modelAverages[key].accuracy.push(d.metrics.accuracy);
+          if (d.metrics.balanced_accuracy !== undefined)
+            modelAverages[key].balanced_accuracy.push(
+              d.metrics.balanced_accuracy
+            );
+          if (d.metrics.precision !== undefined)
+            modelAverages[key].precision.push(d.metrics.precision);
+          if (d.metrics.recall !== undefined)
+            modelAverages[key].recall.push(d.metrics.recall);
+          if (d.metrics.kappa !== undefined)
+            modelAverages[key].kappa.push(d.metrics.kappa);
+          if (d.metrics.minpse !== undefined)
+            modelAverages[key].minpse.push(d.metrics.minpse);
+          if (d.metrics.task_dataset_score !== undefined)
+            modelAverages[key].task_dataset_score.push(
+              d.metrics.task_dataset_score
+            );
         });
 
         // Mark best approaches for each model
-        if (showApproaches === 'all') {
+        if (showApproaches === "all") {
           const modelGroups = {};
-          Object.keys(modelAverages).forEach(key => {
+          Object.keys(modelAverages).forEach((key) => {
             const data = modelAverages[key];
             const modelId = data.model_id;
             if (!modelGroups[modelId]) modelGroups[modelId] = [];
             modelGroups[modelId].push({ key, data });
           });
 
-          Object.keys(modelGroups).forEach(modelId => {
+          Object.keys(modelGroups).forEach((modelId) => {
             const group = modelGroups[modelId];
             if (group.length > 1) {
               let bestKey = null;
               let bestScore = -Infinity;
-              
+
               group.forEach(({ key, data }) => {
                 const scores = data[primaryMetric] || [];
-                const avgScore = scores.length > 0 ? scores.reduce((sum, val) => sum + val, 0) / scores.length : 0;
+                const avgScore =
+                  scores.length > 0
+                    ? scores.reduce((sum, val) => sum + val, 0) / scores.length
+                    : 0;
                 if (avgScore > bestScore) {
                   bestScore = avgScore;
                   bestKey = key;
                 }
               });
-              
+
               if (bestKey) {
                 modelAverages[bestKey].isBest = true;
               }
@@ -2059,36 +2330,101 @@
 
         // Calculate averages and create table rows
         const models = Object.keys(modelAverages);
-        
-        const modelResults = models.map(key => {
+
+        const modelResults = models.map((key) => {
           const data = modelAverages[key];
-          const avgAuroc = data.auroc.length > 0 ? data.auroc.reduce((sum, val) => sum + val, 0) / data.auroc.length : 0;
-          const avgAuprc = data.auprc.length > 0 ? data.auprc.reduce((sum, val) => sum + val, 0) / data.auprc.length : 0;
-          const avgNormAuprc = data.normalized_auprc.length > 0 ? data.normalized_auprc.reduce((sum, val) => sum + val, 0) / data.normalized_auprc.length : 0;
-          const avgMcc = data.mcc.length > 0 ? data.mcc.reduce((sum, val) => sum + val, 0) / data.mcc.length : 0;
-          const avgSpecificity = data.specificity.length > 0 ? data.specificity.reduce((sum, val) => sum + val, 0) / data.specificity.length : 0;
-          const avgF1 = data.f1_score.length > 0 ? data.f1_score.reduce((sum, val) => sum + val, 0) / data.f1_score.length : 0;
-          const avgAccuracy = data.accuracy.length > 0 ? data.accuracy.reduce((sum, val) => sum + val, 0) / data.accuracy.length : 0;
-          const avgBalAccuracy = data.balanced_accuracy.length > 0 ? data.balanced_accuracy.reduce((sum, val) => sum + val, 0) / data.balanced_accuracy.length : 0;
-          const avgPrecision = data.precision.length > 0 ? data.precision.reduce((sum, val) => sum + val, 0) / data.precision.length : 0;
-          const avgRecall = data.recall.length > 0 ? data.recall.reduce((sum, val) => sum + val, 0) / data.recall.length : 0;
-          const avgKappa = data.kappa.length > 0 ? data.kappa.reduce((sum, val) => sum + val, 0) / data.kappa.length : 0;
-          const avgMinpse = data.minpse.length > 0 ? data.minpse.reduce((sum, val) => sum + val, 0) / data.minpse.length : 0;
-          const avgPulse = data.task_dataset_score.length > 0 ? data.task_dataset_score.reduce((sum, val) => sum + val, 0) / data.task_dataset_score.length : 0;
-          
-          const primaryScore = primaryMetric === 'auroc' ? avgAuroc : 
-                               primaryMetric === 'auprc' ? avgAuprc :
-                               primaryMetric === 'normalized_auprc' ? avgNormAuprc :
-                               primaryMetric === 'mcc' ? avgMcc :
-                               primaryMetric === 'specificity' ? avgSpecificity :
-                               primaryMetric === 'f1_score' ? avgF1 :
-                               primaryMetric === 'accuracy' ? avgAccuracy :
-                               primaryMetric === 'balanced_accuracy' ? avgBalAccuracy :
-                               primaryMetric === 'precision' ? avgPrecision :
-                               primaryMetric === 'recall' ? avgRecall :
-                               primaryMetric === 'kappa' ? avgKappa :
-                               primaryMetric === 'minpse' ? avgMinpse : avgPulse;
-          
+          const avgAuroc =
+            data.auroc.length > 0
+              ? data.auroc.reduce((sum, val) => sum + val, 0) /
+                data.auroc.length
+              : 0;
+          const avgAuprc =
+            data.auprc.length > 0
+              ? data.auprc.reduce((sum, val) => sum + val, 0) /
+                data.auprc.length
+              : 0;
+          const avgNormAuprc =
+            data.normalized_auprc.length > 0
+              ? data.normalized_auprc.reduce((sum, val) => sum + val, 0) /
+                data.normalized_auprc.length
+              : 0;
+          const avgMcc =
+            data.mcc.length > 0
+              ? data.mcc.reduce((sum, val) => sum + val, 0) / data.mcc.length
+              : 0;
+          const avgSpecificity =
+            data.specificity.length > 0
+              ? data.specificity.reduce((sum, val) => sum + val, 0) /
+                data.specificity.length
+              : 0;
+          const avgF1 =
+            data.f1_score.length > 0
+              ? data.f1_score.reduce((sum, val) => sum + val, 0) /
+                data.f1_score.length
+              : 0;
+          const avgAccuracy =
+            data.accuracy.length > 0
+              ? data.accuracy.reduce((sum, val) => sum + val, 0) /
+                data.accuracy.length
+              : 0;
+          const avgBalAccuracy =
+            data.balanced_accuracy.length > 0
+              ? data.balanced_accuracy.reduce((sum, val) => sum + val, 0) /
+                data.balanced_accuracy.length
+              : 0;
+          const avgPrecision =
+            data.precision.length > 0
+              ? data.precision.reduce((sum, val) => sum + val, 0) /
+                data.precision.length
+              : 0;
+          const avgRecall =
+            data.recall.length > 0
+              ? data.recall.reduce((sum, val) => sum + val, 0) /
+                data.recall.length
+              : 0;
+          const avgKappa =
+            data.kappa.length > 0
+              ? data.kappa.reduce((sum, val) => sum + val, 0) /
+                data.kappa.length
+              : 0;
+          const avgMinpse =
+            data.minpse.length > 0
+              ? data.minpse.reduce((sum, val) => sum + val, 0) /
+                data.minpse.length
+              : 0;
+          const avgPulse =
+            data.task_dataset_score.length > 0
+              ? data.task_dataset_score.reduce((sum, val) => sum + val, 0) /
+                data.task_dataset_score.length
+              : 0;
+
+          const primaryScore =
+            primaryMetric === "auroc"
+              ? avgAuroc
+              : primaryMetric === "auprc"
+              ? avgAuprc
+              : primaryMetric === "normalized_auprc"
+              ? avgNormAuprc
+              : primaryMetric === "mcc"
+              ? avgMcc
+              : primaryMetric === "specificity"
+              ? avgSpecificity
+              : primaryMetric === "f1_score"
+              ? avgF1
+              : primaryMetric === "accuracy"
+              ? avgAccuracy
+              : primaryMetric === "balanced_accuracy"
+              ? avgBalAccuracy
+              : primaryMetric === "precision"
+              ? avgPrecision
+              : primaryMetric === "recall"
+              ? avgRecall
+              : primaryMetric === "kappa"
+              ? avgKappa
+              : primaryMetric === "minpse"
+              ? avgMinpse
+              : avgPulse;
+
           return {
             model_id: data.model_id,
             prompting_id: data.prompting_id,
@@ -2107,7 +2443,7 @@
             avgKappa,
             avgMinpse,
             avgPulse,
-            primaryScore
+            primaryScore,
           };
         });
 
@@ -2117,17 +2453,23 @@
         tbody.innerHTML = "";
 
         modelResults.forEach((result) => {
-          const formattedApproach = formatPromptingApproach(result.prompting_id);
-          
+          const formattedApproach = formatPromptingApproach(
+            result.prompting_id
+          );
+
           // Create model display with approach and type indicator
           let modelDisplay = '<div class="model-display-container">';
-          
+
           if (formattedApproach) {
             modelDisplay += `<div class="model-with-approach">
               <div class="model-main-row">
                 ${getModelLogoHtml(result.model_id)}
                 <span class="model-name">${result.model_id}</span>
-                ${result.isBest && showApproaches === 'all' ? '<span class="best-approach-indicator">⭐</span>' : ''}
+                ${
+                  result.isBest && showApproaches === "all"
+                    ? '<span class="best-approach-indicator">⭐</span>'
+                    : ""
+                }
               </div>
               <span class="approach-in-model">${formattedApproach}</span>
             </div>`;
@@ -2135,27 +2477,58 @@
             modelDisplay += `<div class="model-main-row">
               ${getModelLogoHtml(result.model_id)}
               <span class="model-name">${result.model_id}</span>
-              ${result.isBest && showApproaches === 'all' ? '<span class="best-approach-indicator">⭐</span>' : ''}
+              ${
+                result.isBest && showApproaches === "all"
+                  ? '<span class="best-approach-indicator">⭐</span>'
+                  : ""
+              }
             </div>`;
           }
-          modelDisplay += '</div>';
-          
+          modelDisplay += "</div>";
+
           const row = document.createElement("tr");
           row.innerHTML = `
             <td class="model-name-cell ${result.type}-type">${modelDisplay}</td>
-            <td><span class="metric-value ${getMetricClass(result.avgPulse, true)}">${result.avgPulse.toFixed(1)}</span></td>
-            <td><span class="metric-value ${getMetricClass(result.avgAuroc)}">${result.avgAuroc.toFixed(3)}</span></td>
-            <td><span class="metric-value ${getMetricClass(result.avgAuprc)}">${result.avgAuprc.toFixed(3)}</span></td>
-            <td><span class="metric-value ${getMetricClass(result.avgMcc)}">${result.avgMcc.toFixed(3)}</span></td>
-            <td><span class="metric-value ${getMetricClass(result.avgNormAuprc)}">${result.avgNormAuprc.toFixed(3)}</span></td>
-            <td><span class="metric-value ${getMetricClass(result.avgSpecificity)}">${result.avgSpecificity.toFixed(3)}</span></td>
-            <td><span class="metric-value ${getMetricClass(result.avgF1)}">${result.avgF1.toFixed(3)}</span></td>
-            <td><span class="metric-value ${getMetricClass(result.avgAccuracy)}">${result.avgAccuracy.toFixed(3)}</span></td>
-            <td><span class="metric-value ${getMetricClass(result.avgBalAccuracy)}">${result.avgBalAccuracy.toFixed(3)}</span></td>
-            <td><span class="metric-value ${getMetricClass(result.avgPrecision)}">${result.avgPrecision.toFixed(3)}</span></td>
-            <td><span class="metric-value ${getMetricClass(result.avgRecall)}">${result.avgRecall.toFixed(3)}</span></td>
-            <td><span class="metric-value ${getMetricClass(result.avgKappa)}">${result.avgKappa.toFixed(3)}</span></td>
-            <td><span class="metric-value ${getMetricClass(result.avgMinpse)}">${result.avgMinpse.toFixed(3)}</span></td>
+            <td><span class="metric-value ${getMetricClass(
+              result.avgPulse,
+              true
+            )}">${result.avgPulse.toFixed(1)}</span></td>
+            <td><span class="metric-value ${getMetricClass(
+              result.avgAuroc
+            )}">${result.avgAuroc.toFixed(3)}</span></td>
+            <td><span class="metric-value ${getMetricClass(
+              result.avgAuprc
+            )}">${result.avgAuprc.toFixed(3)}</span></td>
+            <td><span class="metric-value ${getMetricClass(
+              result.avgMcc
+            )}">${result.avgMcc.toFixed(3)}</span></td>
+            <td><span class="metric-value ${getMetricClass(
+              result.avgNormAuprc
+            )}">${result.avgNormAuprc.toFixed(3)}</span></td>
+            <td><span class="metric-value ${getMetricClass(
+              result.avgSpecificity
+            )}">${result.avgSpecificity.toFixed(3)}</span></td>
+            <td><span class="metric-value ${getMetricClass(
+              result.avgF1
+            )}">${result.avgF1.toFixed(3)}</span></td>
+            <td><span class="metric-value ${getMetricClass(
+              result.avgAccuracy
+            )}">${result.avgAccuracy.toFixed(3)}</span></td>
+            <td><span class="metric-value ${getMetricClass(
+              result.avgBalAccuracy
+            )}">${result.avgBalAccuracy.toFixed(3)}</span></td>
+            <td><span class="metric-value ${getMetricClass(
+              result.avgPrecision
+            )}">${result.avgPrecision.toFixed(3)}</span></td>
+            <td><span class="metric-value ${getMetricClass(
+              result.avgRecall
+            )}">${result.avgRecall.toFixed(3)}</span></td>
+            <td><span class="metric-value ${getMetricClass(
+              result.avgKappa
+            )}">${result.avgKappa.toFixed(3)}</span></td>
+            <td><span class="metric-value ${getMetricClass(
+              result.avgMinpse
+            )}">${result.avgMinpse.toFixed(3)}</span></td>
           `;
           tbody.appendChild(row);
         });
@@ -2174,10 +2547,15 @@
       }
 
       function setupEventListeners() {
-        const tasks = ['aki', 'mortality', 'sepsis'];
-        
-        tasks.forEach(task => {
-          [`${task}DatasetFilter`, `${task}ModelTypeFilter`, `${task}ShowApproaches`, `${task}PrimaryMetric`].forEach((id) => {
+        const tasks = ["aki", "mortality", "sepsis"];
+
+        tasks.forEach((task) => {
+          [
+            `${task}DatasetFilter`,
+            `${task}ModelTypeFilter`,
+            `${task}ShowApproaches`,
+            `${task}PrimaryMetric`,
+          ].forEach((id) => {
             document.getElementById(id).addEventListener("change", async () => {
               if (currentTask === task) {
                 updateCurrentTab();
@@ -2187,22 +2565,30 @@
         });
 
         // Add event listeners for overall tab
-        ['overallModelTypeFilter', 'overallShowApproaches', 'overallPrimaryMetric'].forEach((id) => {
+        [
+          "overallModelTypeFilter",
+          "overallShowApproaches",
+          "overallPrimaryMetric",
+        ].forEach((id) => {
           document.getElementById(id).addEventListener("change", async () => {
-            if (currentTask === 'overall') {
+            if (currentTask === "overall") {
               updateCurrentTab();
             }
           });
         });
 
         // Add click outside handler to close dropdowns
-        document.addEventListener('click', function(event) {
-          const isDropdownClick = event.target.closest('.model-filter-dropdown');
+        document.addEventListener("click", function (event) {
+          const isDropdownClick = event.target.closest(
+            ".model-filter-dropdown"
+          );
           if (!isDropdownClick) {
-            ['overall', 'aki', 'mortality', 'sepsis'].forEach(task => {
-              const dropdown = document.getElementById(`${task}ModelFilterDropdown`);
+            ["overall", "aki", "mortality", "sepsis"].forEach((task) => {
+              const dropdown = document.getElementById(
+                `${task}ModelFilterDropdown`
+              );
               if (dropdown) {
-                dropdown.classList.remove('open');
+                dropdown.classList.remove("open");
               }
             });
           }
